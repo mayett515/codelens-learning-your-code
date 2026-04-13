@@ -144,6 +144,10 @@ function openSectionChatById(sectionId) {
         renderFileTabs();
         renderCode();
     }
+
+    touchProjectRecentFile(state.currentProject, fileIdx, { save: false });
+    touchSectionChatActivity(state.currentProject, sectionId, { save: false });
+    saveState();
     
     document.getElementById('chat-title').textContent = state.colorNames[color] || color;
     const fileName = project.files[fileIdx]?.name || 'File';
@@ -168,6 +172,7 @@ async function autoExplain(code, sectionId) {
     
     chat.messages.push({ role: 'user', content: 'Explain this code:', borderColor: 'green' });
     chat.messages.push({ role: 'assistant', content: '```\n' + code + '\n```', borderColor: 'green' });
+    touchSectionChatActivity(state.currentProject, sectionId, { save: false });
     renderChatMessages(chat.messages);
 
     const provider = getChatProvider('section');
@@ -186,6 +191,7 @@ async function autoExplain(code, sectionId) {
         api: response?.api || provider,
         model: response?.model || model
     });
+    touchSectionChatActivity(state.currentProject, sectionId, { save: false });
     saveState();
     renderChatMessages(chat.messages);
 }
@@ -201,4 +207,128 @@ function goBackFromChat() {
     } else {
         showScreen('home-screen');
     }
+}
+
+function formatRecentTime(isoValue = '') {
+    const ms = Date.parse(String(isoValue || ''));
+    if (!Number.isFinite(ms) || ms <= 0) return 'recent';
+
+    const diffMs = Date.now() - ms;
+    if (diffMs < 60 * 1000) return 'just now';
+    if (diffMs < 60 * 60 * 1000) return `${Math.max(1, Math.floor(diffMs / 60000))}m ago`;
+    if (diffMs < 24 * 60 * 60 * 1000) return `${Math.max(1, Math.floor(diffMs / 3600000))}h ago`;
+    return `${Math.max(1, Math.floor(diffMs / 86400000))}d ago`;
+}
+
+function decodeRecentData(raw = '') {
+    try {
+        return decodeURIComponent(String(raw || ''));
+    } catch (_) {
+        return String(raw || '');
+    }
+}
+
+function renderRecentChatsInto(containerId, limit = 10) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const items = buildRecentChats(limit);
+    if (!items.length) {
+        container.innerHTML = '<div class="empty-state"><div class="title">No recent chats yet</div><div class="desc">Open a section chat or general chat to see it here.</div></div>';
+        return;
+    }
+
+    container.innerHTML = items.map(item => {
+        const preview = item.preview ? `<div class="meta">${escapeHtml(item.preview)}</div>` : '';
+        const timeLabel = formatRecentTime(item.updatedAt);
+
+        if (item.type === 'section') {
+            return `
+                <div class="list-item recent-chat-item"
+                     data-action="open-recent-chat"
+                     data-chat-type="section"
+                     data-project-index="${item.projectIndex}"
+                     data-section-id="${encodeURIComponent(item.sectionId || '')}">
+                    <div class="icon">${uiIcon('chat')}</div>
+                    <div class="info">
+                        <div class="name">${escapeHtml(item.title || 'Section Chat')}</div>
+                        <div class="meta">${escapeHtml(item.subtitle || item.projectName || '')} | ${escapeHtml(timeLabel)}</div>
+                        ${preview}
+                    </div>
+                    <span class="arrow">${uiIcon('arrow-right')}</span>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="list-item recent-chat-item"
+                 data-action="open-recent-chat"
+                 data-chat-type="general"
+                 data-chat-idx="${item.chatIdx}"
+                 data-folder-id="${encodeURIComponent(String(item.folderId ?? ''))}">
+                <div class="icon">${uiIcon('folder')}</div>
+                <div class="info">
+                    <div class="name">${escapeHtml(item.title || 'General Chat')}</div>
+                    <div class="meta">${escapeHtml(item.subtitle || 'General Chat')} | ${escapeHtml(timeLabel)}</div>
+                    ${preview}
+                </div>
+                <span class="arrow">${uiIcon('arrow-right')}</span>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderHomeRecentChatsPreview() {
+    renderRecentChatsInto('home-recent-chats', 6);
+}
+
+function renderRecentChatsScreen() {
+    renderRecentChatsInto('recent-chats-list', 30);
+}
+
+function openRecentChat(actionEl) {
+    if (!actionEl) return;
+
+    const chatType = String(actionEl.dataset.chatType || '').trim().toLowerCase();
+    if (chatType === 'section') {
+        const projectIndex = Number(actionEl.dataset.projectIndex);
+        const sectionId = decodeRecentData(actionEl.dataset.sectionId || '');
+        if (!Number.isInteger(projectIndex) || !state.projects[projectIndex] || !sectionId) {
+            showToast('Recent section chat is unavailable');
+            return;
+        }
+        state.currentProject = projectIndex;
+        openSectionChatById(sectionId);
+        return;
+    }
+
+    if (chatType === 'general') {
+        const folderIdRaw = decodeRecentData(actionEl.dataset.folderId || '');
+        const chatIdx = Number(actionEl.dataset.chatIdx);
+        const folderIndex = state.folders.findIndex(folder => String(folder?.id ?? '') === folderIdRaw);
+
+        if (folderIndex >= 0) {
+            openFolder(folderIndex);
+            return;
+        }
+
+        if (!Number.isInteger(chatIdx) || !state.generalChats[chatIdx]) {
+            showToast('Recent general chat is unavailable');
+            return;
+        }
+
+        const fallbackChat = state.generalChats[chatIdx];
+        state.currentGeneralFolder = fallbackChat.folderId ?? null;
+        state.currentChat = { type: 'general', idx: chatIdx };
+        const folderName = state.folders.find(item => item?.id === state.currentGeneralFolder)?.name || 'General';
+        const folderLabel = document.getElementById('general-chat-folder');
+        if (folderLabel) folderLabel.textContent = folderName;
+        renderGeneralGemSelector();
+        syncChatModelControls('general');
+        renderGeneralChatMessages();
+        showScreen('general-chat-screen');
+        return;
+    }
+
+    showToast('Unknown recent chat type');
 }

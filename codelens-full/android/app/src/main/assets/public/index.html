@@ -48,10 +48,17 @@
                             <div class="icon">💎</div>
                             <div class="label">What We Learned</div>
                         </div>
+                        <div class="quick-card" data-action="show-screen" data-screen="recent-chats-screen">
+                            <div class="icon">ðŸ•’</div>
+                            <div class="label">Recent Chats</div>
+                        </div>
                     </div>
                     
                     <div class="section-title">My Projects</div>
                     <div id="projects-list"></div>
+                    
+                    <div class="section-title">Recent Chats</div>
+                    <div id="home-recent-chats"></div>
                     
                     <div class="section-title">Saved Snippets</div>
                     <div id="folders-preview"></div>
@@ -71,6 +78,10 @@
                 <div class="file-switcher">
                     <div class="file-switcher-name" id="file-switcher-name">file.js</div>
                     <button class="file-switcher-btn" data-action="show-file-picker">Select Other File</button>
+                </div>
+                <div class="project-recent-wrap is-hidden" id="project-recent-wrap">
+                    <div class="project-recent-label">Recent in this project</div>
+                    <div class="project-recent-files" id="project-recent-files"></div>
                 </div>
                 <div class="color-toolbar">
                     <button class="color-btn red" data-action="select-color" data-color="red"></button>
@@ -121,6 +132,9 @@
                         <span class="queue-status-text" id="chat-queue-status">AI idle</span>
                         <button class="queue-cancel-btn" id="chat-queue-cancel" data-action="cancel-ai-queue" disabled>Cancel Queue</button>
                     </div>
+                    <div class="capture-learning-inline">
+                        <button class="capture-learning-btn" data-action="capture-chat-learning">Save this chat as learning</button>
+                    </div>
                 </div>
             </div>
             
@@ -155,6 +169,9 @@
                         <span class="queue-status-text" id="general-queue-status">AI idle</span>
                         <button class="queue-cancel-btn" id="general-queue-cancel" data-action="cancel-ai-queue" disabled>Cancel Queue</button>
                     </div>
+                    <div class="capture-learning-inline">
+                        <button class="capture-learning-btn" data-action="capture-chat-learning">Save this chat as learning</button>
+                    </div>
                 </div>
             </div>
 
@@ -166,6 +183,10 @@
                     <span></span>
                 </div>
                 <div class="scrollable">
+                    <div class="learning-help-card">
+                        <div class="learning-help-title">How Learning Works</div>
+                        <div class="learning-help-text">Brain button = summarize this whole chat into concepts. "Save as learning" = save one selected bubble. Opening a session from here is a temporary read-only memory view, and you can return via the banner.</div>
+                    </div>
                     <div class="section-title">Today</div>
                     <div id="learning-today-list"></div>
 
@@ -241,6 +262,16 @@
                 <div class="scrollable" id="folders-list"></div>
             </div>
             
+            <!-- RECENT CHATS SCREEN -->
+            <div class="screen" id="recent-chats-screen">
+                <div class="code-header">
+                    <button class="icon-btn" data-action="show-screen" data-screen="home-screen">â†</button>
+                    <span class="code-filename">Recent Chats</span>
+                    <span></span>
+                </div>
+                <div class="scrollable" id="recent-chats-list"></div>
+            </div>
+
             <!-- SETTINGS SCREEN -->
             <div class="screen" id="settings-screen">
                 <div class="code-header">
@@ -541,7 +572,12 @@
                 <span class="modal-title">Select File</span>
                     <button class="modal-close" data-action="hide-modal" data-modal="file-picker-modal">X</button>
             </div>
-            <div class="modal-body" id="file-picker-list"></div>
+            <div class="modal-body">
+                <div class="file-picker-search-wrap">
+                    <input type="text" class="file-picker-search" id="file-picker-search" placeholder="Search file path or file content...">
+                </div>
+                <div id="file-picker-list"></div>
+            </div>
         </div>
     </div>
 

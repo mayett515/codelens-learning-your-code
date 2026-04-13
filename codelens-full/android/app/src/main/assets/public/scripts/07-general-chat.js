@@ -18,7 +18,7 @@ async function sendGeneralMessage() {
     // Find or create chat
     let chatIdx = state.generalChats.findIndex(c => c.folderId === state.currentGeneralFolder);
     if (chatIdx === -1) {
-        state.generalChats.push({ folderId: state.currentGeneralFolder, messages: [] });
+        state.generalChats.push({ folderId: state.currentGeneralFolder, messages: [], updatedAt: '' });
         chatIdx = state.generalChats.length - 1;
     }
     
@@ -34,7 +34,7 @@ async function sendGeneralMessage() {
     if (activeGem) systemPrompts.push(activeGem.prompt);
     if (state.currentAvatar?.prompt) systemPrompts.push(state.currentAvatar.prompt);
     if (typeof getLearningSystemPromptForQuery === 'function') {
-        const memoryPrompt = getLearningSystemPromptForQuery(text, { scope: 'general' });
+        const memoryPrompt = await getLearningSystemPromptForQuery(text, { scope: 'general' });
         if (memoryPrompt) systemPrompts.push(memoryPrompt);
     }
 
@@ -48,6 +48,7 @@ async function sendGeneralMessage() {
         model
     };
     chat.messages.push(pendingReply);
+    touchGeneralChatActivity(chatIdx, { save: false });
     saveState();
     renderGeneralChatMessages();
 
@@ -64,6 +65,7 @@ async function sendGeneralMessage() {
     pendingReply.api = response?.api || provider;
     pendingReply.model = response?.model || model;
     pendingReply.pending = false;
+    touchGeneralChatActivity(chatIdx, { save: false });
     saveState();
 
     if (state.currentChat?.type === 'general' && state.currentChat?.idx === chatIdx) {

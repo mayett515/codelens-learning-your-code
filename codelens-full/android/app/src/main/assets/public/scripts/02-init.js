@@ -10,6 +10,7 @@ function init() {
     renderFolders();
     loadSettings();
     if (typeof renderLearningHomePreview === 'function') renderLearningHomePreview();
+    if (typeof renderHomeRecentChatsPreview === 'function') renderHomeRecentChatsPreview();
     if (typeof renderLearningScreen === 'function') renderLearningScreen();
     if (typeof renderLearningReviewChatScreen === 'function') renderLearningReviewChatScreen();
     setupEventListeners();
@@ -28,7 +29,7 @@ function applyKitIcons() {
     setIcon('.header-actions .icon-btn:nth-child(1)', 'bookmark');
     setIcon('.header-actions .icon-btn:nth-child(2)', 'settings');
 
-    const quickIcons = ['import', 'clipboard', 'chat', 'brain'];
+    const quickIcons = ['import', 'clipboard', 'chat', 'brain', 'menu'];
     document.querySelectorAll('#home-screen .quick-grid .quick-card .icon').forEach((el, idx) => {
         el.innerHTML = uiIcon(quickIcons[idx] || 'spark', 'lg');
     });
@@ -42,15 +43,15 @@ function applyKitIcons() {
     if (toolbarButtons[3]) toolbarButtons[3].innerHTML = iconWithText('sections', 'Sections');
     if (toolbarButtons[4]) toolbarButtons[4].innerHTML = iconWithText('bot', 'Avatar Chat');
 
-    setIcon('#chat-screen .chat-header .icon-btn:nth-child(1)', 'arrow-left');
-    setIcon('#chat-screen .chat-header .icon-btn:nth-child(2)', 'brain');
-    setIcon('#chat-screen .chat-header .icon-btn:nth-child(3)', 'bookmark');
+    setIcon('#chat-screen [data-action="go-back-from-chat"]', 'arrow-left');
+    setIcon('#chat-screen [data-action="capture-chat-learning"]', 'brain');
+    setIcon('#chat-screen [data-action="show-chat-bookmarks"]', 'bookmark');
     setIcon('#chat-send-btn', 'send');
 
-    setIcon('#general-chat-screen .chat-header .icon-btn:nth-child(1)', 'arrow-left');
-    setIcon('#general-chat-screen .chat-header .icon-btn:nth-child(2)', 'brain');
-    setIcon('#general-chat-screen .chat-header .icon-btn:nth-child(3)', 'folder');
-    setIcon('#general-chat-screen .chat-header .icon-btn:nth-child(4)', 'bot');
+    setIcon('#general-chat-screen [data-action="show-screen"][data-screen="home-screen"]', 'arrow-left');
+    setIcon('#general-chat-screen [data-action="capture-chat-learning"]', 'brain');
+    setIcon('#general-chat-screen [data-action="show-general-chat-folders"]', 'folder');
+    setIcon('#general-chat-screen [data-action="show-avatar-picker"]', 'bot');
     setIcon('#general-chat-send-btn', 'send');
 
     setIcon('#learning-screen .code-header .icon-btn:nth-child(1)', 'arrow-left');
@@ -63,6 +64,7 @@ function applyKitIcons() {
     setIcon('#folders-screen .code-header .icon-btn:nth-child(1)', 'arrow-left');
     setIcon('#folders-screen .code-header .icon-btn:nth-child(3)', 'plus');
     setIcon('#settings-screen .code-header .icon-btn:nth-child(1)', 'arrow-left');
+    setIcon('#recent-chats-screen .code-header .icon-btn:nth-child(1)', 'arrow-left');
 
     document.querySelectorAll('#bookmarks-filter .filter-chip').forEach(chip => {
         const color = chip.dataset.color;
@@ -480,6 +482,14 @@ function setupEventListeners() {
         importBackupInput.addEventListener('change', importBackup);
     }
 
+    const filePickerSearchInput = document.getElementById('file-picker-search');
+    if (filePickerSearchInput) {
+        filePickerSearchInput.addEventListener('input', event => {
+            filePickerSearchTerm = String(event.target.value || '');
+            renderFilePicker();
+        });
+    }
+
     document.addEventListener('click', handleDelegatedActionClick);
     window.addEventListener('resize', scheduleRenderVisibleCodeLines);
     window.addEventListener('beforeunload', flushStateSave);
@@ -615,6 +625,19 @@ function runDelegatedAction(actionEl) {
         case 'set-learning-graph-mode':
             if (typeof setLearningGraphMode === 'function') setLearningGraphMode(actionEl.dataset.mode || 'connections');
             return true;
+        case 'learning-graph-zoom-in':
+            if (typeof setLearningGraphZoom === 'function' && typeof getLearningGraphZoom === 'function') {
+                setLearningGraphZoom(getLearningGraphZoom() + 0.2);
+            }
+            return true;
+        case 'learning-graph-zoom-out':
+            if (typeof setLearningGraphZoom === 'function' && typeof getLearningGraphZoom === 'function') {
+                setLearningGraphZoom(getLearningGraphZoom() - 0.2);
+            }
+            return true;
+        case 'learning-graph-zoom-reset':
+            if (typeof setLearningGraphZoom === 'function') setLearningGraphZoom(1.45);
+            return true;
         case 'learning-review-new-chat':
             if (typeof startLearningReviewChatFromConcept === 'function') startLearningReviewChatFromConcept('', { forceNew: true, useActiveConcept: true });
             return true;
@@ -643,6 +666,14 @@ function runDelegatedAction(actionEl) {
             if (fileIndex !== null) selectFileFromPicker(fileIndex);
             return true;
         }
+        case 'open-project-recent-file': {
+            const fileIndex = getDatasetNumber(actionEl, 'fileIndex');
+            if (fileIndex !== null) switchFile(fileIndex);
+            return true;
+        }
+        case 'open-recent-chat':
+            if (typeof openRecentChat === 'function') openRecentChat(actionEl);
+            return true;
         case 'open-folder': {
             const folderIndex = getDatasetNumber(actionEl, 'folderIndex');
             if (folderIndex !== null) openFolder(folderIndex);
@@ -685,11 +716,27 @@ function runDelegatedAction(actionEl) {
 }
 
 function handleDelegatedActionClick(event) {
-    const actionEl = event.target.closest('[data-action]');
+    const actionEl = findDelegatedActionElement(event.target);
     if (!actionEl) return;
     if (actionEl.disabled) return;
 
     if (runDelegatedAction(actionEl)) {
         event.preventDefault();
     }
+}
+
+function findDelegatedActionElement(target) {
+    if (!target) return null;
+
+    if (typeof target.closest === 'function') {
+        const found = target.closest('[data-action]');
+        if (found) return found;
+    }
+
+    let node = target;
+    while (node) {
+        if (node.dataset?.action) return node;
+        node = node.parentNode || node.host || null;
+    }
+    return null;
 }

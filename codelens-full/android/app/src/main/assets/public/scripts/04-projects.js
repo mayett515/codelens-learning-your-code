@@ -95,6 +95,7 @@ function createFromPaste() {
         highlights: {},
         chats: {},
         avatarChats: [],
+        recentFiles: [0],
         created: new Date().toISOString()
     };
     
@@ -266,6 +267,7 @@ async function importFromGitHub() {
             highlights: {},
             chats: {},
             avatarChats: [],
+            recentFiles: [0],
             created: new Date().toISOString()
         };
         
@@ -288,7 +290,13 @@ function openProject(idx) {
     invalidateSectionsCache();
     clearSelectionState();
     filePickerExpanded = new Set();
-    state.currentFile = 0;
+    const project = state.projects[state.currentProject];
+    const preferredFileIdx = Number(project?.recentFiles?.[0]);
+    state.currentFile = Number.isInteger(preferredFileIdx) && preferredFileIdx >= 0 && preferredFileIdx < (project?.files?.length || 0)
+        ? preferredFileIdx
+        : 0;
+    touchProjectRecentFile(state.currentProject, state.currentFile, { save: false });
+    saveState();
     
     renderFileTabs();
     renderCode({ resetScroll: true });
@@ -305,6 +313,32 @@ function renderFileTabs() {
 
     const switcherName = document.getElementById('file-switcher-name');
     if (switcherName) switcherName.textContent = fileName;
+
+    renderProjectRecentFiles();
+}
+
+function renderProjectRecentFiles() {
+    const wrap = document.getElementById('project-recent-wrap');
+    const container = document.getElementById('project-recent-files');
+    if (!wrap || !container || state.currentProject === null) return;
+
+    const project = state.projects[state.currentProject];
+    const recents = getProjectRecentFiles(project, MAX_PROJECT_RECENT_FILES)
+        .filter(entry => Number(entry.idx) !== Number(state.currentFile))
+        .slice(0, 6);
+
+    if (!recents.length) {
+        wrap.classList.add('is-hidden');
+        container.innerHTML = '';
+        return;
+    }
+
+    wrap.classList.remove('is-hidden');
+    container.innerHTML = recents.map(entry => `
+        <button class="project-recent-btn" data-action="open-project-recent-file" data-file-index="${entry.idx}">
+            ${escapeHtml(String(entry.file?.name || `File ${entry.idx + 1}`))}
+        </button>
+    `).join('');
 }
 
 function normalizeFilePath(path) {
@@ -377,11 +411,85 @@ function legacyRenderFilePickerNodeOld(node, depth = 0) {
     return html;
 }
 
+function getFileSearchSnippet(content = '', query = '') {
+    const body = String(content || '');
+    const q = String(query || '').trim().toLowerCase();
+    if (!q || !body) return '';
+
+    const lcBody = body.toLowerCase();
+    const matchIndex = lcBody.indexOf(q);
+    if (matchIndex < 0) return '';
+
+    const start = Math.max(0, matchIndex - 36);
+    const end = Math.min(body.length, matchIndex + q.length + 56);
+    const prefix = start > 0 ? '...' : '';
+    const suffix = end < body.length ? '...' : '';
+    return `${prefix}${body.slice(start, end).replace(/\s+/g, ' ').trim()}${suffix}`;
+}
+
+function renderFilePickerSearchResults(project, query = '') {
+    const q = String(query || '').trim().toLowerCase();
+    if (!q) return '';
+    const allowContentScan = q.length >= 2;
+
+    const matches = [];
+    project.files.forEach((file, idx) => {
+        const path = normalizeFilePath(file.name);
+        const fileName = path.split('/').pop() || `file-${idx + 1}`;
+        const pathHit = path.toLowerCase().includes(q);
+        const contentHit = allowContentScan && String(file.content || '').toLowerCase().includes(q);
+        if (!pathHit && !contentHit) return;
+
+        matches.push({
+            idx,
+            fileName,
+            fullPath: path || fileName,
+            source: pathHit ? 'Path match' : 'Content match',
+            snippet: contentHit ? getFileSearchSnippet(file.content, q) : ''
+        });
+    });
+
+    if (!matches.length) {
+        return '<div class="empty-state"><div class="title">No file matched</div><div class="desc">Try another keyword</div></div>';
+    }
+
+    const limited = matches.slice(0, 150);
+    const listHtml = limited.map(match => {
+        const activeClass = match.idx === state.currentFile ? 'active' : '';
+        return `
+            <div class="list-item file-picker-item file ${activeClass}" data-action="select-file-from-picker" data-file-index="${match.idx}">
+                <div class="icon">${uiIcon('file')}</div>
+                <div class="info">
+                    <div class="name">${escapeHtml(match.fileName)}</div>
+                    <div class="meta">${escapeHtml(match.fullPath)}</div>
+                    <div class="file-picker-snippet">${escapeHtml(match.source)}${match.snippet ? ` | ${escapeHtml(match.snippet)}` : ''}</div>
+                </div>
+                <span class="arrow">${match.idx === state.currentFile ? uiIcon('check') : uiIcon('arrow-right')}</span>
+            </div>
+        `;
+    }).join('');
+
+    const suffix = matches.length > limited.length
+        ? `<div class="file-picker-search-meta">Showing first ${limited.length} of ${matches.length} matches</div>`
+        : `<div class="file-picker-search-meta">${matches.length} match${matches.length === 1 ? '' : 'es'}</div>`;
+
+    return `${suffix}${listHtml}`;
+}
+
 function renderFilePicker() {
     const list = document.getElementById('file-picker-list');
     if (!list || state.currentProject === null) return;
 
     const project = state.projects[state.currentProject];
+    const searchInput = document.getElementById('file-picker-search');
+    const searchTerm = String(searchInput ? searchInput.value : filePickerSearchTerm || '').trim();
+    filePickerSearchTerm = searchTerm;
+
+    if (searchTerm) {
+        list.innerHTML = renderFilePickerSearchResults(project, searchTerm);
+        return;
+    }
+
     const currentPath = normalizeFilePath(project.files[state.currentFile]?.name || '');
     const folderParts = currentPath ? currentPath.split('/').slice(0, -1) : [];
 
@@ -403,8 +511,11 @@ function renderFilePicker() {
 }
 
 function showFilePicker() {
+    const searchInput = document.getElementById('file-picker-search');
+    if (searchInput) searchInput.value = filePickerSearchTerm;
     renderFilePicker();
     showModal('file-picker-modal');
+    if (searchInput) searchInput.focus();
 }
 
 function toggleFilePickerFolder(encodedPath) {
@@ -427,8 +538,10 @@ function selectFileFromPicker(idx) {
 function switchFile(idx) {
     state.currentFile = idx;
     clearSelectionState();
+    touchProjectRecentFile(state.currentProject, idx, { save: false });
     renderFileTabs();
     renderCode({ resetScroll: true });
+    saveState();
 }
 
 function renderCode(options = {}) {
@@ -588,7 +701,7 @@ function renderProjects() {
             <div class="icon">${uiIcon('folder')}</div>
             <div class="info">
                 <div class="name">${escapeHtml(p.name || 'Untitled')}</div>
-                <div class="meta">${p.files ? p.files.length + ' files' : 'Code snippet'}</div>
+                <div class="meta">${p.files ? p.files.length + ' files' : 'Code snippet'}${Array.isArray(p.recentFiles) && p.recentFiles.length ? ` | ${Math.min(p.recentFiles.length, 6)} recent` : ''}</div>
             </div>
             <span class="arrow">${uiIcon('arrow-right')}</span>
         </div>

@@ -52,6 +52,10 @@ function openFolder(folderIdx) {
     state.currentGeneralFolder = folder.id;
     const chatIdx = state.generalChats.findIndex(c => c.folderId === folder.id);
     state.currentChat = chatIdx >= 0 ? { type: 'general', idx: chatIdx } : { type: 'general', idx: null };
+    if (chatIdx >= 0) {
+        touchGeneralChatActivity(chatIdx, { save: false });
+        saveState();
+    }
 
     const folderLabel = document.getElementById('general-chat-folder');
     if (folderLabel) folderLabel.textContent = folder.name;

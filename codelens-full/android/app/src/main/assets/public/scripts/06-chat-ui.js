@@ -334,7 +334,7 @@ async function sendMessage() {
         systemPrompts.push(activeGem.prompt);
     }
     if (typeof getLearningSystemPromptForQuery === 'function') {
-        const memoryPrompt = getLearningSystemPromptForQuery(text, { scope: 'section' });
+        const memoryPrompt = await getLearningSystemPromptForQuery(text, { scope: 'section' });
         if (memoryPrompt) systemPrompts.push(memoryPrompt);
     }
 
@@ -348,6 +348,7 @@ async function sendMessage() {
         model
     };
     chat.messages.push(pendingReply);
+    touchSectionChatActivity(projectIdx, chatId, { save: false });
     saveState();
     renderChatMessages(chat.messages);
 
@@ -364,6 +365,7 @@ async function sendMessage() {
     pendingReply.api = response?.api || provider;
     pendingReply.model = response?.model || model;
     pendingReply.pending = false;
+    touchSectionChatActivity(projectIdx, chatId, { save: false });
     saveState();
 
     if (
