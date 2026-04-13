@@ -130,11 +130,65 @@ async function parseJSONResponse(response) {
     const rawText = await response.text();
     if (!rawText) return { data: null, rawText: '' };
 
-    try {
-        return { data: JSON.parse(rawText), rawText };
-    } catch {
-        return { data: null, rawText };
+    return { data: tryParseJSONText(rawText), rawText };
+}
+
+function stripMarkdownCodeFences(rawText = '') {
+    const source = String(rawText || '').trim();
+    if (!source) return '';
+
+    // Handle the common model habit of wrapping JSON in ```json ... ```
+    return source
+        .replace(/^```(?:json)?\s*/i, '')
+        .replace(/\s*```$/i, '')
+        .trim();
+}
+
+function extractLikelyJSONObject(rawText = '') {
+    const source = String(rawText || '');
+    const start = source.indexOf('{');
+    const end = source.lastIndexOf('}');
+    if (start < 0 || end <= start) return '';
+    return source.slice(start, end + 1).trim();
+}
+
+function tryParseJSONText(rawText = '') {
+    const source = String(rawText || '').trim();
+    if (!source) return null;
+
+    const candidates = [];
+    const seen = new Set();
+    const addCandidate = value => {
+        const candidate = String(value || '').trim();
+        if (!candidate || seen.has(candidate)) return;
+        seen.add(candidate);
+        candidates.push(candidate);
+    };
+
+    addCandidate(source);
+    addCandidate(stripMarkdownCodeFences(source));
+    addCandidate(extractLikelyJSONObject(source));
+    addCandidate(extractLikelyJSONObject(stripMarkdownCodeFences(source)));
+
+    for (const candidate of candidates) {
+        try {
+            return JSON.parse(candidate);
+        } catch (_) {
+            // try next candidate
+        }
     }
+    return null;
+}
+
+function parseAIPayload(rawText = '') {
+    const parsed = tryParseJSONText(rawText);
+    if (parsed && typeof parsed === 'object') return parsed;
+
+    const preview = String(rawText || '').slice(0, 700);
+    if (preview.trim()) {
+        console.warn('[ai-json] AI generated malformed JSON payload:', preview);
+    }
+    return null;
 }
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 70000) {

@@ -383,7 +383,9 @@ function ensureStateShape() {
             model: String(item?.model || ''),
             api: String(item?.api || ''),
             updatedAt: String(item?.updatedAt || ''),
-            signature: String(item?.signature || '')
+            signature: String(item?.signature || ''),
+            nativeSyncedAt: String(item?.nativeSyncedAt || ''),
+            nativeSignature: String(item?.nativeSignature || '')
         };
     });
     state.learningHub.embeddings = normalizedEmbeddings;

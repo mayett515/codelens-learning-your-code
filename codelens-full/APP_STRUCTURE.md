@@ -12,6 +12,9 @@ CodeLens is a Capacitor Android app with a plain HTML/CSS/JavaScript frontend (n
 - API keys:
   - Native path (preferred on Android): `window.NativeSecureStore` bridge to Android SharedPreferences
   - Fallback path: browser localStorage
+- Learning vectors (semantic memory):
+  - Native path (preferred on Android): `window.ObjectBoxBridge` bridge (upsert/match/delete)
+  - JS cache path: `state.learningHub.embeddings` for fallback and sync metadata
 
 ## 2) Repository map
 
@@ -22,6 +25,7 @@ Main folders/files:
   - Important Java files:
     - `android/app/src/main/java/com/codelens/app/MainActivity.java`
     - `android/app/src/main/java/com/codelens/app/NativeSecureStoreBridge.java`
+    - `android/app/src/main/java/com/codelens/app/ObjectBoxBridge.java`
 - `android/app/src/main/assets/public/`
   - Runtime web app shipped inside Android.
   - Main frontend files:
@@ -95,6 +99,9 @@ Persistence strategy:
 - API keys:
   - preferred: native bridge (`NativeSecureStore`)
   - fallback: localStorage key `codelens_api_keys_v1`
+- Learning vectors:
+  - preferred: native bridge (`ObjectBoxBridge`) in Android SharedPreferences-backed store
+  - fallback cache: `state.learningHub.embeddings` in localStorage state snapshot
 
 Normalization path:
 
@@ -217,8 +224,12 @@ Core parts:
   - `addSnippetToLearningSession()`
 - local semantic memory retrieval:
   - cloud embeddings fetched on-demand (`getBestEmbeddingForText`)
-  - vectors cached locally in `learningHub.embeddings`
-  - pull ranking blends lexical + cosine similarity
+  - vectors synced to native bridge via JS interfaces:
+    - `upsertEmbedding(payload)`
+    - `getTopMatches(payload)`
+    - `deleteEmbedding(payload)`
+  - `learningHub.embeddings` remains as JS-side cache and native-sync tracking
+  - pull ranking blends lexical + cosine similarity (native bridge first, JS fallback)
 - derived graph data:
   - `refreshLearningDerivedData()`
   - `calculateLearningLinks()`
@@ -269,6 +280,7 @@ Graph interaction:
 `MainActivity.java`:
 
 - Registers `NativeSecureStoreBridge` as JS interface `NativeSecureStore`.
+- Registers `ObjectBoxBridge` as JS interface `ObjectBoxBridge`.
 
 `NativeSecureStoreBridge.java`:
 
@@ -276,9 +288,20 @@ Graph interaction:
 - `setApiKeys(json)`
 - `clearApiKeys()`
 
+`ObjectBoxBridge.java`:
+
+- `upsertEmbedding(payloadJson)`:
+  - payload: `{ id, vector[], model, api, signature, updatedAt }`
+- `getTopMatches(payloadJson)`:
+  - payload: `{ vector[], ids[], limit }`
+  - response: `{ ok, matches: [{ id, score, cosine }] }`
+- `deleteEmbedding(payloadJson)`:
+  - payload: `{ id }`
+
 Storage backend:
 
 - Android `SharedPreferences` file `codelens_secure_store`, key `api_keys_json`.
+- Android `SharedPreferences` file `codelens_learning_vectors`, key `embeddings_json`.
 
 ## 11) Full function index (by script)
 
@@ -346,7 +369,7 @@ Boot call only: `init();`
 
 ### `scripts/16-learning.js`
 
-`getTodayDateKey`, `toDateKey`, `cleanLearningText`, `truncateLearningText`, `createLearningId`, `deepCloneSimple`, `tokenizeLearningText`, `uniqueLearningStrings`, `getCurrentChatContextDescriptor`, `getLearningSessionById`, `getLearningSessionByKey`, `getOrCreateLearningSessionForContext`, `extractLearningKeywords`, `collectLearningConceptTokens`, `computeLearningTokenJaccard`, `getLearningConceptSimilarity`, `chooseMoreSpecificLearningPrinciple`, `findBestLearningConceptMatch`, `addConceptToLearningSession`, `addSnippetToLearningSession`, `deriveLearningConceptRecords`, `calculateLearningLinks`, `refreshLearningDerivedData`, `getSortedLearningSessions`, `renderLearningSessionsInto`, `renderLearningSnippets`, `decodeLearningData`, `getLearningReviewChats`, `getLearningReviewChatById`, `getLearningConceptById`, `getLatestLearningReviewChatForConcept`, `getLearningConceptRecordsSorted`, `clampLearning01`, `getConceptReviewStats`, `getConceptStrengthScore`, `getLearningStrengthPalette`, `renderLearningConceptExplorer`, `getRelatedConceptTitles`, `openLearningConceptById`, `getLearningSnippetsForConcept`, `buildLearningReviewStarterMessage`, `createLearningReviewChat`, `startLearningReviewChatFromConcept`, `openLearningReviewChatById`, `getActiveLearningReviewChat`, `buildLearningReviewSystemPrompts`, `renderLearningReviewChatScreen`, `sendLearningReviewMessage`, `normalizeLearningGraphMode`, `getLearningGraphMode`, `getLearningGraphModeMeta`, `clampLearningGraphZoom`, `getLearningGraphZoom`, `setLearningGraphZoom`, `setLearningGraphMode`, `getConceptAgeDays`, `getLearningGraphNodeVisual`, `buildLearningGraphData`, `renderLearningGraph`, `renderLearningHomePreview`, `renderLearningScreen`, `scoreLearningSessionForQuery`, `getRelevantLearningSessions`, `getLearningSystemPromptForQuery`, `tryParseLearningSummaryJson`, `buildFallbackLearningSummary`, `normalizeLearningSummary`, `findMessageByQuote`, `captureCurrentChatLearning`, `saveSelectedBubbleAsLearning`, `captureNavigationContext`, `restoreNavigationContext`, `decodeSessionRefData`, `openLearningSessionById`, `getReferenceSession`, `isReferenceReadOnlyMode`, `applyReferenceReadOnlyUI`, `exitLearningSessionReference`
+`getTodayDateKey`, `toDateKey`, `cleanLearningText`, `truncateLearningText`, `createLearningId`, `deepCloneSimple`, `tokenizeLearningText`, `uniqueLearningStrings`, `getCurrentChatContextDescriptor`, `getLearningSessionById`, `getLearningSessionByKey`, `getOrCreateLearningSessionForContext`, `extractLearningKeywords`, `collectLearningConceptTokens`, `computeLearningTokenJaccard`, `getLearningConceptSimilarity`, `chooseMoreSpecificLearningPrinciple`, `findBestLearningConceptMatch`, `addConceptToLearningSession`, `addSnippetToLearningSession`, `deriveLearningConceptRecords`, `calculateLearningLinks`, `refreshLearningDerivedData`, `getSortedLearningSessions`, `renderLearningSessionsInto`, `renderLearningSnippets`, `decodeLearningData`, `getLearningReviewChats`, `getLearningReviewChatById`, `getLearningConceptById`, `getLatestLearningReviewChatForConcept`, `getLearningConceptRecordsSorted`, `clampLearning01`, `getConceptReviewStats`, `getConceptStrengthScore`, `getLearningStrengthPalette`, `renderLearningConceptExplorer`, `getRelatedConceptTitles`, `openLearningConceptById`, `getLearningSnippetsForConcept`, `buildLearningReviewStarterMessage`, `createLearningReviewChat`, `startLearningReviewChatFromConcept`, `openLearningReviewChatById`, `getActiveLearningReviewChat`, `buildLearningReviewSystemPrompts`, `renderLearningReviewChatScreen`, `sendLearningReviewMessage`, `normalizeLearningGraphMode`, `getLearningGraphMode`, `getLearningGraphModeMeta`, `clampLearningGraphZoom`, `getLearningGraphZoom`, `setLearningGraphZoom`, `setLearningGraphMode`, `getConceptAgeDays`, `getLearningGraphNodeVisual`, `buildLearningGraphData`, `renderLearningGraph`, `renderLearningHomePreview`, `renderLearningScreen`, `scoreLearningSessionForQuery`, `getRelevantLearningSessions`, `getLearningSystemPromptForQuery`, `tryParseLearningSummaryJson`, `buildFallbackLearningSummary`, `normalizeLearningSummary`, `findMessageByQuote`, `captureCurrentChatLearning`, `saveSelectedBubbleAsLearning`, `captureNavigationContext`, `restoreNavigationContext`, `decodeSessionRefData`, `openLearningSessionById`, `getReferenceSession`, `isReferenceReadOnlyMode`, `applyReferenceReadOnlyUI`, `exitLearningSessionReference`, `getTopMatches`, `upsertEmbedding`, `deleteEmbedding`
 
 ## 12) Where to edit common requests
 

@@ -505,6 +505,7 @@ function pruneLearningEmbeddingsToKnownConcepts(concepts = []) {
     const validIds = new Set((Array.isArray(concepts) ? concepts : []).map(item => String(item?.id || '')).filter(Boolean));
     Object.keys(store).forEach(conceptId => {
         if (!validIds.has(conceptId)) {
+            deleteEmbedding({ id: conceptId });
             delete store[conceptId];
         }
     });
@@ -529,6 +530,152 @@ function getLearningCosineSimilarity(leftVector = [], rightVector = []) {
 
     if (normLeft <= 0 || normRight <= 0) return 0;
     return dot / (Math.sqrt(normLeft) * Math.sqrt(normRight));
+}
+
+function resolveLearningPayloadObject(payload = null) {
+    if (!payload) return null;
+    if (typeof payload === 'object') return payload;
+
+    const rawText = String(payload || '').trim();
+    if (!rawText) return null;
+
+    if (typeof parseAIPayload === 'function') {
+        const parsed = parseAIPayload(rawText);
+        if (parsed && typeof parsed === 'object') return parsed;
+    }
+
+    try {
+        const parsed = JSON.parse(rawText);
+        return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch (_) {
+        return null;
+    }
+}
+
+function getNativeVectorBridge() {
+    const bridge = window?.ObjectBoxBridge;
+    if (!bridge || typeof bridge !== 'object') return null;
+    if (typeof bridge.getTopMatches !== 'function') return null;
+    if (typeof bridge.upsertEmbedding !== 'function') return null;
+    if (typeof bridge.deleteEmbedding !== 'function') return null;
+    return bridge;
+}
+
+function callNativeVectorBridge(method = '', payload = {}) {
+    const bridge = getNativeVectorBridge();
+    if (!bridge || typeof bridge[method] !== 'function') return null;
+
+    try {
+        const raw = bridge[method](JSON.stringify(payload || {}));
+        return resolveLearningPayloadObject(raw);
+    } catch (error) {
+        console.warn('[learning-vector] native bridge call failed:', error?.message || error);
+        return null;
+    }
+}
+
+// JS interface: native semantic retrieval
+function getTopMatches(payload = {}) {
+    return callNativeVectorBridge('getTopMatches', payload);
+}
+
+// JS interface: native vector upsert
+function upsertEmbedding(payload = {}) {
+    return callNativeVectorBridge('upsertEmbedding', payload);
+}
+
+// JS interface: native vector delete
+function deleteEmbedding(payload = {}) {
+    return callNativeVectorBridge('deleteEmbedding', payload);
+}
+
+function ensureNativeEmbeddingSynced(conceptId = '', embeddingRecord = null) {
+    const id = String(conceptId || '').trim();
+    if (!id || !embeddingRecord || typeof embeddingRecord !== 'object') return false;
+    if (!getNativeVectorBridge()) return false;
+
+    const vector = Array.isArray(embeddingRecord.vector)
+        ? embeddingRecord.vector.map(value => Number(value)).filter(value => Number.isFinite(value)).slice(0, 256)
+        : [];
+    if (vector.length < LEARNING_VECTOR_MIN_LENGTH) return false;
+
+    const currentSignature = String(embeddingRecord.signature || '');
+    const alreadySynced = Boolean(
+        embeddingRecord.nativeSyncedAt &&
+        String(embeddingRecord.nativeSignature || '') === currentSignature
+    );
+    if (alreadySynced) return false;
+
+    const response = upsertEmbedding({
+        id,
+        vector,
+        model: String(embeddingRecord.model || ''),
+        api: String(embeddingRecord.api || ''),
+        signature: currentSignature,
+        updatedAt: String(embeddingRecord.updatedAt || new Date().toISOString())
+    });
+
+    if (!response || response.ok === false) return false;
+    embeddingRecord.nativeSyncedAt = new Date().toISOString();
+    embeddingRecord.nativeSignature = currentSignature;
+    return true;
+}
+
+function getLearningSemanticScoresFromNativeBridge(queryVector = [], concepts = []) {
+    if (!getNativeVectorBridge()) return null;
+
+    const conceptIds = (Array.isArray(concepts) ? concepts : [])
+        .map(item => String(item?.id || '').trim())
+        .filter(Boolean);
+    if (!conceptIds.length) return {};
+
+    const parsed = getTopMatches({
+        vector: queryVector.slice(0, 256),
+        ids: conceptIds,
+        limit: conceptIds.length
+    });
+    if (!parsed || parsed.ok === false) return null;
+
+    const matches = Array.isArray(parsed?.matches) ? parsed.matches : [];
+    if (!matches.length) return {};
+
+    const scoreMap = {};
+    matches.forEach(match => {
+        const id = String(match?.id || match?.conceptId || '').trim();
+        if (!id) return;
+
+        const rawScore = Number(match?.score ?? match?.similarity ?? match?.cosine ?? 0);
+        if (!Number.isFinite(rawScore)) return;
+        const normalized = rawScore >= 0 && rawScore <= 1
+            ? rawScore
+            : ((rawScore + 1) / 2);
+        scoreMap[id] = Math.max(0, Math.min(1, normalized));
+    });
+    return scoreMap;
+}
+
+function computeLearningSemanticScoresLocally(queryVector = [], concepts = [], embeddingStore = {}) {
+    const scoreMap = {};
+    (Array.isArray(concepts) ? concepts : []).forEach(concept => {
+        const conceptId = String(concept?.id || '').trim();
+        if (!conceptId) return;
+
+        const vector = embeddingStore?.[conceptId]?.vector;
+        if (!Array.isArray(vector) || vector.length < LEARNING_VECTOR_MIN_LENGTH) return;
+
+        const cosine = getLearningCosineSimilarity(queryVector, vector);
+        const normalized = Math.max(0, (cosine + 1) / 2);
+        scoreMap[conceptId] = normalized;
+    });
+
+    return scoreMap;
+}
+
+function getLearningSemanticScoreMap(queryVector = [], concepts = [], embeddingStore = {}) {
+    if (!Array.isArray(queryVector) || queryVector.length < LEARNING_VECTOR_MIN_LENGTH) return null;
+    const nativeMap = getLearningSemanticScoresFromNativeBridge(queryVector, concepts);
+    if (nativeMap && typeof nativeMap === 'object' && Object.keys(nativeMap).length) return nativeMap;
+    return computeLearningSemanticScoresLocally(queryVector, concepts, embeddingStore);
 }
 
 function getLearningQueryEmbeddingCacheKey(queryText = '') {
@@ -591,6 +738,7 @@ async function ensureLearningEmbeddingForConcept(concept = {}, options = {}) {
         existing.vector.length >= LEARNING_VECTOR_MIN_LENGTH
     );
     if (hasUsableExisting && !options.force) {
+        ensureNativeEmbeddingSynced(conceptId, existing);
         return existing;
     }
 
@@ -608,8 +756,11 @@ async function ensureLearningEmbeddingForConcept(concept = {}, options = {}) {
             model: String(payload.model || ''),
             api: String(payload.api || ''),
             updatedAt: new Date().toISOString(),
-            signature
+            signature,
+            nativeSyncedAt: '',
+            nativeSignature: ''
         };
+        ensureNativeEmbeddingSynced(conceptId, store[conceptId]);
         return store[conceptId];
     })().catch(() => null).finally(() => {
         learningEmbeddingJobs.delete(jobKey);
@@ -642,7 +793,12 @@ async function syncLearningConceptEmbeddings(concepts = [], options = {}) {
             !Array.isArray(existing.vector) ||
             existing.vector.length < LEARNING_VECTOR_MIN_LENGTH
         );
-        if (!needsUpdate) continue;
+        if (!needsUpdate) {
+            if (ensureNativeEmbeddingSynced(conceptId, existing)) {
+                updated = true;
+            }
+            continue;
+        }
 
         processed += 1;
         const result = await ensureLearningEmbeddingForConcept(concept, options);
@@ -1726,25 +1882,27 @@ async function getRelevantLearningConceptPulls(query = '', options = {}, limit =
 
     const queryEmbedding = await getLearningQueryEmbeddingPayload(queryText, options);
     const embeddingStore = getLearningEmbeddingsStore();
+    const semanticScoreMap = queryEmbedding?.vector?.length
+        ? await getLearningSemanticScoreMap(queryEmbedding.vector, concepts, embeddingStore)
+        : null;
+    const hasSemanticScores = Boolean(
+        semanticScoreMap &&
+        typeof semanticScoreMap === 'object' &&
+        Object.keys(semanticScoreMap).length
+    );
 
     const scored = concepts.map(concept => ({
         concept,
         lexicalScore: scoreLearningConceptForQuery(concept, queryText, tokens),
-        semanticScore: (() => {
-            if (!queryEmbedding?.vector?.length) return 0;
-            const conceptVector = embeddingStore[concept.id]?.vector;
-            if (!Array.isArray(conceptVector) || conceptVector.length < LEARNING_VECTOR_MIN_LENGTH) return 0;
-            const cosine = getLearningCosineSimilarity(queryEmbedding.vector, conceptVector);
-            return Math.max(0, (cosine + 1) / 2);
-        })()
+        semanticScore: hasSemanticScores ? Number(semanticScoreMap[concept.id] || 0) : 0
     })).map(entry => ({
         ...entry,
-        score: queryEmbedding?.vector?.length
+        score: hasSemanticScores
             ? (entry.lexicalScore * 0.58) + (entry.semanticScore * 7.4)
             : entry.lexicalScore
     }));
 
-    const minScore = queryEmbedding?.vector?.length ? 1.1 : 1.35;
+    const minScore = hasSemanticScores ? 1.1 : 1.35;
     const ranked = scored
         .sort((a, b) => b.score - a.score)
         .filter(entry => entry.score > minScore);
@@ -1778,19 +1936,29 @@ async function getLearningSystemPromptForQuery(query = '', options = {}) {
     if (!pulls.length) return '';
 
     const scopeContext = getLearningCurrentScopeContext(options);
-    const pullLines = pulls.map(concept => {
+    const vaultPulls = pulls.map(concept => {
         const shortTitle = truncateLearningText(concept.title || 'Concept', 42).replace(/[|\]]/g, '');
         const keywordSummary = (concept.keywords || []).slice(0, 7).join(', ') || 'n/a';
         const syntaxSummary = (concept.languageSyntax || []).slice(0, 6).join(', ') || 'n/a';
-        return `- title=${concept.title || 'Concept'}; core_concept=${concept.coreConcept || 'n/a'}; architectural_pattern=${concept.architecturalPattern || 'n/a'}; programming_paradigm=${concept.programmingParadigm || 'n/a'}; summary=${truncateLearningText(concept.summary || concept.principle || '', 180)}; syntax=${syntaxSummary}; keywords=${keywordSummary}; session_ref=[[SESSION_REF:${concept.sessionId}|${shortTitle}]]`;
-    }).join('\n');
+        return {
+            title: concept.title || 'Concept',
+            core_concept: concept.coreConcept || 'n/a',
+            architectural_pattern: concept.architecturalPattern || 'n/a',
+            programming_paradigm: concept.programmingParadigm || 'n/a',
+            summary: truncateLearningText(concept.summary || concept.principle || '', 160),
+            syntax: syntaxSummary,
+            keywords: keywordSummary,
+            session_ref: `[[SESSION_REF:${concept.sessionId}|${shortTitle}]]`
+        };
+    });
+    const vaultPullsJson = JSON.stringify(vaultPulls, null, 2);
 
     return [
         'You are the user\'s personal "Dot Connector" and coding mentor.',
         'Your job is to map the current problem/code to concepts from the user\'s own memory vault.',
         scopeContext ? `Current scope context:\n${scopeContext}` : '',
-        'Highly relevant Vault Pulls:',
-        pullLines,
+        'Highly relevant Vault Pulls (abstract concept cards only, never raw past code):',
+        vaultPullsJson,
         'Task:',
         '1) Find the best conceptual match based on core_concept or architectural_pattern, not superficial syntax.',
         '2) If there is a real match, start immediately with a memory bridge (example tone: "Eyy, this should look familiar...").',
@@ -1805,6 +1973,13 @@ async function getLearningSystemPromptForQuery(query = '', options = {}) {
 function tryParseLearningSummaryJson(text = '') {
     const source = String(text || '').trim();
     if (!source) return null;
+
+    if (typeof parseAIPayload === 'function') {
+        const parsed = parseAIPayload(source);
+        if (parsed && typeof parsed === 'object') {
+            return parsed;
+        }
+    }
 
     const candidates = [];
     candidates.push(source);

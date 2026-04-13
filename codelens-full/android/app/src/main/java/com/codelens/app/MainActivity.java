@@ -14,6 +14,10 @@ public class MainActivity extends BridgeActivity {
                 new NativeSecureStoreBridge(this),
                 "NativeSecureStore"
             );
+            getBridge().getWebView().addJavascriptInterface(
+                new ObjectBoxBridge(this),
+                "ObjectBoxBridge"
+            );
         }
     }
 }
