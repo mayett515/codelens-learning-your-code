@@ -1,0 +1,13 @@
+{
+  "name": "codelens",
+  "version": "2.0.0",
+  "description": "Code Learning App",
+  "main": "index.js",
+  "scripts": {
+    "build": "echo 'No build needed'"
+  },
+  "dependencies": {
+    "@capacitor/android": "^5.0.0",
+    "@capacitor/core": "^5.0.0"
+  }
+}

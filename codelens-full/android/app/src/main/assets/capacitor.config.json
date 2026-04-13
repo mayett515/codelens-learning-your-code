@@ -1,0 +1,8 @@
+{
+  "appId": "com.codelens.app",
+  "appName": "CodeLens",
+  "webDir": "public",
+  "server": {
+    "androidScheme": "https"
+  }
+}

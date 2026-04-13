@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#373c4b">
+    <title>CodeLens</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="./styles/app.css">
+</head>
+<body>
+    <div class="app">
+        <!-- Toast -->
+        <div class="toast" id="toast"></div>
+        
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <div class="logo-icon">🔍</div>
+                <span class="logo-text">CodeLens</span>
+            </div>
+            <div class="header-actions">
+                <button class="icon-btn" data-action="show-screen" data-screen="bookmarks-screen">🔖</button>
+                <button class="icon-btn" data-action="show-screen" data-screen="settings-screen">⚙️</button>
+            </div>
+        </header>
+        
+        <!-- Main Content -->
+        <div class="main-content">
+            
+            <!-- HOME SCREEN -->
+            <div class="screen active" id="home-screen">
+                <div class="scrollable">
+                    <div class="quick-grid">
+                        <div class="quick-card" data-action="show-modal" data-modal="import-modal">
+                            <div class="icon">📦</div>
+                            <div class="label">Import GitHub</div>
+                        </div>
+                        <div class="quick-card" data-action="show-modal" data-modal="paste-modal">
+                            <div class="icon">📋</div>
+                            <div class="label">Paste Code</div>
+                        </div>
+                        <div class="quick-card" data-action="show-screen" data-screen="general-chat-screen">
+                            <div class="icon">💬</div>
+                            <div class="label">General Chat</div>
+                        </div>
+                        <div class="quick-card" data-action="show-screen" data-screen="learning-screen">
+                            <div class="icon">💎</div>
+                            <div class="label">What We Learned</div>
+                        </div>
+                    </div>
+                    
+                    <div class="section-title">My Projects</div>
+                    <div id="projects-list"></div>
+                    
+                    <div class="section-title">Saved Snippets</div>
+                    <div id="folders-preview"></div>
+                    
+                    <div class="section-title">Knowledge Graph</div>
+                    <div id="home-knowledge-graph"></div>
+                </div>
+            </div>
+            
+            <!-- PROJECT VIEW SCREEN -->
+            <div class="screen" id="project-screen">
+                <div class="code-header">
+                    <button class="icon-btn" data-action="show-screen" data-screen="home-screen">←</button>
+                    <span class="code-filename" id="current-file-name">file.js</span>
+                    <button class="icon-btn" data-action="show-project-chats">💬</button>
+                </div>
+                <div class="file-switcher">
+                    <div class="file-switcher-name" id="file-switcher-name">file.js</div>
+                    <button class="file-switcher-btn" data-action="show-file-picker">Select Other File</button>
+                </div>
+                <div class="color-toolbar">
+                    <button class="color-btn red" data-action="select-color" data-color="red"></button>
+                    <button class="color-btn green active" data-action="select-color" data-color="green"></button>
+                    <button class="color-btn yellow" data-action="select-color" data-color="yellow"></button>
+                    <button class="color-btn blue" data-action="select-color" data-color="blue"></button>
+                    <button class="color-btn purple" data-action="select-color" data-color="purple"></button>
+                    <button class="color-btn eraser" data-action="select-color" data-color="eraser">🧹</button>
+                    <div class="toolbar-divider"></div>
+                    <button class="toolbar-btn" id="select-mode-btn" data-action="toggle-selection-mode">Select</button>
+                    <button class="toolbar-btn" data-action="apply-selection-range">Mark Range</button>
+                    <button class="toolbar-btn" data-action="clear-selection">Clear</button>
+                    <div class="toolbar-divider"></div>
+                    <button class="toolbar-btn" data-action="show-marked-sections">📑 Sections</button>
+                    <button class="toolbar-btn" data-action="show-project-avatar-chat">🤖 Avatar Chat</button>
+                </div>
+                <div class="selection-status" id="selection-status">Mark mode: tap lines to mark. Hold <strong>Shift</strong> and click another line to mark a full range.</div>
+                <div class="code-viewer" id="code-viewer"></div>
+            </div>
+            
+            <!-- CHAT SCREEN -->
+            <div class="screen" id="chat-screen">
+                <div class="chat-header" style="display:flex;align-items:center;gap:12px;">
+                    <button class="icon-btn" data-action="go-back-from-chat" style="width:32px;height:32px;font-size:14px;">←</button>
+                    <div style="flex:1;">
+                        <div class="chat-header-title" id="chat-title">Chat</div>
+                        <div class="chat-header-sub" id="chat-subtitle">About selected code</div>
+                    </div>
+                    <button class="icon-btn" data-action="capture-chat-learning" style="width:32px;height:32px;">🧠</button>
+                    <button class="icon-btn" data-action="show-chat-bookmarks" style="width:32px;height:32px;">🔖</button>
+                </div>
+                <div class="chat-messages" id="chat-messages"></div>
+                <div class="chat-input-area">
+                    <div class="session-jump-banner is-hidden" id="chat-session-jump-banner">
+                        <span id="chat-session-jump-text">Read-only memory session</span>
+                        <button class="session-jump-btn" data-action="exit-reference-session">Back to main session</button>
+                    </div>
+                    <div class="gem-selector" id="gem-selector"></div>
+                    <div class="chat-model-row">
+                        <select class="chat-model-provider" id="chat-provider-select"></select>
+                        <select class="chat-model-select" id="chat-model-select"></select>
+                    </div>
+                    <div class="chat-input-row">
+                        <input type="text" class="chat-input" id="chat-input" placeholder="Ask about this code...">
+                        <button class="chat-send" id="chat-send-btn" data-action="send-section-chat">➤</button>
+                    </div>
+                    <div class="queue-status-row">
+                        <span class="queue-status-text" id="chat-queue-status">AI idle</span>
+                        <button class="queue-cancel-btn" id="chat-queue-cancel" data-action="cancel-ai-queue" disabled>Cancel Queue</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- GENERAL CHAT SCREEN -->
+            <div class="screen" id="general-chat-screen">
+                <div class="chat-header" style="display:flex;align-items:center;gap:12px;">
+                    <button class="icon-btn" data-action="show-screen" data-screen="home-screen" style="width:32px;height:32px;font-size:14px;">←</button>
+                    <div style="flex:1;">
+                        <div class="chat-header-title">General Chat</div>
+                        <div class="chat-header-sub" id="general-chat-folder">No folder</div>
+                    </div>
+                    <button class="icon-btn" data-action="capture-chat-learning">🧠</button>
+                    <button class="icon-btn" data-action="show-general-chat-folders">📁</button>
+                    <button class="icon-btn" data-action="show-avatar-picker">🤖</button>
+                </div>
+                <div class="chat-messages" id="general-chat-messages"></div>
+                <div class="chat-input-area">
+                    <div class="session-jump-banner is-hidden" id="general-session-jump-banner">
+                        <span id="general-session-jump-text">Read-only memory session</span>
+                        <button class="session-jump-btn" data-action="exit-reference-session">Back to main session</button>
+                    </div>
+                    <div class="gem-selector" id="general-gem-selector"></div>
+                    <div class="chat-model-row">
+                        <select class="chat-model-provider" id="general-chat-provider-select"></select>
+                        <select class="chat-model-select" id="general-chat-model-select"></select>
+                    </div>
+                    <div class="chat-input-row">
+                        <input type="text" class="chat-input" id="general-chat-input" placeholder="Ask anything...">
+                        <button class="chat-send" id="general-chat-send-btn" data-action="send-general-chat">➤</button>
+                    </div>
+                    <div class="queue-status-row">
+                        <span class="queue-status-text" id="general-queue-status">AI idle</span>
+                        <button class="queue-cancel-btn" id="general-queue-cancel" data-action="cancel-ai-queue" disabled>Cancel Queue</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LEARNING SCREEN -->
+            <div class="screen" id="learning-screen">
+                <div class="code-header">
+                    <button class="icon-btn" data-action="show-screen" data-screen="home-screen">â†</button>
+                    <span class="code-filename">What We Learned</span>
+                    <span></span>
+                </div>
+                <div class="scrollable">
+                    <div class="section-title">Today</div>
+                    <div id="learning-today-list"></div>
+
+                    <div class="section-title">Concept Explorer</div>
+                    <div id="learning-concepts-list"></div>
+
+                    <div class="section-title">Knowledge Graph</div>
+                    <div id="learning-graph"></div>
+
+                    <div class="section-title">Session Snippets</div>
+                    <div id="learning-snippets-list"></div>
+                </div>
+            </div>
+
+            <!-- LEARNING REVIEW CHAT SCREEN -->
+            <div class="screen" id="learning-chat-screen">
+                <div class="chat-header" style="display:flex;align-items:center;gap:12px;">
+                    <button class="icon-btn" data-action="show-screen" data-screen="learning-screen" style="width:32px;height:32px;font-size:14px;">â†</button>
+                    <div style="flex:1;min-width:0;">
+                        <div class="chat-header-title" id="learning-review-title">Learning Q&A</div>
+                        <div class="chat-header-sub" id="learning-review-subtitle">Ask questions about this concept</div>
+                    </div>
+                    <button class="icon-btn" data-action="learning-review-new-chat" style="width:32px;height:32px;">+</button>
+                </div>
+                <div class="chat-messages" id="learning-review-messages"></div>
+                <div class="chat-input-area">
+                    <div class="chat-input-row">
+                        <input type="text" class="chat-input" id="learning-review-input" placeholder="Ask to relearn this concept...">
+                        <button class="chat-send" id="learning-review-send-btn" data-action="send-learning-review">âž¤</button>
+                    </div>
+                    <div class="queue-status-row">
+                        <span class="queue-status-text" id="learning-review-queue-status">AI idle</span>
+                        <button class="queue-cancel-btn" id="learning-review-queue-cancel" data-action="cancel-ai-queue" disabled>Cancel Queue</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- GEMS SCREEN -->
+            <div class="screen" id="gems-screen">
+                <div class="code-header">
+                    <button class="icon-btn" data-action="show-screen" data-screen="home-screen">←</button>
+                    <span class="code-filename">My Gems</span>
+                    <button class="icon-btn" data-action="show-modal" data-modal="create-gem-modal">+</button>
+                </div>
+                <div class="scrollable" id="gems-list"></div>
+            </div>
+            
+            <!-- BOOKMARKS SCREEN -->
+            <div class="screen" id="bookmarks-screen">
+                <div class="code-header">
+                    <button class="icon-btn" data-action="show-screen" data-screen="home-screen">←</button>
+                    <span class="code-filename">Bookmarks</span>
+                    <span></span>
+                </div>
+                <div class="bookmarks-filter" id="bookmarks-filter">
+                    <div class="filter-chip active" data-action="filter-bookmarks" data-color="all">All</div>
+                    <div class="filter-chip" data-action="filter-bookmarks" data-color="red">🔴</div>
+                    <div class="filter-chip" data-action="filter-bookmarks" data-color="green">🟢</div>
+                    <div class="filter-chip" data-action="filter-bookmarks" data-color="yellow">🟡</div>
+                    <div class="filter-chip" data-action="filter-bookmarks" data-color="blue">🔵</div>
+                    <div class="filter-chip" data-action="filter-bookmarks" data-color="purple">🟣</div>
+                </div>
+                <div class="scrollable" id="bookmarks-list"></div>
+            </div>
+            
+            <!-- FOLDERS SCREEN -->
+            <div class="screen" id="folders-screen">
+                <div class="code-header">
+                    <button class="icon-btn" data-action="show-screen" data-screen="home-screen">←</button>
+                    <span class="code-filename">Saved Snippets</span>
+                    <button class="icon-btn" data-action="show-modal" data-modal="create-folder-modal">+</button>
+                </div>
+                <div class="scrollable" id="folders-list"></div>
+            </div>
+            
+            <!-- SETTINGS SCREEN -->
+            <div class="screen" id="settings-screen">
+                <div class="code-header">
+                    <button class="icon-btn" data-action="show-screen" data-screen="home-screen">←</button>
+                    <span class="code-filename">Settings</span>
+                    <span></span>
+                </div>
+                <div class="scrollable">
+                    <div class="section-title">Active API</div>
+                    <div class="api-section">
+                        <div class="api-select" data-action="set-active-api" data-api="openrouter" id="api-openrouter">
+                            <span class="api-status"></span>
+                            <span>OpenRouter</span>
+                        </div>
+                    </div>
+                    <div class="api-section">
+                        <div class="api-select" data-action="set-active-api" data-api="siliconflow" id="api-siliconflow">
+                            <span class="api-status"></span>
+                            <span>SiliconFlow</span>
+                        </div>
+                    </div>
+                    <div class="api-section">
+                        <div class="api-select" data-action="set-active-api" data-api="legacy" id="api-legacy" style="display:none;">
+                            <span class="api-status"></span>
+                            <span>🟣 OpenRouter</span>
+                        </div>
+                    </div>
+                    
+                    <div class="section-title">API Keys</div>
+                    <div class="input-group">
+                        <label class="input-label">OpenRouter API Key</label>
+                        <input type="password" class="input-field" id="openrouter-key" placeholder="sk-or-...">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">OpenRouter Model</label>
+                        <select class="input-field" id="openrouter-model"></select>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">SiliconFlow API Key</label>
+                        <input type="password" class="input-field" id="siliconflow-key" placeholder="sk-...">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">SiliconFlow Model</label>
+                        <select class="input-field" id="siliconflow-model"></select>
+                    </div>
+                    <button class="btn btn-primary" data-action="save-settings" style="margin-bottom:16px;">Save Settings</button>
+                    
+                    <div class="section-title">Color Names</div>
+                    <div class="input-group">
+                        <label class="input-label">🔴 Red Name</label>
+                        <input type="text" class="input-field" id="color-name-red" placeholder="e.g. Important">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">🟢 Green Name</label>
+                        <input type="text" class="input-field" id="color-name-green" placeholder="e.g. Understood">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">🟡 Yellow Name</label>
+                        <input type="text" class="input-field" id="color-name-yellow" placeholder="e.g. Review later">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">🔵 Blue Name</label>
+                        <input type="text" class="input-field" id="color-name-blue" placeholder="e.g. Question">
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">🟣 Purple Name</label>
+                        <input type="text" class="input-field" id="color-name-purple" placeholder="e.g. Complex">
+                    </div>
+                    <button class="btn btn-secondary" data-action="save-color-names" style="margin-bottom:24px;">Save Color Names</button>
+                    
+                    <div class="section-title">Backup</div>
+                    <button class="btn btn-secondary" id="settings-export-btn" data-action="export-backup" style="margin-bottom:12px;">📤 Export Backup</button>
+                    <button class="btn btn-secondary" id="settings-import-trigger-btn" data-action="open-import-backup">📥 Import Backup</button>
+                    <input type="file" id="import-backup" accept=".json" style="display:none;">
+                    
+                    <div class="section-title" style="margin-top:24px;">Danger Zone</div>
+                    <button class="btn btn-danger" id="settings-clear-btn" data-action="clear-all-data">🗑️ Clear All Data</button>
+                </div>
+            </div>
+            
+        </div>
+        
+        <!-- Bottom Nav -->
+        <nav class="bottom-nav">
+            <div class="nav-item active" data-action="show-screen" data-screen="home-screen">
+                <span class="icon">🏠</span>
+                <span class="label">Home</span>
+            </div>
+            <div class="nav-item" data-action="show-screen" data-screen="learning-screen">
+                <span class="icon">💎</span>
+                <span class="label">Learned</span>
+            </div>
+            <div class="nav-item" data-action="show-screen" data-screen="folders-screen">
+                <span class="icon">📁</span>
+                <span class="label">Snippets</span>
+            </div>
+            <div class="nav-item" data-action="show-screen" data-screen="settings-screen">
+                <span class="icon">⚙️</span>
+                <span class="label">Settings</span>
+            </div>
+        </nav>
+    </div>
+    
+    <!-- MODALS -->
+    
+    <!-- Import GitHub Modal -->
+    <div class="modal-overlay" id="import-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-title">Import from GitHub</span>
+                <button class="modal-close" data-action="hide-modal" data-modal="import-modal">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label class="input-label">GitHub Repository URL</label>
+                    <input type="text" class="input-field" id="github-url" placeholder="https://github.com/user/repo">
+                </div>
+                <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">
+                    Supports: github.com/user/repo or raw file URLs
+                </p>
+                <div class="import-status is-hidden" id="import-status" aria-live="polite"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" data-action="import-from-github">Import</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Paste Code Modal -->
+    <div class="modal-overlay" id="paste-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-title">Paste Code</span>
+                <button class="modal-close" data-action="hide-modal" data-modal="paste-modal">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label class="input-label">Project Name</label>
+                    <input type="text" class="input-field" id="paste-name" placeholder="My Project">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Code</label>
+                    <textarea class="input-field" id="paste-code" placeholder="Paste your code here..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" data-action="create-from-paste">Create Project</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Create Gem Modal -->
+    <div class="modal-overlay" id="create-gem-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-title">Create Gem</span>
+                <button class="modal-close" data-action="hide-modal" data-modal="create-gem-modal">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label class="input-label">Name</label>
+                    <input type="text" class="input-field" id="gem-name" placeholder="e.g. Explain Simply">
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Face</label>
+                    <div class="face-picker" id="gem-face-picker">
+                        <div class="face-option selected" data-face="🤓">🤓</div>
+                        <div class="face-option" data-face="😎">😎</div>
+                        <div class="face-option" data-face="🧠">🧠</div>
+                        <div class="face-option" data-face="👨‍🏫">👨‍🏫</div>
+                        <div class="face-option" data-face="🤖">🤖</div>
+                        <div class="face-option" data-face="🎯">🎯</div>
+                        <div class="face-option" data-face="🔥">🔥</div>
+                        <div class="face-option" data-face="⚡">⚡</div>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Color</label>
+                    <div class="color-picker" id="gem-color-picker">
+                        <div class="color-option red selected" data-color="red"></div>
+                        <div class="color-option green" data-color="green"></div>
+                        <div class="color-option yellow" data-color="yellow"></div>
+                        <div class="color-option blue" data-color="blue"></div>
+                        <div class="color-option purple" data-color="purple"></div>
+                        <div class="color-option orange" data-color="orange"></div>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label class="input-label">Prompt</label>
+                    <textarea class="input-field" id="gem-prompt" placeholder="e.g. Explain everything simply, like I'm a beginner. Use analogies."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" data-action="create-gem">Create Gem</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Create Folder Modal -->
+    <div class="modal-overlay" id="create-folder-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-title">Create Folder</span>
+                <button class="modal-close" data-action="hide-modal" data-modal="create-folder-modal">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label class="input-label">Folder Name</label>
+                    <input type="text" class="input-field" id="folder-name" placeholder="e.g. Loop Explanations">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" data-action="create-folder">Create Folder</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Save Snippet Modal -->
+    <div class="modal-overlay" id="save-snippet-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-title">Save to Folder</span>
+                <button class="modal-close" data-action="hide-modal" data-modal="save-snippet-modal">×</button>
+            </div>
+            <div class="modal-body" id="save-snippet-folders"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="save-snippet-new-folder-btn" data-action="show-modal" data-modal="create-folder-modal">+ New Folder</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bubble Color Modal -->
+    <div class="modal-overlay" id="bubble-color-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-title">Message Options</span>
+                <button class="modal-close" data-action="hide-modal" data-modal="bubble-color-modal">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <label class="input-label">Border Color</label>
+                    <div class="color-picker" id="bubble-color-picker">
+                        <div class="color-option green selected" data-color="green"></div>
+                        <div class="color-option red" data-color="red"></div>
+                        <div class="color-option yellow" data-color="yellow"></div>
+                        <div class="color-option blue" data-color="blue"></div>
+                        <div class="color-option purple" data-color="purple"></div>
+                        <div class="color-option orange" data-color="orange"></div>
+                    </div>
+                </div>
+                <button class="btn btn-secondary" id="bubble-toggle-bookmark-btn" style="margin-bottom:12px;" data-action="toggle-bookmark">🔖 Toggle Bookmark</button>
+                <button class="btn btn-secondary" id="bubble-save-folder-btn" data-action="save-to-folder">📁 Save to Folder</button>
+                <button class="btn btn-secondary" id="bubble-save-learning-btn" style="margin-top:12px;" data-action="save-learning-from-bubble">🧠 Save as Learning</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Learning Concept Modal -->
+    <div class="modal-overlay" id="learning-concept-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-title">Concept Review</span>
+                <button class="modal-close" data-action="hide-modal" data-modal="learning-concept-modal">X</button>
+            </div>
+            <div class="modal-body" id="learning-concept-modal-body"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="learning-concept-ask-btn" data-action="start-learning-review-chat-from-modal">Ask Learner Gem</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Avatar Picker Modal -->
+    <div class="modal-overlay" id="avatar-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-title">Choose Avatar</span>
+                <button class="modal-close" data-action="hide-modal" data-modal="avatar-modal">×</button>
+            </div>
+            <div class="modal-body" id="avatar-list"></div>
+        </div>
+    </div>
+    
+    <!-- Sections Modal -->
+    <div class="modal-overlay" id="sections-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-title">Marked Sections</span>
+                <button class="modal-close" data-action="hide-modal" data-modal="sections-modal">×</button>
+            </div>
+            <div class="modal-body" id="sections-list"></div>
+        </div>
+    </div>
+
+    <!-- File Picker Modal -->
+    <div class="modal-overlay" id="file-picker-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-title">Select File</span>
+                    <button class="modal-close" data-action="hide-modal" data-modal="file-picker-modal">X</button>
+            </div>
+            <div class="modal-body" id="file-picker-list"></div>
+        </div>
+    </div>
+
+    <!-- Project Actions Modal -->
+    <div class="modal-overlay" id="project-actions-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-title" id="project-actions-title">Project</span>
+                    <button class="modal-close" data-action="cancel-project-delete">X</button>
+            </div>
+            <div class="modal-body">
+                <button class="btn btn-danger" data-action="delete-selected-project">Delete Project</button>
+                <button class="btn btn-secondary" style="margin-top:12px;" data-action="cancel-project-delete">X Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="./scripts/01-state.js"></script>
+    <script src="./scripts/02-init.js"></script>
+    <script src="./scripts/03-navigation.js"></script>
+    <script src="./scripts/04-projects.js"></script>
+    <script src="./scripts/05-sections-chats.js"></script>
+    <script src="./scripts/06-chat-ui.js"></script>
+    <script src="./scripts/07-general-chat.js"></script>
+    <script src="./scripts/08-gems.js"></script>
+    <script src="./scripts/09-folders-snippets.js"></script>
+    <script src="./scripts/10-bookmarks.js"></script>
+    <script src="./scripts/11-avatars.js"></script>
+    <script src="./scripts/12-ai-api.js"></script>
+    <script src="./scripts/13-settings.js"></script>
+    <script src="./scripts/14-backup.js"></script>
+    <script src="./scripts/16-learning.js"></script>
+    <script src="./scripts/15-init-2.js"></script>
+</body>
+</html>

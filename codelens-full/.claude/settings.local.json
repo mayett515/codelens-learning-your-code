@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(\"/c/Program Files/Android/Android Studio/jbr/bin/keytool.exe\" -genkeypair -v -keystore \"C:\\\\CodeLens-v2\\\\codelens-full\\\\android\\\\app\\\\release-key.jks\" -keyalg RSA -keysize 2048 -validity 10000 -alias codelens -storepass codelens123 -keypass codelens123 -dname \"CN=CodeLens, OU=Dev, O=CodeLens, L=Unknown, ST=Unknown, C=US\")",
+      "Bash(./gradlew assembleRelease)",
+      "Bash(ls \"C:\\\\CodeLens-v2\\\\codelens-full\\\\android\\\\gradlew\"*)",
+      "Bash(ls \"C:\\\\CodeLens-v2\\\\codelens-full\\\\android\\\\gradle\"*)",
+      "Bash(gradle wrapper:*)",
+      "Bash(find /c/Users/muell/.gradle/wrapper/dists/gradle-8.13-bin -name gradle-wrapper*.jar)",
+      "Bash(ANDROID_HOME=\"C:/Users/muell/AppData/Local/Android/Sdk\" JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" \"C:/Program Files/Android/Android Studio/jbr/bin/java\" -jar gradle/wrapper/gradle-wrapper.jar assembleRelease)"
+    ]
+  }
+}

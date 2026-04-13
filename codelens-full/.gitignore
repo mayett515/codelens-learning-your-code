@@ -1,0 +1,31 @@
+# Workspace / editor
+.vscode/
+
+# OS noise
+Thumbs.db
+.DS_Store
+
+# Node dependencies
+node_modules/
+
+# Android generated files
+android/.gradle/
+android/build/
+android/app/build/
+android/.idea/
+
+# Local machine / secrets
+android/local.properties
+local.keys.json
+local.keys.json.txt
+.env
+.env.*
+*.jks
+*.keystore
+
+# Build outputs
+*.apk
+*.aab
+
+# Logs
+*.log
