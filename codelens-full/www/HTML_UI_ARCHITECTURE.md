@@ -1,44 +1,70 @@
 # CodeLens HTML/UI Architecture
 
-This document focuses on the UI shell and visual structure in `public/`.
+This document maps the UI shell in `public/` and the key interaction surfaces.
 
-## UI Layout
+## 1) Primary UI Files
 
 - `index.html`
-  - Screen and modal markup only.
-  - Uses `data-action` attributes (no inline handlers).
-  - Loads `styles/app.css` and script chunks in numeric order.
+  - Screen + modal structure
+  - `data-action` wiring targets
+  - script include order
 - `styles/app.css`
-  - Theme tokens, layout, component styles, code/chat styling.
+  - layout, theme tokens, code/chat styles, graph styles, mode styles
 - `assets/icons.svg`
-  - Shared icon sprite used by static markup and dynamic renderers.
+  - shared icon sprite
 
-## Screen Map
+## 2) Screen Map
 
 - `home-screen`
-  - Project list, quick actions, folder preview.
+  - project cards, quick actions, recent chat preview
 - `project-screen`
-  - Code viewer, file picker launch, color/selection toolbar.
+  - code header, file switcher, recent files row, color/mode toolbar, code viewer
 - `chat-screen`
-  - Section chat.
+  - section/line chat with header-level `Save as Learning`
 - `general-chat-screen`
-  - Folder-scoped general chat.
+  - general chat with folder/avatar controls + `Save as Learning`
+- `learning-screen`
+  - today sessions, concept explorer, knowledge graph, session snippets
+- `learning-chat-screen`
+  - concept-focused review chat
+- `recent-chats-screen`
+  - searchable recent chats list with incremental loading
 - `gems-screen`
-  - Prompt templates.
+  - prompt template management
 - `bookmarks-screen`
-  - Saved bookmarks + color filter chips.
+  - bookmark list with color filters
 - `folders-screen`
-  - Folder list for snippet/chat organization.
+  - saved snippet folders
 - `settings-screen`
-  - Provider selection, API key inputs, model and backup controls.
+  - provider/model selection, API keys, color labels, backup
 
-## UI Interaction Model
+## 3) High-Impact Modals
 
-- Static and dynamic clickable elements use `data-action`.
-- A centralized delegated click dispatcher in `scripts/02-init.js` routes all UI actions.
-- Visual icon replacements run during `init()` via `applyKitIcons()`.
+- import GitHub / paste code
+- file picker modal (includes search + search-mode toggle)
+- bubble options modal
+- learning capture preview modal (confirm/cancel)
+- sections modal
+- project action modal
+- avatar picker and folder/gem creation modals
 
-## Script Load Order (UI-Relevant)
+## 4) Interaction Model
+
+- All UI actions are delegated through `data-action`.
+- `02-init.js` handles action dispatch.
+- `project-screen` interaction modes:
+  - `View`: open existing marks and line explain flows without accidental marking
+  - `Mark`: line/range marking tools enabled
+- marker visuals include nested same-color depth distinctions.
+- line-level point markers can open line chats separately from section chats.
+
+## 5) Knowledge Graph UI
+
+- Graph is rendered in learning UI surfaces.
+- Pan + pinch zoom are mobile-first interactions.
+- Zoom is gesture-driven (not plus/minus buttons).
+
+## 6) Script Load Order
 
 1. `scripts/01-state.js`
 2. `scripts/02-init.js`
@@ -54,4 +80,11 @@ This document focuses on the UI shell and visual structure in `public/`.
 12. `scripts/12-ai-api.js`
 13. `scripts/13-settings.js`
 14. `scripts/14-backup.js`
-15. `scripts/15-init-2.js`
+15. `scripts/16-learning.js`
+16. `scripts/15-init-2.js` (boot call)
+
+## 7) UI Editing Guardrails
+
+- Keep `www/index.html` and `android/.../assets/public/index.html` aligned.
+- Add new clicks via `data-action`, not inline handlers.
+- If new stateful UI is added, ensure it is normalized in state shape routines.

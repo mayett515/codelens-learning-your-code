@@ -1,10 +1,27 @@
-# CodeLens Architecture Index
+# CodeLens Architecture Entry Point
 
-This folder has two distinct architecture docs:
+This folder contains the runtime-facing architecture docs used by the shipped app UI.
+
+## Start Here
 
 - `HTML_UI_ARCHITECTURE.md`
-  - Screen/layout structure (`index.html`, CSS, icon sprite, UI load order).
+  - Screen map, modal map, UI interaction model, and script load order.
 - `CODE_RUNTIME_ARCHITECTURE.md`
-  - Runtime flow (state, storage, delegated actions, AI queue, module boundaries).
+  - Runtime behavior, state/persistence, action routing, AI queue, learning flow, and native bridges.
 
-Use this file as the entry point, then open the doc that matches what you are changing.
+## Related Root Docs
+
+Use these from the repository root (`codelens-full/`):
+
+- `APP_STRUCTURE.md`
+  - Full project map and function-level reference.
+- `LEARNING_NATIVE_BRIDGE.md`
+  - Native learning vector bridge contract (`getTopMatches`, `upsertEmbedding`, `deleteEmbedding`).
+- `ANDROID_BUILD_SETUP.md`
+  - Local Java/Gradle setup and stable build commands.
+- `MAIN.md`
+  - Master index of all markdown docs and when to include each one in prompts.
+
+## Mirror Note
+
+The docs in `www/` and `android/app/src/main/assets/public/` should stay aligned because Android runs the `assets/public` copy while local web flow commonly references `www/`.

@@ -2,6 +2,8 @@
 
 This document explains how the app is organized, how data flows through it, and where key functions live.
 
+For the full markdown documentation map, see `MAIN.md`.
+
 ## 1) High-level architecture
 
 CodeLens is a Capacitor Android app with a plain HTML/CSS/JavaScript frontend (no React/Vue framework).
@@ -255,7 +257,7 @@ Graph interaction:
 - Pan/zoom support:
   - `getLearningGraphZoom()`
   - `setLearningGraphZoom()`
-  - pannable viewport and zoom controls
+  - pannable viewport with mobile pinch-zoom gestures
 
 ## 9) Gems, avatars, snippets, bookmarks, settings
 

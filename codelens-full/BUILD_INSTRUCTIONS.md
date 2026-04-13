@@ -1,4 +1,32 @@
-# CodeLens v2.0 - Build Instructions
+# CodeLens Build Instructions
+
+## Current Build Path (April 2026)
+
+Use this path for reliable local builds:
+
+1. From `codelens-full`:
+   - `npm install`
+   - `npx cap sync`
+2. From `codelens-full/android`:
+   - `.\build-local.ps1 compileDebugSources`
+   - `.\build-local.ps1 assembleDebug`
+3. APK output:
+   - `android/app/build/outputs/apk/debug/app-debug.apk`
+
+Notes:
+- `build-local.ps1` auto-detects Java from Android Studio JBR.
+- `build-local.ps1` sets a project-local Gradle home by default.
+- If Gradle lock issues appear, rerun `.\build-local.ps1 tasks`.
+
+## Current Core UX Summary
+
+- Project screen supports `View` mode and `Mark` mode.
+- Recent chats screen supports search + incremental loading.
+- Chat header action is `Save as Learning` with preview-before-save flow.
+- Learning screen includes session list, concept explorer, and graph view.
+
+---
+Legacy instructions from the original package format are preserved below.
 
 ## Features Included
 - 📦 Import from GitHub (paste repo URL)
