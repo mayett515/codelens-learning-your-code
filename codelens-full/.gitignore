@@ -10,6 +10,7 @@ node_modules/
 
 # Android generated files
 android/.gradle/
+android/.gradle-user-home*/
 android/build/
 android/app/build/
 android/.idea/

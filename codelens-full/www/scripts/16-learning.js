@@ -23,6 +23,12 @@ function truncateLearningText(value = '', maxLen = 180) {
     return `${text.slice(0, Math.max(0, maxLen - 3))}...`;
 }
 
+function normalizeNullableLearningText(value = '') {
+    if (value === null || value === undefined) return null;
+    const text = cleanLearningText(value);
+    return text || null;
+}
+
 function createLearningId(prefix = 'learn') {
     return `${prefix}-${Date.now()}-${Math.floor(Math.random() * 1e6).toString(16)}`;
 }
@@ -77,6 +83,32 @@ function getCurrentChatContextDescriptor() {
                 projectId: project.id,
                 sectionId,
                 fileIdx: state.currentFile
+            },
+            messages: Array.isArray(chat.messages) ? chat.messages : []
+        };
+    }
+
+    if (state.currentChat?.type === 'line' && state.currentProject !== null) {
+        const project = state.projects[state.currentProject];
+        const lineChatId = state.currentChat?.id;
+        const chat = project?.lineChats?.[lineChatId];
+        const lineIdx = Number(state.currentChat?.lineIdx);
+        const fileIdx = Number(state.currentChat?.fileIdx);
+        if (!project || !lineChatId || !chat || !Number.isInteger(lineIdx) || !Number.isInteger(fileIdx)) return null;
+
+        const fileName = cleanLearningText(project.files?.[fileIdx]?.name || `File ${fileIdx + 1}`);
+        const title = `${project.name || 'Project'} - ${fileName} - Line ${lineIdx + 1}`;
+
+        return {
+            scope: 'section',
+            sessionKey: `line:${project.id}:${fileIdx}:${lineIdx}`,
+            title,
+            source: {
+                type: 'line',
+                projectId: project.id,
+                lineChatId,
+                fileIdx,
+                lineIdx
             },
             messages: Array.isArray(chat.messages) ? chat.messages : []
         };
@@ -169,30 +201,232 @@ function extractLearningKeywords(text = '', maxCount = 8) {
         .map(entry => entry[0]);
 }
 
+const LEARNING_CONCEPT_STOP_WORDS = new Set([
+    'core', 'principle', 'concept', 'concepts', 'key', 'takeaway', 'takeaways',
+    'guide', 'pattern', 'patterns', 'approach', 'approaches', 'method', 'methods',
+    'thing', 'things', 'topic', 'topics', 'note', 'notes', 'idea', 'ideas',
+    'learn', 'learning', 'learned', 'session', 'chat', 'summary'
+]);
+
+function collectLearningConceptTokens(values = []) {
+    const sourceValues = Array.isArray(values) ? values : [values];
+    const set = new Set();
+
+    sourceValues.forEach(value => {
+        if (Array.isArray(value)) {
+            value.forEach(item => {
+                tokenizeLearningText(item || '').forEach(token => {
+                    if (token.length < 3 || LEARNING_CONCEPT_STOP_WORDS.has(token)) return;
+                    set.add(token);
+                });
+            });
+            return;
+        }
+
+        tokenizeLearningText(value || '').forEach(token => {
+            if (token.length < 3 || LEARNING_CONCEPT_STOP_WORDS.has(token)) return;
+            set.add(token);
+        });
+    });
+
+    return Array.from(set);
+}
+
+function computeLearningTokenJaccard(leftTokens = [], rightTokens = []) {
+    const left = new Set(Array.isArray(leftTokens) ? leftTokens : []);
+    const right = new Set(Array.isArray(rightTokens) ? rightTokens : []);
+    if (!left.size || !right.size) return 0;
+
+    let overlap = 0;
+    left.forEach(token => {
+        if (right.has(token)) overlap += 1;
+    });
+
+    const union = left.size + right.size - overlap;
+    if (!union) return 0;
+    return overlap / union;
+}
+
+function getLearningConceptSimilarity(leftConcept = {}, rightConcept = {}) {
+    const leftTitle = cleanLearningText(leftConcept.title || '').toLowerCase();
+    const rightTitle = cleanLearningText(rightConcept.title || '').toLowerCase();
+    const leftCoreConcept = cleanLearningText(leftConcept.coreConcept || leftConcept.core_concept || '').toLowerCase();
+    const rightCoreConcept = cleanLearningText(rightConcept.coreConcept || rightConcept.core_concept || '').toLowerCase();
+    const leftPattern = cleanLearningText(leftConcept.architecturalPattern || leftConcept.architectural_pattern || '').toLowerCase();
+    const rightPattern = cleanLearningText(rightConcept.architecturalPattern || rightConcept.architectural_pattern || '').toLowerCase();
+    const leftParadigm = cleanLearningText(leftConcept.programmingParadigm || leftConcept.programming_paradigm || '').toLowerCase();
+    const rightParadigm = cleanLearningText(rightConcept.programmingParadigm || rightConcept.programming_paradigm || '').toLowerCase();
+
+    const leftTitleTokens = collectLearningConceptTokens([leftConcept.title || '']).slice(0, 6);
+    const rightTitleTokens = collectLearningConceptTokens([rightConcept.title || '']).slice(0, 6);
+    const leftKeywordTokens = collectLearningConceptTokens([leftConcept.keywords || [], leftConcept.languageSyntax || leftConcept.language_syntax || []]).slice(0, 12);
+    const rightKeywordTokens = collectLearningConceptTokens([rightConcept.keywords || [], rightConcept.languageSyntax || rightConcept.language_syntax || []]).slice(0, 12);
+    const leftCoreTokens = collectLearningConceptTokens([
+        leftConcept.coreConcept || leftConcept.core_concept || '',
+        leftConcept.architecturalPattern || leftConcept.architectural_pattern || '',
+        leftConcept.programmingParadigm || leftConcept.programming_paradigm || ''
+    ]).slice(0, 14);
+    const rightCoreTokens = collectLearningConceptTokens([
+        rightConcept.coreConcept || rightConcept.core_concept || '',
+        rightConcept.architecturalPattern || rightConcept.architectural_pattern || '',
+        rightConcept.programmingParadigm || rightConcept.programming_paradigm || ''
+    ]).slice(0, 14);
+    const leftAllTokens = collectLearningConceptTokens([
+        leftConcept.title || '',
+        leftConcept.principle || '',
+        leftConcept.summary || '',
+        leftConcept.coreConcept || leftConcept.core_concept || '',
+        leftConcept.architecturalPattern || leftConcept.architectural_pattern || '',
+        leftConcept.programmingParadigm || leftConcept.programming_paradigm || '',
+        leftConcept.languageSyntax || leftConcept.language_syntax || [],
+        leftConcept.keywords || []
+    ]).slice(0, 30);
+    const rightAllTokens = collectLearningConceptTokens([
+        rightConcept.title || '',
+        rightConcept.principle || '',
+        rightConcept.summary || '',
+        rightConcept.coreConcept || rightConcept.core_concept || '',
+        rightConcept.architecturalPattern || rightConcept.architectural_pattern || '',
+        rightConcept.programmingParadigm || rightConcept.programming_paradigm || '',
+        rightConcept.languageSyntax || rightConcept.language_syntax || [],
+        rightConcept.keywords || []
+    ]).slice(0, 30);
+
+    const exactTitleMatch = Boolean(leftTitle && rightTitle && leftTitle === rightTitle);
+    const inclusiveTitleMatch = Boolean(
+        leftTitle && rightTitle &&
+        leftTitle.length >= 8 &&
+        rightTitle.length >= 8 &&
+        (leftTitle.includes(rightTitle) || rightTitle.includes(leftTitle))
+    );
+    const exactCoreMatch = Boolean(leftCoreConcept && rightCoreConcept && leftCoreConcept === rightCoreConcept);
+    const exactPatternMatch = Boolean(leftPattern && rightPattern && leftPattern === rightPattern);
+    const exactParadigmMatch = Boolean(leftParadigm && rightParadigm && leftParadigm === rightParadigm);
+
+    const titleScore = computeLearningTokenJaccard(leftTitleTokens, rightTitleTokens);
+    const keywordScore = computeLearningTokenJaccard(leftKeywordTokens, rightKeywordTokens);
+    const coreScore = computeLearningTokenJaccard(leftCoreTokens, rightCoreTokens);
+    const allScore = computeLearningTokenJaccard(leftAllTokens, rightAllTokens);
+
+    let score = (titleScore * 0.35) + (keywordScore * 0.14) + (coreScore * 0.36) + (allScore * 0.15);
+    if (exactTitleMatch) score = Math.max(score, 0.86);
+    if (inclusiveTitleMatch) score = Math.max(score, 0.74);
+    if (exactCoreMatch) score = Math.max(score, 0.84);
+    if (exactPatternMatch) score = Math.max(score, 0.8);
+    if (exactParadigmMatch) score = Math.max(score, 0.76);
+    return clampLearning01(score);
+}
+
+function chooseMoreSpecificLearningPrinciple(existingValue = '', nextValue = '') {
+    const existing = cleanLearningText(existingValue || '');
+    const incoming = cleanLearningText(nextValue || '');
+    if (!existing) return incoming;
+    if (!incoming) return existing;
+    if (existing.toLowerCase() === incoming.toLowerCase()) return existing;
+
+    const similarity = computeLearningTokenJaccard(
+        collectLearningConceptTokens([existing]),
+        collectLearningConceptTokens([incoming])
+    );
+    if (similarity >= 0.7) {
+        return incoming.length > existing.length ? incoming : existing;
+    }
+    return existing;
+}
+
+function findBestLearningConceptMatch(candidateConcept = {}, options = {}) {
+    const minScore = clampLearning01(options.minScore ?? 0.62);
+    const excludeSessionId = String(options.excludeSessionId || '');
+    let bestMatch = null;
+
+    state.learningHub.sessions.forEach(session => {
+        if (!session || !Array.isArray(session.concepts)) return;
+        if (excludeSessionId && session.id === excludeSessionId) return;
+
+        session.concepts.forEach(concept => {
+            const score = getLearningConceptSimilarity(candidateConcept, concept);
+            if (score < minScore) return;
+            if (!bestMatch || score > bestMatch.score) {
+                bestMatch = { concept, session, score };
+            }
+        });
+    });
+
+    return bestMatch;
+}
+
 function addConceptToLearningSession(session, concept = {}) {
     if (!session) return null;
 
     const title = truncateLearningText(concept.title || '', 80) || 'Core Principle';
-    const principle = truncateLearningText(concept.principle || concept.summary || concept.content || '', 280);
+    const summary = truncateLearningText(concept.summary || concept.principle || concept.content || '', 280);
+    const principle = summary;
+    const coreConcept = truncateLearningText(concept.coreConcept || concept.core_concept || '', 140);
+    const architecturalPattern = normalizeNullableLearningText(concept.architecturalPattern || concept.architectural_pattern || '');
+    const programmingParadigm = truncateLearningText(concept.programmingParadigm || concept.programming_paradigm || '', 90);
+    const languageSyntax = uniqueLearningStrings(Array.isArray(concept.languageSyntax)
+        ? concept.languageSyntax
+        : Array.isArray(concept.language_syntax)
+            ? concept.language_syntax
+            : []).slice(0, 10);
     if (!principle) return null;
 
     const keywords = uniqueLearningStrings([
         ...(Array.isArray(concept.keywords) ? concept.keywords : []),
+        ...languageSyntax,
+        coreConcept,
+        architecturalPattern || '',
+        programmingParadigm,
         ...extractLearningKeywords(`${title} ${principle}`, 8)
-    ]).slice(0, 8);
+    ]).slice(0, 10);
 
-    const normalizedKey = `${title.toLowerCase()}|${principle.slice(0, 80).toLowerCase()}`;
-    const duplicate = session.concepts.find(item => {
-        const otherKey = `${String(item.title || '').toLowerCase()}|${String(item.principle || '').slice(0, 80).toLowerCase()}`;
-        return normalizedKey === otherKey;
+    const candidateConcept = { title, principle, summary, coreConcept, architecturalPattern, programmingParadigm, languageSyntax, keywords };
+    const duplicate = session.concepts.find(item => getLearningConceptSimilarity(candidateConcept, item) >= 0.84);
+    if (duplicate) {
+        duplicate.principle = chooseMoreSpecificLearningPrinciple(duplicate.principle || '', principle);
+        duplicate.summary = chooseMoreSpecificLearningPrinciple(duplicate.summary || '', summary || principle);
+        duplicate.coreConcept = duplicate.coreConcept || coreConcept;
+        duplicate.architecturalPattern = duplicate.architecturalPattern || architecturalPattern;
+        duplicate.programmingParadigm = duplicate.programmingParadigm || programmingParadigm;
+        duplicate.languageSyntax = uniqueLearningStrings([...(duplicate.languageSyntax || []), ...languageSyntax]).slice(0, 10);
+        duplicate.keywords = uniqueLearningStrings([...(duplicate.keywords || []), ...keywords]).slice(0, 10);
+        duplicate.source = String(duplicate.source || concept.source || 'summary');
+        return duplicate;
+    }
+
+    const globalMatch = findBestLearningConceptMatch(candidateConcept, {
+        minScore: 0.62,
+        excludeSessionId: session.id
     });
-    if (duplicate) return duplicate;
+    const canonicalTitle = truncateLearningText(globalMatch?.concept?.title || title, 80) || title;
+    const canonicalKeywords = uniqueLearningStrings([
+        ...keywords,
+        ...languageSyntax,
+        ...(Array.isArray(globalMatch?.concept?.keywords) ? globalMatch.concept.keywords : []),
+        ...extractLearningKeywords(`${canonicalTitle} ${principle}`, 6)
+    ]).slice(0, 10);
+
+    if (globalMatch?.concept) {
+        globalMatch.concept.keywords = uniqueLearningStrings([
+            ...(Array.isArray(globalMatch.concept.keywords) ? globalMatch.concept.keywords : []),
+            ...canonicalKeywords
+        ]).slice(0, 10);
+        globalMatch.concept.coreConcept = globalMatch.concept.coreConcept || coreConcept;
+        globalMatch.concept.architecturalPattern = globalMatch.concept.architecturalPattern || architecturalPattern;
+        globalMatch.concept.programmingParadigm = globalMatch.concept.programmingParadigm || programmingParadigm;
+        globalMatch.concept.languageSyntax = uniqueLearningStrings([...(globalMatch.concept.languageSyntax || []), ...languageSyntax]).slice(0, 10);
+    }
 
     const newConcept = {
         id: createLearningId('concept'),
-        title,
+        title: canonicalTitle,
         principle,
-        keywords,
+        summary,
+        coreConcept,
+        architecturalPattern,
+        programmingParadigm,
+        languageSyntax,
+        keywords: canonicalKeywords,
         createdAt: new Date().toISOString(),
         source: String(concept.source || 'summary')
     };
@@ -236,6 +470,11 @@ function deriveLearningConceptRecords() {
                 sessionDateKey: session.dateKey,
                 title: concept.title,
                 principle: concept.principle,
+                summary: concept.summary || concept.principle || '',
+                coreConcept: concept.coreConcept || '',
+                architecturalPattern: concept.architecturalPattern || null,
+                programmingParadigm: concept.programmingParadigm || '',
+                languageSyntax: Array.isArray(concept.languageSyntax) ? concept.languageSyntax : [],
                 keywords: Array.isArray(concept.keywords) ? concept.keywords : [],
                 createdAt: concept.createdAt || session.updatedAt || session.createdAt || '',
                 source: concept.source || 'summary'
@@ -245,6 +484,359 @@ function deriveLearningConceptRecords() {
     return records;
 }
 
+const LEARNING_VECTOR_MIN_LENGTH = 24;
+const LEARNING_VECTOR_PREFETCH_LIMIT = 140;
+const LEARNING_VECTOR_MAX_UPDATES_PER_QUERY = 10;
+const LEARNING_QUERY_EMBED_CACHE_LIMIT = 24;
+const learningEmbeddingJobs = new Map();
+const learningQueryEmbeddingCache = new Map();
+
+function getLearningEmbeddingsStore() {
+    ensureStateShape();
+    if (!state.learningHub.embeddings || typeof state.learningHub.embeddings !== 'object') {
+        state.learningHub.embeddings = {};
+    }
+    return state.learningHub.embeddings;
+}
+
+function buildLearningConceptSignature(concept = {}) {
+    const parts = [
+        cleanLearningText(concept.title || ''),
+        cleanLearningText(concept.summary || concept.principle || ''),
+        cleanLearningText(concept.coreConcept || ''),
+        cleanLearningText(concept.architecturalPattern || ''),
+        cleanLearningText(concept.programmingParadigm || ''),
+        uniqueLearningStrings(concept.languageSyntax || []).join(','),
+        uniqueLearningStrings(concept.keywords || []).join(',')
+    ];
+    return parts.join('|').toLowerCase();
+}
+
+function buildLearningConceptEmbeddingText(concept = {}) {
+    const syntax = uniqueLearningStrings(concept.languageSyntax || []).slice(0, 10).join(', ');
+    const keywords = uniqueLearningStrings(concept.keywords || []).slice(0, 12).join(', ');
+    return [
+        `Title: ${concept.title || 'Concept'}`,
+        `Summary: ${concept.summary || concept.principle || ''}`,
+        `Core concept: ${concept.coreConcept || ''}`,
+        `Architectural pattern: ${concept.architecturalPattern || ''}`,
+        `Programming paradigm: ${concept.programmingParadigm || ''}`,
+        `Language syntax: ${syntax || 'n/a'}`,
+        `Keywords: ${keywords || 'n/a'}`
+    ].join('\n');
+}
+
+function pruneLearningEmbeddingsToKnownConcepts(concepts = []) {
+    const store = getLearningEmbeddingsStore();
+    const validIds = new Set((Array.isArray(concepts) ? concepts : []).map(item => String(item?.id || '')).filter(Boolean));
+    Object.keys(store).forEach(conceptId => {
+        if (!validIds.has(conceptId)) {
+            deleteEmbedding({ id: conceptId });
+            delete store[conceptId];
+        }
+    });
+}
+
+function getLearningCosineSimilarity(leftVector = [], rightVector = []) {
+    if (!Array.isArray(leftVector) || !Array.isArray(rightVector)) return 0;
+    const len = Math.min(leftVector.length, rightVector.length);
+    if (len < LEARNING_VECTOR_MIN_LENGTH) return 0;
+
+    let dot = 0;
+    let normLeft = 0;
+    let normRight = 0;
+    for (let i = 0; i < len; i++) {
+        const a = Number(leftVector[i]);
+        const b = Number(rightVector[i]);
+        if (!Number.isFinite(a) || !Number.isFinite(b)) continue;
+        dot += a * b;
+        normLeft += a * a;
+        normRight += b * b;
+    }
+
+    if (normLeft <= 0 || normRight <= 0) return 0;
+    return dot / (Math.sqrt(normLeft) * Math.sqrt(normRight));
+}
+
+function resolveLearningPayloadObject(payload = null) {
+    if (!payload) return null;
+    if (typeof payload === 'object') return payload;
+
+    const rawText = String(payload || '').trim();
+    if (!rawText) return null;
+
+    if (typeof parseAIPayload === 'function') {
+        const parsed = parseAIPayload(rawText);
+        if (parsed && typeof parsed === 'object') return parsed;
+    }
+
+    try {
+        const parsed = JSON.parse(rawText);
+        return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch (_) {
+        return null;
+    }
+}
+
+function getNativeVectorBridge() {
+    const bridge = window?.ObjectBoxBridge;
+    if (!bridge || typeof bridge !== 'object') return null;
+    if (typeof bridge.getTopMatches !== 'function') return null;
+    if (typeof bridge.upsertEmbedding !== 'function') return null;
+    if (typeof bridge.deleteEmbedding !== 'function') return null;
+    return bridge;
+}
+
+function callNativeVectorBridge(method = '', payload = {}) {
+    const bridge = getNativeVectorBridge();
+    if (!bridge || typeof bridge[method] !== 'function') return null;
+
+    try {
+        const raw = bridge[method](JSON.stringify(payload || {}));
+        return resolveLearningPayloadObject(raw);
+    } catch (error) {
+        console.warn('[learning-vector] native bridge call failed:', error?.message || error);
+        return null;
+    }
+}
+
+// JS interface: native semantic retrieval
+function getTopMatches(payload = {}) {
+    return callNativeVectorBridge('getTopMatches', payload);
+}
+
+// JS interface: native vector upsert
+function upsertEmbedding(payload = {}) {
+    return callNativeVectorBridge('upsertEmbedding', payload);
+}
+
+// JS interface: native vector delete
+function deleteEmbedding(payload = {}) {
+    return callNativeVectorBridge('deleteEmbedding', payload);
+}
+
+function ensureNativeEmbeddingSynced(conceptId = '', embeddingRecord = null) {
+    const id = String(conceptId || '').trim();
+    if (!id || !embeddingRecord || typeof embeddingRecord !== 'object') return false;
+    if (!getNativeVectorBridge()) return false;
+
+    const vector = Array.isArray(embeddingRecord.vector)
+        ? embeddingRecord.vector.map(value => Number(value)).filter(value => Number.isFinite(value)).slice(0, 256)
+        : [];
+    if (vector.length < LEARNING_VECTOR_MIN_LENGTH) return false;
+
+    const currentSignature = String(embeddingRecord.signature || '');
+    const alreadySynced = Boolean(
+        embeddingRecord.nativeSyncedAt &&
+        String(embeddingRecord.nativeSignature || '') === currentSignature
+    );
+    if (alreadySynced) return false;
+
+    const response = upsertEmbedding({
+        id,
+        vector,
+        model: String(embeddingRecord.model || ''),
+        api: String(embeddingRecord.api || ''),
+        signature: currentSignature,
+        updatedAt: String(embeddingRecord.updatedAt || new Date().toISOString())
+    });
+
+    if (!response || response.ok === false) return false;
+    embeddingRecord.nativeSyncedAt = new Date().toISOString();
+    embeddingRecord.nativeSignature = currentSignature;
+    return true;
+}
+
+function getLearningSemanticScoresFromNativeBridge(queryVector = [], concepts = []) {
+    if (!getNativeVectorBridge()) return null;
+
+    const conceptIds = (Array.isArray(concepts) ? concepts : [])
+        .map(item => String(item?.id || '').trim())
+        .filter(Boolean);
+    if (!conceptIds.length) return {};
+
+    const parsed = getTopMatches({
+        vector: queryVector.slice(0, 256),
+        ids: conceptIds,
+        limit: conceptIds.length
+    });
+    if (!parsed || parsed.ok === false) return null;
+
+    const matches = Array.isArray(parsed?.matches) ? parsed.matches : [];
+    if (!matches.length) return {};
+
+    const scoreMap = {};
+    matches.forEach(match => {
+        const id = String(match?.id || match?.conceptId || '').trim();
+        if (!id) return;
+
+        const rawScore = Number(match?.score ?? match?.similarity ?? match?.cosine ?? 0);
+        if (!Number.isFinite(rawScore)) return;
+        const normalized = rawScore >= 0 && rawScore <= 1
+            ? rawScore
+            : ((rawScore + 1) / 2);
+        scoreMap[id] = Math.max(0, Math.min(1, normalized));
+    });
+    return scoreMap;
+}
+
+function computeLearningSemanticScoresLocally(queryVector = [], concepts = [], embeddingStore = {}) {
+    const scoreMap = {};
+    (Array.isArray(concepts) ? concepts : []).forEach(concept => {
+        const conceptId = String(concept?.id || '').trim();
+        if (!conceptId) return;
+
+        const vector = embeddingStore?.[conceptId]?.vector;
+        if (!Array.isArray(vector) || vector.length < LEARNING_VECTOR_MIN_LENGTH) return;
+
+        const cosine = getLearningCosineSimilarity(queryVector, vector);
+        const normalized = Math.max(0, (cosine + 1) / 2);
+        scoreMap[conceptId] = normalized;
+    });
+
+    return scoreMap;
+}
+
+function getLearningSemanticScoreMap(queryVector = [], concepts = [], embeddingStore = {}) {
+    if (!Array.isArray(queryVector) || queryVector.length < LEARNING_VECTOR_MIN_LENGTH) return null;
+    const nativeMap = getLearningSemanticScoresFromNativeBridge(queryVector, concepts);
+    if (nativeMap && typeof nativeMap === 'object' && Object.keys(nativeMap).length) return nativeMap;
+    return computeLearningSemanticScoresLocally(queryVector, concepts, embeddingStore);
+}
+
+function getLearningQueryEmbeddingCacheKey(queryText = '') {
+    return cleanLearningText(queryText || '').toLowerCase().slice(0, 1800);
+}
+
+function getLearningQueryEmbeddingFromCache(queryText = '') {
+    const key = getLearningQueryEmbeddingCacheKey(queryText);
+    if (!key) return null;
+    return learningQueryEmbeddingCache.get(key) || null;
+}
+
+function setLearningQueryEmbeddingCache(queryText = '', embeddingPayload = null) {
+    const key = getLearningQueryEmbeddingCacheKey(queryText);
+    if (!key || !embeddingPayload?.vector) return;
+
+    if (learningQueryEmbeddingCache.size >= LEARNING_QUERY_EMBED_CACHE_LIMIT) {
+        const oldestKey = learningQueryEmbeddingCache.keys().next().value;
+        if (oldestKey) learningQueryEmbeddingCache.delete(oldestKey);
+    }
+    learningQueryEmbeddingCache.set(key, embeddingPayload);
+}
+
+async function embedTextForLearning(queryText = '', options = {}) {
+    const text = cleanLearningText(queryText || '');
+    if (!text) return null;
+    if (typeof getBestEmbeddingForText !== 'function') return null;
+
+    try {
+        return await getBestEmbeddingForText(text, {
+            provider: options.provider || ''
+        });
+    } catch (_) {
+        return null;
+    }
+}
+
+async function getLearningQueryEmbeddingPayload(queryText = '', options = {}) {
+    const cached = getLearningQueryEmbeddingFromCache(queryText);
+    if (cached?.vector?.length) return cached;
+
+    const embedded = await embedTextForLearning(queryText, options);
+    if (!embedded?.vector?.length) return null;
+
+    setLearningQueryEmbeddingCache(queryText, embedded);
+    return embedded;
+}
+
+async function ensureLearningEmbeddingForConcept(concept = {}, options = {}) {
+    const conceptId = String(concept?.id || '').trim();
+    if (!conceptId) return null;
+
+    const signature = buildLearningConceptSignature(concept);
+    const store = getLearningEmbeddingsStore();
+    const existing = store[conceptId];
+    const hasUsableExisting = Boolean(
+        existing &&
+        existing.signature === signature &&
+        Array.isArray(existing.vector) &&
+        existing.vector.length >= LEARNING_VECTOR_MIN_LENGTH
+    );
+    if (hasUsableExisting && !options.force) {
+        ensureNativeEmbeddingSynced(conceptId, existing);
+        return existing;
+    }
+
+    const jobKey = `${conceptId}:${signature}`;
+    if (learningEmbeddingJobs.has(jobKey)) {
+        return learningEmbeddingJobs.get(jobKey);
+    }
+
+    const job = (async () => {
+        const payload = await embedTextForLearning(buildLearningConceptEmbeddingText(concept), options);
+        if (!payload?.vector || payload.vector.length < LEARNING_VECTOR_MIN_LENGTH) return null;
+
+        store[conceptId] = {
+            vector: payload.vector.slice(0, 256),
+            model: String(payload.model || ''),
+            api: String(payload.api || ''),
+            updatedAt: new Date().toISOString(),
+            signature,
+            nativeSyncedAt: '',
+            nativeSignature: ''
+        };
+        ensureNativeEmbeddingSynced(conceptId, store[conceptId]);
+        return store[conceptId];
+    })().catch(() => null).finally(() => {
+        learningEmbeddingJobs.delete(jobKey);
+    });
+
+    learningEmbeddingJobs.set(jobKey, job);
+    return job;
+}
+
+async function syncLearningConceptEmbeddings(concepts = [], options = {}) {
+    const list = Array.isArray(concepts) ? concepts : [];
+    if (!list.length) return false;
+
+    const maxToUpdate = Math.max(1, Number(options.maxToUpdate) || LEARNING_VECTOR_MAX_UPDATES_PER_QUERY);
+    let updated = false;
+    let processed = 0;
+
+    for (const concept of list) {
+        if (processed >= maxToUpdate) break;
+        const conceptId = String(concept?.id || '').trim();
+        if (!conceptId) continue;
+
+        const store = getLearningEmbeddingsStore();
+        const signature = buildLearningConceptSignature(concept);
+        const existing = store[conceptId];
+        const needsUpdate = Boolean(
+            options.force ||
+            !existing ||
+            existing.signature !== signature ||
+            !Array.isArray(existing.vector) ||
+            existing.vector.length < LEARNING_VECTOR_MIN_LENGTH
+        );
+        if (!needsUpdate) {
+            if (ensureNativeEmbeddingSynced(conceptId, existing)) {
+                updated = true;
+            }
+            continue;
+        }
+
+        processed += 1;
+        const result = await ensureLearningEmbeddingForConcept(concept, options);
+        if (result?.vector?.length) updated = true;
+    }
+
+    if (updated && options.save !== false) {
+        saveState();
+    }
+    return updated;
+}
+
 function calculateLearningLinks(concepts = []) {
     const links = [];
     for (let i = 0; i < concepts.length; i++) {
@@ -252,12 +844,46 @@ function calculateLearningLinks(concepts = []) {
             const a = concepts[i];
             const b = concepts[j];
             if (a.sessionId === b.sessionId) continue;
-            const setA = new Set((a.keywords || []).map(word => String(word).toLowerCase()));
-            const setB = new Set((b.keywords || []).map(word => String(word).toLowerCase()));
+            const setA = new Set(collectLearningConceptTokens([
+                a.title || '',
+                a.summary || a.principle || '',
+                a.coreConcept || '',
+                a.architecturalPattern || '',
+                a.programmingParadigm || '',
+                a.languageSyntax || [],
+                a.keywords || []
+            ]));
+            const setB = new Set(collectLearningConceptTokens([
+                b.title || '',
+                b.summary || b.principle || '',
+                b.coreConcept || '',
+                b.architecturalPattern || '',
+                b.programmingParadigm || '',
+                b.languageSyntax || [],
+                b.keywords || []
+            ]));
+
             let overlap = 0;
             setA.forEach(word => {
                 if (setB.has(word)) overlap += 1;
             });
+
+            const similarity = getLearningConceptSimilarity(
+                { title: a.title, principle: a.principle, keywords: a.keywords },
+                { title: b.title, principle: b.principle, keywords: b.keywords }
+            );
+            const sameCanonicalTitle = cleanLearningText(a.title || '').toLowerCase() === cleanLearningText(b.title || '').toLowerCase();
+
+            if (sameCanonicalTitle) {
+                overlap = Math.max(overlap, 3);
+            } else if (similarity >= 0.78) {
+                overlap = Math.max(overlap, 3);
+            } else if (similarity >= 0.64) {
+                overlap = Math.max(overlap, 2);
+            } else if (similarity >= 0.53) {
+                overlap = Math.max(overlap, 1);
+            }
+
             if (overlap <= 0) continue;
 
             links.push({
@@ -280,6 +906,7 @@ function refreshLearningDerivedData() {
     const links = calculateLearningLinks(concepts);
     state.learningHub.concepts = concepts;
     state.learningHub.links = links;
+    pruneLearningEmbeddingsToKnownConcepts(concepts);
 
     const relatedMap = new Map();
     links.forEach(link => {
@@ -324,7 +951,7 @@ function renderLearningSessionsInto(containerId, sessions = []) {
         const relatedCount = (session.relatedSessionIds || []).length;
         const safeId = encodeURIComponent(session.id);
         return `
-            <div class="list-item learning-session-item">
+            <div class="list-item learning-session-item interactive" data-action="open-learning-session" data-session-id="${safeId}">
                 <div class="icon">${uiIcon('brain')}</div>
                 <div class="info">
                     <div class="name">${escapeHtml(session.title || 'Learning Session')}</div>
@@ -527,6 +1154,11 @@ function renderLearningConceptExplorer(containerId = 'learning-concepts-list') {
     container.innerHTML = concepts.map(concept => {
         const safeConceptId = encodeURIComponent(concept.id);
         const keywords = (concept.keywords || []).slice(0, 7);
+        const taxonomy = uniqueLearningStrings([
+            concept.coreConcept || '',
+            concept.architecturalPattern || '',
+            concept.programmingParadigm || ''
+        ]).slice(0, 3);
         const reviewCount = reviewCountByConcept.get(concept.id) || 0;
         const latestReview = getLatestLearningReviewChatForConcept(concept.id);
         const safeReviewId = latestReview ? encodeURIComponent(latestReview.id) : '';
@@ -537,11 +1169,12 @@ function renderLearningConceptExplorer(containerId = 'learning-concepts-list') {
         const conceptStyle = `--learning-strength-fill:${strengthPalette.fill};--learning-strength-stroke:${strengthPalette.stroke};`;
 
         return `
-            <div class="learning-concept-card" style="${conceptStyle}">
+            <div class="learning-concept-card interactive" style="${conceptStyle}" data-action="open-learning-concept" data-concept-id="${safeConceptId}">
                 <div class="learning-concept-title">${escapeHtml(concept.title || 'Core Principle')}</div>
                 <div class="learning-concept-meta">${escapeHtml(concept.sessionDateKey || '')} | ${escapeHtml(concept.sessionTitle || 'Session')} | ${reviewCount} review chat${reviewCount === 1 ? '' : 's'} | ${learnerHint}</div>
                 <div class="learning-strength-badge">${strengthLabel} ${strengthPct}%</div>
                 <div class="learning-concept-principle">${escapeHtml(concept.principle || '')}</div>
+                ${taxonomy.length ? `<div class="learning-keywords">${taxonomy.map(word => `<span class="learning-keyword">${escapeHtml(word)}</span>`).join('')}</div>` : ''}
                 ${keywords.length ? `<div class="learning-keywords">${keywords.map(word => `<span class="learning-keyword">${escapeHtml(word)}</span>`).join('')}</div>` : ''}
                 <div class="learning-concept-actions">
                     <button class="learning-open-btn" data-action="open-learning-concept" data-concept-id="${safeConceptId}">Relearn</button>
@@ -588,11 +1221,19 @@ function openLearningConceptById(rawConceptId = '') {
 
     const relatedTitles = getRelatedConceptTitles(concept.id, 4);
     const keywords = (concept.keywords || []).slice(0, 10);
+    const languageSyntax = (concept.languageSyntax || []).slice(0, 8);
+    const taxonomyFacts = [
+        concept.coreConcept ? `Core concept: ${concept.coreConcept}` : '',
+        concept.architecturalPattern ? `Pattern: ${concept.architecturalPattern}` : '',
+        concept.programmingParadigm ? `Paradigm: ${concept.programmingParadigm}` : ''
+    ].filter(Boolean);
 
     body.innerHTML = `
         <div class="learning-concept-title">${escapeHtml(concept.title || 'Core Principle')}</div>
         <div class="learning-concept-meta">${escapeHtml(concept.sessionDateKey || '')} | ${escapeHtml(session?.title || concept.sessionTitle || 'Session')}</div>
         <div class="learning-modal-principle">${escapeHtml(concept.principle || '')}</div>
+        ${taxonomyFacts.length ? `<div class="learning-modal-block-title">Concept Taxonomy</div><ul class="learning-mini-list">${taxonomyFacts.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : ''}
+        ${languageSyntax.length ? `<div class="learning-modal-block-title">Syntax Layer</div><div class="learning-keywords">${languageSyntax.map(word => `<span class="learning-keyword">${escapeHtml(word)}</span>`).join('')}</div>` : ''}
         ${keywords.length ? `<div class="learning-modal-block-title">Keywords</div><div class="learning-keywords">${keywords.map(word => `<span class="learning-keyword">${escapeHtml(word)}</span>`).join('')}</div>` : ''}
         ${relatedTitles.length ? `<div class="learning-modal-block-title">Related Concepts</div><ul class="learning-mini-list">${relatedTitles.map(title => `<li>${escapeHtml(title)}</li>`).join('')}</ul>` : ''}
     `;
@@ -622,9 +1263,13 @@ function getLearningSnippetsForConcept(session, concept, limit = 3) {
 
 function buildLearningReviewStarterMessage(concept, session) {
     const sessionTitle = session?.title || concept?.sessionTitle || 'Session';
+    const coreConcept = concept?.coreConcept ? `Core concept: ${concept.coreConcept}` : '';
+    const pattern = concept?.architecturalPattern ? `Pattern: ${concept.architecturalPattern}` : '';
     const lines = [
         `Let's relearn **${concept?.title || 'this concept'}**.`,
         concept?.principle ? `Core principle: ${concept.principle}` : '',
+        coreConcept,
+        pattern,
         `Source: ${sessionTitle}`,
         'Ask me for examples, quizzes, analogies, or a step-by-step recap.'
     ].filter(Boolean);
@@ -720,19 +1365,28 @@ function buildLearningReviewSystemPrompts(concept, session) {
     if (!concept) return [];
     const snippets = getLearningSnippetsForConcept(session, concept, 3);
     const snippetLines = snippets.map((snippet, idx) => `- snippet_${idx + 1}: ${truncateLearningText(snippet.content || '', 220)}`).join('\n');
+    const relatedTitles = getRelatedConceptTitles(concept.id || '', 5);
     const learnerGemPrompt = typeof getLearnerGemPrompt === 'function'
         ? String(getLearnerGemPrompt() || '').trim()
         : '';
 
     const prompt = [
-        'You are teaching the user a concept they already learned and want to reinforce.',
+        'You are the user\'s personal Dot Connector and coding mentor.',
+        'Do not teach from scratch. Start by linking this concept to prior memory and explain through association.',
         `Concept title: ${concept.title || 'Core Principle'}`,
-        `Concept principle: ${concept.principle || ''}`,
+        `Concept summary: ${concept.summary || concept.principle || ''}`,
+        `Core concept: ${concept.coreConcept || 'n/a'}`,
+        `Architectural pattern: ${concept.architecturalPattern || 'n/a'}`,
+        `Programming paradigm: ${concept.programmingParadigm || 'n/a'}`,
+        `Language syntax: ${(concept.languageSyntax || []).join(', ') || 'n/a'}`,
         `Keywords: ${(concept.keywords || []).join(', ') || 'n/a'}`,
+        `Related concepts in memory: ${relatedTitles.join(', ') || 'n/a'}`,
         `Session title: ${session?.title || concept.sessionTitle || 'Session'}`,
         `Session date: ${session?.dateKey || concept.sessionDateKey || ''}`,
         snippetLines ? `Relevant snippets:\n${snippetLines}` : '',
-        'Explain clearly, check understanding, and suggest the next small practice step.'
+        'Use a conversational bridge opener (example tone: "Eyy, this should look familiar...").',
+        'State what is the same conceptually and what is different in implementation details.',
+        'End with one concrete next practice step and one check-understanding question.'
     ].filter(Boolean).join('\n');
 
     return [learnerGemPrompt, prompt].filter(Boolean);
@@ -865,6 +1519,27 @@ function getLearningGraphModeMeta(mode = '') {
     return LEARNING_GRAPH_MODE_META[normalized] || LEARNING_GRAPH_MODE_META.connections;
 }
 
+function clampLearningGraphZoom(value = 1.45) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return 1.45;
+    if (numeric < 1) return 1;
+    if (numeric > 2.2) return 2.2;
+    return numeric;
+}
+
+function getLearningGraphZoom() {
+    ensureStateShape();
+    return clampLearningGraphZoom(state.learningHub.graphZoom || 1.45);
+}
+
+function setLearningGraphZoom(zoom = 1.45) {
+    const nextZoom = clampLearningGraphZoom(zoom);
+    if (Math.abs(nextZoom - getLearningGraphZoom()) < 0.001) return;
+    state.learningHub.graphZoom = nextZoom;
+    saveState();
+    renderLearningScreen();
+}
+
 function setLearningGraphMode(mode = '') {
     const nextMode = normalizeLearningGraphMode(mode);
     if (state.learningHub.graphMode === nextMode) return;
@@ -975,11 +1650,16 @@ function renderLearningGraph(containerId = 'learning-graph', options = {}) {
         return;
     }
 
-    const width = options.width || 340;
-    const height = options.height || 230;
+    const showModeControls = Boolean(options.showModeControls);
+    const enablePanZoom = Boolean(options.enablePanZoom);
+    const baseWidth = options.width || 340;
+    const baseHeight = options.height || 230;
+    const zoom = enablePanZoom ? clampLearningGraphZoom(options.zoom ?? getLearningGraphZoom()) : 1;
+    const width = Math.round(baseWidth * zoom);
+    const height = Math.round(baseHeight * zoom);
     const cx = width / 2;
     const cy = height / 2;
-    const sessionRadius = Math.min(width, height) * 0.31;
+    const sessionRadius = Math.min(width, height) * 0.33;
     const conceptRadius = sessionRadius * 0.62;
 
     const positioned = graph.nodes.map(node => ({ ...node, x: cx, y: cy }));
@@ -1015,8 +1695,9 @@ function renderLearningGraph(containerId = 'learning-graph', options = {}) {
 
     const nodeSvg = positioned.map(node => {
         const isSession = node.type === 'session';
-        const radius = isSession ? 10 : 7;
-        const labelY = isSession ? 18 : 14;
+        const radius = isSession ? 11 : 8;
+        const hitRadius = isSession ? 21 : 18;
+        const labelY = isSession ? 20 : 16;
         const labelClass = isSession ? 'learning-graph-label session' : 'learning-graph-label concept';
         const visual = getLearningGraphNodeVisual(node, mode);
         const actionAttr = isSession
@@ -1026,41 +1707,128 @@ function renderLearningGraph(containerId = 'learning-graph', options = {}) {
         return `
             <g class="learning-graph-node ${isSession ? 'session' : 'concept'} interactive" ${actionAttr}>
                 <title>${escapeHtml(title)}</title>
+                <circle class="learning-graph-hit" cx="${node.x.toFixed(1)}" cy="${node.y.toFixed(1)}" r="${hitRadius}"></circle>
                 <circle cx="${node.x.toFixed(1)}" cy="${node.y.toFixed(1)}" r="${radius}" fill="${visual.fill}" stroke="${visual.stroke}" stroke-width="${isSession ? '1.2' : '1.1'}"></circle>
                 <text x="${node.x.toFixed(1)}" y="${(node.y + labelY).toFixed(1)}" text-anchor="middle" class="${labelClass}">${escapeHtml(node.label)}</text>
             </g>
         `;
     }).join('');
 
-    const showModeControls = Boolean(options.showModeControls);
     const modeMeta = getLearningGraphModeMeta(mode);
+    const zoomPct = Math.round(zoom * 100);
     const controlsHtml = showModeControls ? `
-        <div class="learning-graph-controls">
-            ${LEARNING_GRAPH_MODES.map(key => {
-                const meta = getLearningGraphModeMeta(key);
-                const active = key === mode ? 'active' : '';
-                return `<button class="learning-graph-mode-btn ${active}" data-action="set-learning-graph-mode" data-mode="${key}">${meta.label}</button>`;
-            }).join('')}
+        <div class="learning-graph-controls-row">
+            <div class="learning-graph-controls">
+                ${LEARNING_GRAPH_MODES.map(key => {
+                    const meta = getLearningGraphModeMeta(key);
+                    const active = key === mode ? 'active' : '';
+                    return `<button class="learning-graph-mode-btn ${active}" data-action="set-learning-graph-mode" data-mode="${key}">${meta.label}</button>`;
+                }).join('')}
+            </div>
+            ${enablePanZoom ? `
+                <div class="learning-graph-zoom-controls">
+                    <span class="learning-graph-zoom-value">${zoomPct}%</span>
+                </div>
+            ` : ''}
         </div>
         <div class="learning-graph-mode-desc">${escapeHtml(modeMeta.description)}</div>
+        ${enablePanZoom ? '<div class="learning-graph-pan-hint">Use two fingers to zoom and one finger to pan.</div>' : ''}
     ` : '';
 
     container.innerHTML = `
         ${controlsHtml}
-        <div class="learning-graph-wrap">
-            <svg viewBox="0 0 ${width} ${height}" class="learning-graph-svg" aria-label="Knowledge graph">
-                <defs>
-                    <radialGradient id="learningGraphGlow" cx="50%" cy="40%" r="60%">
-                        <stop offset="0%" stop-color="#84d0ff" stop-opacity="0.22"></stop>
-                        <stop offset="100%" stop-color="#84d0ff" stop-opacity="0"></stop>
-                    </radialGradient>
-                </defs>
-                <circle cx="${cx}" cy="${cy}" r="${Math.min(width, height) * 0.44}" fill="url(#learningGraphGlow)"></circle>
-                ${edgeSvg}
-                ${nodeSvg}
-            </svg>
+        <div class="learning-graph-wrap ${enablePanZoom ? 'pannable' : ''}">
+            <div class="learning-graph-pan-viewport ${enablePanZoom ? 'enabled' : ''}">
+                <svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" class="learning-graph-svg ${enablePanZoom ? 'pannable' : ''}" aria-label="Knowledge graph">
+                    <defs>
+                        <radialGradient id="learningGraphGlow" cx="50%" cy="40%" r="60%">
+                            <stop offset="0%" stop-color="#84d0ff" stop-opacity="0.22"></stop>
+                            <stop offset="100%" stop-color="#84d0ff" stop-opacity="0"></stop>
+                        </radialGradient>
+                    </defs>
+                    <circle cx="${cx}" cy="${cy}" r="${Math.min(width, height) * 0.44}" fill="url(#learningGraphGlow)"></circle>
+                    ${edgeSvg}
+                    ${nodeSvg}
+                </svg>
+            </div>
         </div>
     `;
+
+    if (enablePanZoom) {
+        const viewport = container.querySelector('.learning-graph-pan-viewport');
+        if (viewport) {
+            requestAnimationFrame(() => {
+                viewport.scrollLeft = Math.max(0, (viewport.scrollWidth - viewport.clientWidth) / 2);
+                viewport.scrollTop = Math.max(0, (viewport.scrollHeight - viewport.clientHeight) / 2);
+            });
+            bindLearningGraphPinchZoom(viewport, container, zoom);
+        }
+    }
+}
+
+function getTouchDistance(firstTouch, secondTouch) {
+    const dx = Number(firstTouch?.clientX || 0) - Number(secondTouch?.clientX || 0);
+    const dy = Number(firstTouch?.clientY || 0) - Number(secondTouch?.clientY || 0);
+    return Math.sqrt((dx * dx) + (dy * dy));
+}
+
+function bindLearningGraphPinchZoom(viewport, container, currentZoom = 1.45) {
+    if (!viewport || !container) return;
+    const svg = viewport.querySelector('svg.learning-graph-svg');
+    if (!svg) return;
+
+    const stateLocal = {
+        active: false,
+        startDistance: 0,
+        startZoom: clampLearningGraphZoom(currentZoom),
+        targetZoom: clampLearningGraphZoom(currentZoom)
+    };
+
+    const updateZoomLabel = (zoomValue) => {
+        const label = container.querySelector('.learning-graph-zoom-value');
+        if (label) label.textContent = `${Math.round(zoomValue * 100)}%`;
+    };
+
+    const finishPinch = () => {
+        if (!stateLocal.active) return;
+        stateLocal.active = false;
+        svg.style.transform = '';
+        svg.style.transformOrigin = '';
+        const nextZoom = clampLearningGraphZoom(stateLocal.targetZoom);
+        if (Math.abs(nextZoom - getLearningGraphZoom()) > 0.01) {
+            setLearningGraphZoom(nextZoom);
+        } else {
+            updateZoomLabel(getLearningGraphZoom());
+        }
+    };
+
+    viewport.addEventListener('touchstart', event => {
+        if (event.touches.length !== 2) return;
+        stateLocal.active = true;
+        stateLocal.startDistance = getTouchDistance(event.touches[0], event.touches[1]) || 1;
+        stateLocal.startZoom = getLearningGraphZoom();
+        stateLocal.targetZoom = stateLocal.startZoom;
+    }, { passive: true });
+
+    viewport.addEventListener('touchmove', event => {
+        if (!stateLocal.active || event.touches.length !== 2) return;
+        event.preventDefault();
+        const nextDistance = getTouchDistance(event.touches[0], event.touches[1]) || stateLocal.startDistance;
+        const ratio = nextDistance / Math.max(1, stateLocal.startDistance);
+        stateLocal.targetZoom = clampLearningGraphZoom(stateLocal.startZoom * ratio);
+        const liveScale = stateLocal.targetZoom / Math.max(0.1, stateLocal.startZoom);
+        svg.style.transformOrigin = '50% 50%';
+        svg.style.transform = `scale(${liveScale})`;
+        updateZoomLabel(stateLocal.targetZoom);
+    }, { passive: false });
+
+    viewport.addEventListener('touchend', () => {
+        if (stateLocal.active) finishPinch();
+    }, { passive: true });
+
+    viewport.addEventListener('touchcancel', () => {
+        if (stateLocal.active) finishPinch();
+    }, { passive: true });
 }
 
 function renderLearningHomePreview() {
@@ -1100,6 +1868,8 @@ function renderLearningScreen() {
     renderLearningGraph('learning-graph', {
         mode: getLearningGraphMode(),
         showModeControls: true,
+        enablePanZoom: true,
+        zoom: getLearningGraphZoom(),
         maxSessions: 8,
         maxConceptsPerSession: 2,
         width: 340,
@@ -1108,57 +1878,182 @@ function renderLearningScreen() {
     renderLearningSnippets('learning-snippets-list');
 }
 
-function scoreLearningSessionForQuery(session, tokens = []) {
-    if (!tokens.length) return 0;
-    const corpus = [
-        session.title || '',
-        ...(session.concepts || []).map(item => `${item.title || ''} ${item.principle || ''} ${(item.keywords || []).join(' ')}`),
-        ...(session.snippets || []).map(item => item.content || '')
-    ].join(' ').toLowerCase();
+function getLearningCurrentScopeContext(options = {}) {
+    const scope = String(options.scope || '').toLowerCase();
+    const contextParts = [];
+
+    if (scope === 'section') {
+        const project = state.projects?.[state.currentProject];
+        const file = project?.files?.[state.currentFile];
+        if (file?.name) contextParts.push(`Current file: ${file.name}`);
+        if (file?.content) contextParts.push(`Current code excerpt:\n${truncateLearningText(file.content, 1500)}`);
+
+        const activeSectionId = state.currentChat?.type === 'section' ? state.currentChat.id : '';
+        const sectionMessages = project?.chats?.[activeSectionId]?.messages || [];
+        const recentSectionText = sectionMessages
+            .filter(message => !message.pending)
+            .slice(-6)
+            .map(message => `${message.role}: ${truncateLearningText(message.content || '', 220)}`)
+            .join('\n');
+        if (recentSectionText) contextParts.push(`Recent section chat context:\n${recentSectionText}`);
+    } else if (scope === 'general') {
+        const chatIdx = state.generalChats.findIndex(chat => chat.folderId === state.currentGeneralFolder);
+        const messages = chatIdx >= 0 ? state.generalChats[chatIdx].messages : [];
+        const recentGeneralText = (messages || [])
+            .filter(message => !message.pending)
+            .slice(-6)
+            .map(message => `${message.role}: ${truncateLearningText(message.content || '', 220)}`)
+            .join('\n');
+        if (recentGeneralText) contextParts.push(`Recent general chat context:\n${recentGeneralText}`);
+    }
+
+    return contextParts.filter(Boolean).join('\n\n');
+}
+
+function scoreLearningConceptForQuery(concept, queryText = '', tokens = []) {
+    if (!concept) return 0;
+    const titleText = cleanLearningText(concept.title || '').toLowerCase();
+    const summaryText = cleanLearningText(concept.summary || concept.principle || '').toLowerCase();
+    const coreText = cleanLearningText(concept.coreConcept || '').toLowerCase();
+    const patternText = cleanLearningText(concept.architecturalPattern || '').toLowerCase();
+    const paradigmText = cleanLearningText(concept.programmingParadigm || '').toLowerCase();
+    const syntaxText = (concept.languageSyntax || []).map(item => String(item || '').toLowerCase()).join(' ');
+    const keywordText = (concept.keywords || []).map(item => String(item || '').toLowerCase()).join(' ');
+    const sessionText = cleanLearningText(concept.sessionTitle || '').toLowerCase();
 
     let score = 0;
     tokens.forEach(token => {
-        if (corpus.includes(token)) score += 1;
+        if (!token || token.length < 3) return;
+        if (coreText.includes(token)) score += 3.2;
+        if (patternText.includes(token)) score += 2.8;
+        if (paradigmText.includes(token)) score += 2.1;
+        if (titleText.includes(token)) score += 1.9;
+        if (summaryText.includes(token)) score += 1.3;
+        if (syntaxText.includes(token)) score += 1.6;
+        if (keywordText.includes(token)) score += 1.4;
+        if (sessionText.includes(token)) score += 0.8;
     });
+
+    const pseudoConcept = {
+        title: truncateLearningText(queryText, 80),
+        summary: truncateLearningText(queryText, 280),
+        coreConcept: truncateLearningText(queryText, 140),
+        keywords: extractLearningKeywords(queryText, 10)
+    };
+    const similarityBoost = getLearningConceptSimilarity(concept, pseudoConcept);
+    score += similarityBoost * 4.8;
+
+    const ageDays = getConceptAgeDays(concept.createdAt || '');
+    if (ageDays <= 2) score += 0.7;
+    else if (ageDays <= 10) score += 0.4;
+    else if (ageDays <= 30) score += 0.2;
+
     return score;
 }
 
-function getRelevantLearningSessions(query = '', limit = 3) {
-    const sessions = getSortedLearningSessions();
-    if (!sessions.length) return [];
+async function getRelevantLearningConceptPulls(query = '', options = {}, limit = 3) {
+    refreshLearningDerivedData();
+    const maxItems = Math.max(1, Number(limit) || 3);
+    if (!state.learningHub.concepts.length) return [];
 
-    const tokens = tokenizeLearningText(query);
-    const scored = sessions.map(session => ({
-        session,
-        score: scoreLearningSessionForQuery(session, tokens)
+    const currentScopeText = getLearningCurrentScopeContext(options);
+    const queryText = [query, currentScopeText].filter(Boolean).join('\n');
+    const tokens = collectLearningConceptTokens([queryText]).slice(0, 40);
+    const concepts = getLearningConceptRecordsSorted(220);
+    if (!concepts.length) return [];
+
+    const vectorCandidates = concepts.slice(0, Math.min(concepts.length, LEARNING_VECTOR_PREFETCH_LIMIT));
+    const updatedVectors = await syncLearningConceptEmbeddings(vectorCandidates, {
+        maxToUpdate: LEARNING_VECTOR_MAX_UPDATES_PER_QUERY,
+        save: false
+    });
+    if (updatedVectors) saveState();
+
+    const queryEmbedding = await getLearningQueryEmbeddingPayload(queryText, options);
+    const embeddingStore = getLearningEmbeddingsStore();
+    const semanticScoreMap = queryEmbedding?.vector?.length
+        ? await getLearningSemanticScoreMap(queryEmbedding.vector, concepts, embeddingStore)
+        : null;
+    const hasSemanticScores = Boolean(
+        semanticScoreMap &&
+        typeof semanticScoreMap === 'object' &&
+        Object.keys(semanticScoreMap).length
+    );
+
+    const scored = concepts.map(concept => ({
+        concept,
+        lexicalScore: scoreLearningConceptForQuery(concept, queryText, tokens),
+        semanticScore: hasSemanticScores ? Number(semanticScoreMap[concept.id] || 0) : 0
+    })).map(entry => ({
+        ...entry,
+        score: hasSemanticScores
+            ? (entry.lexicalScore * 0.58) + (entry.semanticScore * 7.4)
+            : entry.lexicalScore
     }));
 
-    const relevant = scored
-        .filter(entry => entry.score > 0)
+    const minScore = hasSemanticScores ? 1.1 : 1.35;
+    const ranked = scored
         .sort((a, b) => b.score - a.score)
-        .slice(0, limit)
-        .map(entry => entry.session);
+        .filter(entry => entry.score > minScore);
 
-    if (relevant.length > 0) return relevant;
-    return sessions.slice(0, Math.min(limit, 2));
+    const picked = [];
+    const seenTitles = new Set();
+    ranked.forEach(entry => {
+        if (picked.length >= maxItems) return;
+        const normalizedTitle = cleanLearningText(entry.concept.title || '').toLowerCase();
+        if (normalizedTitle && seenTitles.has(normalizedTitle)) return;
+        if (normalizedTitle) seenTitles.add(normalizedTitle);
+        picked.push(entry.concept);
+    });
+
+    if (picked.length >= maxItems) return picked.slice(0, maxItems);
+
+    for (const concept of concepts) {
+        if (picked.length >= maxItems) break;
+        if (picked.some(item => item.id === concept.id)) continue;
+        picked.push(concept);
+    }
+
+    return picked.slice(0, maxItems);
 }
 
-function getLearningSystemPromptForQuery(query = '') {
+async function getLearningSystemPromptForQuery(query = '', options = {}) {
     refreshLearningDerivedData();
     if (!state.learningHub.sessions.length) return '';
 
-    const sessions = getRelevantLearningSessions(query, 3);
-    if (!sessions.length) return '';
+    const pulls = await getRelevantLearningConceptPulls(query, options, 3);
+    if (!pulls.length) return '';
 
-    const memoryLines = sessions.map(session => {
-        const conceptSummary = (session.concepts || []).slice(0, 2).map(concept => concept.title || '').filter(Boolean).join(', ');
-        return `- id=${session.id}; date=${session.dateKey || ''}; title=${session.title || 'Session'}; concepts=${conceptSummary || 'n/a'}`;
-    }).join('\n');
+    const scopeContext = getLearningCurrentScopeContext(options);
+    const vaultPulls = pulls.map(concept => {
+        const shortTitle = truncateLearningText(concept.title || 'Concept', 42).replace(/[|\]]/g, '');
+        const keywordSummary = (concept.keywords || []).slice(0, 7).join(', ') || 'n/a';
+        const syntaxSummary = (concept.languageSyntax || []).slice(0, 6).join(', ') || 'n/a';
+        return {
+            title: concept.title || 'Concept',
+            core_concept: concept.coreConcept || 'n/a',
+            architectural_pattern: concept.architecturalPattern || 'n/a',
+            programming_paradigm: concept.programmingParadigm || 'n/a',
+            summary: truncateLearningText(concept.summary || concept.principle || '', 160),
+            syntax: syntaxSummary,
+            keywords: keywordSummary,
+            session_ref: `[[SESSION_REF:${concept.sessionId}|${shortTitle}]]`
+        };
+    });
+    const vaultPullsJson = JSON.stringify(vaultPulls, null, 2);
 
     return [
-        'Memory context from prior sessions (use only if relevant):',
-        memoryLines,
-        'If you reference one of these sessions, include this exact token format once:',
+        'You are the user\'s personal "Dot Connector" and coding mentor.',
+        'Your job is to map the current problem/code to concepts from the user\'s own memory vault.',
+        scopeContext ? `Current scope context:\n${scopeContext}` : '',
+        'Highly relevant Vault Pulls (abstract concept cards only, never raw past code):',
+        vaultPullsJson,
+        'Task:',
+        '1) Find the best conceptual match based on core_concept or architectural_pattern, not superficial syntax.',
+        '2) If there is a real match, start immediately with a memory bridge (example tone: "Eyy, this should look familiar...").',
+        '3) Explain via association: map old concept behavior to this new context directly.',
+        '4) If the pulls are genuinely irrelevant, do not force a connection. Say: "This looks like a genuinely new concept for our database. What does this remind you of?"',
+        'If you reference one pull, include this exact token format once:',
         '[[SESSION_REF:<id>|<short title>]]',
         'Do not invent session IDs.'
     ].join('\n');
@@ -1167,6 +2062,13 @@ function getLearningSystemPromptForQuery(query = '') {
 function tryParseLearningSummaryJson(text = '') {
     const source = String(text || '').trim();
     if (!source) return null;
+
+    if (typeof parseAIPayload === 'function') {
+        const parsed = parseAIPayload(source);
+        if (parsed && typeof parsed === 'object') {
+            return parsed;
+        }
+    }
 
     const candidates = [];
     candidates.push(source);
@@ -1190,14 +2092,19 @@ function buildFallbackLearningSummary(messages = []) {
     const latestAssistant = messages.slice().reverse().find(message => message.role === 'assistant' && !message.pending);
     const latestUser = messages.slice().reverse().find(message => message.role === 'user' && !message.pending);
     const principleText = latestAssistant?.content || latestUser?.content || '';
+    const fallbackKeywords = extractLearningKeywords(principleText, 6);
 
     return {
         session_title: 'Captured Learning',
         core_principles: [
             {
                 title: 'Key takeaway',
-                principle: truncateLearningText(principleText, 240),
-                keywords: extractLearningKeywords(principleText, 6)
+                summary: truncateLearningText(principleText, 240),
+                core_concept: 'Problem decomposition and practical implementation',
+                architectural_pattern: null,
+                programming_paradigm: 'Procedural',
+                language_syntax: [],
+                keywords: fallbackKeywords
             }
         ],
         snippets: latestAssistant ? [{ quote: truncateLearningText(latestAssistant.content, 260), reason: 'Most recent assistant explanation' }] : []
@@ -1209,14 +2116,39 @@ function normalizeLearningSummary(summary, messages = []) {
         return buildFallbackLearningSummary(messages);
     }
 
-    const principlesRaw = Array.isArray(summary.core_principles) ? summary.core_principles : [];
+    const principlesRaw = Array.isArray(summary.core_principles)
+        ? summary.core_principles
+        : (summary.title || summary.summary || summary.core_concept)
+            ? [summary]
+            : [];
     const principles = principlesRaw
         .map(item => ({
             title: truncateLearningText(item?.title || '', 80) || 'Core Principle',
-            principle: truncateLearningText(item?.principle || item?.summary || '', 280),
+            summary: truncateLearningText(item?.summary || item?.principle || '', 280),
+            core_concept: truncateLearningText(item?.core_concept || item?.coreConcept || '', 140),
+            architectural_pattern: normalizeNullableLearningText(item?.architectural_pattern ?? item?.architecturalPattern ?? ''),
+            programming_paradigm: truncateLearningText(item?.programming_paradigm || item?.programmingParadigm || '', 90),
+            language_syntax: uniqueLearningStrings(
+                Array.isArray(item?.language_syntax)
+                    ? item.language_syntax
+                    : Array.isArray(item?.languageSyntax)
+                        ? item.languageSyntax
+                        : []
+            ).slice(0, 10),
             keywords: uniqueLearningStrings(Array.isArray(item?.keywords) ? item.keywords : [])
         }))
-        .filter(item => item.principle);
+        .map(item => ({
+            ...item,
+            summary: item.summary || '',
+            keywords: uniqueLearningStrings([
+                ...item.keywords,
+                ...item.language_syntax,
+                item.core_concept,
+                item.architectural_pattern || '',
+                item.programming_paradigm
+            ]).slice(0, 10)
+        }))
+        .filter(item => item.summary);
 
     const snippetsRaw = Array.isArray(summary.snippets) ? summary.snippets : [];
     const snippets = snippetsRaw
@@ -1243,6 +2175,109 @@ function findMessageByQuote(messages = [], quote = '') {
     return messages.find(message => cleanLearningText(message.content || '').toLowerCase().includes(normalizedQuote)) || null;
 }
 
+let pendingLearningCapture = null;
+
+function renderLearningCapturePreview(summary, context, messageCount = 0) {
+    const sessionTitle = truncateLearningText(summary?.session_title || context?.title || 'Learning Session', 90);
+    const principles = Array.isArray(summary?.core_principles) ? summary.core_principles : [];
+    const snippets = Array.isArray(summary?.snippets) ? summary.snippets : [];
+    const cards = principles.length
+        ? principles.map(item => `
+            <div class="learning-preview-card">
+                <div class="learning-preview-card-title">${escapeHtml(item.title || 'Core Principle')}</div>
+                <div class="learning-preview-card-summary">${escapeHtml(item.summary || '')}</div>
+                <div class="learning-preview-card-meta">
+                    <div><strong>Core:</strong> ${escapeHtml(item.core_concept || 'n/a')}</div>
+                    <div><strong>Pattern:</strong> ${escapeHtml(item.architectural_pattern || 'none')}</div>
+                    <div><strong>Paradigm:</strong> ${escapeHtml(item.programming_paradigm || 'n/a')}</div>
+                </div>
+            </div>
+        `).join('')
+        : '<div class="empty-state"><div class="title">No principles extracted</div><div class="desc">Try again after a longer chat.</div></div>';
+
+    return `
+        <div class="learning-preview-title">${escapeHtml(sessionTitle)}</div>
+        <div class="learning-preview-meta">${escapeHtml(String(messageCount))} messages analyzed • ${escapeHtml(String(principles.length))} concepts • ${escapeHtml(String(snippets.length))} snippets</div>
+        ${cards}
+    `;
+}
+
+function applyLearningCapture(summary, context, messages) {
+    const session = getOrCreateLearningSessionForContext({
+        ...context,
+        title: summary.session_title || context.title
+    });
+    if (!session) {
+        showToast('Could not create learning session');
+        return;
+    }
+
+    const touchedConcepts = [];
+    summary.core_principles.forEach(principle => {
+        const savedConcept = addConceptToLearningSession(session, {
+            title: principle.title,
+            summary: principle.summary,
+            principle: principle.summary,
+            coreConcept: principle.core_concept,
+            architecturalPattern: principle.architectural_pattern,
+            programmingParadigm: principle.programming_paradigm,
+            languageSyntax: principle.language_syntax,
+            keywords: principle.keywords,
+            source: 'chat-summary'
+        });
+        if (savedConcept?.id) {
+            touchedConcepts.push({
+                ...savedConcept,
+                sessionId: session.id,
+                sessionTitle: session.title,
+                sessionDateKey: session.dateKey
+            });
+        }
+    });
+
+    summary.snippets.forEach(item => {
+        const matched = findMessageByQuote(messages, item.quote);
+        addSnippetToLearningSession(session, {
+            content: matched?.content || item.quote,
+            role: matched?.role || 'assistant',
+            borderColor: matched?.borderColor || 'green',
+            api: matched?.api || '',
+            model: matched?.model || '',
+            source: 'chat-summary'
+        });
+    });
+
+    session.updatedAt = new Date().toISOString();
+    refreshLearningDerivedData();
+    saveState();
+    renderLearningHomePreview();
+    renderLearningScreen();
+    showToast('Learning captured for this chat');
+
+    if (touchedConcepts.length) {
+        syncLearningConceptEmbeddings(touchedConcepts, {
+            maxToUpdate: Math.min(6, touchedConcepts.length),
+            save: true
+        }).catch(() => null);
+    }
+}
+
+function confirmLearningCapturePreview() {
+    if (!pendingLearningCapture) {
+        hideModal('learning-capture-preview-modal');
+        return;
+    }
+    const { summary, context, messages } = pendingLearningCapture;
+    pendingLearningCapture = null;
+    hideModal('learning-capture-preview-modal');
+    applyLearningCapture(summary, context, messages);
+}
+
+function cancelLearningCapturePreview() {
+    pendingLearningCapture = null;
+    hideModal('learning-capture-preview-modal');
+}
+
 async function captureCurrentChatLearning() {
     if (isReferenceReadOnlyMode()) {
         showToast('This referenced session is read-only');
@@ -1263,15 +2298,44 @@ async function captureCurrentChatLearning() {
 
     const provider = getChatProvider(context.scope);
     const model = getChatModel(context.scope, provider);
-    const history = buildAIHistoryFromMessages(messages).slice(-20);
+    const history = buildAIHistoryFromMessages(messages).slice(-40);
+    const knownConceptTaxonomy = getLearningConceptRecordsSorted(140)
+        .map(item => ({
+            title: item.title || '',
+            coreConcept: item.coreConcept || '',
+            architecturalPattern: item.architecturalPattern || '',
+            programmingParadigm: item.programmingParadigm || ''
+        }))
+        .filter(item => item.title)
+        .slice(0, 28);
+    const knownConceptBlock = knownConceptTaxonomy.length
+        ? `Existing concept taxonomy (reuse a title when the underlying mechanism is the same):\n${knownConceptTaxonomy.map(item => {
+            const facets = [
+                item.coreConcept ? `core=${item.coreConcept}` : '',
+                item.architecturalPattern ? `pattern=${item.architecturalPattern}` : '',
+                item.programmingParadigm ? `paradigm=${item.programmingParadigm}` : ''
+            ].filter(Boolean).join('; ');
+            return `- title=${item.title}${facets ? ` (${facets})` : ''}`;
+        }).join('\n')}`
+        : 'Existing concept taxonomy: none yet.';
 
     const prompt = [
-        'Summarize this conversation into concrete learnings.',
+        'You are an expert computer science taxonomist and knowledge extraction engine.',
+        'Analyze the full provided conversation context and extract broad, language-agnostic learning cards.',
+        knownConceptBlock,
         'Return ONLY valid JSON with this exact shape:',
         '{',
         '  "session_title": "string",',
         '  "core_principles": [',
-        '    { "title": "string", "principle": "string", "keywords": ["string"] }',
+        '    {',
+        '      "title": "string",',
+        '      "summary": "string",',
+        '      "core_concept": "string",',
+        '      "architectural_pattern": "string|null",',
+        '      "programming_paradigm": "string",',
+        '      "language_syntax": ["string"],',
+        '      "keywords": ["string"]',
+        '    }',
         '  ],',
         '  "snippets": [',
         '    { "quote": "string", "reason": "string" }',
@@ -1279,7 +2343,12 @@ async function captureCurrentChatLearning() {
         '}',
         'Rules:',
         '- Max 6 principles.',
-        '- Keep each principle specific and practical.',
+        '- Core concepts must be language-agnostic computer science concepts.',
+        '- Reuse existing concept titles when the core mechanism is the same.',
+        '- Keep title mechanism-focused and under 7 words.',
+        '- Keep each summary specific and practical (1-2 sentences).',
+        '- If no architectural pattern exists, return null for architectural_pattern.',
+        '- language_syntax should list concrete syntax features used in the snippet/chat.',
         '- Snippets must be concise and high-signal.'
     ].join('\n');
 
@@ -1296,43 +2365,13 @@ async function captureCurrentChatLearning() {
 
     const parsed = tryParseLearningSummaryJson(response?.content || '');
     const summary = normalizeLearningSummary(parsed, messages);
-    const session = getOrCreateLearningSessionForContext({
-        ...context,
-        title: summary.session_title || context.title
-    });
-    if (!session) {
-        showToast('Could not create learning session');
-        return;
+    pendingLearningCapture = { summary, context, messages };
+
+    const previewBody = document.getElementById('learning-capture-preview-body');
+    if (previewBody) {
+        previewBody.innerHTML = renderLearningCapturePreview(summary, context, messages.length);
     }
-
-    summary.core_principles.forEach(principle => {
-        addConceptToLearningSession(session, {
-            title: principle.title,
-            principle: principle.principle,
-            keywords: principle.keywords,
-            source: 'chat-summary'
-        });
-    });
-
-    summary.snippets.forEach(item => {
-        const matched = findMessageByQuote(messages, item.quote);
-        addSnippetToLearningSession(session, {
-            content: matched?.content || item.quote,
-            role: matched?.role || 'assistant',
-            borderColor: matched?.borderColor || 'green',
-            api: matched?.api || '',
-            model: matched?.model || '',
-            source: 'chat-summary'
-        });
-    });
-
-    session.updatedAt = new Date().toISOString();
-    refreshLearningDerivedData();
-    saveState();
-    renderLearningHomePreview();
-    renderLearningScreen();
-    hideModal('bubble-color-modal');
-    showToast('Learning captured for this chat');
+    showModal('learning-capture-preview-modal');
 }
 
 function saveSelectedBubbleAsLearning() {
@@ -1370,9 +2409,13 @@ function saveSelectedBubbleAsLearning() {
     });
 
     const firstSentence = cleanLearningText(String(message.content || '').split(/[.!?]\s/)[0] || '');
-    addConceptToLearningSession(session, {
+    const savedConcept = addConceptToLearningSession(session, {
         title: truncateLearningText(firstSentence || 'Saved chat insight', 72),
-        principle: truncateLearningText(message.content || '', 260),
+        summary: truncateLearningText(message.content || '', 260),
+        coreConcept: 'Applied reasoning and implementation detail',
+        architecturalPattern: null,
+        programmingParadigm: 'Mixed',
+        languageSyntax: [],
         keywords: extractLearningKeywords(message.content || '', 6),
         source: 'chat-bubble'
     });
@@ -1384,6 +2427,18 @@ function saveSelectedBubbleAsLearning() {
     renderLearningScreen();
     hideModal('bubble-color-modal');
     showToast('Saved to Learning Hub');
+
+    if (savedConcept?.id) {
+        syncLearningConceptEmbeddings([{
+            ...savedConcept,
+            sessionId: session.id,
+            sessionTitle: session.title,
+            sessionDateKey: session.dateKey
+        }], {
+            maxToUpdate: 1,
+            save: true
+        }).catch(() => null);
+    }
 }
 
 function captureNavigationContext() {
@@ -1410,6 +2465,21 @@ function restoreNavigationContext(context) {
                 state.currentFile = context.currentFile;
             }
             openSectionChatById(chat.id);
+            return;
+        }
+    }
+
+    if (chat.type === 'line' && context.currentProject !== null && context.currentProject !== undefined && chat.id) {
+        if (state.projects[context.currentProject]) {
+            state.currentProject = context.currentProject;
+            if (context.currentFile !== null && context.currentFile !== undefined) {
+                state.currentFile = context.currentFile;
+            }
+            const parsed = parseLineChatMeta(chat.id);
+            openLineChatById(chat.id, {
+                fileIdx: Number.isInteger(chat.fileIdx) ? chat.fileIdx : parsed.fileIdx,
+                lineIdx: Number.isInteger(chat.lineIdx) ? chat.lineIdx : parsed.lineIdx
+            });
             return;
         }
     }
@@ -1462,6 +2532,17 @@ function openLearningSessionById(rawSessionId = '') {
             state.currentProject = projectIndex;
             if (Number.isFinite(source.fileIdx)) state.currentFile = source.fileIdx;
             openSectionChatById(source.sectionId);
+            opened = true;
+        }
+    } else if (source.type === 'line') {
+        const projectIndex = state.projects.findIndex(project => project.id === source.projectId);
+        if (projectIndex >= 0 && source.lineChatId) {
+            state.currentProject = projectIndex;
+            if (Number.isFinite(source.fileIdx)) state.currentFile = source.fileIdx;
+            openLineChatById(source.lineChatId, {
+                fileIdx: Number.isInteger(source.fileIdx) ? source.fileIdx : null,
+                lineIdx: Number.isInteger(source.lineIdx) ? source.lineIdx : null
+            });
             opened = true;
         }
     } else if (source.type === 'general') {
@@ -1518,10 +2599,13 @@ function applyReferenceReadOnlyUI() {
         document.getElementById('chat-send-btn'),
         document.getElementById('chat-provider-select'),
         document.getElementById('chat-model-select'),
+        document.getElementById('chat-capture-learning-btn'),
+        document.getElementById('line-chat-pin-btn'),
         document.getElementById('general-chat-input'),
         document.getElementById('general-chat-send-btn'),
         document.getElementById('general-chat-provider-select'),
-        document.getElementById('general-chat-model-select')
+        document.getElementById('general-chat-model-select'),
+        document.getElementById('general-capture-learning-btn')
     ];
     toggles.forEach(el => {
         if (!el) return;

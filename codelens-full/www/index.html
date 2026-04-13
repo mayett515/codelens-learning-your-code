@@ -48,10 +48,17 @@
                             <div class="icon">💎</div>
                             <div class="label">What We Learned</div>
                         </div>
+                        <div class="quick-card" data-action="show-screen" data-screen="recent-chats-screen">
+                            <div class="icon">ðŸ•’</div>
+                            <div class="label">Recent Chats</div>
+                        </div>
                     </div>
                     
                     <div class="section-title">My Projects</div>
                     <div id="projects-list"></div>
+                    
+                    <div class="section-title">Recent Chats</div>
+                    <div id="home-recent-chats"></div>
                     
                     <div class="section-title">Saved Snippets</div>
                     <div id="folders-preview"></div>
@@ -72,6 +79,10 @@
                     <div class="file-switcher-name" id="file-switcher-name">file.js</div>
                     <button class="file-switcher-btn" data-action="show-file-picker">Select Other File</button>
                 </div>
+                <div class="project-recent-wrap is-hidden" id="project-recent-wrap">
+                    <div class="project-recent-label">Recent in this project</div>
+                    <div class="project-recent-files" id="project-recent-files"></div>
+                </div>
                 <div class="color-toolbar">
                     <button class="color-btn red" data-action="select-color" data-color="red"></button>
                     <button class="color-btn green active" data-action="select-color" data-color="green"></button>
@@ -80,14 +91,18 @@
                     <button class="color-btn purple" data-action="select-color" data-color="purple"></button>
                     <button class="color-btn eraser" data-action="select-color" data-color="eraser">🧹</button>
                     <div class="toolbar-divider"></div>
-                    <button class="toolbar-btn" id="select-mode-btn" data-action="toggle-selection-mode">Select</button>
-                    <button class="toolbar-btn" data-action="apply-selection-range">Mark Range</button>
-                    <button class="toolbar-btn" data-action="clear-selection">Clear</button>
+                    <button class="toolbar-btn active" id="interaction-view-btn" data-action="set-interaction-mode" data-mode="view">View</button>
+                    <button class="toolbar-btn" id="interaction-mark-btn" data-action="set-interaction-mode" data-mode="mark">Mark</button>
+                    <div class="toolbar-divider"></div>
+                    <button class="toolbar-btn interaction-mark-only" id="select-mode-btn" data-action="toggle-selection-mode">Select</button>
+                    <button class="toolbar-btn interaction-mark-only" data-action="apply-selection-range">Mark Range</button>
+                    <button class="toolbar-btn interaction-mark-only" data-action="clear-selection">Clear</button>
                     <div class="toolbar-divider"></div>
                     <button class="toolbar-btn" data-action="show-marked-sections">📑 Sections</button>
                     <button class="toolbar-btn" data-action="show-project-avatar-chat">🤖 Avatar Chat</button>
+                    <button class="toolbar-btn" data-action="show-screen" data-screen="settings-screen">Color Names</button>
                 </div>
-                <div class="selection-status" id="selection-status">Mark mode: tap lines to mark. Hold <strong>Shift</strong> and click another line to mark a full range.</div>
+                <div class="selection-status" id="selection-status">View mode: tap marked code to open chats. Double tap any line to explain that line only.</div>
                 <div class="code-viewer" id="code-viewer"></div>
             </div>
             
@@ -99,7 +114,8 @@
                         <div class="chat-header-title" id="chat-title">Chat</div>
                         <div class="chat-header-sub" id="chat-subtitle">About selected code</div>
                     </div>
-                    <button class="icon-btn" data-action="capture-chat-learning" style="width:32px;height:32px;">🧠</button>
+                    <button class="header-learning-btn" id="chat-capture-learning-btn" data-action="capture-chat-learning">Save as Learning</button>
+                    <button class="icon-btn is-hidden" id="line-chat-pin-btn" data-action="mark-current-line-chat" style="width:32px;height:32px;">•</button>
                     <button class="icon-btn" data-action="show-chat-bookmarks" style="width:32px;height:32px;">🔖</button>
                 </div>
                 <div class="chat-messages" id="chat-messages"></div>
@@ -132,7 +148,7 @@
                         <div class="chat-header-title">General Chat</div>
                         <div class="chat-header-sub" id="general-chat-folder">No folder</div>
                     </div>
-                    <button class="icon-btn" data-action="capture-chat-learning">🧠</button>
+                    <button class="header-learning-btn" id="general-capture-learning-btn" data-action="capture-chat-learning">Save as Learning</button>
                     <button class="icon-btn" data-action="show-general-chat-folders">📁</button>
                     <button class="icon-btn" data-action="show-avatar-picker">🤖</button>
                 </div>
@@ -166,6 +182,10 @@
                     <span></span>
                 </div>
                 <div class="scrollable">
+                    <div class="learning-help-card">
+                        <div class="learning-help-title">How Learning Works</div>
+                        <div class="learning-help-text">Use "Save as Learning" in chat to extract core concepts from the whole conversation, preview them, then confirm save. Bubble menu "Save as Learning" saves only that one message. Opening a session here is read-only memory mode.</div>
+                    </div>
                     <div class="section-title">Today</div>
                     <div id="learning-today-list"></div>
 
@@ -241,6 +261,22 @@
                 <div class="scrollable" id="folders-list"></div>
             </div>
             
+            <!-- RECENT CHATS SCREEN -->
+            <div class="screen" id="recent-chats-screen">
+                <div class="code-header">
+                    <button class="icon-btn" data-action="show-screen" data-screen="home-screen">â†</button>
+                    <span class="code-filename">Recent Chats</span>
+                    <span></span>
+                </div>
+                <div class="recent-chats-tools">
+                    <input type="text" class="recent-chats-search" id="recent-chats-search" placeholder="Search recent chats, project, file, or line...">
+                </div>
+                <div class="scrollable" id="recent-chats-scroll">
+                    <div id="recent-chats-list"></div>
+                    <div class="recent-chats-load-more" id="recent-chats-load-more"></div>
+                </div>
+            </div>
+
             <!-- SETTINGS SCREEN -->
             <div class="screen" id="settings-screen">
                 <div class="code-header">
@@ -541,7 +577,16 @@
                 <span class="modal-title">Select File</span>
                     <button class="modal-close" data-action="hide-modal" data-modal="file-picker-modal">X</button>
             </div>
-            <div class="modal-body" id="file-picker-list"></div>
+            <div class="modal-body">
+                <div class="file-picker-search-wrap">
+                    <input type="text" class="file-picker-search" id="file-picker-search" placeholder="Search file path or file content...">
+                </div>
+                <div class="file-picker-search-tools">
+                    <button class="file-picker-mode-btn active" data-action="set-file-search-mode" data-mode="smart">Path + Content</button>
+                    <button class="file-picker-mode-btn" data-action="set-file-search-mode" data-mode="filename">Filename Only</button>
+                </div>
+                <div id="file-picker-list"></div>
+            </div>
         </div>
     </div>
 
@@ -555,6 +600,21 @@
             <div class="modal-body">
                 <button class="btn btn-danger" data-action="delete-selected-project">Delete Project</button>
                 <button class="btn btn-secondary" style="margin-top:12px;" data-action="cancel-project-delete">X Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Learning Capture Preview Modal -->
+    <div class="modal-overlay" id="learning-capture-preview-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <span class="modal-title">Learning Preview</span>
+                <button class="modal-close" data-action="cancel-learning-capture">X</button>
+            </div>
+            <div class="modal-body" id="learning-capture-preview-body"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-action="cancel-learning-capture" style="margin-bottom:10px;">Cancel</button>
+                <button class="btn btn-primary" data-action="confirm-learning-capture">Save to Learning Hub</button>
             </div>
         </div>
     </div>

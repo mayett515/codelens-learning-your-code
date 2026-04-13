@@ -40,16 +40,23 @@ function applyKitIcons() {
     if (eraserBtn) eraserBtn.innerHTML = uiIcon('eraser');
 
     const toolbarButtons = document.querySelectorAll('#project-screen .toolbar-btn');
-    if (toolbarButtons[3]) toolbarButtons[3].innerHTML = iconWithText('sections', 'Sections');
-    if (toolbarButtons[4]) toolbarButtons[4].innerHTML = iconWithText('bot', 'Avatar Chat');
+    if (toolbarButtons[0]) toolbarButtons[0].innerHTML = iconWithText('menu', 'View');
+    if (toolbarButtons[1]) toolbarButtons[1].innerHTML = iconWithText('target', 'Mark');
+    if (toolbarButtons[5]) toolbarButtons[5].innerHTML = iconWithText('sections', 'Sections');
+    if (toolbarButtons[6]) toolbarButtons[6].innerHTML = iconWithText('bot', 'Avatar Chat');
+    if (toolbarButtons[7]) toolbarButtons[7].innerHTML = iconWithText('settings', 'Color Names');
 
     setIcon('#chat-screen [data-action="go-back-from-chat"]', 'arrow-left');
-    setIcon('#chat-screen [data-action="capture-chat-learning"]', 'brain');
+    const chatCaptureBtn = document.getElementById('chat-capture-learning-btn');
+    if (chatCaptureBtn) chatCaptureBtn.innerHTML = iconWithText('brain', 'Save as Learning', 'tight');
+    const linePinBtn = document.getElementById('line-chat-pin-btn');
+    if (linePinBtn) linePinBtn.innerHTML = uiIcon('bookmark');
     setIcon('#chat-screen [data-action="show-chat-bookmarks"]', 'bookmark');
     setIcon('#chat-send-btn', 'send');
 
     setIcon('#general-chat-screen [data-action="show-screen"][data-screen="home-screen"]', 'arrow-left');
-    setIcon('#general-chat-screen [data-action="capture-chat-learning"]', 'brain');
+    const generalCaptureBtn = document.getElementById('general-capture-learning-btn');
+    if (generalCaptureBtn) generalCaptureBtn.innerHTML = iconWithText('brain', 'Save as Learning', 'tight');
     setIcon('#general-chat-screen [data-action="show-general-chat-folders"]', 'folder');
     setIcon('#general-chat-screen [data-action="show-avatar-picker"]', 'bot');
     setIcon('#general-chat-send-btn', 'send');
@@ -210,11 +217,15 @@ function getSelectionClassForLine(lineIdx) {
 }
 
 function applyLineClasses(lineEl, lineIdx) {
+    if (state.currentProject === null || state.currentFile === null) return;
+    const project = state.projects[state.currentProject];
     const highlights = getCurrentHighlights();
     const color = highlights[lineIdx];
-    const markedClass = color ? `marked-${color}` : '';
+    const markLevel = color ? `mark-level-${getHighlightLevel(project, state.currentFile, lineIdx)}` : '';
+    const markedClass = color ? `marked-${color} ${markLevel}` : '';
     const selectionClass = getSelectionClassForLine(lineIdx);
-    lineEl.className = `code-line ${markedClass} ${selectionClass}`.trim();
+    const pinClass = getLinePinChatId(project, state.currentFile, lineIdx) ? 'has-pin' : '';
+    lineEl.className = `code-line ${markedClass} ${selectionClass} ${pinClass}`.trim();
 }
 
 function detectLanguageFromFileName(fileName = '') {
@@ -316,10 +327,32 @@ function renderCodeLineElement(lineIdx) {
     lineEl.dataset.line = String(lineIdx);
     applyLineClasses(lineEl, lineIdx);
     lineEl.addEventListener('click', (event) => handleLineClick(event, lineIdx));
+    lineEl.addEventListener('dblclick', (event) => {
+        if (typeof handleLineDoubleClick === 'function') handleLineDoubleClick(event, lineIdx);
+    });
 
     const lineNum = document.createElement('span');
     lineNum.className = 'line-num';
     lineNum.textContent = String(lineIdx + 1);
+
+    if (state.currentProject !== null && state.currentFile !== null) {
+        const project = state.projects[state.currentProject];
+        const linePinChatId = getLinePinChatId(project, state.currentFile, lineIdx);
+        if (linePinChatId) {
+            const pinBtn = document.createElement('button');
+            pinBtn.type = 'button';
+            pinBtn.className = 'line-pin-btn';
+            pinBtn.title = `Open line ${lineIdx + 1} note`;
+            pinBtn.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                if (typeof openLineChatById === 'function') {
+                    openLineChatById(linePinChatId, { fileIdx: state.currentFile, lineIdx });
+                }
+            });
+            lineEl.appendChild(pinBtn);
+        }
+    }
 
     const lineText = document.createElement('span');
     lineText.className = 'line-text';
@@ -490,7 +523,24 @@ function setupEventListeners() {
         });
     }
 
+    const recentChatsSearchInput = document.getElementById('recent-chats-search');
+    if (recentChatsSearchInput) {
+        recentChatsSearchInput.addEventListener('input', event => {
+            recentChatsSearchTerm = String(event.target.value || '');
+            recentChatsVisibleCount = RECENT_CHATS_PAGE_SIZE;
+            if (typeof renderRecentChatsScreen === 'function') renderRecentChatsScreen({ reset: true });
+        });
+    }
+
+    const recentChatsScroll = document.getElementById('recent-chats-scroll');
+    if (recentChatsScroll) {
+        recentChatsScroll.addEventListener('scroll', () => {
+            if (typeof handleRecentChatsScroll === 'function') handleRecentChatsScroll(recentChatsScroll);
+        });
+    }
+
     document.addEventListener('click', handleDelegatedActionClick);
+    document.addEventListener('backbutton', handleAndroidBackButton);
     window.addEventListener('resize', scheduleRenderVisibleCodeLines);
     window.addEventListener('beforeunload', flushStateSave);
     document.addEventListener('visibilitychange', () => {
@@ -525,6 +575,11 @@ function runDelegatedAction(actionEl) {
             return true;
         case 'select-color':
             if (actionEl.dataset.color) selectColor(actionEl.dataset.color);
+            return true;
+        case 'set-interaction-mode':
+            if (typeof setCodeInteractionMode === 'function') {
+                setCodeInteractionMode(actionEl.dataset.mode || 'view');
+            }
             return true;
         case 'toggle-selection-mode':
             toggleSelectionMode();
@@ -607,6 +662,15 @@ function runDelegatedAction(actionEl) {
         case 'save-learning-from-bubble':
             if (typeof saveSelectedBubbleAsLearning === 'function') saveSelectedBubbleAsLearning();
             return true;
+        case 'mark-current-line-chat':
+            if (typeof markCurrentLineChat === 'function') markCurrentLineChat();
+            return true;
+        case 'confirm-learning-capture':
+            if (typeof confirmLearningCapturePreview === 'function') confirmLearningCapturePreview();
+            return true;
+        case 'cancel-learning-capture':
+            if (typeof cancelLearningCapturePreview === 'function') cancelLearningCapturePreview();
+            return true;
         case 'open-learning-session':
             if (typeof openLearningSessionById === 'function') openLearningSessionById(actionEl.dataset.sessionId || '');
             return true;
@@ -660,6 +724,9 @@ function runDelegatedAction(actionEl) {
         }
         case 'toggle-file-picker-folder':
             toggleFilePickerFolder(actionEl.dataset.folderPath || '');
+            return true;
+        case 'set-file-search-mode':
+            if (typeof setFilePickerSearchMode === 'function') setFilePickerSearchMode(actionEl.dataset.mode || 'smart');
             return true;
         case 'select-file-from-picker': {
             const fileIndex = getDatasetNumber(actionEl, 'fileIndex');

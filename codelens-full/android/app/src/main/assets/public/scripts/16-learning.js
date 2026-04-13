@@ -88,6 +88,32 @@ function getCurrentChatContextDescriptor() {
         };
     }
 
+    if (state.currentChat?.type === 'line' && state.currentProject !== null) {
+        const project = state.projects[state.currentProject];
+        const lineChatId = state.currentChat?.id;
+        const chat = project?.lineChats?.[lineChatId];
+        const lineIdx = Number(state.currentChat?.lineIdx);
+        const fileIdx = Number(state.currentChat?.fileIdx);
+        if (!project || !lineChatId || !chat || !Number.isInteger(lineIdx) || !Number.isInteger(fileIdx)) return null;
+
+        const fileName = cleanLearningText(project.files?.[fileIdx]?.name || `File ${fileIdx + 1}`);
+        const title = `${project.name || 'Project'} - ${fileName} - Line ${lineIdx + 1}`;
+
+        return {
+            scope: 'section',
+            sessionKey: `line:${project.id}:${fileIdx}:${lineIdx}`,
+            title,
+            source: {
+                type: 'line',
+                projectId: project.id,
+                lineChatId,
+                fileIdx,
+                lineIdx
+            },
+            messages: Array.isArray(chat.messages) ? chat.messages : []
+        };
+    }
+
     if (state.currentChat?.type === 'general') {
         const folderId = state.currentGeneralFolder ?? state.generalChats[state.currentChat.idx]?.folderId ?? null;
         if (folderId === null || folderId === undefined) return null;
@@ -1701,15 +1727,12 @@ function renderLearningGraph(containerId = 'learning-graph', options = {}) {
             </div>
             ${enablePanZoom ? `
                 <div class="learning-graph-zoom-controls">
-                    <button class="learning-graph-mode-btn" data-action="learning-graph-zoom-out">-</button>
                     <span class="learning-graph-zoom-value">${zoomPct}%</span>
-                    <button class="learning-graph-mode-btn" data-action="learning-graph-zoom-in">+</button>
-                    <button class="learning-graph-mode-btn" data-action="learning-graph-zoom-reset">Reset</button>
                 </div>
             ` : ''}
         </div>
         <div class="learning-graph-mode-desc">${escapeHtml(modeMeta.description)}</div>
-        ${enablePanZoom ? '<div class="learning-graph-pan-hint">Drag inside the graph to pan in any direction.</div>' : ''}
+        ${enablePanZoom ? '<div class="learning-graph-pan-hint">Use two fingers to zoom and one finger to pan.</div>' : ''}
     ` : '';
 
     container.innerHTML = `
@@ -1738,8 +1761,74 @@ function renderLearningGraph(containerId = 'learning-graph', options = {}) {
                 viewport.scrollLeft = Math.max(0, (viewport.scrollWidth - viewport.clientWidth) / 2);
                 viewport.scrollTop = Math.max(0, (viewport.scrollHeight - viewport.clientHeight) / 2);
             });
+            bindLearningGraphPinchZoom(viewport, container, zoom);
         }
     }
+}
+
+function getTouchDistance(firstTouch, secondTouch) {
+    const dx = Number(firstTouch?.clientX || 0) - Number(secondTouch?.clientX || 0);
+    const dy = Number(firstTouch?.clientY || 0) - Number(secondTouch?.clientY || 0);
+    return Math.sqrt((dx * dx) + (dy * dy));
+}
+
+function bindLearningGraphPinchZoom(viewport, container, currentZoom = 1.45) {
+    if (!viewport || !container) return;
+    const svg = viewport.querySelector('svg.learning-graph-svg');
+    if (!svg) return;
+
+    const stateLocal = {
+        active: false,
+        startDistance: 0,
+        startZoom: clampLearningGraphZoom(currentZoom),
+        targetZoom: clampLearningGraphZoom(currentZoom)
+    };
+
+    const updateZoomLabel = (zoomValue) => {
+        const label = container.querySelector('.learning-graph-zoom-value');
+        if (label) label.textContent = `${Math.round(zoomValue * 100)}%`;
+    };
+
+    const finishPinch = () => {
+        if (!stateLocal.active) return;
+        stateLocal.active = false;
+        svg.style.transform = '';
+        svg.style.transformOrigin = '';
+        const nextZoom = clampLearningGraphZoom(stateLocal.targetZoom);
+        if (Math.abs(nextZoom - getLearningGraphZoom()) > 0.01) {
+            setLearningGraphZoom(nextZoom);
+        } else {
+            updateZoomLabel(getLearningGraphZoom());
+        }
+    };
+
+    viewport.addEventListener('touchstart', event => {
+        if (event.touches.length !== 2) return;
+        stateLocal.active = true;
+        stateLocal.startDistance = getTouchDistance(event.touches[0], event.touches[1]) || 1;
+        stateLocal.startZoom = getLearningGraphZoom();
+        stateLocal.targetZoom = stateLocal.startZoom;
+    }, { passive: true });
+
+    viewport.addEventListener('touchmove', event => {
+        if (!stateLocal.active || event.touches.length !== 2) return;
+        event.preventDefault();
+        const nextDistance = getTouchDistance(event.touches[0], event.touches[1]) || stateLocal.startDistance;
+        const ratio = nextDistance / Math.max(1, stateLocal.startDistance);
+        stateLocal.targetZoom = clampLearningGraphZoom(stateLocal.startZoom * ratio);
+        const liveScale = stateLocal.targetZoom / Math.max(0.1, stateLocal.startZoom);
+        svg.style.transformOrigin = '50% 50%';
+        svg.style.transform = `scale(${liveScale})`;
+        updateZoomLabel(stateLocal.targetZoom);
+    }, { passive: false });
+
+    viewport.addEventListener('touchend', () => {
+        if (stateLocal.active) finishPinch();
+    }, { passive: true });
+
+    viewport.addEventListener('touchcancel', () => {
+        if (stateLocal.active) finishPinch();
+    }, { passive: true });
 }
 
 function renderLearningHomePreview() {
@@ -2086,6 +2175,109 @@ function findMessageByQuote(messages = [], quote = '') {
     return messages.find(message => cleanLearningText(message.content || '').toLowerCase().includes(normalizedQuote)) || null;
 }
 
+let pendingLearningCapture = null;
+
+function renderLearningCapturePreview(summary, context, messageCount = 0) {
+    const sessionTitle = truncateLearningText(summary?.session_title || context?.title || 'Learning Session', 90);
+    const principles = Array.isArray(summary?.core_principles) ? summary.core_principles : [];
+    const snippets = Array.isArray(summary?.snippets) ? summary.snippets : [];
+    const cards = principles.length
+        ? principles.map(item => `
+            <div class="learning-preview-card">
+                <div class="learning-preview-card-title">${escapeHtml(item.title || 'Core Principle')}</div>
+                <div class="learning-preview-card-summary">${escapeHtml(item.summary || '')}</div>
+                <div class="learning-preview-card-meta">
+                    <div><strong>Core:</strong> ${escapeHtml(item.core_concept || 'n/a')}</div>
+                    <div><strong>Pattern:</strong> ${escapeHtml(item.architectural_pattern || 'none')}</div>
+                    <div><strong>Paradigm:</strong> ${escapeHtml(item.programming_paradigm || 'n/a')}</div>
+                </div>
+            </div>
+        `).join('')
+        : '<div class="empty-state"><div class="title">No principles extracted</div><div class="desc">Try again after a longer chat.</div></div>';
+
+    return `
+        <div class="learning-preview-title">${escapeHtml(sessionTitle)}</div>
+        <div class="learning-preview-meta">${escapeHtml(String(messageCount))} messages analyzed • ${escapeHtml(String(principles.length))} concepts • ${escapeHtml(String(snippets.length))} snippets</div>
+        ${cards}
+    `;
+}
+
+function applyLearningCapture(summary, context, messages) {
+    const session = getOrCreateLearningSessionForContext({
+        ...context,
+        title: summary.session_title || context.title
+    });
+    if (!session) {
+        showToast('Could not create learning session');
+        return;
+    }
+
+    const touchedConcepts = [];
+    summary.core_principles.forEach(principle => {
+        const savedConcept = addConceptToLearningSession(session, {
+            title: principle.title,
+            summary: principle.summary,
+            principle: principle.summary,
+            coreConcept: principle.core_concept,
+            architecturalPattern: principle.architectural_pattern,
+            programmingParadigm: principle.programming_paradigm,
+            languageSyntax: principle.language_syntax,
+            keywords: principle.keywords,
+            source: 'chat-summary'
+        });
+        if (savedConcept?.id) {
+            touchedConcepts.push({
+                ...savedConcept,
+                sessionId: session.id,
+                sessionTitle: session.title,
+                sessionDateKey: session.dateKey
+            });
+        }
+    });
+
+    summary.snippets.forEach(item => {
+        const matched = findMessageByQuote(messages, item.quote);
+        addSnippetToLearningSession(session, {
+            content: matched?.content || item.quote,
+            role: matched?.role || 'assistant',
+            borderColor: matched?.borderColor || 'green',
+            api: matched?.api || '',
+            model: matched?.model || '',
+            source: 'chat-summary'
+        });
+    });
+
+    session.updatedAt = new Date().toISOString();
+    refreshLearningDerivedData();
+    saveState();
+    renderLearningHomePreview();
+    renderLearningScreen();
+    showToast('Learning captured for this chat');
+
+    if (touchedConcepts.length) {
+        syncLearningConceptEmbeddings(touchedConcepts, {
+            maxToUpdate: Math.min(6, touchedConcepts.length),
+            save: true
+        }).catch(() => null);
+    }
+}
+
+function confirmLearningCapturePreview() {
+    if (!pendingLearningCapture) {
+        hideModal('learning-capture-preview-modal');
+        return;
+    }
+    const { summary, context, messages } = pendingLearningCapture;
+    pendingLearningCapture = null;
+    hideModal('learning-capture-preview-modal');
+    applyLearningCapture(summary, context, messages);
+}
+
+function cancelLearningCapturePreview() {
+    pendingLearningCapture = null;
+    hideModal('learning-capture-preview-modal');
+}
+
 async function captureCurrentChatLearning() {
     if (isReferenceReadOnlyMode()) {
         showToast('This referenced session is read-only');
@@ -2173,64 +2365,13 @@ async function captureCurrentChatLearning() {
 
     const parsed = tryParseLearningSummaryJson(response?.content || '');
     const summary = normalizeLearningSummary(parsed, messages);
-    const session = getOrCreateLearningSessionForContext({
-        ...context,
-        title: summary.session_title || context.title
-    });
-    if (!session) {
-        showToast('Could not create learning session');
-        return;
+    pendingLearningCapture = { summary, context, messages };
+
+    const previewBody = document.getElementById('learning-capture-preview-body');
+    if (previewBody) {
+        previewBody.innerHTML = renderLearningCapturePreview(summary, context, messages.length);
     }
-
-    const touchedConcepts = [];
-    summary.core_principles.forEach(principle => {
-        const savedConcept = addConceptToLearningSession(session, {
-            title: principle.title,
-            summary: principle.summary,
-            principle: principle.summary,
-            coreConcept: principle.core_concept,
-            architecturalPattern: principle.architectural_pattern,
-            programmingParadigm: principle.programming_paradigm,
-            languageSyntax: principle.language_syntax,
-            keywords: principle.keywords,
-            source: 'chat-summary'
-        });
-        if (savedConcept?.id) {
-            touchedConcepts.push({
-                ...savedConcept,
-                sessionId: session.id,
-                sessionTitle: session.title,
-                sessionDateKey: session.dateKey
-            });
-        }
-    });
-
-    summary.snippets.forEach(item => {
-        const matched = findMessageByQuote(messages, item.quote);
-        addSnippetToLearningSession(session, {
-            content: matched?.content || item.quote,
-            role: matched?.role || 'assistant',
-            borderColor: matched?.borderColor || 'green',
-            api: matched?.api || '',
-            model: matched?.model || '',
-            source: 'chat-summary'
-        });
-    });
-
-    session.updatedAt = new Date().toISOString();
-    refreshLearningDerivedData();
-    saveState();
-    renderLearningHomePreview();
-    renderLearningScreen();
-    hideModal('bubble-color-modal');
-    showToast('Learning captured for this chat');
-
-    if (touchedConcepts.length) {
-        syncLearningConceptEmbeddings(touchedConcepts, {
-            maxToUpdate: Math.min(6, touchedConcepts.length),
-            save: true
-        }).catch(() => null);
-    }
+    showModal('learning-capture-preview-modal');
 }
 
 function saveSelectedBubbleAsLearning() {
@@ -2328,6 +2469,21 @@ function restoreNavigationContext(context) {
         }
     }
 
+    if (chat.type === 'line' && context.currentProject !== null && context.currentProject !== undefined && chat.id) {
+        if (state.projects[context.currentProject]) {
+            state.currentProject = context.currentProject;
+            if (context.currentFile !== null && context.currentFile !== undefined) {
+                state.currentFile = context.currentFile;
+            }
+            const parsed = parseLineChatMeta(chat.id);
+            openLineChatById(chat.id, {
+                fileIdx: Number.isInteger(chat.fileIdx) ? chat.fileIdx : parsed.fileIdx,
+                lineIdx: Number.isInteger(chat.lineIdx) ? chat.lineIdx : parsed.lineIdx
+            });
+            return;
+        }
+    }
+
     if (chat.type === 'general' && context.currentGeneralFolder !== null && context.currentGeneralFolder !== undefined) {
         const folderIndex = state.folders.findIndex(folder => folder.id === context.currentGeneralFolder);
         if (folderIndex >= 0) {
@@ -2376,6 +2532,17 @@ function openLearningSessionById(rawSessionId = '') {
             state.currentProject = projectIndex;
             if (Number.isFinite(source.fileIdx)) state.currentFile = source.fileIdx;
             openSectionChatById(source.sectionId);
+            opened = true;
+        }
+    } else if (source.type === 'line') {
+        const projectIndex = state.projects.findIndex(project => project.id === source.projectId);
+        if (projectIndex >= 0 && source.lineChatId) {
+            state.currentProject = projectIndex;
+            if (Number.isFinite(source.fileIdx)) state.currentFile = source.fileIdx;
+            openLineChatById(source.lineChatId, {
+                fileIdx: Number.isInteger(source.fileIdx) ? source.fileIdx : null,
+                lineIdx: Number.isInteger(source.lineIdx) ? source.lineIdx : null
+            });
             opened = true;
         }
     } else if (source.type === 'general') {
@@ -2432,10 +2599,13 @@ function applyReferenceReadOnlyUI() {
         document.getElementById('chat-send-btn'),
         document.getElementById('chat-provider-select'),
         document.getElementById('chat-model-select'),
+        document.getElementById('chat-capture-learning-btn'),
+        document.getElementById('line-chat-pin-btn'),
         document.getElementById('general-chat-input'),
         document.getElementById('general-chat-send-btn'),
         document.getElementById('general-chat-provider-select'),
-        document.getElementById('general-chat-model-select')
+        document.getElementById('general-chat-model-select'),
+        document.getElementById('general-capture-learning-btn')
     ];
     toggles.forEach(el => {
         if (!el) return;

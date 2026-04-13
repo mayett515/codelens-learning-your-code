@@ -399,3 +399,27 @@ Use this as a fast "where do I change X?" guide:
 - `ensureStateShape()` must be updated whenever persistent schema changes.
 - If you add a new action button, wire a `data-action` case in `runDelegatedAction()`.
 - For Android release consistency, keep `android/app/src/main/assets/public` and `www` aligned.
+
+## 14) New UX/Navigation Pass (April 2026)
+
+- Code interaction is now split into:
+  - `View` mode: safe browsing, open marked chats, double-tap line explain.
+  - `Mark` mode: section/range marking and color depth layering.
+- Line-level mini chats:
+  - Double-tap any code line in `View` mode.
+  - Optional pin/point marker per line opens its own chat thread.
+- Marker safety:
+  - Eraser now requires deliberate confirmation (double tap / confirm for range).
+- Project recents:
+  - Recent files row keeps newest at the left and includes active file.
+- Recent chats:
+  - Home shows latest 5.
+  - Full recent screen supports search + incremental load on scroll + absolute date.
+- File picker search:
+  - Toggle between `Path + Content` and `Filename Only`.
+- Android back behavior:
+  - Screen history stack + hardware back handling.
+- Learning capture:
+  - `Save as Learning` now shows a concept preview modal before final save.
+- Knowledge graph:
+  - Two-finger pinch zoom on mobile graph viewport (no +/- buttons).

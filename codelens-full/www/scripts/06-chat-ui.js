@@ -249,9 +249,11 @@ function showBubbleOptions(idx) {
 }
 
 function getCurrentMessages() {
+    const project = state.projects[state.currentProject];
     if (state.currentChat?.type === 'section') {
-        const project = state.projects[state.currentProject];
-        return project.chats[state.currentChat.id].messages;
+        return project?.chats?.[state.currentChat.id]?.messages || [];
+    } else if (state.currentChat?.type === 'line') {
+        return project?.lineChats?.[state.currentChat.id]?.messages || [];
     } else if (state.currentChat?.type === 'general') {
         return state.generalChats[state.currentChat.idx]?.messages || [];
     }
@@ -321,7 +323,8 @@ async function sendMessage() {
     const projectIdx = state.currentProject;
     const chatId = state.currentChat?.id;
     const project = state.projects[projectIdx];
-    const chat = project?.chats?.[chatId];
+    const isLineChat = state.currentChat?.type === 'line';
+    const chat = isLineChat ? project?.lineChats?.[chatId] : project?.chats?.[chatId];
     if (!chat) return;
 
     const provider = getChatProvider('section');
@@ -334,7 +337,7 @@ async function sendMessage() {
         systemPrompts.push(activeGem.prompt);
     }
     if (typeof getLearningSystemPromptForQuery === 'function') {
-        const memoryPrompt = getLearningSystemPromptForQuery(text, { scope: 'section' });
+        const memoryPrompt = await getLearningSystemPromptForQuery(text, { scope: 'section' });
         if (memoryPrompt) systemPrompts.push(memoryPrompt);
     }
 
@@ -348,6 +351,8 @@ async function sendMessage() {
         model
     };
     chat.messages.push(pendingReply);
+    if (isLineChat) touchLineChatActivity(projectIdx, chatId, { save: false });
+    else touchSectionChatActivity(projectIdx, chatId, { save: false });
     saveState();
     renderChatMessages(chat.messages);
 
@@ -364,11 +369,13 @@ async function sendMessage() {
     pendingReply.api = response?.api || provider;
     pendingReply.model = response?.model || model;
     pendingReply.pending = false;
+    if (isLineChat) touchLineChatActivity(projectIdx, chatId, { save: false });
+    else touchSectionChatActivity(projectIdx, chatId, { save: false });
     saveState();
 
     if (
         state.currentProject === projectIdx &&
-        state.currentChat?.type === 'section' &&
+        (state.currentChat?.type === 'section' || state.currentChat?.type === 'line') &&
         state.currentChat?.id === chatId
     ) {
         renderChatMessages(chat.messages);

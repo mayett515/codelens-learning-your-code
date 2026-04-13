@@ -36,7 +36,9 @@ let state = {
         sessions: [],
         concepts: [],
         links: [],
+        embeddings: {},
         graphMode: 'connections',
+        graphZoom: 1.45,
         reviewChats: [],
         activeReviewChatId: null,
         activeConceptId: null
@@ -50,10 +52,16 @@ let selectionEndLine = null;
 let lastClickedLine = null;
 let saveStateTimer = null;
 let saveStatePending = false;
+let codeInteractionMode = 'view';
 let filePickerExpanded = new Set();
+let filePickerSearchTerm = '';
+let filePickerSearchMode = 'smart';
+let recentChatsSearchTerm = '';
+let recentChatsVisibleCount = 20;
 let projectPressTimer = null;
 let projectLongPressTriggered = false;
 let projectActionIndex = null;
+let appScreenHistory = [];
 
 const SAVE_DEBOUNCE_MS = 300;
 const VIRTUAL_LINE_HEIGHT = 24;
@@ -66,6 +74,10 @@ const API_KEY_PROVIDERS = ['openrouter', 'siliconflow'];
 const API_PROVIDERS = ['openrouter', 'siliconflow'];
 const DEFAULT_OPENROUTER_MODEL = 'openai/gpt-4o-mini';
 const DEFAULT_SILICONFLOW_MODEL = 'Qwen/Qwen2.5-7B-Instruct';
+const MAX_PROJECT_RECENT_FILES = 8;
+const MAX_RECENT_CHATS = 50;
+const MAX_HOME_RECENT_CHATS = 5;
+const RECENT_CHATS_PAGE_SIZE = 20;
 
 const OPENROUTER_MODEL_OPTIONS = [
     { value: 'openai/gpt-4o-mini', label: 'GPT-4o Mini' },
@@ -263,6 +275,92 @@ function ensureStateShape() {
         };
     });
 
+    state.projects = Array.isArray(state.projects) ? state.projects : [];
+    state.folders = Array.isArray(state.folders) ? state.folders : [];
+    state.generalChats = Array.isArray(state.generalChats) ? state.generalChats : [];
+
+    state.projects.forEach(project => {
+        if (!project || typeof project !== 'object') return;
+        if (!Array.isArray(project.files)) project.files = [];
+        if (!project.highlights || typeof project.highlights !== 'object') project.highlights = {};
+        if (!project.highlightLevels || typeof project.highlightLevels !== 'object') project.highlightLevels = {};
+        if (!project.chats || typeof project.chats !== 'object') project.chats = {};
+        if (!project.lineChats || typeof project.lineChats !== 'object') project.lineChats = {};
+        if (!project.linePins || typeof project.linePins !== 'object') project.linePins = {};
+        if (!Array.isArray(project.avatarChats)) project.avatarChats = [];
+
+        const normalizedRecentFiles = Array.isArray(project.recentFiles)
+            ? project.recentFiles
+                .map(value => Number(value))
+                .filter(value => Number.isInteger(value) && value >= 0 && value < project.files.length)
+            : [];
+        project.recentFiles = Array.from(new Set(normalizedRecentFiles)).slice(0, MAX_PROJECT_RECENT_FILES);
+
+        Object.keys(project.chats).forEach(sectionId => {
+            const chat = project.chats[sectionId];
+            if (!chat || typeof chat !== 'object') {
+                project.chats[sectionId] = { messages: [], bookmarks: [], updatedAt: '' };
+                return;
+            }
+            if (!Array.isArray(chat.messages)) chat.messages = [];
+            if (!Array.isArray(chat.bookmarks)) chat.bookmarks = [];
+            chat.updatedAt = String(chat.updatedAt || chat.createdAt || '');
+        });
+
+        Object.keys(project.highlightLevels).forEach(fileKey => {
+            const byLine = project.highlightLevels[fileKey];
+            if (!byLine || typeof byLine !== 'object') {
+                delete project.highlightLevels[fileKey];
+                return;
+            }
+            Object.keys(byLine).forEach(lineKey => {
+                const level = Number(byLine[lineKey]);
+                if (!Number.isInteger(level) || level < 1) delete byLine[lineKey];
+                else byLine[lineKey] = Math.min(3, level);
+            });
+            if (!Object.keys(byLine).length) delete project.highlightLevels[fileKey];
+        });
+
+        Object.keys(project.lineChats).forEach(lineChatId => {
+            const chat = project.lineChats[lineChatId];
+            if (!chat || typeof chat !== 'object') {
+                delete project.lineChats[lineChatId];
+                return;
+            }
+            if (!Array.isArray(chat.messages)) chat.messages = [];
+            chat.updatedAt = String(chat.updatedAt || chat.createdAt || '');
+            chat.fileIdx = Number.isInteger(Number(chat.fileIdx)) ? Number(chat.fileIdx) : null;
+            chat.lineIdx = Number.isInteger(Number(chat.lineIdx)) ? Number(chat.lineIdx) : null;
+        });
+
+        Object.keys(project.linePins).forEach(fileKey => {
+            const byLine = project.linePins[fileKey];
+            if (!byLine || typeof byLine !== 'object') {
+                delete project.linePins[fileKey];
+                return;
+            }
+            Object.keys(byLine).forEach(lineKey => {
+                const chatId = String(byLine[lineKey] || '').trim();
+                if (!chatId) delete byLine[lineKey];
+                else byLine[lineKey] = chatId;
+            });
+            if (!Object.keys(byLine).length) delete project.linePins[fileKey];
+        });
+    });
+
+    state.folders.forEach(folder => {
+        if (!folder || typeof folder !== 'object') return;
+        if (!Array.isArray(folder.snippets)) folder.snippets = [];
+    });
+
+    state.generalChats = state.generalChats
+        .filter(chat => chat && typeof chat === 'object')
+        .map(chat => ({
+            folderId: chat.folderId ?? null,
+            messages: Array.isArray(chat.messages) ? chat.messages : [],
+            updatedAt: String(chat.updatedAt || chat.createdAt || '')
+        }));
+
     if (!state.learningHub || typeof state.learningHub !== 'object') {
         state.learningHub = {};
     }
@@ -288,11 +386,22 @@ function ensureStateShape() {
             concepts: concepts.map(item => ({
                 id: String(item?.id || ''),
                 title: String(item?.title || 'Core Principle'),
-                principle: String(item?.principle || ''),
+                principle: String(item?.principle || item?.summary || ''),
+                summary: String(item?.summary || item?.principle || ''),
+                coreConcept: String(item?.coreConcept || item?.core_concept || ''),
+                architecturalPattern: item?.architecturalPattern === null || item?.architectural_pattern === null
+                    ? null
+                    : String(item?.architecturalPattern || item?.architectural_pattern || ''),
+                programmingParadigm: String(item?.programmingParadigm || item?.programming_paradigm || ''),
+                languageSyntax: Array.isArray(item?.languageSyntax)
+                    ? item.languageSyntax.map(entry => String(entry || '')).filter(Boolean)
+                    : Array.isArray(item?.language_syntax)
+                        ? item.language_syntax.map(entry => String(entry || '')).filter(Boolean)
+                        : [],
                 keywords: Array.isArray(item?.keywords) ? item.keywords.map(word => String(word || '')).filter(Boolean) : [],
                 createdAt: String(item?.createdAt || ''),
                 source: String(item?.source || 'summary')
-            })).filter(item => item.id && item.principle),
+            })).filter(item => item.id && (item.principle || item.summary)),
             snippets: snippets.map(item => ({
                 id: String(item?.id || ''),
                 content: String(item?.content || ''),
@@ -309,8 +418,33 @@ function ensureStateShape() {
 
     state.learningHub.concepts = Array.isArray(state.learningHub.concepts) ? state.learningHub.concepts : [];
     state.learningHub.links = Array.isArray(state.learningHub.links) ? state.learningHub.links : [];
+    const rawEmbeddings = state.learningHub.embeddings && typeof state.learningHub.embeddings === 'object'
+        ? state.learningHub.embeddings
+        : {};
+    const normalizedEmbeddings = {};
+    Object.keys(rawEmbeddings).forEach(conceptId => {
+        const item = rawEmbeddings[conceptId];
+        const vector = Array.isArray(item?.vector)
+            ? item.vector.map(value => Number(value)).filter(value => Number.isFinite(value)).slice(0, 256)
+            : [];
+        if (!vector.length) return;
+        normalizedEmbeddings[String(conceptId || '')] = {
+            vector,
+            model: String(item?.model || ''),
+            api: String(item?.api || ''),
+            updatedAt: String(item?.updatedAt || ''),
+            signature: String(item?.signature || ''),
+            nativeSyncedAt: String(item?.nativeSyncedAt || ''),
+            nativeSignature: String(item?.nativeSignature || '')
+        };
+    });
+    state.learningHub.embeddings = normalizedEmbeddings;
     const graphMode = String(state.learningHub.graphMode || '').toLowerCase();
     state.learningHub.graphMode = ['connections', 'recency', 'source'].includes(graphMode) ? graphMode : 'connections';
+    const graphZoom = Number(state.learningHub.graphZoom);
+    state.learningHub.graphZoom = Number.isFinite(graphZoom)
+        ? Math.min(2.2, Math.max(1, graphZoom))
+        : 1.45;
     const reviewChats = Array.isArray(state.learningHub.reviewChats) ? state.learningHub.reviewChats : [];
     state.learningHub.reviewChats = reviewChats.map(chat => ({
         id: String(chat?.id || ''),
@@ -336,6 +470,262 @@ function ensureStateShape() {
     if (!state.referenceView || typeof state.referenceView !== 'object') {
         state.referenceView = null;
     }
+}
+
+function touchProjectRecentFile(projectIdx, fileIdx, options = {}) {
+    const project = state.projects?.[projectIdx];
+    if (!project || !Array.isArray(project.files)) return;
+
+    const idx = Number(fileIdx);
+    if (!Number.isInteger(idx) || idx < 0 || idx >= project.files.length) return;
+
+    if (!Array.isArray(project.recentFiles)) project.recentFiles = [];
+    project.recentFiles = project.recentFiles
+        .map(value => Number(value))
+        .filter(value => Number.isInteger(value) && value >= 0 && value < project.files.length && value !== idx);
+    project.recentFiles.unshift(idx);
+    if (project.recentFiles.length > MAX_PROJECT_RECENT_FILES) {
+        project.recentFiles = project.recentFiles.slice(0, MAX_PROJECT_RECENT_FILES);
+    }
+    project.lastOpenedAt = new Date().toISOString();
+
+    if (options.save !== false) saveState();
+}
+
+function getProjectRecentFiles(project, limit = MAX_PROJECT_RECENT_FILES) {
+    if (!project || !Array.isArray(project.files)) return [];
+    const maxItems = Math.max(1, Number(limit) || MAX_PROJECT_RECENT_FILES);
+    const indexList = Array.isArray(project.recentFiles) ? project.recentFiles : [];
+
+    return indexList
+        .map(value => Number(value))
+        .filter(value => Number.isInteger(value) && value >= 0 && value < project.files.length)
+        .slice(0, maxItems)
+        .map(idx => ({
+            idx,
+            file: project.files[idx]
+        }));
+}
+
+function getChatPreviewText(messages = [], maxLen = 120) {
+    if (!Array.isArray(messages) || messages.length === 0) return '';
+    const latest = messages
+        .slice()
+        .reverse()
+        .find(message => message && !message.pending && String(message.content || '').trim());
+    const text = String(latest?.content || '').replace(/\s+/g, ' ').trim();
+    if (!text) return '';
+    if (text.length <= maxLen) return text;
+    return `${text.slice(0, Math.max(0, maxLen - 3))}...`;
+}
+
+function parseSectionMeta(sectionId = '') {
+    const raw = String(sectionId || '').trim();
+    if (!raw) {
+        return {
+            fileIdx: null,
+            color: 'green',
+            start: null,
+            end: null
+        };
+    }
+
+    const parts = raw.split('-');
+    const fileIdx = Number(parts[0]);
+    const color = String(parts[1] || 'green');
+    const start = Number(parts[2]);
+    const end = Number(parts[3]);
+
+    return {
+        fileIdx: Number.isInteger(fileIdx) ? fileIdx : null,
+        color,
+        start: Number.isInteger(start) ? start : null,
+        end: Number.isInteger(end) ? end : null
+    };
+}
+
+function getLineChatId(fileIdx, lineIdx) {
+    return `line:${Number(fileIdx)}:${Number(lineIdx)}`;
+}
+
+function parseLineChatMeta(lineChatId = '') {
+    const raw = String(lineChatId || '').trim();
+    if (!raw.startsWith('line:')) {
+        return { fileIdx: null, lineIdx: null };
+    }
+    const parts = raw.split(':');
+    const fileIdx = Number(parts[1]);
+    const lineIdx = Number(parts[2]);
+    return {
+        fileIdx: Number.isInteger(fileIdx) ? fileIdx : null,
+        lineIdx: Number.isInteger(lineIdx) ? lineIdx : null
+    };
+}
+
+function getHighlightLevel(project, fileIdx, lineIdx) {
+    if (!project || !project.highlightLevels) return 1;
+    const byLine = project.highlightLevels[String(fileIdx)];
+    if (!byLine || typeof byLine !== 'object') return 1;
+    const value = Number(byLine[String(lineIdx)]);
+    if (!Number.isInteger(value) || value < 1) return 1;
+    return Math.min(3, value);
+}
+
+function setHighlightLevel(project, fileIdx, lineIdx, level = 1) {
+    if (!project) return;
+    if (!project.highlightLevels || typeof project.highlightLevels !== 'object') {
+        project.highlightLevels = {};
+    }
+    const fileKey = String(fileIdx);
+    if (!project.highlightLevels[fileKey] || typeof project.highlightLevels[fileKey] !== 'object') {
+        project.highlightLevels[fileKey] = {};
+    }
+    project.highlightLevels[fileKey][String(lineIdx)] = Math.min(3, Math.max(1, Number(level) || 1));
+}
+
+function clearHighlightLevel(project, fileIdx, lineIdx) {
+    if (!project?.highlightLevels) return;
+    const fileKey = String(fileIdx);
+    const byLine = project.highlightLevels[fileKey];
+    if (!byLine || typeof byLine !== 'object') return;
+    delete byLine[String(lineIdx)];
+    if (!Object.keys(byLine).length) delete project.highlightLevels[fileKey];
+}
+
+function getLinePinChatId(project, fileIdx, lineIdx) {
+    if (!project?.linePins) return '';
+    const byLine = project.linePins[String(fileIdx)];
+    if (!byLine || typeof byLine !== 'object') return '';
+    return String(byLine[String(lineIdx)] || '').trim();
+}
+
+function setLinePinChatId(project, fileIdx, lineIdx, chatId = '') {
+    if (!project) return;
+    if (!project.linePins || typeof project.linePins !== 'object') project.linePins = {};
+    const fileKey = String(fileIdx);
+    if (!project.linePins[fileKey] || typeof project.linePins[fileKey] !== 'object') {
+        project.linePins[fileKey] = {};
+    }
+    const value = String(chatId || '').trim();
+    if (value) {
+        project.linePins[fileKey][String(lineIdx)] = value;
+    } else {
+        delete project.linePins[fileKey][String(lineIdx)];
+    }
+}
+
+function buildRecentChats(limit = MAX_RECENT_CHATS) {
+    const items = [];
+    const maxItems = Math.max(1, Number(limit) || MAX_RECENT_CHATS);
+
+    state.projects.forEach((project, projectIndex) => {
+        if (!project || typeof project !== 'object' || !project.chats || typeof project.chats !== 'object') return;
+
+        Object.entries(project.chats).forEach(([sectionId, chat]) => {
+            if (!chat || !Array.isArray(chat.messages) || chat.messages.length === 0) return;
+
+            const sectionMeta = parseSectionMeta(sectionId);
+            const fileName = Number.isInteger(sectionMeta.fileIdx)
+                ? String(project.files?.[sectionMeta.fileIdx]?.name || `File ${sectionMeta.fileIdx + 1}`)
+                : 'File';
+            const lineText = Number.isInteger(sectionMeta.start) && Number.isInteger(sectionMeta.end)
+                ? `L${sectionMeta.start + 1}-${sectionMeta.end + 1}`
+                : 'Section';
+            const updatedAt = String(chat.updatedAt || project.lastOpenedAt || project.created || '');
+            const updatedMs = Number.isFinite(Date.parse(updatedAt)) ? Date.parse(updatedAt) : 0;
+            const labelColor = state.colorNames?.[sectionMeta.color] || sectionMeta.color || 'Section';
+            const projectName = String(project.name || 'Project');
+
+            items.push({
+                type: 'section',
+                updatedAt,
+                updatedMs,
+                sectionId,
+                projectIndex,
+                projectName,
+                fileName,
+                title: `${labelColor} Section`,
+                subtitle: `${projectName} | ${fileName} | ${lineText}`,
+                preview: getChatPreviewText(chat.messages, 140)
+            });
+        });
+
+        Object.entries(project.lineChats || {}).forEach(([lineChatId, chat]) => {
+            if (!chat || !Array.isArray(chat.messages) || chat.messages.length === 0) return;
+            const meta = parseLineChatMeta(lineChatId);
+            if (!Number.isInteger(meta.fileIdx) || !Number.isInteger(meta.lineIdx)) return;
+            const fileName = String(project.files?.[meta.fileIdx]?.name || `File ${meta.fileIdx + 1}`);
+            const updatedAt = String(chat.updatedAt || project.lastOpenedAt || project.created || '');
+            const updatedMs = Number.isFinite(Date.parse(updatedAt)) ? Date.parse(updatedAt) : 0;
+            const projectName = String(project.name || 'Project');
+
+            items.push({
+                type: 'line',
+                updatedAt,
+                updatedMs,
+                lineChatId,
+                lineIdx: meta.lineIdx,
+                fileIdx: meta.fileIdx,
+                projectIndex,
+                projectName,
+                fileName,
+                title: `Line ${meta.lineIdx + 1} Note`,
+                subtitle: `${projectName} | ${fileName} | L${meta.lineIdx + 1}`,
+                preview: getChatPreviewText(chat.messages, 140)
+            });
+        });
+    });
+
+    state.generalChats.forEach((chat, chatIdx) => {
+        if (!chat || !Array.isArray(chat.messages) || chat.messages.length === 0) return;
+        const folderId = chat.folderId ?? null;
+        const folder = state.folders.find(item => item?.id === folderId);
+        const folderName = String(folder?.name || 'General');
+        const updatedAt = String(chat.updatedAt || '');
+        const updatedMs = Number.isFinite(Date.parse(updatedAt)) ? Date.parse(updatedAt) : 0;
+
+        items.push({
+            type: 'general',
+            updatedAt,
+            updatedMs,
+            chatIdx,
+            folderId,
+            folderName,
+            title: `General: ${folderName}`,
+            subtitle: 'General Chat',
+            preview: getChatPreviewText(chat.messages, 140)
+        });
+    });
+
+    return items
+        .sort((a, b) => b.updatedMs - a.updatedMs)
+        .slice(0, maxItems);
+}
+
+function touchSectionChatActivity(projectIdx, sectionId, options = {}) {
+    const project = state.projects?.[projectIdx];
+    if (!project || !project.chats || !project.chats[sectionId]) return;
+    project.chats[sectionId].updatedAt = new Date().toISOString();
+    if (typeof renderHomeRecentChatsPreview === 'function') renderHomeRecentChatsPreview();
+    const recentScreen = document.getElementById('recent-chats-screen');
+    if (recentScreen?.classList.contains('active') && typeof renderRecentChatsScreen === 'function') {
+        renderRecentChatsScreen();
+    }
+    if (options.save !== false) saveState();
+}
+
+function touchGeneralChatActivity(chatIdx, options = {}) {
+    const idx = Number(chatIdx);
+    if (!Number.isInteger(idx) || idx < 0 || idx >= state.generalChats.length) return;
+    const chat = state.generalChats[idx];
+    if (!chat) return;
+    chat.updatedAt = new Date().toISOString();
+    if (typeof renderHomeRecentChatsPreview === 'function') renderHomeRecentChatsPreview();
+    const recentScreen = document.getElementById('recent-chats-screen');
+    if (recentScreen?.classList.contains('active') && typeof renderRecentChatsScreen === 'function') {
+        renderRecentChatsScreen();
+    }
+    if (options.save !== false) saveState();
 }
 
 function getChatConfig(scope = 'section') {

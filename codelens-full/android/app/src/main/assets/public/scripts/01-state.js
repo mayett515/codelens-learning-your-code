@@ -52,11 +52,16 @@ let selectionEndLine = null;
 let lastClickedLine = null;
 let saveStateTimer = null;
 let saveStatePending = false;
+let codeInteractionMode = 'view';
 let filePickerExpanded = new Set();
 let filePickerSearchTerm = '';
+let filePickerSearchMode = 'smart';
+let recentChatsSearchTerm = '';
+let recentChatsVisibleCount = 20;
 let projectPressTimer = null;
 let projectLongPressTriggered = false;
 let projectActionIndex = null;
+let appScreenHistory = [];
 
 const SAVE_DEBOUNCE_MS = 300;
 const VIRTUAL_LINE_HEIGHT = 24;
@@ -71,6 +76,8 @@ const DEFAULT_OPENROUTER_MODEL = 'openai/gpt-4o-mini';
 const DEFAULT_SILICONFLOW_MODEL = 'Qwen/Qwen2.5-7B-Instruct';
 const MAX_PROJECT_RECENT_FILES = 8;
 const MAX_RECENT_CHATS = 50;
+const MAX_HOME_RECENT_CHATS = 5;
+const RECENT_CHATS_PAGE_SIZE = 20;
 
 const OPENROUTER_MODEL_OPTIONS = [
     { value: 'openai/gpt-4o-mini', label: 'GPT-4o Mini' },
@@ -276,7 +283,10 @@ function ensureStateShape() {
         if (!project || typeof project !== 'object') return;
         if (!Array.isArray(project.files)) project.files = [];
         if (!project.highlights || typeof project.highlights !== 'object') project.highlights = {};
+        if (!project.highlightLevels || typeof project.highlightLevels !== 'object') project.highlightLevels = {};
         if (!project.chats || typeof project.chats !== 'object') project.chats = {};
+        if (!project.lineChats || typeof project.lineChats !== 'object') project.lineChats = {};
+        if (!project.linePins || typeof project.linePins !== 'object') project.linePins = {};
         if (!Array.isArray(project.avatarChats)) project.avatarChats = [];
 
         const normalizedRecentFiles = Array.isArray(project.recentFiles)
@@ -295,6 +305,46 @@ function ensureStateShape() {
             if (!Array.isArray(chat.messages)) chat.messages = [];
             if (!Array.isArray(chat.bookmarks)) chat.bookmarks = [];
             chat.updatedAt = String(chat.updatedAt || chat.createdAt || '');
+        });
+
+        Object.keys(project.highlightLevels).forEach(fileKey => {
+            const byLine = project.highlightLevels[fileKey];
+            if (!byLine || typeof byLine !== 'object') {
+                delete project.highlightLevels[fileKey];
+                return;
+            }
+            Object.keys(byLine).forEach(lineKey => {
+                const level = Number(byLine[lineKey]);
+                if (!Number.isInteger(level) || level < 1) delete byLine[lineKey];
+                else byLine[lineKey] = Math.min(3, level);
+            });
+            if (!Object.keys(byLine).length) delete project.highlightLevels[fileKey];
+        });
+
+        Object.keys(project.lineChats).forEach(lineChatId => {
+            const chat = project.lineChats[lineChatId];
+            if (!chat || typeof chat !== 'object') {
+                delete project.lineChats[lineChatId];
+                return;
+            }
+            if (!Array.isArray(chat.messages)) chat.messages = [];
+            chat.updatedAt = String(chat.updatedAt || chat.createdAt || '');
+            chat.fileIdx = Number.isInteger(Number(chat.fileIdx)) ? Number(chat.fileIdx) : null;
+            chat.lineIdx = Number.isInteger(Number(chat.lineIdx)) ? Number(chat.lineIdx) : null;
+        });
+
+        Object.keys(project.linePins).forEach(fileKey => {
+            const byLine = project.linePins[fileKey];
+            if (!byLine || typeof byLine !== 'object') {
+                delete project.linePins[fileKey];
+                return;
+            }
+            Object.keys(byLine).forEach(lineKey => {
+                const chatId = String(byLine[lineKey] || '').trim();
+                if (!chatId) delete byLine[lineKey];
+                else byLine[lineKey] = chatId;
+            });
+            if (!Object.keys(byLine).length) delete project.linePins[fileKey];
         });
     });
 
@@ -494,6 +544,76 @@ function parseSectionMeta(sectionId = '') {
     };
 }
 
+function getLineChatId(fileIdx, lineIdx) {
+    return `line:${Number(fileIdx)}:${Number(lineIdx)}`;
+}
+
+function parseLineChatMeta(lineChatId = '') {
+    const raw = String(lineChatId || '').trim();
+    if (!raw.startsWith('line:')) {
+        return { fileIdx: null, lineIdx: null };
+    }
+    const parts = raw.split(':');
+    const fileIdx = Number(parts[1]);
+    const lineIdx = Number(parts[2]);
+    return {
+        fileIdx: Number.isInteger(fileIdx) ? fileIdx : null,
+        lineIdx: Number.isInteger(lineIdx) ? lineIdx : null
+    };
+}
+
+function getHighlightLevel(project, fileIdx, lineIdx) {
+    if (!project || !project.highlightLevels) return 1;
+    const byLine = project.highlightLevels[String(fileIdx)];
+    if (!byLine || typeof byLine !== 'object') return 1;
+    const value = Number(byLine[String(lineIdx)]);
+    if (!Number.isInteger(value) || value < 1) return 1;
+    return Math.min(3, value);
+}
+
+function setHighlightLevel(project, fileIdx, lineIdx, level = 1) {
+    if (!project) return;
+    if (!project.highlightLevels || typeof project.highlightLevels !== 'object') {
+        project.highlightLevels = {};
+    }
+    const fileKey = String(fileIdx);
+    if (!project.highlightLevels[fileKey] || typeof project.highlightLevels[fileKey] !== 'object') {
+        project.highlightLevels[fileKey] = {};
+    }
+    project.highlightLevels[fileKey][String(lineIdx)] = Math.min(3, Math.max(1, Number(level) || 1));
+}
+
+function clearHighlightLevel(project, fileIdx, lineIdx) {
+    if (!project?.highlightLevels) return;
+    const fileKey = String(fileIdx);
+    const byLine = project.highlightLevels[fileKey];
+    if (!byLine || typeof byLine !== 'object') return;
+    delete byLine[String(lineIdx)];
+    if (!Object.keys(byLine).length) delete project.highlightLevels[fileKey];
+}
+
+function getLinePinChatId(project, fileIdx, lineIdx) {
+    if (!project?.linePins) return '';
+    const byLine = project.linePins[String(fileIdx)];
+    if (!byLine || typeof byLine !== 'object') return '';
+    return String(byLine[String(lineIdx)] || '').trim();
+}
+
+function setLinePinChatId(project, fileIdx, lineIdx, chatId = '') {
+    if (!project) return;
+    if (!project.linePins || typeof project.linePins !== 'object') project.linePins = {};
+    const fileKey = String(fileIdx);
+    if (!project.linePins[fileKey] || typeof project.linePins[fileKey] !== 'object') {
+        project.linePins[fileKey] = {};
+    }
+    const value = String(chatId || '').trim();
+    if (value) {
+        project.linePins[fileKey][String(lineIdx)] = value;
+    } else {
+        delete project.linePins[fileKey][String(lineIdx)];
+    }
+}
+
 function buildRecentChats(limit = MAX_RECENT_CHATS) {
     const items = [];
     const maxItems = Math.max(1, Number(limit) || MAX_RECENT_CHATS);
@@ -526,6 +646,31 @@ function buildRecentChats(limit = MAX_RECENT_CHATS) {
                 fileName,
                 title: `${labelColor} Section`,
                 subtitle: `${projectName} | ${fileName} | ${lineText}`,
+                preview: getChatPreviewText(chat.messages, 140)
+            });
+        });
+
+        Object.entries(project.lineChats || {}).forEach(([lineChatId, chat]) => {
+            if (!chat || !Array.isArray(chat.messages) || chat.messages.length === 0) return;
+            const meta = parseLineChatMeta(lineChatId);
+            if (!Number.isInteger(meta.fileIdx) || !Number.isInteger(meta.lineIdx)) return;
+            const fileName = String(project.files?.[meta.fileIdx]?.name || `File ${meta.fileIdx + 1}`);
+            const updatedAt = String(chat.updatedAt || project.lastOpenedAt || project.created || '');
+            const updatedMs = Number.isFinite(Date.parse(updatedAt)) ? Date.parse(updatedAt) : 0;
+            const projectName = String(project.name || 'Project');
+
+            items.push({
+                type: 'line',
+                updatedAt,
+                updatedMs,
+                lineChatId,
+                lineIdx: meta.lineIdx,
+                fileIdx: meta.fileIdx,
+                projectIndex,
+                projectName,
+                fileName,
+                title: `Line ${meta.lineIdx + 1} Note`,
+                subtitle: `${projectName} | ${fileName} | L${meta.lineIdx + 1}`,
                 preview: getChatPreviewText(chat.messages, 140)
             });
         });

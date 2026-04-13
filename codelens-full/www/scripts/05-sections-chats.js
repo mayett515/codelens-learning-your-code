@@ -122,6 +122,154 @@ function openSectionChat(lineIdx) {
     openSectionChatById(section.id);
 }
 
+function updateLineChatPinButton() {
+    const button = document.getElementById('line-chat-pin-btn');
+    if (!button) return;
+
+    const isLineChat = state.currentChat?.type === 'line';
+    button.classList.toggle('is-hidden', !isLineChat);
+    if (!isLineChat) return;
+
+    const project = state.projects[state.currentProject];
+    const lineIdx = Number(state.currentChat?.lineIdx);
+    const lineNumber = Number.isInteger(lineIdx) ? lineIdx + 1 : '?';
+    const pinnedChatId = getLinePinChatId(project, state.currentChat?.fileIdx, lineIdx);
+    const isPinned = Boolean(pinnedChatId && pinnedChatId === state.currentChat?.id);
+    button.title = isPinned ? `Line ${lineNumber} already pinned` : `Mark line ${lineNumber} with a point`;
+    button.innerHTML = uiIcon(isPinned ? 'check' : 'bookmark');
+}
+
+function openLineInsightChat(lineIdx) {
+    if (state.currentProject === null || state.currentFile === null) return;
+    const lineChatId = getLineChatId(state.currentFile, lineIdx);
+    openLineChatById(lineChatId, { fileIdx: state.currentFile, lineIdx });
+}
+
+function openLineChatById(lineChatId, options = {}) {
+    const project = state.projects[state.currentProject];
+    if (!project) return;
+    ensureProjectLineStores(project);
+
+    const parsed = parseLineChatMeta(lineChatId);
+    const fileIdx = Number.isInteger(options.fileIdx) ? Number(options.fileIdx) : parsed.fileIdx;
+    const lineIdx = Number.isInteger(options.lineIdx) ? Number(options.lineIdx) : parsed.lineIdx;
+    if (!Number.isInteger(fileIdx) || !Number.isInteger(lineIdx) || !project.files[fileIdx]) return;
+
+    if (!project.lineChats[lineChatId]) {
+        project.lineChats[lineChatId] = {
+            fileIdx,
+            lineIdx,
+            messages: [],
+            bookmarks: [],
+            updatedAt: ''
+        };
+    }
+
+    if (state.currentFile !== fileIdx) {
+        state.currentFile = fileIdx;
+        clearSelectionState();
+        renderFileTabs();
+        renderCode();
+    }
+
+    const chat = project.lineChats[lineChatId];
+    state.currentChat = { type: 'line', id: lineChatId, fileIdx, lineIdx };
+    touchProjectRecentFile(state.currentProject, fileIdx, { save: false });
+    touchLineChatActivity(state.currentProject, lineChatId, { save: false });
+    saveState();
+
+    const fileName = project.files[fileIdx]?.name || 'File';
+    document.getElementById('chat-title').textContent = `Line ${lineIdx + 1}`;
+    document.getElementById('chat-subtitle').textContent = `${fileName} • double-tap note chat`;
+    updateLineChatPinButton();
+    renderGemSelector('gem-selector');
+    syncChatModelControls('section');
+    renderChatMessages(chat.messages);
+    showScreen('chat-screen');
+
+    if (chat.messages.length === 0) {
+        const lineText = String(project.files[fileIdx]?.content?.split('\n')?.[lineIdx] || '').trim();
+        autoExplainLine(lineText, lineChatId, lineIdx);
+    }
+}
+
+async function autoExplainLine(codeLine, lineChatId, lineIdx) {
+    const project = state.projects[state.currentProject];
+    const chat = project?.lineChats?.[lineChatId];
+    if (!chat) return;
+
+    const lineText = String(codeLine || '').trim();
+    if (!lineText) {
+        chat.messages.push({
+            role: 'assistant',
+            content: `Line ${lineIdx + 1} is empty.`,
+            borderColor: 'green'
+        });
+        touchLineChatActivity(state.currentProject, lineChatId, { save: false });
+        saveState();
+        renderChatMessages(chat.messages);
+        return;
+    }
+
+    chat.messages.push({ role: 'user', content: `Explain line ${lineIdx + 1}:`, borderColor: 'green' });
+    chat.messages.push({ role: 'assistant', content: `\`\`\`\n${lineText}\n\`\`\``, borderColor: 'green' });
+    touchLineChatActivity(state.currentProject, lineChatId, { save: false });
+    renderChatMessages(chat.messages);
+
+    const provider = getChatProvider('section');
+    const model = getChatModel('section', provider);
+    const history = buildAIHistoryFromMessages(chat.messages);
+    const prompt = `Explain only this single line in context. Keep it concise and practical.\n\nLine ${lineIdx + 1}: ${lineText}`;
+    const response = await callAI(prompt, {
+        scope: 'section',
+        api: provider,
+        model,
+        history
+    });
+
+    chat.messages.push({
+        role: 'assistant',
+        content: response?.content || 'No response',
+        borderColor: 'green',
+        api: response?.api || provider,
+        model: response?.model || model
+    });
+    touchLineChatActivity(state.currentProject, lineChatId, { save: false });
+    saveState();
+    renderChatMessages(chat.messages);
+}
+
+function markCurrentLineChat() {
+    if (state.currentChat?.type !== 'line') return;
+    const project = state.projects[state.currentProject];
+    if (!project) return;
+    ensureProjectLineStores(project);
+
+    const fileIdx = Number(state.currentChat.fileIdx);
+    const lineIdx = Number(state.currentChat.lineIdx);
+    const chatId = String(state.currentChat.id || '').trim();
+    if (!Number.isInteger(fileIdx) || !Number.isInteger(lineIdx) || !chatId) return;
+
+    setLinePinChatId(project, fileIdx, lineIdx, chatId);
+    touchLineChatActivity(state.currentProject, chatId, { save: false });
+    saveState();
+    updateLineChatPinButton();
+    if (state.currentFile === fileIdx) updateRenderedLine(lineIdx);
+    showToast(`Pinned line ${lineIdx + 1}`);
+}
+
+function touchLineChatActivity(projectIdx, lineChatId, options = {}) {
+    const project = state.projects?.[projectIdx];
+    if (!project?.lineChats?.[lineChatId]) return;
+    project.lineChats[lineChatId].updatedAt = new Date().toISOString();
+    if (typeof renderHomeRecentChatsPreview === 'function') renderHomeRecentChatsPreview();
+    const recentScreen = document.getElementById('recent-chats-screen');
+    if (recentScreen?.classList.contains('active') && typeof renderRecentChatsScreen === 'function') {
+        renderRecentChatsScreen();
+    }
+    if (options.save !== false) saveState();
+}
+
 function openSectionChatById(sectionId) {
     hideModal('sections-modal');
     
@@ -144,10 +292,15 @@ function openSectionChatById(sectionId) {
         renderFileTabs();
         renderCode();
     }
+
+    touchProjectRecentFile(state.currentProject, fileIdx, { save: false });
+    touchSectionChatActivity(state.currentProject, sectionId, { save: false });
+    saveState();
     
     document.getElementById('chat-title').textContent = state.colorNames[color] || color;
     const fileName = project.files[fileIdx]?.name || 'File';
     document.getElementById('chat-subtitle').textContent = `${fileName} - Lines ${start + 1} - ${end + 1}`;
+    updateLineChatPinButton();
     
     renderGemSelector('gem-selector');
     syncChatModelControls('section');
@@ -168,6 +321,7 @@ async function autoExplain(code, sectionId) {
     
     chat.messages.push({ role: 'user', content: 'Explain this code:', borderColor: 'green' });
     chat.messages.push({ role: 'assistant', content: '```\n' + code + '\n```', borderColor: 'green' });
+    touchSectionChatActivity(state.currentProject, sectionId, { save: false });
     renderChatMessages(chat.messages);
 
     const provider = getChatProvider('section');
@@ -186,6 +340,7 @@ async function autoExplain(code, sectionId) {
         api: response?.api || provider,
         model: response?.model || model
     });
+    touchSectionChatActivity(state.currentProject, sectionId, { save: false });
     saveState();
     renderChatMessages(chat.messages);
 }
@@ -196,9 +351,235 @@ function goBackFromChat() {
         return;
     }
 
-    if (state.currentChat?.type === 'section' || state.currentChat?.type === 'avatar') {
+    if (state.currentChat?.type === 'section' || state.currentChat?.type === 'avatar' || state.currentChat?.type === 'line') {
         showScreen('project-screen');
     } else {
         showScreen('home-screen');
     }
+}
+
+function formatRecentTime(isoValue = '') {
+    const ms = Date.parse(String(isoValue || ''));
+    if (!Number.isFinite(ms) || ms <= 0) return 'recent';
+
+    const diffMs = Date.now() - ms;
+    if (diffMs < 60 * 1000) return 'just now';
+    if (diffMs < 60 * 60 * 1000) return `${Math.max(1, Math.floor(diffMs / 60000))}m ago`;
+    if (diffMs < 24 * 60 * 60 * 1000) return `${Math.max(1, Math.floor(diffMs / 3600000))}h ago`;
+    return `${Math.max(1, Math.floor(diffMs / 86400000))}d ago`;
+}
+
+function decodeRecentData(raw = '') {
+    try {
+        return decodeURIComponent(String(raw || ''));
+    } catch (_) {
+        return String(raw || '');
+    }
+}
+
+function formatRecentDate(isoValue = '') {
+    const ts = Date.parse(String(isoValue || ''));
+    if (!Number.isFinite(ts) || ts <= 0) return '';
+    return new Date(ts).toLocaleString([], {
+        year: 'numeric',
+        month: 'short',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function getFilteredRecentChats(limit = MAX_RECENT_CHATS, query = '') {
+    const all = buildRecentChats(limit);
+    const q = String(query || '').trim().toLowerCase();
+    if (!q) return all;
+
+    return all.filter(item => {
+        const hay = [
+            item.type,
+            item.title,
+            item.subtitle,
+            item.preview,
+            item.projectName,
+            item.fileName,
+            item.folderName
+        ].map(value => String(value || '').toLowerCase()).join('\n');
+        return hay.includes(q);
+    });
+}
+
+function renderRecentChatsInto(containerId, options = {}) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+
+    const items = options.items || [];
+    const isFiltered = Boolean(String(options.query || '').trim());
+    if (!items.length) {
+        container.innerHTML = isFiltered
+            ? '<div class="empty-state"><div class="title">No matching chats</div><div class="desc">Try a different search term.</div></div>'
+            : '<div class="empty-state"><div class="title">No recent chats yet</div><div class="desc">Open a section chat or general chat to see it here.</div></div>';
+        return;
+    }
+
+    container.innerHTML = items.map(item => {
+        const preview = item.preview ? `<div class="meta">${escapeHtml(item.preview)}</div>` : '';
+        const timeLabel = formatRecentTime(item.updatedAt);
+        const dateLabel = formatRecentDate(item.updatedAt);
+        const whenLabel = [timeLabel, dateLabel].filter(Boolean).join(' • ');
+
+        if (item.type === 'section') {
+            return `
+                <div class="list-item recent-chat-item"
+                     data-action="open-recent-chat"
+                     data-chat-type="section"
+                     data-project-index="${item.projectIndex}"
+                     data-section-id="${encodeURIComponent(item.sectionId || '')}">
+                    <div class="icon">${uiIcon('chat')}</div>
+                    <div class="info">
+                        <div class="name">${escapeHtml(item.title || 'Section Chat')}</div>
+                        <div class="meta">${escapeHtml(item.subtitle || item.projectName || '')} | ${escapeHtml(whenLabel)}</div>
+                        ${preview}
+                    </div>
+                    <span class="arrow">${uiIcon('arrow-right')}</span>
+                </div>
+            `;
+        }
+
+        if (item.type === 'line') {
+            return `
+                <div class="list-item recent-chat-item"
+                     data-action="open-recent-chat"
+                     data-chat-type="line"
+                     data-project-index="${item.projectIndex}"
+                     data-line-chat-id="${encodeURIComponent(item.lineChatId || '')}">
+                    <div class="icon">${uiIcon('target')}</div>
+                    <div class="info">
+                        <div class="name">${escapeHtml(item.title || 'Line Chat')}</div>
+                        <div class="meta">${escapeHtml(item.subtitle || item.projectName || '')} | ${escapeHtml(whenLabel)}</div>
+                        ${preview}
+                    </div>
+                    <span class="arrow">${uiIcon('arrow-right')}</span>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="list-item recent-chat-item"
+                 data-action="open-recent-chat"
+                 data-chat-type="general"
+                 data-chat-idx="${item.chatIdx}"
+                 data-folder-id="${encodeURIComponent(String(item.folderId ?? ''))}">
+                <div class="icon">${uiIcon('folder')}</div>
+                <div class="info">
+                    <div class="name">${escapeHtml(item.title || 'General Chat')}</div>
+                    <div class="meta">${escapeHtml(item.subtitle || 'General Chat')} | ${escapeHtml(whenLabel)}</div>
+                    ${preview}
+                </div>
+                <span class="arrow">${uiIcon('arrow-right')}</span>
+            </div>
+        `;
+    }).join('');
+}
+
+function renderHomeRecentChatsPreview() {
+    const items = getFilteredRecentChats(MAX_RECENT_CHATS, '').slice(0, MAX_HOME_RECENT_CHATS);
+    renderRecentChatsInto('home-recent-chats', { items });
+}
+
+function renderRecentChatsScreen(options = {}) {
+    if (options.reset) {
+        recentChatsVisibleCount = RECENT_CHATS_PAGE_SIZE;
+    }
+
+    const searchInput = document.getElementById('recent-chats-search');
+    if (searchInput && searchInput.value !== recentChatsSearchTerm) {
+        searchInput.value = recentChatsSearchTerm;
+    }
+    const query = String(searchInput?.value || recentChatsSearchTerm || '').trim();
+    recentChatsSearchTerm = query;
+
+    const filtered = getFilteredRecentChats(MAX_RECENT_CHATS, query);
+    const visible = filtered.slice(0, recentChatsVisibleCount);
+    renderRecentChatsInto('recent-chats-list', { items: visible, query });
+
+    const loadMore = document.getElementById('recent-chats-load-more');
+    if (loadMore) {
+        if (visible.length < filtered.length) {
+            loadMore.textContent = `Scroll for more (${visible.length}/${filtered.length})`;
+        } else {
+            loadMore.textContent = filtered.length ? `Showing ${filtered.length} chats` : '';
+        }
+    }
+}
+
+function handleRecentChatsScroll(scrollEl) {
+    if (!scrollEl) return;
+    if (scrollEl.scrollTop + scrollEl.clientHeight < scrollEl.scrollHeight - 80) return;
+
+    const query = String(recentChatsSearchTerm || '').trim();
+    const filtered = getFilteredRecentChats(MAX_RECENT_CHATS, query);
+    if (recentChatsVisibleCount >= filtered.length) return;
+    recentChatsVisibleCount = Math.min(filtered.length, recentChatsVisibleCount + RECENT_CHATS_PAGE_SIZE);
+    renderRecentChatsScreen();
+}
+
+function openRecentChat(actionEl) {
+    if (!actionEl) return;
+
+    const chatType = String(actionEl.dataset.chatType || '').trim().toLowerCase();
+    if (chatType === 'section') {
+        const projectIndex = Number(actionEl.dataset.projectIndex);
+        const sectionId = decodeRecentData(actionEl.dataset.sectionId || '');
+        if (!Number.isInteger(projectIndex) || !state.projects[projectIndex] || !sectionId) {
+            showToast('Recent section chat is unavailable');
+            return;
+        }
+        state.currentProject = projectIndex;
+        openSectionChatById(sectionId);
+        return;
+    }
+
+    if (chatType === 'line') {
+        const projectIndex = Number(actionEl.dataset.projectIndex);
+        const lineChatId = decodeRecentData(actionEl.dataset.lineChatId || '');
+        if (!Number.isInteger(projectIndex) || !state.projects[projectIndex] || !lineChatId) {
+            showToast('Recent line chat is unavailable');
+            return;
+        }
+        state.currentProject = projectIndex;
+        const parsed = parseLineChatMeta(lineChatId);
+        if (Number.isInteger(parsed.fileIdx)) state.currentFile = parsed.fileIdx;
+        openLineChatById(lineChatId, parsed);
+        return;
+    }
+
+    if (chatType === 'general') {
+        const folderIdRaw = decodeRecentData(actionEl.dataset.folderId || '');
+        const chatIdx = Number(actionEl.dataset.chatIdx);
+        const folderIndex = state.folders.findIndex(folder => String(folder?.id ?? '') === folderIdRaw);
+
+        if (folderIndex >= 0) {
+            openFolder(folderIndex);
+            return;
+        }
+
+        if (!Number.isInteger(chatIdx) || !state.generalChats[chatIdx]) {
+            showToast('Recent general chat is unavailable');
+            return;
+        }
+
+        const fallbackChat = state.generalChats[chatIdx];
+        state.currentGeneralFolder = fallbackChat.folderId ?? null;
+        state.currentChat = { type: 'general', idx: chatIdx };
+        const folderName = state.folders.find(item => item?.id === state.currentGeneralFolder)?.name || 'General';
+        const folderLabel = document.getElementById('general-chat-folder');
+        if (folderLabel) folderLabel.textContent = folderName;
+        renderGeneralGemSelector();
+        syncChatModelControls('general');
+        renderGeneralChatMessages();
+        showScreen('general-chat-screen');
+        return;
+    }
+
+    showToast('Unknown recent chat type');
 }

@@ -1,0 +1,33 @@
+#!/usr/bin/env sh
+
+APP_HOME=$(cd "${0%/*}" >/dev/null 2>&1; pwd -P)
+CLASSPATH="$APP_HOME/gradle/wrapper/gradle-wrapper.jar"
+WRAPPER_SHARED_JAR=$(find "$HOME/.gradle/wrapper/dists" -name "gradle-wrapper-shared-8.13.jar" -print -quit 2>/dev/null)
+if [ -n "$WRAPPER_SHARED_JAR" ]; then
+  CLASSPATH="$CLASSPATH:$WRAPPER_SHARED_JAR"
+fi
+
+CACHED_GRADLE=$(find "$HOME/.gradle/wrapper/dists" -path "*/gradle-8.13/bin/gradle" -print -quit 2>/dev/null)
+case " $GRADLE_OPTS " in
+  *"org.gradle.native=false"*) ;;
+  *) GRADLE_OPTS="${GRADLE_OPTS:+$GRADLE_OPTS }-Dorg.gradle.native=false" ;;
+esac
+export GRADLE_OPTS
+
+if [ -n "$CACHED_GRADLE" ]; then
+  exec "$CACHED_GRADLE" "$@"
+fi
+
+if [ -z "$JAVA_HOME" ]; then
+  if [ -x "/c/Program Files/Android/Android Studio/jbr/bin/java.exe" ]; then
+    JAVA_HOME="/c/Program Files/Android/Android Studio/jbr"
+  fi
+fi
+
+if [ -n "$JAVA_HOME" ]; then
+  JAVACMD="$JAVA_HOME/bin/java"
+else
+  JAVACMD="java"
+fi
+
+exec "$JAVACMD" -Xmx64m -Xms64m -Dorg.gradle.appname=gradlew -classpath "$CLASSPATH" org.gradle.wrapper.GradleWrapperMain "$@"

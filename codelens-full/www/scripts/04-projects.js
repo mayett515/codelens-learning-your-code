@@ -1,4 +1,10 @@
 // ============ PROJECTS ============
+let pendingEraseLineIdx = null;
+let pendingEraseExpiresAt = 0;
+let pendingLineClickTimer = null;
+const ERASE_CONFIRM_WINDOW_MS = 2200;
+const LINE_CLICK_DELAY_MS = 210;
+
 function legacyRenderProjectsOld() {
     const list = document.getElementById('projects-list');
     if (state.projects.length === 0) {
@@ -95,6 +101,7 @@ function createFromPaste() {
         highlights: {},
         chats: {},
         avatarChats: [],
+        recentFiles: [0],
         created: new Date().toISOString()
     };
     
@@ -266,6 +273,7 @@ async function importFromGitHub() {
             highlights: {},
             chats: {},
             avatarChats: [],
+            recentFiles: [0],
             created: new Date().toISOString()
         };
         
@@ -287,12 +295,60 @@ function openProject(idx) {
     state.currentProject = idx;
     invalidateSectionsCache();
     clearSelectionState();
+    codeInteractionMode = 'view';
     filePickerExpanded = new Set();
-    state.currentFile = 0;
+    const project = state.projects[state.currentProject];
+    ensureProjectLineStores(project);
+    const preferredFileIdx = Number(project?.recentFiles?.[0]);
+    state.currentFile = Number.isInteger(preferredFileIdx) && preferredFileIdx >= 0 && preferredFileIdx < (project?.files?.length || 0)
+        ? preferredFileIdx
+        : 0;
+    touchProjectRecentFile(state.currentProject, state.currentFile, { save: false });
+    saveState();
     
     renderFileTabs();
+    updateInteractionModeUI();
     renderCode({ resetScroll: true });
     showScreen('project-screen');
+}
+
+function ensureProjectLineStores(project) {
+    if (!project || typeof project !== 'object') return;
+    if (!project.highlightLevels || typeof project.highlightLevels !== 'object') project.highlightLevels = {};
+    if (!project.lineChats || typeof project.lineChats !== 'object') project.lineChats = {};
+    if (!project.linePins || typeof project.linePins !== 'object') project.linePins = {};
+}
+
+function getCodeInteractionMode() {
+    return codeInteractionMode === 'mark' ? 'mark' : 'view';
+}
+
+function setCodeInteractionMode(mode = 'view') {
+    const nextMode = String(mode || '').toLowerCase() === 'mark' ? 'mark' : 'view';
+    if (codeInteractionMode === nextMode) return;
+    codeInteractionMode = nextMode;
+    if (nextMode === 'view') {
+        isRangeSelectMode = false;
+        clearSelectionState();
+    }
+    pendingEraseLineIdx = null;
+    pendingEraseExpiresAt = 0;
+    updateInteractionModeUI();
+    refreshVisibleLineClasses();
+    updateSelectionStatus();
+}
+
+function updateInteractionModeUI() {
+    const viewBtn = document.getElementById('interaction-view-btn');
+    const markBtn = document.getElementById('interaction-mark-btn');
+    const markOnlyButtons = document.querySelectorAll('.interaction-mark-only');
+    const isMarkMode = getCodeInteractionMode() === 'mark';
+
+    if (viewBtn) viewBtn.classList.toggle('active', !isMarkMode);
+    if (markBtn) markBtn.classList.toggle('active', isMarkMode);
+    markOnlyButtons.forEach(button => {
+        button.classList.toggle('interaction-disabled', !isMarkMode);
+    });
 }
 
 function renderFileTabs() {
@@ -305,6 +361,31 @@ function renderFileTabs() {
 
     const switcherName = document.getElementById('file-switcher-name');
     if (switcherName) switcherName.textContent = fileName;
+
+    renderProjectRecentFiles();
+}
+
+function renderProjectRecentFiles() {
+    const wrap = document.getElementById('project-recent-wrap');
+    const container = document.getElementById('project-recent-files');
+    if (!wrap || !container || state.currentProject === null) return;
+
+    const project = state.projects[state.currentProject];
+    const recents = getProjectRecentFiles(project, MAX_PROJECT_RECENT_FILES)
+        .slice(0, MAX_PROJECT_RECENT_FILES);
+
+    if (!recents.length) {
+        wrap.classList.add('is-hidden');
+        container.innerHTML = '';
+        return;
+    }
+
+    wrap.classList.remove('is-hidden');
+    container.innerHTML = recents.map(entry => `
+        <button class="project-recent-btn" data-action="open-project-recent-file" data-file-index="${entry.idx}">
+            ${entry.idx === state.currentFile ? '● ' : ''}${escapeHtml(String(entry.file?.name || `File ${entry.idx + 1}`))}
+        </button>
+    `).join('');
 }
 
 function normalizeFilePath(path) {
@@ -377,11 +458,96 @@ function legacyRenderFilePickerNodeOld(node, depth = 0) {
     return html;
 }
 
+function getFileSearchSnippet(content = '', query = '') {
+    const body = String(content || '');
+    const q = String(query || '').trim().toLowerCase();
+    if (!q || !body) return '';
+
+    const lcBody = body.toLowerCase();
+    const matchIndex = lcBody.indexOf(q);
+    if (matchIndex < 0) return '';
+
+    const start = Math.max(0, matchIndex - 36);
+    const end = Math.min(body.length, matchIndex + q.length + 56);
+    const prefix = start > 0 ? '...' : '';
+    const suffix = end < body.length ? '...' : '';
+    return `${prefix}${body.slice(start, end).replace(/\s+/g, ' ').trim()}${suffix}`;
+}
+
+function renderFilePickerSearchResults(project, query = '') {
+    const q = String(query || '').trim().toLowerCase();
+    if (!q) return '';
+    const searchMode = filePickerSearchMode === 'filename' ? 'filename' : 'smart';
+    const allowContentScan = searchMode !== 'filename' && q.length >= 2;
+
+    const matches = [];
+    project.files.forEach((file, idx) => {
+        const path = normalizeFilePath(file.name);
+        const fileName = path.split('/').pop() || `file-${idx + 1}`;
+        const pathHit = searchMode === 'filename'
+            ? fileName.toLowerCase().includes(q)
+            : path.toLowerCase().includes(q);
+        const contentHit = allowContentScan && String(file.content || '').toLowerCase().includes(q);
+        if (!pathHit && !contentHit) return;
+
+        matches.push({
+            idx,
+            fileName,
+            fullPath: path || fileName,
+            source: pathHit ? (searchMode === 'filename' ? 'Filename match' : 'Path match') : 'Content match',
+            snippet: contentHit ? getFileSearchSnippet(file.content, q) : ''
+        });
+    });
+
+    if (!matches.length) {
+        return '<div class="empty-state"><div class="title">No file matched</div><div class="desc">Try another keyword</div></div>';
+    }
+
+    const limited = matches.slice(0, 150);
+    const listHtml = limited.map(match => {
+        const activeClass = match.idx === state.currentFile ? 'active' : '';
+        return `
+            <div class="list-item file-picker-item file ${activeClass}" data-action="select-file-from-picker" data-file-index="${match.idx}">
+                <div class="icon">${uiIcon('file')}</div>
+                <div class="info">
+                    <div class="name">${escapeHtml(match.fileName)}</div>
+                    <div class="meta">${escapeHtml(match.fullPath)}</div>
+                    <div class="file-picker-snippet">${escapeHtml(match.source)}${match.snippet ? ` | ${escapeHtml(match.snippet)}` : ''}</div>
+                </div>
+                <span class="arrow">${match.idx === state.currentFile ? uiIcon('check') : uiIcon('arrow-right')}</span>
+            </div>
+        `;
+    }).join('');
+
+    const suffix = matches.length > limited.length
+        ? `<div class="file-picker-search-meta">Showing first ${limited.length} of ${matches.length} matches</div>`
+        : `<div class="file-picker-search-meta">${matches.length} match${matches.length === 1 ? '' : 'es'}</div>`;
+
+    return `${suffix}${listHtml}`;
+}
+
+function setFilePickerSearchMode(mode = 'smart') {
+    filePickerSearchMode = String(mode || '').toLowerCase() === 'filename' ? 'filename' : 'smart';
+    document.querySelectorAll('.file-picker-mode-btn').forEach(button => {
+        button.classList.toggle('active', button.dataset.mode === filePickerSearchMode);
+    });
+    renderFilePicker();
+}
+
 function renderFilePicker() {
     const list = document.getElementById('file-picker-list');
     if (!list || state.currentProject === null) return;
 
     const project = state.projects[state.currentProject];
+    const searchInput = document.getElementById('file-picker-search');
+    const searchTerm = String(searchInput ? searchInput.value : filePickerSearchTerm || '').trim();
+    filePickerSearchTerm = searchTerm;
+
+    if (searchTerm) {
+        list.innerHTML = renderFilePickerSearchResults(project, searchTerm);
+        return;
+    }
+
     const currentPath = normalizeFilePath(project.files[state.currentFile]?.name || '');
     const folderParts = currentPath ? currentPath.split('/').slice(0, -1) : [];
 
@@ -403,8 +569,12 @@ function renderFilePicker() {
 }
 
 function showFilePicker() {
+    const searchInput = document.getElementById('file-picker-search');
+    if (searchInput) searchInput.value = filePickerSearchTerm;
+    setFilePickerSearchMode(filePickerSearchMode);
     renderFilePicker();
     showModal('file-picker-modal');
+    if (searchInput) searchInput.focus();
 }
 
 function toggleFilePickerFolder(encodedPath) {
@@ -427,8 +597,10 @@ function selectFileFromPicker(idx) {
 function switchFile(idx) {
     state.currentFile = idx;
     clearSelectionState();
+    touchProjectRecentFile(state.currentProject, idx, { save: false });
     renderFileTabs();
     renderCode({ resetScroll: true });
+    saveState();
 }
 
 function renderCode(options = {}) {
@@ -440,6 +612,10 @@ function clearSelectionState() {
     selectionStartLine = null;
     selectionEndLine = null;
     lastClickedLine = null;
+    if (pendingLineClickTimer) {
+        clearTimeout(pendingLineClickTimer);
+        pendingLineClickTimer = null;
+    }
 }
 
 function getSelectedRange() {
@@ -453,13 +629,19 @@ function getSelectedRange() {
 function updateSelectionStatus() {
     const status = document.getElementById('selection-status');
     const selectButton = document.getElementById('select-mode-btn');
+    const isMarkMode = getCodeInteractionMode() === 'mark';
     if (selectButton) selectButton.classList.toggle('active', isRangeSelectMode);
     if (!status) return;
 
     const range = getSelectedRange();
 
+    if (!isMarkMode) {
+        status.textContent = 'View mode: tap marked code to open its chat. Double tap any line to explain that line.';
+        return;
+    }
+
     if (!isRangeSelectMode) {
-        status.innerHTML = 'Mark mode: tap lines to mark. Hold <strong>Shift</strong> and click another line to mark a full range.';
+        status.innerHTML = 'Mark mode: tap lines to mark. Tap the same color again for a lighter nested shade. Hold <strong>Shift</strong> and tap another line to mark a full range.';
         return;
     }
 
@@ -472,6 +654,7 @@ function updateSelectionStatus() {
 }
 
 function toggleSelectionMode() {
+    if (getCodeInteractionMode() !== 'mark') return;
     isRangeSelectMode = !isRangeSelectMode;
     clearSelectionState();
     refreshVisibleLineClasses();
@@ -485,6 +668,11 @@ function clearSelection() {
 }
 
 function applySelectionToCurrentColor(showFeedback = true) {
+    if (getCodeInteractionMode() !== 'mark') {
+        if (showFeedback) showToast('Switch to Mark mode first');
+        return;
+    }
+
     const range = getSelectedRange();
     if (!range) {
         if (showFeedback) showToast('Select a range first');
@@ -495,9 +683,22 @@ function applySelectionToCurrentColor(showFeedback = true) {
     if (!project.highlights[state.currentFile]) project.highlights[state.currentFile] = {};
     const highlights = project.highlights[state.currentFile];
 
+    if (state.currentColor === 'eraser') {
+        const shouldErase = window.confirm(`Erase marks on lines ${range.start + 1}-${range.end + 1}?`);
+        if (!shouldErase) return;
+    }
+
     for (let line = range.start; line <= range.end; line++) {
-        if (state.currentColor === 'eraser') delete highlights[line];
-        else highlights[line] = state.currentColor;
+        if (state.currentColor === 'eraser') {
+            delete highlights[line];
+            clearHighlightLevel(project, state.currentFile, line);
+        } else {
+            const level = highlights[line] === state.currentColor
+                ? Math.min(3, getHighlightLevel(project, state.currentFile, line) + 1)
+                : 1;
+            highlights[line] = state.currentColor;
+            setHighlightLevel(project, state.currentFile, line, level);
+        }
     }
 
     invalidateSectionsCache(state.currentFile);
@@ -516,6 +717,19 @@ function applySelectionToCurrentColor(showFeedback = true) {
 }
 
 function handleLineClick(evt, lineIdx) {
+    if (getCodeInteractionMode() !== 'mark') {
+        if (pendingLineClickTimer) clearTimeout(pendingLineClickTimer);
+        pendingLineClickTimer = setTimeout(() => {
+            pendingLineClickTimer = null;
+            const project = state.projects[state.currentProject];
+            const highlights = project?.highlights?.[state.currentFile] || {};
+            if (highlights[lineIdx]) {
+                openSectionChat(lineIdx);
+            }
+        }, LINE_CLICK_DELAY_MS);
+        return;
+    }
+
     if (isRangeSelectMode) {
         if (selectionStartLine === null) {
             selectionStartLine = lineIdx;
@@ -540,20 +754,44 @@ function handleLineClick(evt, lineIdx) {
     toggleLine(lineIdx);
 }
 
+function handleLineDoubleClick(evt, lineIdx) {
+    if (pendingLineClickTimer) {
+        clearTimeout(pendingLineClickTimer);
+        pendingLineClickTimer = null;
+    }
+    evt?.preventDefault?.();
+    evt?.stopPropagation?.();
+
+    if (getCodeInteractionMode() !== 'view') return;
+    if (typeof openLineInsightChat === 'function') openLineInsightChat(lineIdx);
+}
+
 function toggleLine(lineIdx) {
     const project = state.projects[state.currentProject];
+    ensureProjectLineStores(project);
     if (!project.highlights[state.currentFile]) project.highlights[state.currentFile] = {};
     
     const highlights = project.highlights[state.currentFile];
     
     if (state.currentColor === 'eraser') {
+        if (!highlights[lineIdx]) return;
+        const now = Date.now();
+        if (pendingEraseLineIdx !== lineIdx || now > pendingEraseExpiresAt) {
+            pendingEraseLineIdx = lineIdx;
+            pendingEraseExpiresAt = now + ERASE_CONFIRM_WINDOW_MS;
+            showToast(`Tap line ${lineIdx + 1} again to erase`);
+            return;
+        }
+        pendingEraseLineIdx = null;
+        pendingEraseExpiresAt = 0;
         delete highlights[lineIdx];
+        clearHighlightLevel(project, state.currentFile, lineIdx);
     } else if (highlights[lineIdx] === state.currentColor) {
-        // Open chat for this section
-        openSectionChat(lineIdx);
-        return;
+        const nextLevel = Math.min(3, getHighlightLevel(project, state.currentFile, lineIdx) + 1);
+        setHighlightLevel(project, state.currentFile, lineIdx, nextLevel);
     } else {
         highlights[lineIdx] = state.currentColor;
+        setHighlightLevel(project, state.currentFile, lineIdx, 1);
     }
     
     invalidateSectionsCache(state.currentFile);
@@ -563,6 +801,9 @@ function toggleLine(lineIdx) {
 }
 
 function selectColor(color) {
+    if (getCodeInteractionMode() !== 'mark') {
+        setCodeInteractionMode('mark');
+    }
     state.currentColor = color;
     document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
     document.querySelector(`.color-btn.${color}`).classList.add('active');
@@ -588,7 +829,7 @@ function renderProjects() {
             <div class="icon">${uiIcon('folder')}</div>
             <div class="info">
                 <div class="name">${escapeHtml(p.name || 'Untitled')}</div>
-                <div class="meta">${p.files ? p.files.length + ' files' : 'Code snippet'}</div>
+                <div class="meta">${p.files ? p.files.length + ' files' : 'Code snippet'}${Array.isArray(p.recentFiles) && p.recentFiles.length ? ` | ${Math.min(p.recentFiles.length, 6)} recent` : ''}</div>
             </div>
             <span class="arrow">${uiIcon('arrow-right')}</span>
         </div>
