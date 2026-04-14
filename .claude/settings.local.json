@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(wc -l c:/CodeLens-v2/codelens-full/*.md c:/CodeLens-v2/codelens-full/www/*.md)",
+      "Bash(cp c:/CodeLens-v2/codelens-full/android/app/src/main/assets/public/scripts/07-general-chat.js c:/CodeLens-v2/codelens-full/www/scripts/07-general-chat.js)",
+      "Bash(cp c:/CodeLens-v2/codelens-full/android/app/src/main/assets/public/scripts/09-folders-snippets.js c:/CodeLens-v2/codelens-full/www/scripts/09-folders-snippets.js)",
+      "Bash(cp c:/CodeLens-v2/codelens-full/android/app/src/main/assets/public/scripts/12-ai-api.js c:/CodeLens-v2/codelens-full/www/scripts/12-ai-api.js)",
+      "Bash(sed -i '496,841d' c:/CodeLens-v2/codelens-full/www/scripts/16-learning.js)",
+      "Bash(sed -n '493,500p' c:/CodeLens-v2/codelens-full/www/scripts/16-learning.js)"
+    ]
+  }
+}

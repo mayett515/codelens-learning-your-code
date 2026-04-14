@@ -13,15 +13,22 @@ let state = {
         section: {
             provider: 'openrouter',
             models: {
-                openrouter: 'openai/gpt-4o-mini',
-                siliconflow: 'Qwen/Qwen2.5-7B-Instruct'
+                openrouter: 'qwen/qwen-2.5-coder-32b-instruct',
+                siliconflow: 'Qwen/Qwen2.5-Coder-7B-Instruct'
             }
         },
         general: {
             provider: 'openrouter',
             models: {
-                openrouter: 'openai/gpt-4o-mini',
+                openrouter: 'meta-llama/llama-3.3-70b-instruct',
                 siliconflow: 'Qwen/Qwen2.5-7B-Instruct'
+            }
+        },
+        learning: {
+            provider: 'openrouter',
+            models: {
+                openrouter: 'deepseek/deepseek-chat',
+                siliconflow: 'deepseek-ai/DeepSeek-V2.5'
             }
         }
     },
@@ -80,21 +87,55 @@ const MAX_HOME_RECENT_CHATS = 5;
 const RECENT_CHATS_PAGE_SIZE = 20;
 
 const OPENROUTER_MODEL_OPTIONS = [
-    { value: 'openai/gpt-4o-mini', label: 'GPT-4o Mini' },
-    { value: 'openai/gpt-4o', label: 'GPT-4o' },
-    { value: 'anthropic/claude-3.5-sonnet', label: 'Claude 3.5 Sonnet' },
-    { value: 'anthropic/claude-3-haiku', label: 'Claude 3 Haiku' },
-    { value: 'meta-llama/llama-3.1-70b-instruct', label: 'Llama 3.1 70B' },
-    { value: 'mistralai/mistral-small-3.2-24b-instruct:free', label: 'Mistral Small 3.2' }
+    { value: 'openai/gpt-4o-mini', label: 'GPT-4o Mini', tags: ['general', 'cheap'] },
+    { value: 'openai/gpt-4o', label: 'GPT-4o', tags: ['general'] },
+    { value: 'anthropic/claude-3.5-sonnet', label: 'Claude 3.5 Sonnet', tags: ['general', 'code'] },
+    { value: 'anthropic/claude-3-haiku', label: 'Claude 3 Haiku', tags: ['cheap'] },
+    { value: 'meta-llama/llama-3.1-70b-instruct', label: 'Llama 3.1 70B', tags: ['general'] },
+    { value: 'meta-llama/llama-3.3-70b-instruct', label: 'Llama 3.3 70B (free)', tags: ['general', 'free'] },
+    { value: 'mistralai/mistral-small-3.2-24b-instruct:free', label: 'Mistral Small 3.2 (free)', tags: ['general', 'free'] },
+    { value: 'qwen/qwen-2.5-coder-32b-instruct', label: 'Qwen 2.5 Coder 32B', tags: ['code', 'free'] },
+    { value: 'qwen/qwen-2.5-72b-instruct', label: 'Qwen 2.5 72B Instruct', tags: ['general'] },
+    { value: 'deepseek/deepseek-chat', label: 'DeepSeek V3 Chat', tags: ['learning', 'code', 'general'] },
+    { value: 'deepseek/deepseek-r1', label: 'DeepSeek R1 (reasoning)', tags: ['learning', 'reason'] },
+    { value: 'deepseek/deepseek-r1-distill-llama-70b', label: 'DeepSeek R1 Distill 70B', tags: ['reason'] },
+    { value: 'google/gemma-2-27b-it', label: 'Gemma 2 27B IT', tags: ['general'] },
+    { value: 'nvidia/llama-3.1-nemotron-70b-instruct', label: 'Nemotron 70B', tags: ['general'] }
 ];
 
 const SILICONFLOW_MODEL_OPTIONS = [
-    { value: 'Qwen/Qwen2.5-7B-Instruct', label: 'Qwen 2.5 7B Instruct' },
-    { value: 'Qwen/Qwen2.5-32B-Instruct', label: 'Qwen 2.5 32B Instruct' },
-    { value: 'Qwen/Qwen2.5-14B-Instruct', label: 'Qwen 2.5 14B Instruct' },
-    { value: 'THUDM/GLM-4-9B-Chat', label: 'GLM-4 9B Chat' },
-    { value: 'Qwen/Qwen2.5-72B-Instruct', label: 'Qwen 2.5 72B Instruct' }
+    { value: 'Qwen/Qwen2.5-7B-Instruct', label: 'Qwen 2.5 7B Instruct', tags: ['cheap', 'free'] },
+    { value: 'Qwen/Qwen2.5-14B-Instruct', label: 'Qwen 2.5 14B Instruct', tags: ['general'] },
+    { value: 'Qwen/Qwen2.5-32B-Instruct', label: 'Qwen 2.5 32B Instruct', tags: ['general'] },
+    { value: 'Qwen/Qwen2.5-72B-Instruct', label: 'Qwen 2.5 72B Instruct', tags: ['general', 'learning'] },
+    { value: 'Qwen/Qwen2.5-Coder-7B-Instruct', label: 'Qwen 2.5 Coder 7B', tags: ['code', 'free'] },
+    { value: 'Qwen/Qwen2.5-Coder-32B-Instruct', label: 'Qwen 2.5 Coder 32B', tags: ['code'] },
+    { value: 'THUDM/GLM-4-9B-Chat', label: 'GLM-4 9B Chat', tags: ['general', 'free'] },
+    { value: 'deepseek-ai/DeepSeek-V2.5', label: 'DeepSeek V2.5', tags: ['learning', 'code'] },
+    { value: 'deepseek-ai/DeepSeek-Coder-V2-Instruct', label: 'DeepSeek Coder V2', tags: ['code'] },
+    { value: 'deepseek-ai/DeepSeek-R1-Distill-Qwen-32B', label: 'DeepSeek R1 Distill Qwen 32B', tags: ['reason'] },
+    { value: 'meta-llama/Meta-Llama-3.1-8B-Instruct', label: 'Llama 3.1 8B', tags: ['cheap', 'free'] }
 ];
+
+// Per-scope recommended defaults. Kept in sync with chatConfig seed above.
+// Used by ensureStateShape() to pick sensible defaults for fresh state and
+// by getDefaultModelForProviderInScope() when callers want a task-aware default.
+const SCOPE_RECOMMENDED_MODELS = {
+    section: {
+        openrouter: 'qwen/qwen-2.5-coder-32b-instruct',
+        siliconflow: 'Qwen/Qwen2.5-Coder-7B-Instruct'
+    },
+    general: {
+        openrouter: 'meta-llama/llama-3.3-70b-instruct',
+        siliconflow: 'Qwen/Qwen2.5-7B-Instruct'
+    },
+    learning: {
+        openrouter: 'deepseek/deepseek-chat',
+        siliconflow: 'deepseek-ai/DeepSeek-V2.5'
+    }
+};
+
+const CHAT_SCOPES = ['section', 'general', 'learning'];
 
 let apiKeys = {
     openrouter: '',
@@ -238,6 +279,23 @@ function sanitizePersistedState(rawState = {}) {
 function getPersistedStateSnapshot() {
     const snapshot = { ...state };
     delete snapshot.apiKeys;
+
+    // Vectors live in their own localStorage key (see 17-learning-embeddings.js).
+    // Strip any stray `.vector` arrays from the embedding metadata map so the
+    // main state blob never grows with vector data (large arrays balloon
+    // JSON.parse time at every boot).
+    const hub = snapshot.learningHub;
+    if (hub && typeof hub === 'object' && hub.embeddings && typeof hub.embeddings === 'object') {
+        const slim = {};
+        Object.keys(hub.embeddings).forEach(id => {
+            const record = hub.embeddings[id];
+            if (!record || typeof record !== 'object') return;
+            const { vector: _discard, ...meta } = record;
+            slim[id] = meta;
+        });
+        snapshot.learningHub = { ...hub, embeddings: slim };
+    }
+
     return snapshot;
 }
 
@@ -247,6 +305,13 @@ function getProviderModelOptions(provider) {
 
 function getDefaultModelForProvider(provider) {
     return provider === 'siliconflow' ? DEFAULT_SILICONFLOW_MODEL : DEFAULT_OPENROUTER_MODEL;
+}
+
+function getDefaultModelForProviderInScope(provider, scope = 'section') {
+    const key = CHAT_SCOPES.includes(scope) ? scope : 'section';
+    const providerKey = API_PROVIDERS.includes(provider) ? provider : 'openrouter';
+    const recommended = SCOPE_RECOMMENDED_MODELS?.[key]?.[providerKey];
+    return recommended || getDefaultModelForProvider(providerKey);
 }
 
 function ensureStateShape() {
@@ -261,7 +326,7 @@ function ensureStateShape() {
         state.chatConfig = {};
     }
 
-    ['section', 'general'].forEach(scope => {
+    CHAT_SCOPES.forEach(scope => {
         const cfg = state.chatConfig[scope] || {};
         const provider = API_PROVIDERS.includes(cfg.provider) ? cfg.provider : state.activeAPI;
         const models = cfg.models && typeof cfg.models === 'object' ? cfg.models : {};
@@ -269,8 +334,8 @@ function ensureStateShape() {
         state.chatConfig[scope] = {
             provider,
             models: {
-                openrouter: String(models.openrouter || state.openrouterModel || DEFAULT_OPENROUTER_MODEL),
-                siliconflow: String(models.siliconflow || state.siliconflowModel || DEFAULT_SILICONFLOW_MODEL)
+                openrouter: String(models.openrouter || getDefaultModelForProviderInScope('openrouter', scope)),
+                siliconflow: String(models.siliconflow || getDefaultModelForProviderInScope('siliconflow', scope))
             }
         };
     });
@@ -418,27 +483,41 @@ function ensureStateShape() {
 
     state.learningHub.concepts = Array.isArray(state.learningHub.concepts) ? state.learningHub.concepts : [];
     state.learningHub.links = Array.isArray(state.learningHub.links) ? state.learningHub.links : [];
+    // Embedding records: metadata only. Vector arrays live in a separate
+    // vector store (see 17-learning-embeddings.js) so the main state blob
+    // stays small. Legacy persisted states that still carry an inline
+    // `.vector` field are migrated on the spot by migrateInlineLearningVectors.
     const rawEmbeddings = state.learningHub.embeddings && typeof state.learningHub.embeddings === 'object'
         ? state.learningHub.embeddings
         : {};
     const normalizedEmbeddings = {};
     Object.keys(rawEmbeddings).forEach(conceptId => {
         const item = rawEmbeddings[conceptId];
-        const vector = Array.isArray(item?.vector)
-            ? item.vector.map(value => Number(value)).filter(value => Number.isFinite(value)).slice(0, 256)
-            : [];
-        if (!vector.length) return;
-        normalizedEmbeddings[String(conceptId || '')] = {
-            vector,
-            model: String(item?.model || ''),
-            api: String(item?.api || ''),
-            updatedAt: String(item?.updatedAt || ''),
-            signature: String(item?.signature || ''),
-            nativeSyncedAt: String(item?.nativeSyncedAt || ''),
-            nativeSignature: String(item?.nativeSignature || '')
+        if (!item || typeof item !== 'object') return;
+        const id = String(conceptId || '');
+        if (!id) return;
+        const hasInlineVector = Array.isArray(item.vector) && item.vector.length >= 24;
+        const signature = String(item.signature || '');
+        // Keep records that either (a) still carry a legacy inline vector, or
+        // (b) already have a signature from a previous run. Empty records are
+        // dropped — no point retaining them.
+        if (!hasInlineVector && !signature && !item.nativeSignature) return;
+        normalizedEmbeddings[id] = {
+            model: String(item.model || ''),
+            api: String(item.api || ''),
+            updatedAt: String(item.updatedAt || ''),
+            signature,
+            nativeSyncedAt: String(item.nativeSyncedAt || ''),
+            nativeSignature: String(item.nativeSignature || '')
         };
+        // Carry the inline vector forward just long enough for the migration
+        // helper below to move it into the dedicated vector store.
+        if (hasInlineVector) normalizedEmbeddings[id].vector = item.vector;
     });
     state.learningHub.embeddings = normalizedEmbeddings;
+    if (typeof migrateInlineLearningVectors === 'function') {
+        migrateInlineLearningVectors(normalizedEmbeddings);
+    }
     const graphMode = String(state.learningHub.graphMode || '').toLowerCase();
     state.learningHub.graphMode = ['connections', 'recency', 'source'].includes(graphMode) ? graphMode : 'connections';
     const graphZoom = Number(state.learningHub.graphZoom);
@@ -741,7 +820,7 @@ function getChatModel(scope = 'section', provider = '') {
     const cfg = getChatConfig(scope);
     const selectedProvider = provider || cfg.provider;
     const model = cfg.models?.[selectedProvider];
-    return String(model || getDefaultModelForProvider(selectedProvider));
+    return String(model || getDefaultModelForProviderInScope(selectedProvider, scope));
 }
 
 function setChatProvider(scope = 'section', provider = 'openrouter') {
@@ -750,7 +829,7 @@ function setChatProvider(scope = 'section', provider = 'openrouter') {
     const nextProvider = API_PROVIDERS.includes(provider) ? provider : 'openrouter';
     cfg.provider = nextProvider;
     if (!cfg.models[nextProvider]) {
-        cfg.models[nextProvider] = getDefaultModelForProvider(nextProvider);
+        cfg.models[nextProvider] = getDefaultModelForProviderInScope(nextProvider, scope);
     }
 }
 
@@ -760,11 +839,16 @@ function setChatModel(scope = 'section', model = '', provider = '') {
     const selectedProvider = provider || cfg.provider;
     if (!API_PROVIDERS.includes(selectedProvider)) return;
 
-    const nextModel = String(model || '').trim() || getDefaultModelForProvider(selectedProvider);
+    const nextModel = String(model || '').trim() || getDefaultModelForProviderInScope(selectedProvider, scope);
     cfg.models[selectedProvider] = nextModel;
 
-    if (selectedProvider === 'openrouter') state.openrouterModel = nextModel;
-    if (selectedProvider === 'siliconflow') state.siliconflowModel = nextModel;
+    // Legacy top-level model fields track the 'section' scope so older code
+    // paths that still read state.openrouterModel / state.siliconflowModel
+    // see an up-to-date value for the primary chat flow.
+    if (scope === 'section') {
+        if (selectedProvider === 'openrouter') state.openrouterModel = nextModel;
+        if (selectedProvider === 'siliconflow') state.siliconflowModel = nextModel;
+    }
 }
 
 function uiIcon(name, classes = '') {

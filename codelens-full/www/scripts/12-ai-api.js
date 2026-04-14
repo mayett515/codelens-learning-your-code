@@ -28,6 +28,20 @@ const PROVIDER_DISPLAY_NAMES = {
     siliconflow: 'SiliconFlow'
 };
 
+const EMBEDDING_MODELS = {
+    siliconflow: [
+        'BAAI/bge-m3',
+        'Qwen/Qwen3-Embedding-8B',
+        'netease-youdao/bce-embedding-base_v1'
+    ],
+    openrouter: [
+        'openai/text-embedding-3-small',
+        'nomic-ai/nomic-embed-text-v1.5'
+    ]
+};
+
+const LEARNING_EMBEDDING_MAX_DIMENSIONS = 256;
+
 const APP_SYSTEM_PROMPT = [
     'You are the AI assistant inside the CodeLens mobile coding app.',
     'The user is editing code and markdown from a phone and wants fast, practical, reliable help.',
@@ -116,11 +130,65 @@ async function parseJSONResponse(response) {
     const rawText = await response.text();
     if (!rawText) return { data: null, rawText: '' };
 
-    try {
-        return { data: JSON.parse(rawText), rawText };
-    } catch {
-        return { data: null, rawText };
+    return { data: tryParseJSONText(rawText), rawText };
+}
+
+function stripMarkdownCodeFences(rawText = '') {
+    const source = String(rawText || '').trim();
+    if (!source) return '';
+
+    // Handle the common model habit of wrapping JSON in ```json ... ```
+    return source
+        .replace(/^```(?:json)?\s*/i, '')
+        .replace(/\s*```$/i, '')
+        .trim();
+}
+
+function extractLikelyJSONObject(rawText = '') {
+    const source = String(rawText || '');
+    const start = source.indexOf('{');
+    const end = source.lastIndexOf('}');
+    if (start < 0 || end <= start) return '';
+    return source.slice(start, end + 1).trim();
+}
+
+function tryParseJSONText(rawText = '') {
+    const source = String(rawText || '').trim();
+    if (!source) return null;
+
+    const candidates = [];
+    const seen = new Set();
+    const addCandidate = value => {
+        const candidate = String(value || '').trim();
+        if (!candidate || seen.has(candidate)) return;
+        seen.add(candidate);
+        candidates.push(candidate);
+    };
+
+    addCandidate(source);
+    addCandidate(stripMarkdownCodeFences(source));
+    addCandidate(extractLikelyJSONObject(source));
+    addCandidate(extractLikelyJSONObject(stripMarkdownCodeFences(source)));
+
+    for (const candidate of candidates) {
+        try {
+            return JSON.parse(candidate);
+        } catch (_) {
+            // try next candidate
+        }
     }
+    return null;
+}
+
+function parseAIPayload(rawText = '') {
+    const parsed = tryParseJSONText(rawText);
+    if (parsed && typeof parsed === 'object') return parsed;
+
+    const preview = String(rawText || '').slice(0, 700);
+    if (preview.trim()) {
+        console.warn('[ai-json] AI generated malformed JSON payload:', preview);
+    }
+    return null;
 }
 
 async function fetchWithTimeout(url, options = {}, timeoutMs = 70000) {
@@ -609,6 +677,139 @@ function persistResolvedModel(request, resolvedModel) {
 
 function getRequestMessages(request) {
     return buildApiMessages(request.prompt, request.history || [], request.systemPrompts || []);
+}
+
+function getEmbeddingFallbackModels(api = '', preferredModel = '') {
+    const provider = String(api || '').toLowerCase();
+    const list = [
+        String(preferredModel || '').trim(),
+        ...(EMBEDDING_MODELS[provider] || [])
+    ].filter(Boolean);
+    return Array.from(new Set(list));
+}
+
+function normalizeEmbeddingVector(rawVector = []) {
+    if (!Array.isArray(rawVector)) return null;
+    const numeric = rawVector
+        .map(value => Number(value))
+        .filter(value => Number.isFinite(value));
+    if (numeric.length < 16) return null;
+
+    const truncated = numeric.slice(0, LEARNING_EMBEDDING_MAX_DIMENSIONS);
+    const norm = Math.sqrt(truncated.reduce((sum, value) => sum + (value * value), 0));
+    if (!Number.isFinite(norm) || norm <= 0) return null;
+    return truncated.map(value => Number((value / norm).toFixed(6)));
+}
+
+function parseEmbeddingFromPayload(payload) {
+    if (!payload || typeof payload !== 'object') return null;
+
+    if (Array.isArray(payload?.data) && Array.isArray(payload.data[0]?.embedding)) {
+        return payload.data[0].embedding;
+    }
+
+    if (Array.isArray(payload?.embedding)) {
+        return payload.embedding;
+    }
+
+    if (Array.isArray(payload?.output?.embeddings) && Array.isArray(payload.output.embeddings[0]?.embedding)) {
+        return payload.output.embeddings[0].embedding;
+    }
+
+    return null;
+}
+
+async function requestEmbeddingVector(api, endpoint, key, model, text) {
+    const payload = await requestJsonFromApi(api, endpoint, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            ...(api === 'openrouter'
+                ? {
+                    'Authorization': `Bearer ${key}`,
+                    'HTTP-Referer': 'https://codelens.local',
+                    'X-Title': 'CodeLens'
+                }
+                : {
+                    'Authorization': `Bearer ${key}`
+                })
+        },
+        body: JSON.stringify({
+            model,
+            input: [String(text || '').slice(0, 12000)]
+        })
+    });
+
+    const embedding = parseEmbeddingFromPayload(payload);
+    const normalized = normalizeEmbeddingVector(embedding);
+    if (!normalized) {
+        throw createApiError(`Invalid embedding response for ${api}:${model}`, { retriable: true });
+    }
+
+    return {
+        vector: normalized,
+        api,
+        model
+    };
+}
+
+async function callProviderEmbeddings(api, text, options = {}) {
+    const provider = String(api || '').toLowerCase();
+    const key = getApiKey(provider);
+    if (!key) {
+        throw createApiError(getApiKeyMissingMessage(provider), { retriable: false });
+    }
+
+    const models = getEmbeddingFallbackModels(provider, options.model);
+    const endpoints = provider === 'openrouter'
+        ? ['https://openrouter.ai/api/v1/embeddings']
+        : ['https://api.siliconflow.cn/v1/embeddings', 'https://api.siliconflow.com/v1/embeddings'];
+
+    let lastError = null;
+    for (const model of models) {
+        for (const endpoint of endpoints) {
+            try {
+                return await withApiRetries(provider, async () => {
+                    return await requestEmbeddingVector(provider, endpoint, key, model, text);
+                });
+            } catch (error) {
+                lastError = error;
+                if (!isModelUnavailableError(error) && !isLikelyRetriableMessage(error?.message || '')) {
+                    throw error;
+                }
+            }
+        }
+    }
+
+    throw lastError || createApiError(`No usable embedding model for ${provider}`, { retriable: false });
+}
+
+async function getBestEmbeddingForText(text = '', options = {}) {
+    const sourceText = String(text || '').trim();
+    if (!sourceText) return null;
+
+    const preferredProvider = String(options.provider || '').toLowerCase();
+    const providers = Array.from(new Set([
+        preferredProvider,
+        'siliconflow',
+        'openrouter'
+    ].filter(provider => provider === 'siliconflow' || provider === 'openrouter')));
+
+    let lastError = null;
+    for (const provider of providers) {
+        try {
+            return await callProviderEmbeddings(provider, sourceText, {
+                model: options.model || ''
+            });
+        } catch (error) {
+            lastError = error;
+        }
+    }
+
+    if (lastError) {
+        console.warn('[learning-embeddings] fallback to lexical similarity:', lastError?.message || lastError);
+    }
+    return null;
 }
 
 async function callOpenRouter(request) {

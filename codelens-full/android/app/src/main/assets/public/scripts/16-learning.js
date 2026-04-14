@@ -484,358 +484,15 @@ function deriveLearningConceptRecords() {
     return records;
 }
 
-const LEARNING_VECTOR_MIN_LENGTH = 24;
-const LEARNING_VECTOR_PREFETCH_LIMIT = 140;
-const LEARNING_VECTOR_MAX_UPDATES_PER_QUERY = 10;
-const LEARNING_QUERY_EMBED_CACHE_LIMIT = 24;
-const learningEmbeddingJobs = new Map();
-const learningQueryEmbeddingCache = new Map();
-
-function getLearningEmbeddingsStore() {
-    ensureStateShape();
-    if (!state.learningHub.embeddings || typeof state.learningHub.embeddings !== 'object') {
-        state.learningHub.embeddings = {};
-    }
-    return state.learningHub.embeddings;
-}
-
-function buildLearningConceptSignature(concept = {}) {
-    const parts = [
-        cleanLearningText(concept.title || ''),
-        cleanLearningText(concept.summary || concept.principle || ''),
-        cleanLearningText(concept.coreConcept || ''),
-        cleanLearningText(concept.architecturalPattern || ''),
-        cleanLearningText(concept.programmingParadigm || ''),
-        uniqueLearningStrings(concept.languageSyntax || []).join(','),
-        uniqueLearningStrings(concept.keywords || []).join(',')
-    ];
-    return parts.join('|').toLowerCase();
-}
-
-function buildLearningConceptEmbeddingText(concept = {}) {
-    const syntax = uniqueLearningStrings(concept.languageSyntax || []).slice(0, 10).join(', ');
-    const keywords = uniqueLearningStrings(concept.keywords || []).slice(0, 12).join(', ');
-    return [
-        `Title: ${concept.title || 'Concept'}`,
-        `Summary: ${concept.summary || concept.principle || ''}`,
-        `Core concept: ${concept.coreConcept || ''}`,
-        `Architectural pattern: ${concept.architecturalPattern || ''}`,
-        `Programming paradigm: ${concept.programmingParadigm || ''}`,
-        `Language syntax: ${syntax || 'n/a'}`,
-        `Keywords: ${keywords || 'n/a'}`
-    ].join('\n');
-}
-
-function pruneLearningEmbeddingsToKnownConcepts(concepts = []) {
-    const store = getLearningEmbeddingsStore();
-    const validIds = new Set((Array.isArray(concepts) ? concepts : []).map(item => String(item?.id || '')).filter(Boolean));
-    Object.keys(store).forEach(conceptId => {
-        if (!validIds.has(conceptId)) {
-            deleteEmbedding({ id: conceptId });
-            delete store[conceptId];
-        }
-    });
-}
-
-function getLearningCosineSimilarity(leftVector = [], rightVector = []) {
-    if (!Array.isArray(leftVector) || !Array.isArray(rightVector)) return 0;
-    const len = Math.min(leftVector.length, rightVector.length);
-    if (len < LEARNING_VECTOR_MIN_LENGTH) return 0;
-
-    let dot = 0;
-    let normLeft = 0;
-    let normRight = 0;
-    for (let i = 0; i < len; i++) {
-        const a = Number(leftVector[i]);
-        const b = Number(rightVector[i]);
-        if (!Number.isFinite(a) || !Number.isFinite(b)) continue;
-        dot += a * b;
-        normLeft += a * a;
-        normRight += b * b;
-    }
-
-    if (normLeft <= 0 || normRight <= 0) return 0;
-    return dot / (Math.sqrt(normLeft) * Math.sqrt(normRight));
-}
-
-function resolveLearningPayloadObject(payload = null) {
-    if (!payload) return null;
-    if (typeof payload === 'object') return payload;
-
-    const rawText = String(payload || '').trim();
-    if (!rawText) return null;
-
-    if (typeof parseAIPayload === 'function') {
-        const parsed = parseAIPayload(rawText);
-        if (parsed && typeof parsed === 'object') return parsed;
-    }
-
-    try {
-        const parsed = JSON.parse(rawText);
-        return parsed && typeof parsed === 'object' ? parsed : null;
-    } catch (_) {
-        return null;
-    }
-}
-
-function getNativeVectorBridge() {
-    const bridge = window?.ObjectBoxBridge;
-    if (!bridge || typeof bridge !== 'object') return null;
-    if (typeof bridge.getTopMatches !== 'function') return null;
-    if (typeof bridge.upsertEmbedding !== 'function') return null;
-    if (typeof bridge.deleteEmbedding !== 'function') return null;
-    return bridge;
-}
-
-function callNativeVectorBridge(method = '', payload = {}) {
-    const bridge = getNativeVectorBridge();
-    if (!bridge || typeof bridge[method] !== 'function') return null;
-
-    try {
-        const raw = bridge[method](JSON.stringify(payload || {}));
-        return resolveLearningPayloadObject(raw);
-    } catch (error) {
-        console.warn('[learning-vector] native bridge call failed:', error?.message || error);
-        return null;
-    }
-}
-
-// JS interface: native semantic retrieval
-function getTopMatches(payload = {}) {
-    return callNativeVectorBridge('getTopMatches', payload);
-}
-
-// JS interface: native vector upsert
-function upsertEmbedding(payload = {}) {
-    return callNativeVectorBridge('upsertEmbedding', payload);
-}
-
-// JS interface: native vector delete
-function deleteEmbedding(payload = {}) {
-    return callNativeVectorBridge('deleteEmbedding', payload);
-}
-
-function ensureNativeEmbeddingSynced(conceptId = '', embeddingRecord = null) {
-    const id = String(conceptId || '').trim();
-    if (!id || !embeddingRecord || typeof embeddingRecord !== 'object') return false;
-    if (!getNativeVectorBridge()) return false;
-
-    const vector = Array.isArray(embeddingRecord.vector)
-        ? embeddingRecord.vector.map(value => Number(value)).filter(value => Number.isFinite(value)).slice(0, 256)
-        : [];
-    if (vector.length < LEARNING_VECTOR_MIN_LENGTH) return false;
-
-    const currentSignature = String(embeddingRecord.signature || '');
-    const alreadySynced = Boolean(
-        embeddingRecord.nativeSyncedAt &&
-        String(embeddingRecord.nativeSignature || '') === currentSignature
-    );
-    if (alreadySynced) return false;
-
-    const response = upsertEmbedding({
-        id,
-        vector,
-        model: String(embeddingRecord.model || ''),
-        api: String(embeddingRecord.api || ''),
-        signature: currentSignature,
-        updatedAt: String(embeddingRecord.updatedAt || new Date().toISOString())
-    });
-
-    if (!response || response.ok === false) return false;
-    embeddingRecord.nativeSyncedAt = new Date().toISOString();
-    embeddingRecord.nativeSignature = currentSignature;
-    return true;
-}
-
-function getLearningSemanticScoresFromNativeBridge(queryVector = [], concepts = []) {
-    if (!getNativeVectorBridge()) return null;
-
-    const conceptIds = (Array.isArray(concepts) ? concepts : [])
-        .map(item => String(item?.id || '').trim())
-        .filter(Boolean);
-    if (!conceptIds.length) return {};
-
-    const parsed = getTopMatches({
-        vector: queryVector.slice(0, 256),
-        ids: conceptIds,
-        limit: conceptIds.length
-    });
-    if (!parsed || parsed.ok === false) return null;
-
-    const matches = Array.isArray(parsed?.matches) ? parsed.matches : [];
-    if (!matches.length) return {};
-
-    const scoreMap = {};
-    matches.forEach(match => {
-        const id = String(match?.id || match?.conceptId || '').trim();
-        if (!id) return;
-
-        const rawScore = Number(match?.score ?? match?.similarity ?? match?.cosine ?? 0);
-        if (!Number.isFinite(rawScore)) return;
-        const normalized = rawScore >= 0 && rawScore <= 1
-            ? rawScore
-            : ((rawScore + 1) / 2);
-        scoreMap[id] = Math.max(0, Math.min(1, normalized));
-    });
-    return scoreMap;
-}
-
-function computeLearningSemanticScoresLocally(queryVector = [], concepts = [], embeddingStore = {}) {
-    const scoreMap = {};
-    (Array.isArray(concepts) ? concepts : []).forEach(concept => {
-        const conceptId = String(concept?.id || '').trim();
-        if (!conceptId) return;
-
-        const vector = embeddingStore?.[conceptId]?.vector;
-        if (!Array.isArray(vector) || vector.length < LEARNING_VECTOR_MIN_LENGTH) return;
-
-        const cosine = getLearningCosineSimilarity(queryVector, vector);
-        const normalized = Math.max(0, (cosine + 1) / 2);
-        scoreMap[conceptId] = normalized;
-    });
-
-    return scoreMap;
-}
-
-function getLearningSemanticScoreMap(queryVector = [], concepts = [], embeddingStore = {}) {
-    if (!Array.isArray(queryVector) || queryVector.length < LEARNING_VECTOR_MIN_LENGTH) return null;
-    const nativeMap = getLearningSemanticScoresFromNativeBridge(queryVector, concepts);
-    if (nativeMap && typeof nativeMap === 'object' && Object.keys(nativeMap).length) return nativeMap;
-    return computeLearningSemanticScoresLocally(queryVector, concepts, embeddingStore);
-}
-
-function getLearningQueryEmbeddingCacheKey(queryText = '') {
-    return cleanLearningText(queryText || '').toLowerCase().slice(0, 1800);
-}
-
-function getLearningQueryEmbeddingFromCache(queryText = '') {
-    const key = getLearningQueryEmbeddingCacheKey(queryText);
-    if (!key) return null;
-    return learningQueryEmbeddingCache.get(key) || null;
-}
-
-function setLearningQueryEmbeddingCache(queryText = '', embeddingPayload = null) {
-    const key = getLearningQueryEmbeddingCacheKey(queryText);
-    if (!key || !embeddingPayload?.vector) return;
-
-    if (learningQueryEmbeddingCache.size >= LEARNING_QUERY_EMBED_CACHE_LIMIT) {
-        const oldestKey = learningQueryEmbeddingCache.keys().next().value;
-        if (oldestKey) learningQueryEmbeddingCache.delete(oldestKey);
-    }
-    learningQueryEmbeddingCache.set(key, embeddingPayload);
-}
-
-async function embedTextForLearning(queryText = '', options = {}) {
-    const text = cleanLearningText(queryText || '');
-    if (!text) return null;
-    if (typeof getBestEmbeddingForText !== 'function') return null;
-
-    try {
-        return await getBestEmbeddingForText(text, {
-            provider: options.provider || ''
-        });
-    } catch (_) {
-        return null;
-    }
-}
-
-async function getLearningQueryEmbeddingPayload(queryText = '', options = {}) {
-    const cached = getLearningQueryEmbeddingFromCache(queryText);
-    if (cached?.vector?.length) return cached;
-
-    const embedded = await embedTextForLearning(queryText, options);
-    if (!embedded?.vector?.length) return null;
-
-    setLearningQueryEmbeddingCache(queryText, embedded);
-    return embedded;
-}
-
-async function ensureLearningEmbeddingForConcept(concept = {}, options = {}) {
-    const conceptId = String(concept?.id || '').trim();
-    if (!conceptId) return null;
-
-    const signature = buildLearningConceptSignature(concept);
-    const store = getLearningEmbeddingsStore();
-    const existing = store[conceptId];
-    const hasUsableExisting = Boolean(
-        existing &&
-        existing.signature === signature &&
-        Array.isArray(existing.vector) &&
-        existing.vector.length >= LEARNING_VECTOR_MIN_LENGTH
-    );
-    if (hasUsableExisting && !options.force) {
-        ensureNativeEmbeddingSynced(conceptId, existing);
-        return existing;
-    }
-
-    const jobKey = `${conceptId}:${signature}`;
-    if (learningEmbeddingJobs.has(jobKey)) {
-        return learningEmbeddingJobs.get(jobKey);
-    }
-
-    const job = (async () => {
-        const payload = await embedTextForLearning(buildLearningConceptEmbeddingText(concept), options);
-        if (!payload?.vector || payload.vector.length < LEARNING_VECTOR_MIN_LENGTH) return null;
-
-        store[conceptId] = {
-            vector: payload.vector.slice(0, 256),
-            model: String(payload.model || ''),
-            api: String(payload.api || ''),
-            updatedAt: new Date().toISOString(),
-            signature,
-            nativeSyncedAt: '',
-            nativeSignature: ''
-        };
-        ensureNativeEmbeddingSynced(conceptId, store[conceptId]);
-        return store[conceptId];
-    })().catch(() => null).finally(() => {
-        learningEmbeddingJobs.delete(jobKey);
-    });
-
-    learningEmbeddingJobs.set(jobKey, job);
-    return job;
-}
-
-async function syncLearningConceptEmbeddings(concepts = [], options = {}) {
-    const list = Array.isArray(concepts) ? concepts : [];
-    if (!list.length) return false;
-
-    const maxToUpdate = Math.max(1, Number(options.maxToUpdate) || LEARNING_VECTOR_MAX_UPDATES_PER_QUERY);
-    let updated = false;
-    let processed = 0;
-
-    for (const concept of list) {
-        if (processed >= maxToUpdate) break;
-        const conceptId = String(concept?.id || '').trim();
-        if (!conceptId) continue;
-
-        const store = getLearningEmbeddingsStore();
-        const signature = buildLearningConceptSignature(concept);
-        const existing = store[conceptId];
-        const needsUpdate = Boolean(
-            options.force ||
-            !existing ||
-            existing.signature !== signature ||
-            !Array.isArray(existing.vector) ||
-            existing.vector.length < LEARNING_VECTOR_MIN_LENGTH
-        );
-        if (!needsUpdate) {
-            if (ensureNativeEmbeddingSynced(conceptId, existing)) {
-                updated = true;
-            }
-            continue;
-        }
-
-        processed += 1;
-        const result = await ensureLearningEmbeddingForConcept(concept, options);
-        if (result?.vector?.length) updated = true;
-    }
-
-    if (updated && options.save !== false) {
-        saveState();
-    }
-    return updated;
-}
+// The embeddings layer (native vector bridge + learning vector store + concept
+// embedding sync) has moved to `scripts/17-learning-embeddings.js`. It is
+// loaded immediately after this file, so every symbol it exports
+// (getTopMatches, upsertEmbedding, deleteEmbedding, getLearningEmbeddingsStore,
+// pruneLearningEmbeddingsToKnownConcepts, getLearningCosineSimilarity,
+// getLearningSemanticScoreMap, getLearningQueryEmbeddingPayload,
+// ensureLearningEmbeddingForConcept, syncLearningConceptEmbeddings, and the
+// LEARNING_VECTOR_* constants) is available as a global function here at
+// runtime.
 
 function calculateLearningLinks(concepts = []) {
     const links = [];
@@ -1444,8 +1101,8 @@ async function sendLearningReviewMessage() {
         return;
     }
 
-    const provider = getChatProvider('general');
-    const model = getChatModel('general', provider);
+    const provider = getChatProvider('learning');
+    const model = getChatModel('learning', provider);
     const history = buildAIHistoryFromMessages(chat.messages || []);
     const { concept, session } = getLearningConceptById(chat.conceptId);
     const systemPrompts = buildLearningReviewSystemPrompts(concept, session);
@@ -1469,7 +1126,7 @@ async function sendLearningReviewMessage() {
 
     const response = await callAI(text, {
         notifyQueue: true,
-        scope: 'general',
+        scope: 'learning',
         api: provider,
         model,
         history,
@@ -1970,9 +1627,8 @@ async function getRelevantLearningConceptPulls(query = '', options = {}, limit =
     if (updatedVectors) saveState();
 
     const queryEmbedding = await getLearningQueryEmbeddingPayload(queryText, options);
-    const embeddingStore = getLearningEmbeddingsStore();
     const semanticScoreMap = queryEmbedding?.vector?.length
-        ? await getLearningSemanticScoreMap(queryEmbedding.vector, concepts, embeddingStore)
+        ? await getLearningSemanticScoreMap(queryEmbedding.vector, concepts)
         : null;
     const hasSemanticScores = Boolean(
         semanticScoreMap &&
@@ -2296,8 +1952,11 @@ async function captureCurrentChatLearning() {
         return;
     }
 
-    const provider = getChatProvider(context.scope);
-    const model = getChatModel(context.scope, provider);
+    // Taxonomy extraction requires strict JSON output — always route to the
+    // 'learning' scope so users can configure a reliable model for it,
+    // independent of the chat scope they captured from.
+    const provider = getChatProvider('learning');
+    const model = getChatModel('learning', provider);
     const history = buildAIHistoryFromMessages(messages).slice(-40);
     const knownConceptTaxonomy = getLearningConceptRecordsSorted(140)
         .map(item => ({
@@ -2353,7 +2012,7 @@ async function captureCurrentChatLearning() {
     ].join('\n');
 
     const response = await callAI(prompt, {
-        scope: context.scope,
+        scope: 'learning',
         api: provider,
         model,
         history,
