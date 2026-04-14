@@ -27,6 +27,15 @@ function importBackup(event) {
                 clearAllLearningVectors();
             }
             state = { ...state, ...data };
+            // Imported concepts carry stale nativeSyncedAt / nativeSignature
+            // values from the source install. Without clearing them,
+            // ensureNativeEmbeddingSynced() sees a "synced" flag and skips
+            // the upsert — leaving the native vector store empty while the
+            // JS side believes it is populated. Force a re-sync.
+            if (typeof resetLearningEmbeddingSyncFlags === 'function'
+                && state.learningHub && state.learningHub.embeddings) {
+                resetLearningEmbeddingSyncFlags(state.learningHub.embeddings);
+            }
             sectionsCache.clear();
             saveState();
             renderProjects();

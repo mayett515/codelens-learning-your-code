@@ -8,13 +8,15 @@ Keep semantic retrieval native-first on Android to avoid UI stutter and make the
 
 ## Runtime Layers
 
-1. JS app (`scripts/16-learning.js`)
-2. Native bridge (`ObjectBoxBridge.java`)
-3. Native persistent vector store (currently SharedPreferences-backed map, contract-ready for ObjectBox engine)
+1. JS app logic (`scripts/16-learning.js`)
+2. JS embedding layer (`scripts/17-learning-embeddings.js`)
+3. Native bridge (`ObjectBoxBridge.java`)
+4. Native persistent vector store (currently SharedPreferences-backed map, contract-ready for ObjectBox engine)
+5. JS local vector cache (`codelens_learning_vectors_v1`)
 
 ## JS Interface Contract
 
-Exposed and used in `scripts/16-learning.js`:
+Exposed by and primarily used in `scripts/17-learning-embeddings.js` (invoked from learning flows in `16-learning.js`):
 
 - `getTopMatches(payload)`
 - `upsertEmbedding(payload)`
@@ -68,10 +70,17 @@ Response:
 
 ## Data Ownership
 
-- JS keeps `state.learningHub.embeddings` as:
-  - cache/fallback for non-native paths
-  - sync metadata (`nativeSyncedAt`, `nativeSignature`)
+- JS keeps `state.learningHub.embeddings` as metadata only:
+  - `{ api, model, updatedAt, signature, nativeSyncedAt, nativeSignature }`
+- JS keeps raw vectors in localStorage key `codelens_learning_vectors_v1`:
+  - `{ "<conceptId>": [float, float, ...] }`
 - Native store is source of truth for native semantic matching.
+
+## Native Storage Layout (current implementation)
+
+- SharedPreferences file: `codelens_learning_vectors`
+- Per-id rows: `vec.<conceptId>` -> compact JSON payload
+- Legacy migration: if `embeddings_json` exists, it is migrated once into per-id rows and then removed.
 
 ## Sync Rules
 
@@ -81,6 +90,23 @@ Response:
 4. Retrieval path:
    - native `getTopMatches` first
    - JS cosine fallback if native unavailable
+
+## Reset / Import Rules
+
+Because vectors live in a dedicated store outside the main state blob, two
+helpers in `17-learning-embeddings.js` keep the three layers (metadata,
+JS vector store, native bridge) coherent across wipes and restores:
+
+- `clearAllLearningVectors()` — called from `clearAllData()` and
+  `importBackup()`. Drops the `codelens_learning_vectors_v1` key, clears
+  the in-memory map + query cache + in-flight jobs, and issues
+  `deleteEmbedding` to the native bridge for every known id.
+- `resetLearningEmbeddingSyncFlags(map)` — called from `importBackup()`
+  immediately after the imported state is merged. Clears
+  `nativeSyncedAt` / `nativeSignature` on every concept metadata record.
+  Without this, imported concepts look already-synced and
+  `ensureNativeEmbeddingSynced()` skips the upsert — leaving the native
+  store empty while JS believes it is populated.
 
 ## Android Wiring
 

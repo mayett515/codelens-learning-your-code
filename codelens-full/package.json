@@ -4,7 +4,9 @@
   "description": "Code Learning App",
   "main": "index.js",
   "scripts": {
-    "build": "echo 'No build needed'"
+    "build": "echo 'No build needed'",
+    "sync": "node scripts/sync-assets.js",
+    "sync:check": "node scripts/sync-assets.js --check"
   },
   "dependencies": {
     "@capacitor/android": "^5.0.0",

@@ -81,7 +81,8 @@ This document maps the UI shell in `public/` and the key interaction surfaces.
 13. `scripts/13-settings.js`
 14. `scripts/14-backup.js`
 15. `scripts/16-learning.js`
-16. `scripts/15-init-2.js` (boot call)
+16. `scripts/17-learning-embeddings.js`
+17. `scripts/15-init-2.js` (boot call)
 
 ## 7) UI Editing Guardrails
 

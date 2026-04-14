@@ -16,7 +16,8 @@ CodeLens is a Capacitor Android app with a plain HTML/CSS/JavaScript frontend (n
   - Fallback path: browser localStorage
 - Learning vectors (semantic memory):
   - Native path (preferred on Android): `window.ObjectBoxBridge` bridge (upsert/match/delete)
-  - JS cache path: `state.learningHub.embeddings` for fallback and sync metadata
+  - JS metadata path: `state.learningHub.embeddings` (metadata only, no raw vectors)
+  - JS vector store path: localStorage key `codelens_learning_vectors_v1` managed by `17-learning-embeddings.js`
 
 ## 2) Repository map
 
@@ -33,7 +34,7 @@ Main folders/files:
   - Main frontend files:
     - `index.html`
     - `styles/app.css`
-    - `scripts/01-state.js` ... `scripts/16-learning.js`
+    - `scripts/01-state.js` ... `scripts/17-learning-embeddings.js`
 - `www/`
   - Web assets mirror (also contains architecture notes).
   - In practice, `android/app/src/main/assets/public` is the critical runtime copy for Android.
@@ -51,6 +52,7 @@ The frontend is modular but global-scope based:
   - `02-init.js`
   - ...
   - `16-learning.js`
+  - `17-learning-embeddings.js`
   - `15-init-2.js` (calls `init();`)
 
 Why this matters:
@@ -89,7 +91,7 @@ Core fields:
 - `currentAvatar`
 - `learningHub`
   - `sessions[]`, `concepts[]`, `links[]`
-  - `embeddings{ conceptId -> { vector[], api, model, signature, updatedAt } }`
+  - `embeddings{ conceptId -> { api, model, signature, updatedAt, nativeSyncedAt, nativeSignature } }`
   - `graphMode`, `graphZoom`
   - `reviewChats[]`
   - `activeReviewChatId`, `activeConceptId`
@@ -103,7 +105,8 @@ Persistence strategy:
   - fallback: localStorage key `codelens_api_keys_v1`
 - Learning vectors:
   - preferred: native bridge (`ObjectBoxBridge`) in Android SharedPreferences-backed store
-  - fallback cache: `state.learningHub.embeddings` in localStorage state snapshot
+  - metadata cache: `state.learningHub.embeddings` in `codelens_state_v2`
+  - raw vector cache: `codelens_learning_vectors_v1` (separate localStorage key, debounced writes)
 
 Normalization path:
 
@@ -206,7 +209,9 @@ Responsibilities:
 
 ### D) Learning hub and memory graph
 
-Owned by `16-learning.js`.
+Owned by:
+- `16-learning.js` (sessions, taxonomy capture, graph, review chat)
+- `17-learning-embeddings.js` (embedding lifecycle, vector persistence, native bridge calls)
 
 Core parts:
 
@@ -226,11 +231,12 @@ Core parts:
   - `addSnippetToLearningSession()`
 - local semantic memory retrieval:
   - cloud embeddings fetched on-demand (`getBestEmbeddingForText`)
-  - vectors synced to native bridge via JS interfaces:
+  - vectors synced to native bridge via JS interfaces (implemented in `17-learning-embeddings.js`):
     - `upsertEmbedding(payload)`
     - `getTopMatches(payload)`
     - `deleteEmbedding(payload)`
-  - `learningHub.embeddings` remains as JS-side cache and native-sync tracking
+  - `learningHub.embeddings` stores metadata only
+  - raw vectors live in a separate vector store key (`codelens_learning_vectors_v1`)
   - pull ranking blends lexical + cosine similarity (native bridge first, JS fallback)
 - derived graph data:
   - `refreshLearningDerivedData()`
@@ -272,10 +278,14 @@ Graph interaction:
   - filter and render bookmarked messages
 - Settings (`13-settings.js`)
   - provider/model selection
+  - UI controls all three scopes: `section` (section chat row), `general` (general chat row), `learning` (settings page — "Learning Model (JSON Extraction / Review)")
+  - `syncAllChatModelControls()` iterates `CHAT_SCOPES`, so adding a scope only requires a new selector pair in HTML + `getChatSelectorElements()` branch
   - API key management UI
   - color naming
 - Backup (`14-backup.js`)
   - export/import/clear app data
+  - note: raw vectors are now outside `codelens_state_v2`; include `codelens_learning_vectors_v1` if you need full-memory backups
+  - on `clearAllData()` / `importBackup()`: calls `clearAllLearningVectors()` (drops the vector store + native rows) and `resetLearningEmbeddingSyncFlags()` (clears `nativeSyncedAt` / `nativeSignature` on imported metadata so the native bridge actually gets re-populated)
 
 ## 10) Native Android bridge details
 
@@ -303,7 +313,9 @@ Graph interaction:
 Storage backend:
 
 - Android `SharedPreferences` file `codelens_secure_store`, key `api_keys_json`.
-- Android `SharedPreferences` file `codelens_learning_vectors`, key `embeddings_json`.
+- Android `SharedPreferences` file `codelens_learning_vectors`:
+  - current format: per-id rows under `vec.<id>`
+  - legacy migration: old `embeddings_json` blob is auto-migrated on first load
 
 ## 11) Full function index (by script)
 
@@ -311,7 +323,7 @@ This is the current function map for quick navigation.
 
 ### `scripts/01-state.js`
 
-`sanitizeApiKeys`, `getApiKeysSnapshot`, `getApiKey`, `setApiKeys`, `setApiKey`, `persistApiKeysToStorage`, `loadApiKeysFromStorage`, `clearStoredApiKeys`, `migrateLegacyApiKeys`, `sanitizePersistedState`, `getPersistedStateSnapshot`, `getProviderModelOptions`, `getDefaultModelForProvider`, `ensureStateShape`, `touchProjectRecentFile`, `getProjectRecentFiles`, `getChatPreviewText`, `parseSectionMeta`, `buildRecentChats`, `touchSectionChatActivity`, `touchGeneralChatActivity`, `getChatConfig`, `getChatProvider`, `getChatModel`, `setChatProvider`, `setChatModel`, `uiIcon`, `iconWithText`, `normalizeFaceKey`, `getFaceIconName`, `renderFaceGlyph`, `getDefaultAvatars`
+`sanitizeApiKeys`, `getApiKeysSnapshot`, `getApiKey`, `setApiKeys`, `setApiKey`, `persistApiKeysToStorage`, `loadApiKeysFromStorage`, `clearStoredApiKeys`, `migrateLegacyApiKeys`, `sanitizePersistedState`, `getPersistedStateSnapshot`, `getProviderModelOptions`, `getDefaultModelForProvider`, `getDefaultModelForProviderInScope`, `ensureStateShape`, `touchProjectRecentFile`, `getProjectRecentFiles`, `getChatPreviewText`, `parseSectionMeta`, `buildRecentChats`, `touchSectionChatActivity`, `touchGeneralChatActivity`, `getChatConfig`, `getChatProvider`, `getChatModel`, `setChatProvider`, `setChatModel`, `uiIcon`, `iconWithText`, `normalizeFaceKey`, `getFaceIconName`, `renderFaceGlyph`, `getDefaultAvatars`
 
 ### `scripts/02-init.js`
 
@@ -371,7 +383,11 @@ Boot call only: `init();`
 
 ### `scripts/16-learning.js`
 
-`getTodayDateKey`, `toDateKey`, `cleanLearningText`, `truncateLearningText`, `createLearningId`, `deepCloneSimple`, `tokenizeLearningText`, `uniqueLearningStrings`, `getCurrentChatContextDescriptor`, `getLearningSessionById`, `getLearningSessionByKey`, `getOrCreateLearningSessionForContext`, `extractLearningKeywords`, `collectLearningConceptTokens`, `computeLearningTokenJaccard`, `getLearningConceptSimilarity`, `chooseMoreSpecificLearningPrinciple`, `findBestLearningConceptMatch`, `addConceptToLearningSession`, `addSnippetToLearningSession`, `deriveLearningConceptRecords`, `calculateLearningLinks`, `refreshLearningDerivedData`, `getSortedLearningSessions`, `renderLearningSessionsInto`, `renderLearningSnippets`, `decodeLearningData`, `getLearningReviewChats`, `getLearningReviewChatById`, `getLearningConceptById`, `getLatestLearningReviewChatForConcept`, `getLearningConceptRecordsSorted`, `clampLearning01`, `getConceptReviewStats`, `getConceptStrengthScore`, `getLearningStrengthPalette`, `renderLearningConceptExplorer`, `getRelatedConceptTitles`, `openLearningConceptById`, `getLearningSnippetsForConcept`, `buildLearningReviewStarterMessage`, `createLearningReviewChat`, `startLearningReviewChatFromConcept`, `openLearningReviewChatById`, `getActiveLearningReviewChat`, `buildLearningReviewSystemPrompts`, `renderLearningReviewChatScreen`, `sendLearningReviewMessage`, `normalizeLearningGraphMode`, `getLearningGraphMode`, `getLearningGraphModeMeta`, `clampLearningGraphZoom`, `getLearningGraphZoom`, `setLearningGraphZoom`, `setLearningGraphMode`, `getConceptAgeDays`, `getLearningGraphNodeVisual`, `buildLearningGraphData`, `renderLearningGraph`, `renderLearningHomePreview`, `renderLearningScreen`, `scoreLearningSessionForQuery`, `getRelevantLearningSessions`, `getLearningSystemPromptForQuery`, `tryParseLearningSummaryJson`, `buildFallbackLearningSummary`, `normalizeLearningSummary`, `findMessageByQuote`, `captureCurrentChatLearning`, `saveSelectedBubbleAsLearning`, `captureNavigationContext`, `restoreNavigationContext`, `decodeSessionRefData`, `openLearningSessionById`, `getReferenceSession`, `isReferenceReadOnlyMode`, `applyReferenceReadOnlyUI`, `exitLearningSessionReference`, `getTopMatches`, `upsertEmbedding`, `deleteEmbedding`
+`getTodayDateKey`, `toDateKey`, `cleanLearningText`, `truncateLearningText`, `createLearningId`, `deepCloneSimple`, `tokenizeLearningText`, `uniqueLearningStrings`, `getCurrentChatContextDescriptor`, `getLearningSessionById`, `getLearningSessionByKey`, `getOrCreateLearningSessionForContext`, `extractLearningKeywords`, `collectLearningConceptTokens`, `computeLearningTokenJaccard`, `getLearningConceptSimilarity`, `chooseMoreSpecificLearningPrinciple`, `findBestLearningConceptMatch`, `addConceptToLearningSession`, `addSnippetToLearningSession`, `deriveLearningConceptRecords`, `calculateLearningLinks`, `refreshLearningDerivedData`, `getSortedLearningSessions`, `renderLearningSessionsInto`, `renderLearningSnippets`, `decodeLearningData`, `getLearningReviewChats`, `getLearningReviewChatById`, `getLearningConceptById`, `getLatestLearningReviewChatForConcept`, `getLearningConceptRecordsSorted`, `clampLearning01`, `getConceptReviewStats`, `getConceptStrengthScore`, `getLearningStrengthPalette`, `renderLearningConceptExplorer`, `getRelatedConceptTitles`, `openLearningConceptById`, `getLearningSnippetsForConcept`, `buildLearningReviewStarterMessage`, `createLearningReviewChat`, `startLearningReviewChatFromConcept`, `openLearningReviewChatById`, `getActiveLearningReviewChat`, `buildLearningReviewSystemPrompts`, `renderLearningReviewChatScreen`, `sendLearningReviewMessage`, `normalizeLearningGraphMode`, `getLearningGraphMode`, `getLearningGraphModeMeta`, `clampLearningGraphZoom`, `getLearningGraphZoom`, `setLearningGraphZoom`, `setLearningGraphMode`, `getConceptAgeDays`, `getLearningGraphNodeVisual`, `buildLearningGraphData`, `renderLearningGraph`, `renderLearningHomePreview`, `renderLearningScreen`, `scoreLearningSessionForQuery`, `getRelevantLearningSessions`, `getLearningSystemPromptForQuery`, `tryParseLearningSummaryJson`, `buildFallbackLearningSummary`, `normalizeLearningSummary`, `findMessageByQuote`, `captureCurrentChatLearning`, `saveSelectedBubbleAsLearning`, `captureNavigationContext`, `restoreNavigationContext`, `decodeSessionRefData`, `openLearningSessionById`, `getReferenceSession`, `isReferenceReadOnlyMode`, `applyReferenceReadOnlyUI`, `exitLearningSessionReference`
+
+### `scripts/17-learning-embeddings.js`
+
+`getLearningEmbeddingsStore`, `buildLearningConceptSignature`, `buildLearningConceptEmbeddingText`, `pruneLearningEmbeddingsToKnownConcepts`, `getLearningCosineSimilarity`, `getNativeVectorBridge`, `callNativeVectorBridge`, `getTopMatches`, `upsertEmbedding`, `deleteEmbedding`, `ensureNativeEmbeddingSynced`, `getLearningSemanticScoresFromNativeBridge`, `computeLearningSemanticScoresLocally`, `getLearningSemanticScoreMap`, `embedTextForLearning`, `ensureLearningEmbeddingForConcept`, `syncLearningConceptEmbeddings`, `loadLearningVectorsFromStorage`, `saveLearningVectorsSoon`, `getLearningVector`, `setLearningVector`, `deleteLearningVector`, `migrateInlineLearningVectors`
 
 ## 12) Where to edit common requests
 
@@ -390,6 +406,8 @@ Use this as a fast "where do I change X?" guide:
   - `scripts/12-ai-api.js`
 - Learning capture and concept quality:
   - `scripts/16-learning.js` (`captureCurrentChatLearning`, concept matching/linking)
+- Learning vectors / semantic retrieval / native bridge sync:
+  - `scripts/17-learning-embeddings.js`
 - Knowledge graph UX:
   - `scripts/16-learning.js` + `styles/app.css`
 - Screen-level layout/labels:

@@ -323,7 +323,19 @@
                         <select class="input-field" id="siliconflow-model"></select>
                     </div>
                     <button class="btn btn-primary" data-action="save-settings" style="margin-bottom:16px;">Save Settings</button>
-                    
+
+                    <div class="section-title">Learning Model (JSON Extraction / Review)</div>
+                    <div class="input-group">
+                        <label class="input-label">Provider</label>
+                        <select class="input-field" id="learning-chat-provider-select"
+                            onchange="handleChatProviderChange('learning', this.value)"></select>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Model</label>
+                        <select class="input-field" id="learning-chat-model-select"
+                            onchange="handleChatModelChange('learning', this.value)"></select>
+                    </div>
+
                     <div class="section-title">Color Names</div>
                     <div class="input-group">
                         <label class="input-label">🔴 Red Name</label>

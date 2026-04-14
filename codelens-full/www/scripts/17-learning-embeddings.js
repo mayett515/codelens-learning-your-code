@@ -139,6 +139,21 @@ function clearAllLearningVectors() {
     } catch (_) { /* storage may be unavailable */ }
 }
 
+// Force-resets the per-concept native sync flags on an embeddings metadata
+// map. Used by importBackup() so freshly-imported concepts don't carry a
+// stale nativeSyncedAt/nativeSignature from the source install — which would
+// make ensureNativeEmbeddingSynced() skip the upsert and leave the native
+// bridge empty while the JS side still thinks everything is synced.
+function resetLearningEmbeddingSyncFlags(embeddingsMetadataMap = {}) {
+    if (!embeddingsMetadataMap || typeof embeddingsMetadataMap !== 'object') return;
+    Object.keys(embeddingsMetadataMap).forEach(id => {
+        const record = embeddingsMetadataMap[id];
+        if (!record || typeof record !== 'object') return;
+        record.nativeSyncedAt = '';
+        record.nativeSignature = '';
+    });
+}
+
 // Called from ensureStateShape() in 01-state.js after it normalizes the
 // embedding metadata map. Pre-v2 persisted states stored the vector INSIDE
 // the embedding record; we move any such vectors into the dedicated store

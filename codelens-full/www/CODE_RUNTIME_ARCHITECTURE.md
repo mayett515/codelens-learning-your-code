@@ -21,7 +21,8 @@ This document describes how the app behaves at runtime and where responsibilitie
 13. `13-settings.js`
 14. `14-backup.js`
 15. `16-learning.js`
-16. `15-init-2.js` (`init();`)
+16. `17-learning-embeddings.js`
+17. `15-init-2.js` (`init();`)
 
 Boot runs in `02-init.js` and performs:
 - API key load
@@ -38,7 +39,8 @@ Boot runs in `02-init.js` and performs:
   - fallback: localStorage key `codelens_api_keys_v1`
 - Learning embeddings:
   - preferred on Android: `window.ObjectBoxBridge`
-  - JS cache/fallback: `state.learningHub.embeddings`
+  - JS metadata map: `state.learningHub.embeddings` (no raw vectors)
+  - JS vector cache key: `codelens_learning_vectors_v1`
 
 ## 3) Action Routing Model
 
@@ -86,13 +88,17 @@ Recent chat system:
 
 ## 6) Learning Runtime
 
-Main owner: `16-learning.js`
+Main owners:
+- `16-learning.js` (session/concept/graph/review flows)
+- `17-learning-embeddings.js` (embedding lifecycle + vector store + native bridge IO)
 
 - `Save as Learning` can capture:
   - full active chat
   - single bubble
 - capture flow now includes preview-before-save modal
 - concepts are normalized into taxonomy fields
+- review and extraction calls use `learning` chat scope by default
+- settings UI currently exposes section/general model controls; learning scope defaults are configured in state helpers
 - knowledge graph data derived from sessions/concepts/links
 - graph supports pan and pinch zoom on mobile
 - session reference mode is read-only and can restore prior navigation context
@@ -135,5 +141,6 @@ Reference contract doc:
 
 - Keep new UI actions on `data-action` and route centrally.
 - Keep provider/network logic in `12-ai-api.js`.
-- Keep learning concept extraction and semantic retrieval in `16-learning.js`.
+- Keep learning concept extraction/session logic in `16-learning.js`.
+- Keep vector persistence/native semantic retrieval in `17-learning-embeddings.js`.
 - Keep `www/` docs and `android/.../assets/public/` docs mirrored.

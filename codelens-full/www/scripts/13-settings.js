@@ -80,6 +80,12 @@ function getChatSelectorElements(scope = 'section') {
             model: document.getElementById('general-chat-model-select')
         };
     }
+    if (scope === 'learning') {
+        return {
+            provider: document.getElementById('learning-chat-provider-select'),
+            model: document.getElementById('learning-chat-model-select')
+        };
+    }
 
     return {
         provider: document.getElementById('chat-provider-select'),
@@ -99,8 +105,8 @@ function syncChatModelControls(scope = 'section') {
 }
 
 function syncAllChatModelControls() {
-    syncChatModelControls('section');
-    syncChatModelControls('general');
+    (typeof CHAT_SCOPES !== 'undefined' ? CHAT_SCOPES : ['section', 'general', 'learning'])
+        .forEach(scope => syncChatModelControls(scope));
 }
 
 function syncSettingsModelControls() {
@@ -149,7 +155,7 @@ function saveSettings() {
     state.openrouterModel = String(document.getElementById('openrouter-model')?.value || DEFAULT_OPENROUTER_MODEL);
     state.siliconflowModel = String(document.getElementById('siliconflow-model')?.value || DEFAULT_SILICONFLOW_MODEL);
 
-    ['section', 'general'].forEach(scope => {
+    (typeof CHAT_SCOPES !== 'undefined' ? CHAT_SCOPES : ['section', 'general', 'learning']).forEach(scope => {
         const cfg = getChatConfig(scope);
         if (!cfg.models.openrouter || cfg.models.openrouter === previousOpenRouterModel) {
             cfg.models.openrouter = state.openrouterModel;
@@ -182,8 +188,8 @@ function setActiveAPI(api) {
     if (!API_PROVIDERS.includes(provider)) return;
 
     state.activeAPI = provider;
-    setChatProvider('section', provider);
-    setChatProvider('general', provider);
+    (typeof CHAT_SCOPES !== 'undefined' ? CHAT_SCOPES : ['section', 'general', 'learning'])
+        .forEach(scope => setChatProvider(scope, provider));
     saveState();
     updateAPIButtons();
     syncAllChatModelControls();
@@ -211,7 +217,10 @@ function handleChatProviderChange(scope = 'section', provider = '') {
     saveState();
     updateAPIButtons();
     syncChatModelControls(scope);
-    showToast(`${scope === 'general' ? 'General' : 'Section'} chat uses ${getProviderLabel(nextProvider)}`);
+    const scopeLabel = scope === 'general' ? 'General'
+        : scope === 'learning' ? 'Learning'
+        : 'Section';
+    showToast(`${scopeLabel} chat uses ${getProviderLabel(nextProvider)}`);
 }
 
 function handleChatModelChange(scope = 'section', model = '') {
