@@ -14,11 +14,18 @@ function exportBackup() {
 function importBackup(event) {
     const file = event.target.files[0];
     if (!file) return;
-    
+
     const reader = new FileReader();
     reader.onload = (e) => {
         try {
             const data = sanitizePersistedState(JSON.parse(e.target.result));
+            // Learning vectors live in their own storage key (see
+            // 17-learning-embeddings.js). Drop them before applying the
+            // imported state so stale vectors from the previous install
+            // don't get matched against freshly-imported concept ids.
+            if (typeof clearAllLearningVectors === 'function') {
+                clearAllLearningVectors();
+            }
             state = { ...state, ...data };
             sectionsCache.clear();
             saveState();
@@ -41,6 +48,11 @@ function clearAllData() {
         saveStatePending = false;
         localStorage.removeItem(STATE_STORAGE_KEY);
         localStorage.removeItem(LEGACY_STATE_STORAGE_KEY);
+        // Also wipe the separate learning-vector store and, best-effort,
+        // the native bridge's persisted vectors.
+        if (typeof clearAllLearningVectors === 'function') {
+            clearAllLearningVectors();
+        }
         clearStoredApiKeys();
         location.reload();
     }

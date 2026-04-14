@@ -109,6 +109,36 @@ function deleteLearningVector(id = '') {
     if (learningVectorStore.delete(key)) saveLearningVectorsSoon();
 }
 
+// Full reset of the learning vector layer. Used by clearAllData() and
+// importBackup() so vectors don't survive across a wipe / restore — if they
+// did, stale ids could get matched to freshly-imported concepts with the
+// same id, producing ghost semantic hits.
+function clearAllLearningVectors() {
+    loadLearningVectorsFromStorage();
+
+    // Best-effort: drop every known id from the native bridge first so the
+    // SharedPreferences-backed store doesn't retain vectors from before the
+    // wipe.
+    const ids = Array.from(learningVectorStore.keys());
+    ids.forEach(id => {
+        try { deleteEmbedding({ id }); } catch (_) { /* native bridge optional */ }
+    });
+
+    learningVectorStore.clear();
+    learningQueryEmbeddingCache.clear();
+    learningEmbeddingJobs.clear();
+
+    if (learningVectorsSaveTimer) {
+        clearTimeout(learningVectorsSaveTimer);
+        learningVectorsSaveTimer = null;
+    }
+    learningVectorStoreDirty = false;
+
+    try {
+        localStorage.removeItem(LEARNING_VECTORS_STORAGE_KEY);
+    } catch (_) { /* storage may be unavailable */ }
+}
+
 // Called from ensureStateShape() in 01-state.js after it normalizes the
 // embedding metadata map. Pre-v2 persisted states stored the vector INSIDE
 // the embedding record; we move any such vectors into the dedicated store

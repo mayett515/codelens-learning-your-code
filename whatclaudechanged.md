@@ -311,3 +311,35 @@ Synced (www was behind, copied from android):
 5. **Settings UI** has no `learning` scope dropdown yet. Power users wanting
    to change the learning model have to edit `state.chatConfig.learning.models`
    manually (or wait for the UI pass).
+
+## Post-session fix: reset/import leak (flagged by Codex)
+
+Codex correctly pointed out that the initial refactor left two holes:
+
+- `clearAllData()` in `14-backup.js` removed the main state blob and the
+  legacy state key but **did not touch** the new `codelens_learning_vectors_v1`
+  key. Vectors survived a full reset.
+- `importBackup()` merged the imported state on top of the existing one
+  without first clearing the local vector store. Stale vectors from the
+  previous install would then get matched against freshly-imported concepts
+  that happened to share ids, producing ghost semantic hits.
+
+### Fix
+
+**`codelens-full/www/scripts/17-learning-embeddings.js`** — new exported
+helper `clearAllLearningVectors()`:
+- Iterates every known id and calls `deleteEmbedding({ id })` on the native
+  bridge (best effort — the bridge may be absent on web).
+- Clears the in-memory `learningVectorStore` map, the query-embedding LRU
+  cache, and any in-flight embedding jobs.
+- Cancels the pending debounced save timer and resets the dirty flag.
+- Removes `codelens_learning_vectors_v1` from localStorage.
+
+**`codelens-full/www/scripts/14-backup.js`**:
+- `importBackup` now calls `clearAllLearningVectors()` right before applying
+  the imported state (guarded with `typeof === 'function'` so the hook stays
+  optional).
+- `clearAllData` likewise calls it before `location.reload()`.
+
+Both changes mirrored to `android/app/src/main/assets/public/scripts/`.
+Parse-checked with `node -c`. Mirrors back in lock-step.
