@@ -1416,58 +1416,96 @@ function buildLearningGraphCyElements(graph, mode = 'connections') {
     return [...nodes, ...edges];
 }
 
+// cxtmenu configuration is tuned for phone use. The extension's whole value
+// is touch-first radial selection — long-press a node, drag a finger into a
+// slice, lift. Defaults assume a mouse, so we override:
+//   - menuRadius is adapted to the current viewport width (≈32% of min edge,
+//     clamped) so finger targets stay generous on narrow phones and don't
+//     swallow the whole canvas on larger tablets.
+//   - indicatorSize, spotlightPadding are enlarged for fat-finger forgiveness.
+//   - openMenuEvents listens for both `taphold` (phone long-press) and
+//     `cxttap` (desktop right-click) so the same menu works everywhere.
+//   - outsideMenuCancel gives the user a generous drag-off-to-cancel radius.
+//   - Commands are icon+label HTML so the slice icon is readable without
+//     squinting at tiny text on a phone.
+function getCxtmenuRadiusForViewport() {
+    const vw = window.innerWidth || 360;
+    const vh = window.innerHeight || 600;
+    const base = Math.round(Math.min(vw, vh) * 0.32);
+    return Math.max(100, Math.min(160, base));
+}
+
+function cxtmenuCommandHtml(icon = '', label = '') {
+    // Canvas-rendered HTML inside cxtmenu slices. Keep markup tight — the
+    // extension measures and rasterizes this. Inline styles are intentional
+    // because cxtmenu doesn't inherit app CSS.
+    return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.15;gap:2px;">
+        <div style="font-size:20px;">${icon}</div>
+        <div style="font-size:11px;font-weight:600;letter-spacing:0.2px;">${label}</div>
+    </div>`;
+}
+
 function attachLearningGraphContextMenu(cy) {
     if (!cy || typeof cy.cxtmenu !== 'function') return;
 
     const commands = ele => {
         const data = ele?.data?.() || {};
         const isSession = data.nodeType === 'session';
+        const centerCmd = {
+            content: cxtmenuCommandHtml('🎯', 'Center'),
+            select: () => cy.animate({ center: { eles: ele }, duration: 180, easing: 'ease-in-out' })
+        };
 
         if (isSession) {
             return [
                 {
-                    content: 'Open Session',
+                    content: cxtmenuCommandHtml('📂', 'Open'),
                     select: () => openLearningSessionById(data.sessionId || '')
                 },
-                {
-                    content: 'Center Node',
-                    select: () => cy.animate({ center: { eles: ele }, duration: 180 })
-                }
+                centerCmd
             ];
         }
 
         return [
             {
-                content: 'Open Concept',
+                content: cxtmenuCommandHtml('📖', 'Open'),
                 select: () => openLearningConceptById(data.conceptId || '')
             },
             {
-                content: 'Ask Learner',
+                content: cxtmenuCommandHtml('💬', 'Ask'),
                 select: () => {
                     if (typeof startLearningReviewChatFromConcept === 'function') {
                         startLearningReviewChatFromConcept(data.conceptId || '', { forceNew: true });
                     }
                 }
             },
-            {
-                content: 'Center Node',
-                select: () => cy.animate({ center: { eles: ele }, duration: 180 })
-            }
+            centerCmd
         ];
     };
 
     try {
         cy.cxtmenu({
             selector: 'node',
-            openMenuEvents: 'cxttapstart taphold',
+            // Long-press on touch, right-click on desktop. Both dispatch the
+            // same menu — one code path for both input modalities.
+            openMenuEvents: 'cxttap taphold',
             commands,
-            fillColor: 'rgba(47, 58, 79, 0.94)',
-            activeFillColor: 'rgba(87, 121, 173, 0.95)',
-            indicatorSize: 14,
-            separatorWidth: 2,
-            spotlightPadding: 4,
-            menuRadius: 88,
-            adaptativeNodeSpotlightRadius: true
+            // Match the app dark-surface palette so the menu feels native.
+            fillColor: 'rgba(28, 36, 54, 0.96)',
+            activeFillColor: 'rgba(96, 139, 219, 0.98)',
+            activePadding: 6,
+            indicatorSize: 22,
+            separatorWidth: 3,
+            spotlightPadding: 8,
+            menuRadius: getCxtmenuRadiusForViewport,
+            // Allow the finger to drift ~40px past the outer ring before the
+            // menu cancels — reduces frustration on bumpy screens.
+            outsideMenuCancel: 40,
+            adaptativeNodeSpotlightRadius: true,
+            itemColor: '#f4f7ff',
+            itemTextShadowColor: 'rgba(0, 0, 0, 0.55)',
+            zIndex: 9999,
+            atMouse: false
         });
     } catch (_) {
         // Extension is optional; failures should not break graph rendering.
@@ -1510,7 +1548,12 @@ function renderLearningGraphWithCytoscape(container, graph, options = {}) {
         minZoom: LEARNING_GRAPH_CYTOSCAPE_MIN_ZOOM,
         maxZoom: LEARNING_GRAPH_CYTOSCAPE_MAX_ZOOM,
         wheelSensitivity: 0.16,
+        // Touch tuning: allow a bit more finger slop before a tap is rejected
+        // (phones jitter more than a mouse), keep desktop strict.
+        touchTapThreshold: 12,
+        desktopTapThreshold: 4,
         boxSelectionEnabled: false,
+        autounselectify: true,
         style: [
             {
                 selector: 'node',
@@ -1531,19 +1574,21 @@ function renderLearningGraphWithCytoscape(container, graph, options = {}) {
                 }
             },
             {
+                // Finger-friendly node targets. Smaller than this and a
+                // taphold routinely lands on empty canvas, not the node.
                 selector: 'node[nodeType = "session"]',
                 style: {
-                    'width': 30,
-                    'height': 30,
-                    'font-size': 10,
+                    'width': 42,
+                    'height': 42,
+                    'font-size': 11,
                     'font-weight': 700
                 }
             },
             {
                 selector: 'node[nodeType = "concept"]',
                 style: {
-                    'width': 22,
-                    'height': 22
+                    'width': 32,
+                    'height': 32
                 }
             },
             {

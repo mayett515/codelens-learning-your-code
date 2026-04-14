@@ -583,6 +583,17 @@
             width: 100%;
             height: 420px;
             display: block;
+            /* touch-action:none lets Cytoscape own pan/zoom gestures without
+               the browser stealing them for native scroll/pinch. Without this,
+               one-finger pan on the graph can scroll the surrounding screen. */
+            touch-action: none;
+            /* Suppress native text-selection + iOS callout bubble so a
+               long-press on a node fires cxtmenu's `taphold` cleanly instead
+               of popping the OS selection UI. */
+            -webkit-user-select: none;
+            user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-tap-highlight-color: transparent;
         }
         .learning-graph-shell.expanded .learning-graph-canvas { height: 100%; min-height: 100%; }
         .learning-graph-svg { width: 100%; height: auto; display: block; }

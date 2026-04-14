@@ -631,9 +631,11 @@
         </div>
     </div>
 
-    <link rel="stylesheet" href="https://unpkg.com/cytoscape-cxtmenu@3.5.0/cytoscape-cxtmenu.css">
-    <script src="https://unpkg.com/cytoscape@3.30.2/dist/cytoscape.min.js"></script>
-    <script src="https://unpkg.com/cytoscape-cxtmenu@3.5.0/cytoscape-cxtmenu.js"></script>
+    <!-- Cytoscape + cxtmenu vendored locally so the graph works offline on-device.
+         cxtmenu v3.5.0 ships no CSS file — its menu is canvas-rendered and styled
+         via JS options in 16-learning.js. -->
+    <script src="./vendor/cytoscape/cytoscape.min.js"></script>
+    <script src="./vendor/cytoscape/cytoscape-cxtmenu.js"></script>
 
     <script src="./scripts/01-state.js"></script>
     <script src="./scripts/02-init.js"></script>
