@@ -541,6 +541,9 @@ function setupEventListeners() {
 
     document.addEventListener('click', handleDelegatedActionClick);
     document.addEventListener('backbutton', handleAndroidBackButton);
+    if (typeof initializeNavigationBackHandling === 'function') {
+        initializeNavigationBackHandling();
+    }
     window.addEventListener('resize', scheduleRenderVisibleCodeLines);
     window.addEventListener('beforeunload', flushStateSave);
     document.addEventListener('visibilitychange', () => {
@@ -688,6 +691,9 @@ function runDelegatedAction(actionEl) {
             return true;
         case 'set-learning-graph-mode':
             if (typeof setLearningGraphMode === 'function') setLearningGraphMode(actionEl.dataset.mode || 'connections');
+            return true;
+        case 'toggle-learning-graph-size':
+            if (typeof toggleLearningGraphExpanded === 'function') toggleLearningGraphExpanded();
             return true;
         case 'learning-graph-zoom-in':
             if (typeof setLearningGraphZoom === 'function' && typeof getLearningGraphZoom === 'function') {

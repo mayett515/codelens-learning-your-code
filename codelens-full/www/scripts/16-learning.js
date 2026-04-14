@@ -1160,6 +1160,10 @@ const LEARNING_GRAPH_MODE_META = {
         description: 'Colors concept nodes by auto-summary vs manual bubble capture.'
     }
 };
+const LEARNING_GRAPH_CYTOSCAPE_MIN_ZOOM = 0.8;
+const LEARNING_GRAPH_CYTOSCAPE_MAX_ZOOM = 2.8;
+let learningGraphCyInstance = null;
+let learningGraphCyZoomTimer = null;
 
 function normalizeLearningGraphMode(mode = '') {
     const raw = String(mode || '').trim().toLowerCase();
@@ -1203,6 +1207,52 @@ function setLearningGraphMode(mode = '') {
     state.learningHub.graphMode = nextMode;
     saveState();
     renderLearningScreen();
+}
+
+function isLearningGraphExpanded() {
+    ensureStateShape();
+    return Boolean(state.learningHub.graphExpanded);
+}
+
+function setLearningGraphExpanded(expanded = false) {
+    const nextValue = Boolean(expanded);
+    if (isLearningGraphExpanded() === nextValue) return;
+    state.learningHub.graphExpanded = nextValue;
+    saveState();
+    renderLearningScreen();
+}
+
+function toggleLearningGraphExpanded() {
+    setLearningGraphExpanded(!isLearningGraphExpanded());
+}
+
+function ensureLearningGraphCytoscapeExtensions() {
+    if (!window.cytoscape || typeof window.cytoscape.use !== 'function') return;
+    if (window.__learningGraphCxtmenuRegistered) return;
+    if (!window.cytoscapeCxtmenu || typeof window.cytoscapeCxtmenu !== 'function') return;
+    try {
+        window.cytoscape.use(window.cytoscapeCxtmenu);
+        window.__learningGraphCxtmenuRegistered = true;
+    } catch (_) {
+        // If extension registration fails we still keep graph rendering alive.
+    }
+}
+
+function isLearningGraphCytoscapeAvailable() {
+    if (!window.cytoscape || typeof window.cytoscape !== 'function') return false;
+    ensureLearningGraphCytoscapeExtensions();
+    return true;
+}
+
+function destroyLearningGraphCytoscape() {
+    if (learningGraphCyZoomTimer) {
+        clearTimeout(learningGraphCyZoomTimer);
+        learningGraphCyZoomTimer = null;
+    }
+    if (learningGraphCyInstance && typeof learningGraphCyInstance.destroy === 'function') {
+        learningGraphCyInstance.destroy();
+    }
+    learningGraphCyInstance = null;
 }
 
 function getConceptAgeDays(createdAt = '') {
@@ -1296,6 +1346,279 @@ function buildLearningGraphData(maxSessions = 8, maxConceptsPerSession = 2, opti
     return { sessions, nodes: Array.from(nodeMap.values()), edges, mode };
 }
 
+function buildLearningGraphControlsHtml(options = {}) {
+    const showModeControls = Boolean(options.showModeControls);
+    if (!showModeControls) return '';
+
+    const mode = normalizeLearningGraphMode(options.mode || getLearningGraphMode());
+    const modeMeta = getLearningGraphModeMeta(mode);
+    const enablePanZoom = Boolean(options.enablePanZoom);
+    const zoomPct = Math.round(Number(options.zoomPct || 100));
+    const expanded = Boolean(options.expanded);
+
+    return `
+        <div class="learning-graph-controls-row">
+            <div class="learning-graph-controls">
+                ${LEARNING_GRAPH_MODES.map(key => {
+                    const meta = getLearningGraphModeMeta(key);
+                    const active = key === mode ? 'active' : '';
+                    return `<button class="learning-graph-mode-btn ${active}" data-action="set-learning-graph-mode" data-mode="${key}">${meta.label}</button>`;
+                }).join('')}
+            </div>
+            <div class="learning-graph-right-controls">
+                ${enablePanZoom ? `
+                    <div class="learning-graph-zoom-controls">
+                        <span class="learning-graph-zoom-value">${zoomPct}%</span>
+                    </div>
+                ` : ''}
+                <button class="learning-graph-size-btn ${expanded ? 'active' : ''}" data-action="toggle-learning-graph-size">
+                    ${uiIcon(expanded ? 'arrow-left' : 'arrow-right', 'sm')}
+                    <span>${expanded ? 'Smaller' : 'Bigger'}</span>
+                </button>
+            </div>
+        </div>
+        <div class="learning-graph-mode-desc">${escapeHtml(modeMeta.description)}</div>
+        ${enablePanZoom ? '<div class="learning-graph-pan-hint">Use two fingers to zoom and one finger to pan.</div>' : ''}
+    `;
+}
+
+function buildLearningGraphCyElements(graph, mode = 'connections') {
+    const nodes = graph.nodes.map(node => {
+        const visual = getLearningGraphNodeVisual(node, mode);
+        const nodeType = node.type === 'session' ? 'session' : 'concept';
+        return {
+            data: {
+                id: node.id,
+                label: node.label,
+                nodeType,
+                sessionId: node.sessionId || '',
+                conceptId: node.conceptId || '',
+                fillColor: visual.fill,
+                strokeColor: visual.stroke
+            }
+        };
+    });
+
+    const edges = graph.edges.map((edge, index) => {
+        const weight = Math.min(3, Math.max(1, Number(edge.weight || 1)));
+        const kind = edge.kind === 'link' ? 'link' : 'owner';
+        return {
+            data: {
+                id: `edge:${edge.source}:${edge.target}:${index}`,
+                source: edge.source,
+                target: edge.target,
+                weight,
+                kind
+            }
+        };
+    });
+
+    return [...nodes, ...edges];
+}
+
+function attachLearningGraphContextMenu(cy) {
+    if (!cy || typeof cy.cxtmenu !== 'function') return;
+
+    const commands = ele => {
+        const data = ele?.data?.() || {};
+        const isSession = data.nodeType === 'session';
+
+        if (isSession) {
+            return [
+                {
+                    content: 'Open Session',
+                    select: () => openLearningSessionById(data.sessionId || '')
+                },
+                {
+                    content: 'Center Node',
+                    select: () => cy.animate({ center: { eles: ele }, duration: 180 })
+                }
+            ];
+        }
+
+        return [
+            {
+                content: 'Open Concept',
+                select: () => openLearningConceptById(data.conceptId || '')
+            },
+            {
+                content: 'Ask Learner',
+                select: () => {
+                    if (typeof startLearningReviewChatFromConcept === 'function') {
+                        startLearningReviewChatFromConcept(data.conceptId || '', { forceNew: true });
+                    }
+                }
+            },
+            {
+                content: 'Center Node',
+                select: () => cy.animate({ center: { eles: ele }, duration: 180 })
+            }
+        ];
+    };
+
+    try {
+        cy.cxtmenu({
+            selector: 'node',
+            openMenuEvents: 'cxttapstart taphold',
+            commands,
+            fillColor: 'rgba(47, 58, 79, 0.94)',
+            activeFillColor: 'rgba(87, 121, 173, 0.95)',
+            indicatorSize: 14,
+            separatorWidth: 2,
+            spotlightPadding: 4,
+            menuRadius: 88,
+            adaptativeNodeSpotlightRadius: true
+        });
+    } catch (_) {
+        // Extension is optional; failures should not break graph rendering.
+    }
+}
+
+function renderLearningGraphWithCytoscape(container, graph, options = {}) {
+    if (!container || !isLearningGraphCytoscapeAvailable()) return false;
+
+    destroyLearningGraphCytoscape();
+
+    const mode = normalizeLearningGraphMode(options.mode || getLearningGraphMode());
+    const expanded = Boolean(options.expanded);
+    const zoom = clampLearningGraphZoom(options.zoom ?? getLearningGraphZoom());
+    const controlsHtml = buildLearningGraphControlsHtml({
+        showModeControls: options.showModeControls,
+        mode,
+        enablePanZoom: options.enablePanZoom,
+        zoomPct: Math.round(zoom * 100),
+        expanded
+    });
+
+    container.innerHTML = `
+        ${controlsHtml}
+        <div class="learning-graph-shell ${expanded ? 'expanded' : ''}">
+            <div class="learning-graph-wrap pannable cytoscape">
+                <div class="learning-graph-pan-viewport enabled cytoscape">
+                    <div class="learning-graph-canvas" aria-label="Knowledge graph"></div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    const mount = container.querySelector('.learning-graph-canvas');
+    if (!mount) return false;
+
+    learningGraphCyInstance = window.cytoscape({
+        container: mount,
+        elements: buildLearningGraphCyElements(graph, mode),
+        minZoom: LEARNING_GRAPH_CYTOSCAPE_MIN_ZOOM,
+        maxZoom: LEARNING_GRAPH_CYTOSCAPE_MAX_ZOOM,
+        wheelSensitivity: 0.16,
+        boxSelectionEnabled: false,
+        style: [
+            {
+                selector: 'node',
+                style: {
+                    'background-color': 'data(fillColor)',
+                    'border-color': 'data(strokeColor)',
+                    'border-width': 1.3,
+                    'label': 'data(label)',
+                    'color': '#dce5fa',
+                    'text-outline-color': 'rgba(23, 27, 35, 0.62)',
+                    'text-outline-width': 2,
+                    'font-size': 9,
+                    'text-valign': 'bottom',
+                    'text-margin-y': 11,
+                    'text-wrap': 'wrap',
+                    'text-max-width': 96,
+                    'text-halign': 'center'
+                }
+            },
+            {
+                selector: 'node[nodeType = "session"]',
+                style: {
+                    'width': 30,
+                    'height': 30,
+                    'font-size': 10,
+                    'font-weight': 700
+                }
+            },
+            {
+                selector: 'node[nodeType = "concept"]',
+                style: {
+                    'width': 22,
+                    'height': 22
+                }
+            },
+            {
+                selector: 'edge',
+                style: {
+                    'width': 'mapData(weight, 1, 3, 1.4, 3.1)',
+                    'curve-style': 'bezier',
+                    'line-color': 'rgba(148, 196, 255, 0.50)',
+                    'opacity': 0.95
+                }
+            },
+            {
+                selector: 'edge[kind = "link"]',
+                style: {
+                    'line-style': 'dashed',
+                    'line-dash-pattern': [6, 4],
+                    'line-color': 'rgba(148, 196, 255, 0.72)'
+                }
+            }
+        ],
+        layout: {
+            name: 'cose',
+            fit: true,
+            padding: expanded ? 34 : 24,
+            animate: false,
+            nodeRepulsion: 7400,
+            idealEdgeLength: edge => (edge.data('kind') === 'link' ? 118 : 92)
+        }
+    });
+
+    const zoomLabel = container.querySelector('.learning-graph-zoom-value');
+    const updateZoomLabel = () => {
+        if (!zoomLabel || !learningGraphCyInstance) return;
+        zoomLabel.textContent = `${Math.round(learningGraphCyInstance.zoom() * 100)}%`;
+    };
+
+    learningGraphCyInstance.on('tap', 'node', event => {
+        const data = event?.target?.data?.() || {};
+        if (data.nodeType === 'session') {
+            openLearningSessionById(data.sessionId || '');
+        } else if (data.conceptId) {
+            openLearningConceptById(data.conceptId || '');
+        }
+    });
+
+    learningGraphCyInstance.on('zoom', () => {
+        updateZoomLabel();
+        if (learningGraphCyZoomTimer) clearTimeout(learningGraphCyZoomTimer);
+        learningGraphCyZoomTimer = setTimeout(() => {
+            if (!learningGraphCyInstance) return;
+            const nextZoom = clampLearningGraphZoom(learningGraphCyInstance.zoom());
+            if (Math.abs(nextZoom - getLearningGraphZoom()) < 0.01) return;
+            state.learningHub.graphZoom = nextZoom;
+            saveState();
+        }, 220);
+    });
+
+    attachLearningGraphContextMenu(learningGraphCyInstance);
+
+    requestAnimationFrame(() => {
+        if (!learningGraphCyInstance) return;
+        learningGraphCyInstance.fit(undefined, expanded ? 40 : 28);
+        learningGraphCyInstance.zoom({
+            level: Math.min(LEARNING_GRAPH_CYTOSCAPE_MAX_ZOOM, Math.max(LEARNING_GRAPH_CYTOSCAPE_MIN_ZOOM, zoom)),
+            renderedPosition: {
+                x: mount.clientWidth / 2,
+                y: mount.clientHeight / 2
+            }
+        });
+        updateZoomLabel();
+    });
+
+    return true;
+}
+
 function renderLearningGraph(containerId = 'learning-graph', options = {}) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -1303,15 +1626,32 @@ function renderLearningGraph(containerId = 'learning-graph', options = {}) {
     const mode = normalizeLearningGraphMode(options.mode || getLearningGraphMode());
     const graph = buildLearningGraphData(options.maxSessions || 8, options.maxConceptsPerSession || 2, { mode });
     if (!graph.nodes.length) {
+        destroyLearningGraphCytoscape();
         container.innerHTML = '<div class="empty-state"><div class="title">Knowledge graph is empty</div><div class="desc">Capture learning from chats to build connected memory.</div></div>';
         return;
     }
 
     const showModeControls = Boolean(options.showModeControls);
     const enablePanZoom = Boolean(options.enablePanZoom);
+    const expanded = Boolean(options.expanded);
+    const preferCytoscape = enablePanZoom && options.useCytoscape !== false && isLearningGraphCytoscapeAvailable();
     const baseWidth = options.width || 340;
     const baseHeight = options.height || 230;
     const zoom = enablePanZoom ? clampLearningGraphZoom(options.zoom ?? getLearningGraphZoom()) : 1;
+
+    if (preferCytoscape) {
+        const rendered = renderLearningGraphWithCytoscape(container, graph, {
+            mode,
+            showModeControls,
+            enablePanZoom,
+            zoom,
+            expanded
+        });
+        if (rendered) return;
+    } else {
+        destroyLearningGraphCytoscape();
+    }
+
     const width = Math.round(baseWidth * zoom);
     const height = Math.round(baseHeight * zoom);
     const cx = width / 2;
@@ -1371,42 +1711,31 @@ function renderLearningGraph(containerId = 'learning-graph', options = {}) {
         `;
     }).join('');
 
-    const modeMeta = getLearningGraphModeMeta(mode);
-    const zoomPct = Math.round(zoom * 100);
-    const controlsHtml = showModeControls ? `
-        <div class="learning-graph-controls-row">
-            <div class="learning-graph-controls">
-                ${LEARNING_GRAPH_MODES.map(key => {
-                    const meta = getLearningGraphModeMeta(key);
-                    const active = key === mode ? 'active' : '';
-                    return `<button class="learning-graph-mode-btn ${active}" data-action="set-learning-graph-mode" data-mode="${key}">${meta.label}</button>`;
-                }).join('')}
-            </div>
-            ${enablePanZoom ? `
-                <div class="learning-graph-zoom-controls">
-                    <span class="learning-graph-zoom-value">${zoomPct}%</span>
-                </div>
-            ` : ''}
-        </div>
-        <div class="learning-graph-mode-desc">${escapeHtml(modeMeta.description)}</div>
-        ${enablePanZoom ? '<div class="learning-graph-pan-hint">Use two fingers to zoom and one finger to pan.</div>' : ''}
-    ` : '';
+    const controlsHtml = buildLearningGraphControlsHtml({
+        showModeControls,
+        mode,
+        enablePanZoom,
+        zoomPct: Math.round(zoom * 100),
+        expanded
+    });
 
     container.innerHTML = `
         ${controlsHtml}
-        <div class="learning-graph-wrap ${enablePanZoom ? 'pannable' : ''}">
-            <div class="learning-graph-pan-viewport ${enablePanZoom ? 'enabled' : ''}">
-                <svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" class="learning-graph-svg ${enablePanZoom ? 'pannable' : ''}" aria-label="Knowledge graph">
-                    <defs>
-                        <radialGradient id="learningGraphGlow" cx="50%" cy="40%" r="60%">
-                            <stop offset="0%" stop-color="#84d0ff" stop-opacity="0.22"></stop>
-                            <stop offset="100%" stop-color="#84d0ff" stop-opacity="0"></stop>
-                        </radialGradient>
-                    </defs>
-                    <circle cx="${cx}" cy="${cy}" r="${Math.min(width, height) * 0.44}" fill="url(#learningGraphGlow)"></circle>
-                    ${edgeSvg}
-                    ${nodeSvg}
-                </svg>
+        <div class="learning-graph-shell ${expanded ? 'expanded' : ''}">
+            <div class="learning-graph-wrap ${enablePanZoom ? 'pannable' : ''}">
+                <div class="learning-graph-pan-viewport ${enablePanZoom ? 'enabled' : ''}">
+                    <svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" class="learning-graph-svg ${enablePanZoom ? 'pannable' : ''}" aria-label="Knowledge graph">
+                        <defs>
+                            <radialGradient id="learningGraphGlow" cx="50%" cy="40%" r="60%">
+                                <stop offset="0%" stop-color="#84d0ff" stop-opacity="0.22"></stop>
+                                <stop offset="100%" stop-color="#84d0ff" stop-opacity="0"></stop>
+                            </radialGradient>
+                        </defs>
+                        <circle cx="${cx}" cy="${cy}" r="${Math.min(width, height) * 0.44}" fill="url(#learningGraphGlow)"></circle>
+                        ${edgeSvg}
+                        ${nodeSvg}
+                    </svg>
+                </div>
             </div>
         </div>
     `;
@@ -1527,6 +1856,7 @@ function renderLearningScreen() {
         showModeControls: true,
         enablePanZoom: true,
         zoom: getLearningGraphZoom(),
+        expanded: isLearningGraphExpanded(),
         maxSessions: 8,
         maxConceptsPerSession: 2,
         width: 340,

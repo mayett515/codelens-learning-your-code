@@ -515,8 +515,23 @@
         .learning-snippet-actions { margin-top: 8px; display: flex; justify-content: flex-end; }
         .learning-graph-controls-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
         .learning-graph-controls { display: flex; gap: 8px; flex-wrap: wrap; }
+        .learning-graph-right-controls { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; }
         .learning-graph-zoom-controls { display: inline-flex; align-items: center; gap: 6px; }
         .learning-graph-zoom-value { min-width: 44px; text-align: center; font-size: 11px; color: #dce6f8; font-weight: 700; }
+        .learning-graph-size-btn {
+            border: 1px solid #6f84a8;
+            background: #2f3d54;
+            color: #e5efff;
+            border-radius: 999px;
+            padding: 6px 10px;
+            font-size: 11px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+        .learning-graph-size-btn.active { background: #4b6fa2; border-color: #8eb0de; color: #f5f9ff; }
         .learning-graph-mode-btn {
             border: 1px solid #697a95;
             background: #2f3a4d;
@@ -530,14 +545,16 @@
         .learning-graph-mode-btn.active { background: #4b6fa2; border-color: #8eb0de; color: #f4f9ff; }
         .learning-graph-mode-desc { font-size: 11px; color: #b6c4de; margin-bottom: 8px; line-height: 1.4; }
         .learning-graph-pan-hint { font-size: 11px; color: #adc2e2; margin-bottom: 8px; }
+        .learning-graph-shell { position: relative; margin-bottom: 10px; }
+        .learning-graph-shell.expanded { min-height: 68vh; }
         .learning-graph-wrap {
             background: radial-gradient(circle at 50% 40%, rgba(132, 208, 255, 0.12), rgba(47, 56, 74, 0.65) 55%, rgba(33, 39, 52, 0.85));
             border: 1px solid #5d6b84;
             border-radius: 14px;
             padding: 6px;
-            margin-bottom: 10px;
             overflow: hidden;
         }
+        .learning-graph-shell.expanded .learning-graph-wrap { height: 68vh; }
         .learning-graph-wrap.pannable { padding: 0; }
         .learning-graph-pan-viewport { overflow: hidden; border-radius: 13px; }
         .learning-graph-pan-viewport.enabled {
@@ -546,6 +563,28 @@
             touch-action: pan-x pan-y;
             -webkit-overflow-scrolling: touch;
         }
+        .learning-graph-shell.expanded .learning-graph-pan-viewport.enabled {
+            max-height: none;
+            height: 100%;
+        }
+        .learning-graph-wrap.cytoscape {
+            background: radial-gradient(circle at 50% 40%, rgba(132, 208, 255, 0.14), rgba(47, 56, 74, 0.74) 55%, rgba(27, 32, 43, 0.9));
+        }
+        .learning-graph-pan-viewport.cytoscape {
+            min-height: 320px;
+            max-height: 420px;
+        }
+        .learning-graph-shell.expanded .learning-graph-pan-viewport.cytoscape {
+            min-height: 100%;
+            max-height: none;
+            height: 100%;
+        }
+        .learning-graph-canvas {
+            width: 100%;
+            height: 420px;
+            display: block;
+        }
+        .learning-graph-shell.expanded .learning-graph-canvas { height: 100%; min-height: 100%; }
         .learning-graph-svg { width: 100%; height: auto; display: block; }
         .learning-graph-svg.pannable { width: auto; max-width: none; }
         .learning-graph-edge { stroke: rgba(148, 196, 255, 0.42); stroke-width: 1.3; }
@@ -562,6 +601,7 @@
         .learning-graph-node > text { pointer-events: none; }
         .learning-graph-label { fill: #dce5fa; font-size: 7.8px; paint-order: stroke; stroke: rgba(23, 27, 35, 0.6); stroke-width: 1.2px; stroke-linejoin: round; }
         .learning-graph-label.session { font-size: 9px; font-weight: 700; }
+        .cxtmenu-content { font-family: 'Space Grotesk', sans-serif; font-size: 11px; }
 
         /* Session refs in bubbles */
         .session-ref-wrap { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 6px; }

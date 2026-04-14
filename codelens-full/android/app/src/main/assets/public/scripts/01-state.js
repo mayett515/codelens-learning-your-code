@@ -46,6 +46,7 @@ let state = {
         embeddings: {},
         graphMode: 'connections',
         graphZoom: 1.45,
+        graphExpanded: false,
         reviewChats: [],
         activeReviewChatId: null,
         activeConceptId: null
@@ -524,6 +525,7 @@ function ensureStateShape() {
     state.learningHub.graphZoom = Number.isFinite(graphZoom)
         ? Math.min(2.2, Math.max(1, graphZoom))
         : 1.45;
+    state.learningHub.graphExpanded = Boolean(state.learningHub.graphExpanded);
     const reviewChats = Array.isArray(state.learningHub.reviewChats) ? state.learningHub.reviewChats : [];
     state.learningHub.reviewChats = reviewChats.map(chat => ({
         id: String(chat?.id || ''),

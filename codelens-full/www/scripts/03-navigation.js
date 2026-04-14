@@ -13,6 +13,82 @@ function pushScreenHistory(screenId = '') {
     }
 }
 
+let navigationBackHandlingInitialized = false;
+let navigationLastBackHandledAt = 0;
+
+function buildNavigationBrowserState(screenId = '') {
+    return {
+        __codelensNav: true,
+        screenId: String(screenId || '').trim() || 'home-screen'
+    };
+}
+
+function syncBrowserHistoryState(screenId = '', options = {}) {
+    const id = String(screenId || '').trim();
+    if (!id || !window.history) return;
+    const replace = options.replace === true;
+
+    try {
+        if (replace && typeof window.history.replaceState === 'function') {
+            window.history.replaceState(buildNavigationBrowserState(id), '', window.location.href);
+            return;
+        }
+        if (!replace && typeof window.history.pushState === 'function') {
+            const currentState = window.history.state;
+            if (currentState?.__codelensNav && currentState.screenId === id) return;
+            window.history.pushState(buildNavigationBrowserState(id), '', window.location.href);
+        }
+    } catch (_) {
+        // Ignore history API failures (older webviews / restricted contexts).
+    }
+}
+
+function handleBackNavigation() {
+    const now = Date.now();
+    // Some Android environments fire both Cordova and Capacitor events.
+    if (now - navigationLastBackHandledAt < 220) return true;
+    const handled = navigateBack();
+    if (handled) {
+        navigationLastBackHandledAt = now;
+    }
+    return handled;
+}
+
+function initializeNavigationBackHandling() {
+    if (navigationBackHandlingInitialized) return;
+    navigationBackHandlingInitialized = true;
+
+    const activeScreen = getActiveScreenId();
+    syncBrowserHistoryState(activeScreen, { replace: true });
+
+    window.addEventListener('popstate', event => {
+        const statePayload = event?.state;
+        if (!statePayload?.__codelensNav) return;
+
+        if (!handleBackNavigation()) {
+            syncBrowserHistoryState(getActiveScreenId(), { replace: true });
+        }
+    });
+
+    const appPlugin = window.Capacitor?.Plugins?.App;
+    if (appPlugin && typeof appPlugin.addListener === 'function') {
+        appPlugin.addListener('backButton', () => {
+            if (handleBackNavigation()) return;
+            if (window.history && window.history.length > 1) {
+                try {
+                    window.history.back();
+                    return;
+                } catch (_) {
+                    // fall through to exit
+                }
+            }
+            if (typeof appPlugin.exitApp === 'function') {
+                appPlugin.exitApp();
+            }
+        });
+    }
+}
+
 function showScreen(screenId, options = {}) {
     const nextScreenId = String(screenId || '').trim();
     if (!nextScreenId) return;
@@ -31,6 +107,7 @@ function showScreen(screenId, options = {}) {
 
     if (trackHistory && previousScreen && previousScreen !== nextScreenId) {
         pushScreenHistory(previousScreen);
+        syncBrowserHistoryState(nextScreenId);
     }
     
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -41,6 +118,7 @@ function showScreen(screenId, options = {}) {
 
     if (nextScreenId === 'project-screen') scheduleRenderVisibleCodeLines();
     if (nextScreenId === 'learning-screen' && typeof renderLearningScreen === 'function') renderLearningScreen();
+    if (nextScreenId !== 'learning-screen' && typeof destroyLearningGraphCytoscape === 'function') destroyLearningGraphCytoscape();
     if (nextScreenId === 'learning-chat-screen' && typeof renderLearningReviewChatScreen === 'function') renderLearningReviewChatScreen();
     if (nextScreenId === 'home-screen' && typeof renderLearningHomePreview === 'function') renderLearningHomePreview();
     if (nextScreenId === 'home-screen' && typeof renderHomeRecentChatsPreview === 'function') renderHomeRecentChatsPreview();
@@ -73,7 +151,7 @@ function navigateBack() {
 }
 
 function handleAndroidBackButton(event) {
-    if (navigateBack()) {
+    if (handleBackNavigation()) {
         event?.preventDefault?.();
         return;
     }
