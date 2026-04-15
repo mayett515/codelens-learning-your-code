@@ -12,7 +12,8 @@
       "Bash(mkdir -p src/domain src/ports src/adapters src/db/migrations src/db/queries src/ai src/learning src/graph src/ui/components src/ui/screens src/stores src/lib)",
       "Bash(mkdir -p assets/vendor/cytoscape assets/icons)",
       "Bash(ls C:/CodeLens-v2/codelens-rn/node_modules/react-native-mmkv/lib/*.d.ts)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(node -e \"console.log\\(require\\('drizzle-orm/package.json'\\).version\\)\")"
     ]
   }
 }
