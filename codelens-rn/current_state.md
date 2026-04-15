@@ -11,6 +11,16 @@
 - Root layout with GestureHandlerRootView, QueryClientProvider, centralized BackHandler
 - Dark theme (`src/ui/theme.ts`)
 
+### Dev Environment (Windows)
+
+- **JAVA_HOME** set to `C:\Program Files\Android\Android Studio\jbr` (JDK 21, bundled with Android Studio)
+- **ANDROID_HOME** set to `%LOCALAPPDATA%\Android\Sdk`
+- **`%JAVA_HOME%\bin`** and **`%ANDROID_HOME%\platform-tools`** on PATH
+- **op-sqlite config**: `"op-sqlite": { "sqliteVec": true }` in `package.json` root (authoritative). **Not** in app.json plugins — op-sqlite v15+ has no Expo config plugin.
+- **`plugins/with-local-properties.js`** — Expo config plugin that writes `android/local.properties` from `ANDROID_HOME` on every `expo prebuild`, surviving `--clean`.
+- **`npm run doctor`** — health check script verifying JAVA_HOME, ANDROID_HOME, adb, op-sqlite config, and plugin registration.
+- Build verified: `npx expo prebuild --clean && npx expo run:android` succeeds end-to-end.
+
 ## Phase 1: Domain + Persistence Foundation — COMPLETE
 
 ### What's Done

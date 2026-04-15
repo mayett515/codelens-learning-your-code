@@ -4,13 +4,40 @@ Each phase ends with the app **runnable end-to-end on a real Android device or e
 
 ## Phase 0 — Scaffolding (½ day)
 
-- `npx create-expo-app@latest codelens-rn --template default`
-- Configure: TypeScript strict, Expo Router, Hermes, new architecture.
-- Install: `op-sqlite`, `drizzle-orm`, `drizzle-kit`, `react-native-mmkv`, `react-native-webview`, `@tanstack/react-query`, `zustand`, `expo-secure-store`, `expo-haptics`, `react-native-gesture-handler`, `react-native-reanimated`, `zod`, `date-fns`.
-- Set up the `src/` folder structure from `03-ARCHITECTURE.md`.
-- Verify dev client builds and launches a "Hello World" screen on device.
+### Windows Environment Prerequisites
 
-**Demo:** App launches, shows a placeholder home screen.
+Before creating the project, verify these are set. Run `npm run doctor` after scaffolding to confirm.
+
+1. **Android Studio** installed with Android SDK (default: `%LOCALAPPDATA%\Android\Sdk`).
+2. **ANDROID_HOME** — set as a User environment variable:
+   ```
+   setx ANDROID_HOME "%LOCALAPPDATA%\Android\Sdk"
+   ```
+3. **JAVA_HOME** — point to Android Studio's bundled JDK (JBR):
+   ```
+   setx JAVA_HOME "C:\Program Files\Android\Android Studio\jbr"
+   ```
+4. **PATH** — add adb and java:
+   ```
+   setx PATH "%PATH%;%JAVA_HOME%\bin;%ANDROID_HOME%\platform-tools"
+   ```
+5. **Restart your terminal** after setting env vars — they don't take effect in the current shell.
+
+### Scaffold Steps
+
+- `npx create-expo-app@latest codelens-rn --template default`
+- Configure: TypeScript strict (`exactOptionalPropertyTypes: true` in tsconfig), Expo Router, Hermes, new architecture (already defaults in SDK 54+).
+- Install runtime deps: `op-sqlite`, `drizzle-orm`, `react-native-mmkv`, `react-native-webview`, `@tanstack/react-query`, `zustand`, `expo-secure-store`, `expo-haptics`, `react-native-gesture-handler`, `react-native-reanimated`, `zod`, `date-fns`.
+- Install dev deps: `drizzle-kit`.
+- Add `"op-sqlite": { "sqliteVec": true }` to the root of `package.json`. This is the authoritative config — op-sqlite v15+ has no Expo config plugin (`app.plugin.js`); the native build files (podspec / build.gradle) read this key directly. Do **not** add `@op-engineering/op-sqlite` to the `plugins` array in `app.json` — it will error.
+- Add `plugins/with-local-properties.js` — Expo config plugin that writes `android/local.properties` with `sdk.dir` on every `expo prebuild`. Reads from `ANDROID_HOME` env var or auto-detects the default Windows SDK path. This prevents `prebuild --clean` from leaving a broken build.
+- Register the plugin in `app.json`: `"./plugins/with-local-properties"`.
+- Add `scripts/doctor.js` — health check that verifies JAVA_HOME, ANDROID_HOME, adb on PATH, `package.json` op-sqlite key with sqliteVec, and `with-local-properties` plugin registered. Run with `npm run doctor`.
+- Set up the `src/` folder structure from `03-ARCHITECTURE.md`.
+- Run `npm run doctor` — all checks must pass.
+- Run `npx expo prebuild --clean` then `npx expo run:android` to verify dev client builds.
+
+**Demo:** App launches, shows a placeholder home screen. `npm run doctor` reports all green.
 
 ## Phase 1 — Domain + Persistence Foundation (1–2 days)
 

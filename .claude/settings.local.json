@@ -13,7 +13,30 @@
       "Bash(mkdir -p assets/vendor/cytoscape assets/icons)",
       "Bash(ls C:/CodeLens-v2/codelens-rn/node_modules/react-native-mmkv/lib/*.d.ts)",
       "Bash(npx tsc:*)",
-      "Bash(node -e \"console.log\\(require\\('drizzle-orm/package.json'\\).version\\)\")"
+      "Bash(node -e \"console.log\\(require\\('drizzle-orm/package.json'\\).version\\)\")",
+      "Bash(grep -E \"config|plugin|\\\\.js$\")",
+      "Read(//c/Program Files/Android/**)",
+      "Read(//c/Users/muell/AppData/Local/Android/**)",
+      "Bash(\"C:/Program Files/Android/Android Studio/jbr/bin/java.exe\" -version)",
+      "Bash(export JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\")",
+      "Bash(export ANDROID_HOME=\"C:/Users/muell/AppData/Local/Android/Sdk\")",
+      "Bash(export PATH=\"$JAVA_HOME/bin:$ANDROID_HOME/platform-tools:$PATH\")",
+      "Bash(java -version)",
+      "Bash(adb version:*)",
+      "Bash(\"C:/Users/muell/AppData/Local/Android/Sdk/platform-tools/adb.exe\" version:*)",
+      "Bash(powershell -Command \"[System.Environment]::GetEnvironmentVariable\\('JAVA_HOME', 'User'\\)\")",
+      "Bash(powershell -Command \"[System.Environment]::GetEnvironmentVariable\\('ANDROID_HOME', 'User'\\)\")",
+      "Bash(powershell -Command \"[System.Environment]::GetEnvironmentVariable\\('JAVA_HOME', 'Machine'\\)\")",
+      "Bash(powershell -Command \"[System.Environment]::GetEnvironmentVariable\\('ANDROID_HOME', 'Machine'\\)\")",
+      "Bash(powershell -Command \"[System.Environment]::GetEnvironmentVariable\\('Path', 'User'\\)\")",
+      "Bash(powershell -Command \"[System.Environment]::SetEnvironmentVariable\\('JAVA_HOME', 'C:\\\\\\\\Program Files\\\\\\\\Android\\\\\\\\Android Studio\\\\\\\\jbr', 'User'\\)\")",
+      "Bash(powershell -Command ':*)",
+      "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" ANDROID_HOME=\"C:/Users/muell/AppData/Local/Android/Sdk\" npx expo prebuild --clean)",
+      "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" ANDROID_HOME=\"C:/Users/muell/AppData/Local/Android/Sdk\" npx expo run:android)",
+      "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" ANDROID_HOME=\"C:/Users/muell/AppData/Local/Android/Sdk\" npx expo start --android)",
+      "Bash(npx kill-port:*)",
+      "Bash(powershell -Command \"Get-Process -Id \\(Get-NetTCPConnection -LocalPort 8081 -ErrorAction SilentlyContinue\\).OwningProcess -ErrorAction SilentlyContinue | Stop-Process -Force\")",
+      "Bash(npx expo:*)"
     ]
   }
 }

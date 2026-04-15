@@ -32,8 +32,18 @@ export default function DevScreen() {
       initDatabase();
       appendLog('Database initialized');
 
-      appendLog('Inserting test project...');
+      appendLog('Cleaning up any stale test data...');
       const pid = projectId('test-project-1');
+      const concept1Id = conceptId('concept-closure');
+      const concept2Id = conceptId('concept-promise');
+      const concept3Id = conceptId('concept-monad');
+      try { await vectorStore.deleteAll(); } catch {}
+      try { await conceptQueries.deleteConcept(concept1Id); } catch {}
+      try { await conceptQueries.deleteConcept(concept2Id); } catch {}
+      try { await conceptQueries.deleteConcept(concept3Id); } catch {}
+      try { await projectQueries.deleteProject(pid); } catch {}
+
+      appendLog('Inserting test project...');
       await projectQueries.insertProject({
         id: pid,
         name: 'Smoke Test Project',
@@ -46,10 +56,6 @@ export default function DevScreen() {
       appendLog(`Projects in DB: ${projects.length}`);
 
       appendLog('Inserting test concepts...');
-      const concept1Id = conceptId('concept-closure');
-      const concept2Id = conceptId('concept-promise');
-      const concept3Id = conceptId('concept-monad');
-
       const now = new Date().toISOString();
       for (const c of [
         { id: concept1Id, name: 'Closure', summary: 'A function that captures its lexical scope' },

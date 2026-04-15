@@ -15,7 +15,12 @@ export function makeSqliteVectorStore(rawDb: DB): VectorStorePort {
         );
 
         await tx.execute(
-          `INSERT OR REPLACE INTO embeddings_vec (concept_id, embedding)
+          `DELETE FROM embeddings_vec WHERE concept_id = ?`,
+          [input.id],
+        );
+
+        await tx.execute(
+          `INSERT INTO embeddings_vec (concept_id, embedding)
            VALUES (?, ?)`,
           [input.id, vecBlob],
         );
