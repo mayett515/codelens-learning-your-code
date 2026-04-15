@@ -41,7 +41,7 @@ export function FilePickerModal({ visible, files, onSelect, onClose }: Props) {
         f.path.toLowerCase().includes(q) ||
         f.content.toLowerCase().includes(q),
     );
-  }, [files, query, searchMode]);
+  }, [files, deferredQuery, searchMode]);
 
   const sorted = useMemo(
     () => [...filtered].sort((a, b) => a.path.localeCompare(b.path)),

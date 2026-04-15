@@ -43,8 +43,8 @@ export async function insertFile(file: SourceFile): Promise<void> {
     projectId: file.projectId,
     path: file.path,
     content: file.content,
-    marks: file.marks as any,
-    ranges: file.ranges as any,
+    marks: file.marks as typeof files.$inferInsert.marks,
+    ranges: file.ranges as typeof files.$inferInsert.ranges,
   });
 }
 
@@ -55,7 +55,10 @@ export async function updateFileMarks(
 ): Promise<void> {
   await db
     .update(files)
-    .set({ marks: marks as any, ranges: ranges as any })
+    .set({
+      marks: marks as typeof files.$inferInsert.marks,
+      ranges: ranges as typeof files.$inferInsert.ranges,
+    })
     .where(eq(files.id, id));
 }
 

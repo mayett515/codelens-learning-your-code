@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,12 +6,14 @@ import {
   Pressable,
   StyleSheet,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { colors, fontSize, spacing } from '@/src/ui/theme';
-import { getChatById, insertMessage } from '@/src/db/queries/chats';
+import { getChatById, insertMessage, deleteMessage } from '@/src/db/queries/chats';
 import { getFileById } from '@/src/db/queries/files';
 import { enqueue } from '@/src/ai/queue';
 import { buildSectionSystemPrompt } from '@/src/domain/prompts';
@@ -26,7 +28,6 @@ export default function SectionChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const chatId = id as ChatId;
   const queryClient = useQueryClient();
-  const listRef = useRef<FlatList>(null);
 
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
@@ -44,12 +45,7 @@ export default function SectionChatScreen() {
   });
 
   const messages = chat?.messages ?? [];
-
-  useEffect(() => {
-    if (messages.length > 0) {
-      setTimeout(() => listRef.current?.scrollToEnd({ animated: false }), 100);
-    }
-  }, [messages.length]);
+  const reversedMessages = useMemo(() => [...messages].reverse(), [messages]);
 
   const handleSend = useCallback(
     async (text: string) => {
@@ -113,7 +109,7 @@ export default function SectionChatScreen() {
 
   const handleDeleteMessage = useCallback(
     async (msg: ChatMessage) => {
-      // For now just remove from UI by invalidating — full delete would need a query helper
+      await deleteMessage(msg.id);
       queryClient.invalidateQueries({ queryKey: ['chat', chatId] });
     },
     [chatId, queryClient],

@@ -38,7 +38,8 @@
       "Bash(powershell -Command \"Get-Process -Id \\(Get-NetTCPConnection -LocalPort 8081 -ErrorAction SilentlyContinue\\).OwningProcess -ErrorAction SilentlyContinue | Stop-Process -Force\")",
       "Bash(npx expo:*)",
       "Bash(xargs grep:*)",
-      "Bash(ls C:/CodeLens-v2/codelens-rn/for_gemini*)"
+      "Bash(ls C:/CodeLens-v2/codelens-rn/for_gemini*)",
+      "Bash(ls C:/CodeLens-v2/codelens-rn/gemini_optimizations*)"
     ]
   }
 }

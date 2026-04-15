@@ -110,6 +110,10 @@ export async function insertMessage(
     .where(eq(chats.id, chatId));
 }
 
+export async function deleteMessage(id: MessageId): Promise<void> {
+  await db.delete(chatMessages).where(eq(chatMessages.id, id));
+}
+
 export async function deleteChat(id: ChatId): Promise<void> {
   await db.delete(chats).where(eq(chats.id, id));
 }

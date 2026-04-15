@@ -12,7 +12,7 @@ const opsqlite = open({ name: DB_NAME });
 function wrapForDrizzle(raw: DB): any {
   const sanitizeParams = (params?: any[]) => {
     if (!params) return params;
-    return params.map(p => {
+    return params.map((p: any) => {
       if (p === undefined) return null;
       // Convert arrays/objects to JSON strings, except for ArrayBuffers (used for vectors)
       if (
@@ -47,8 +47,8 @@ function wrapForDrizzle(raw: DB): any {
           };
         };
       }
-      const val = (target as any)[prop];
-      if (typeof val === 'function') return val.bind(target);
+      const val = (target as Record<string | symbol, unknown>)[prop];
+      if (typeof val === 'function') return (val as Function).bind(target);
       return val;
     },
   });

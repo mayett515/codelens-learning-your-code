@@ -10,7 +10,7 @@ import {
   ListRenderItemInfo,
 } from 'react-native';
 import { colors, fontSize, spacing } from '../theme';
-import { getLineMarkInfo, type LineMarkInfo } from '@/src/domain/marker';
+import type { LineMarkInfo } from '@/src/domain/marker';
 import type {
   LineMark,
   RangeMark,
@@ -100,14 +100,62 @@ export function CodeViewer({
 
   const markMap = useMemo(() => {
     const map = new Map<number, LineMarkInfo>();
-    for (let i = 1; i <= lines.length; i++) {
-      const info = getLineMarkInfo(marks, ranges, i);
-      if (info) {
-        map.set(i, info);
+
+    const directByLine = new Map<number, LineMark>();
+    for (const m of marks) directByLine.set(m.line, m);
+
+    const rangeIndexCache = new Map<MarkColor, Map<RangeMark, number>>();
+    for (const r of ranges) {
+      let colorMap = rangeIndexCache.get(r.color);
+      if (!colorMap) {
+        const sorted = ranges
+          .filter((x) => x.color === r.color)
+          .sort((a, b) => a.startLine - b.startLine);
+        colorMap = new Map<RangeMark, number>();
+        for (let i = 0; i < sorted.length; i++) colorMap.set(sorted[i], i);
+        rangeIndexCache.set(r.color, colorMap);
       }
     }
+
+    for (const r of ranges) {
+      const idx = rangeIndexCache.get(r.color)!.get(r)!;
+      for (let line = r.startLine; line <= r.endLine; line++) {
+        if (map.has(line)) continue;
+        const direct = directByLine.get(line);
+        if (direct) {
+          map.set(line, {
+            color: direct.color,
+            depth: direct.depth,
+            isDirectMark: true,
+            isOverlap: true,
+            rangeIndex: idx,
+          });
+        } else {
+          map.set(line, {
+            color: r.color,
+            depth: r.depth,
+            isDirectMark: false,
+            isOverlap: false,
+            rangeIndex: idx,
+          });
+        }
+      }
+    }
+
+    for (const m of marks) {
+      if (!map.has(m.line)) {
+        map.set(m.line, {
+          color: m.color,
+          depth: m.depth,
+          isDirectMark: true,
+          isOverlap: false,
+          rangeIndex: -1,
+        });
+      }
+    }
+
     return map;
-  }, [marks, ranges, lines.length]);
+  }, [marks, ranges]);
 
   const renderItem = useCallback(
     ({ item, index }: ListRenderItemInfo<string>) => {

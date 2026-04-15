@@ -36,6 +36,7 @@ import { uid } from '@/src/lib/uid';
 import type {
   ProjectId,
   FileId,
+  SourceFile,
   LineMark,
   RangeMark,
 } from '@/src/domain/types';
@@ -97,7 +98,7 @@ export default function ProjectViewerScreen() {
       saveTimer.current = setTimeout(async () => {
         await updateFileMarks(fileId, marks, ranges);
         // Optimistically update the cache instead of invalidating to prevent ping-pong re-renders
-        queryClient.setQueryData(['file', fileId], (old: any) => {
+        queryClient.setQueryData<SourceFile | null | undefined>(['file', fileId], (old) => {
           if (!old) return old;
           return { ...old, marks, ranges };
         });
@@ -337,10 +338,7 @@ export default function ProjectViewerScreen() {
           </Text>
           <Pressable
             style={styles.rangeCancelBtn}
-            onPress={() => {
-              resetSelection();
-              toggleRangeSelectMode();
-            }}
+            onPress={resetSelection}
           >
             <Text style={styles.rangeCancelText}>Cancel</Text>
           </Pressable>
