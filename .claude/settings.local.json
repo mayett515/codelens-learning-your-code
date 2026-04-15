@@ -6,7 +6,13 @@
       "Bash(cp c:/CodeLens-v2/codelens-full/android/app/src/main/assets/public/scripts/09-folders-snippets.js c:/CodeLens-v2/codelens-full/www/scripts/09-folders-snippets.js)",
       "Bash(cp c:/CodeLens-v2/codelens-full/android/app/src/main/assets/public/scripts/12-ai-api.js c:/CodeLens-v2/codelens-full/www/scripts/12-ai-api.js)",
       "Bash(sed -i '496,841d' c:/CodeLens-v2/codelens-full/www/scripts/16-learning.js)",
-      "Bash(sed -n '493,500p' c:/CodeLens-v2/codelens-full/www/scripts/16-learning.js)"
+      "Bash(sed -n '493,500p' c:/CodeLens-v2/codelens-full/www/scripts/16-learning.js)",
+      "Bash(npx create-expo-app@latest codelens-rn --template default)",
+      "Bash(npm install:*)",
+      "Bash(mkdir -p src/domain src/ports src/adapters src/db/migrations src/db/queries src/ai src/learning src/graph src/ui/components src/ui/screens src/stores src/lib)",
+      "Bash(mkdir -p assets/vendor/cytoscape assets/icons)",
+      "Bash(ls C:/CodeLens-v2/codelens-rn/node_modules/react-native-mmkv/lib/*.d.ts)",
+      "Bash(npx tsc:*)"
     ]
   }
 }
