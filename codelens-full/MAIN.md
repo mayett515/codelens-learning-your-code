@@ -29,9 +29,21 @@ If another coding agent asks for "which docs should I read?", start here, then i
    - Include when: deciding doc context for prompts.
 
 6. `C:\CodeLens-v2\whatclaudechanged.md` (session note, outside `codelens-full/`)
-   - Purpose: Temporary migration log from the Claude refactor session.
+   - Purpose: Migration log from the Claude refactor pass (model routing, 17-learning-embeddings split, vector store separation, native store rewrite, reset/import coherence).
    - Include when: reviewing exactly what changed during the 2026-04-14 refactor pass.
    - Note: this is a handoff note, not a canonical architecture source.
+
+7. `C:\CodeLens-v2\graph_ideas.md` (session note)
+   - Purpose: Describes the Cytoscape + cxtmenu integration and the Bigger/Smaller toggle.
+   - Include when: touching graph rendering or the context menu.
+
+8. `C:\CodeLens-v2\codex_changes.md` (session note)
+   - Purpose: Log of the Codex session that introduced the Cytoscape renderer and Android back-nav overhaul.
+   - Include when: auditing exactly which files that pass touched.
+
+9. `C:\CodeLens-v2\for_gemini.md` / `C:\CodeLens-v2\geminis_findings.md` (review notes)
+   - Purpose: Gemini third-party review brief + response. Captures priorities/footguns flagged externally.
+   - Include when: you want the outside-perspective view of current architecture.
 
 ## Web Runtime Docs (`www/`)
 

@@ -98,8 +98,15 @@ Main owners:
 - capture flow now includes preview-before-save modal
 - concepts are normalized into taxonomy fields
 - review and extraction calls use `learning` chat scope by default
-- settings UI currently exposes section/general model controls; learning scope defaults are configured in state helpers
+- settings UI exposes provider/model controls for all three scopes (`section`, `general`, `learning`)
 - knowledge graph data derived from sessions/concepts/links
+- **Graph rendering** (`renderLearningGraph` in `16-learning.js`):
+  - Two renderers: Cytoscape.js (preferred on learning screen when pan/zoom is enabled) and the legacy SVG renderer (fallback + home preview)
+  - Cytoscape libs are vendored at `www/vendor/cytoscape/` and loaded from `index.html` before app scripts — no CDN, works offline
+  - Extension registration is lazy and guarded; failures fall through to the SVG path
+  - Context menu (`cytoscape-cxtmenu`) tuned for phone: `taphold` / `cxttap` open events, viewport-adaptive radius, icon commands (Open / Ask / Center), finger-sized node targets (42/32 px)
+  - Destroy path: `destroyLearningGraphCytoscape()` is called on screen leave (wired from `03-navigation.js`) and before every re-render
+  - Expanded/collapsed panel state persisted as `state.learningHub.graphExpanded`
 - graph supports pan and pinch zoom on mobile
 - session reference mode is read-only and can restore prior navigation context
 
@@ -118,10 +125,15 @@ Main owner: `12-ai-api.js`
 Main owner: `03-navigation.js` + wiring in init/runtime handlers
 
 - screen and modal transitions are centralized
-- history stack supports in-app back navigation behavior
+- `showScreen()` syncs browser `history.state` on every forward transition so back navigation has a real stack to pop
+- `initializeNavigationBackHandling()` (called during init) wires:
+  - `popstate` for WebView back
+  - Capacitor `App.addListener('backButton')` for Android hardware back
+  - duplicate-event guard so devices that fire both don't double-pop
 - Android hardware back behavior prefers:
   1. close open modal
   2. navigate to previous screen/state
+- Leaving the learning screen tears down the Cytoscape instance to free the canvas + cxtmenu handlers
 
 ## 9) Native Bridge Runtime
 
@@ -143,4 +155,5 @@ Reference contract doc:
 - Keep provider/network logic in `12-ai-api.js`.
 - Keep learning concept extraction/session logic in `16-learning.js`.
 - Keep vector persistence/native semantic retrieval in `17-learning-embeddings.js`.
-- Keep `www/` docs and `android/.../assets/public/` docs mirrored.
+- Keep graph rendering logic in `16-learning.js`; vendor new third-party libs under `www/vendor/`, never via CDN.
+- Mirror `www/` → `android/app/src/main/assets/public/` with `npm run sync` (or `npm run sync:check` in CI) — do not copy files by hand.

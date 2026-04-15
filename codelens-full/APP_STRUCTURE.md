@@ -410,6 +410,9 @@ Use this as a fast "where do I change X?" guide:
   - `scripts/17-learning-embeddings.js`
 - Knowledge graph UX:
   - `scripts/16-learning.js` + `styles/app.css`
+  - Cytoscape.js + `cytoscape-cxtmenu` vendored at `www/vendor/cytoscape/` (offline-safe)
+  - Touch-tuned cxtmenu: `taphold`/`cxttap`, viewport-adaptive radius, icon commands, finger-sized node targets
+  - Expand/collapse toggle persisted at `state.learningHub.graphExpanded`
 - Screen-level layout/labels:
   - `index.html` + `styles/app.css`
 
@@ -439,7 +442,13 @@ Use this as a fast "where do I change X?" guide:
   - Toggle between `Path + Content` and `Filename Only`.
 - Android back behavior:
   - Screen history stack + hardware back handling.
+  - `initializeNavigationBackHandling()` (`03-navigation.js`) wires `popstate`, Capacitor `App.backButton`, and a duplicate-event guard. `showScreen()` syncs `history.state` on each forward transition.
 - Learning capture:
   - `Save as Learning` now shows a concept preview modal before final save.
 - Knowledge graph:
   - Two-finger pinch zoom on mobile graph viewport (no +/- buttons).
+  - Cytoscape renderer on learning screen (fallback: SVG). Libraries vendored under `www/vendor/cytoscape/`.
+  - `cytoscape-cxtmenu` radial node menu, tuned for touch (long-press open, icon+label commands, viewport-adaptive radius).
+  - Bigger/Smaller toggle expands the graph panel; state persisted at `state.learningHub.graphExpanded`.
+- Asset sync:
+  - `npm run sync` (script at `codelens-full/scripts/sync-assets.js`) mirrors `www/` → `android/app/src/main/assets/public/`. `npm run sync:check` exits non-zero if the trees diverge. Do **not** copy files by hand.
