@@ -47,23 +47,23 @@ If another coding agent asks for "which docs should I read?", start here, then i
 
 ## Web Runtime Docs (`www/`)
 
-7. `codelens-full/www/ARCHITECTURE.md`
+1. `codelens-full/www/ARCHITECTURE.md`
    - Purpose: Entry point to runtime UI/code architecture docs.
    - Include when: choosing between UI-structure and runtime-flow docs.
 
-8. `codelens-full/www/HTML_UI_ARCHITECTURE.md`
+2. `codelens-full/www/HTML_UI_ARCHITECTURE.md`
    - Purpose: Screen map, modal map, UI interaction model, script order.
    - Include when: changing `index.html`, CSS, screen navigation, or UI interactions.
 
-9. `codelens-full/www/CODE_RUNTIME_ARCHITECTURE.md`
+3. `codelens-full/www/CODE_RUNTIME_ARCHITECTURE.md`
    - Purpose: Runtime boot flow, action routing, state persistence, AI queue, learning flow.
    - Include when: changing JS runtime behavior or cross-module wiring.
 
 ## Android Runtime Mirror Docs (`android/app/src/main/assets/public/`)
 
-10. `codelens-full/android/app/src/main/assets/public/ARCHITECTURE.md`
-11. `codelens-full/android/app/src/main/assets/public/HTML_UI_ARCHITECTURE.md`
-12. `codelens-full/android/app/src/main/assets/public/CODE_RUNTIME_ARCHITECTURE.md`
+1. `codelens-full/android/app/src/main/assets/public/ARCHITECTURE.md`
+2. `codelens-full/android/app/src/main/assets/public/HTML_UI_ARCHITECTURE.md`
+3. `codelens-full/android/app/src/main/assets/public/CODE_RUNTIME_ARCHITECTURE.md`
 
 - Purpose: Same architecture content as `www/`, colocated with Android-shipped runtime assets.
 - Include when: working directly in `android/.../assets/public` and wanting nearby docs.

@@ -8,10 +8,14 @@ This document maps the UI shell in `public/` and the key interaction surfaces.
   - Screen + modal structure
   - `data-action` wiring targets
   - script include order
+  - loads vendored Cytoscape libs from `vendor/cytoscape/` before app scripts
 - `styles/app.css`
   - layout, theme tokens, code/chat styles, graph styles, mode styles
 - `assets/icons.svg`
   - shared icon sprite
+- `vendor/cytoscape/`
+  - vendored third-party libraries (`cytoscape.min.js`, `cytoscape-cxtmenu.js`)
+  - loaded locally so the knowledge graph works offline on-device; never re-add a CDN include here
 
 ## 2) Screen Map
 
@@ -60,9 +64,17 @@ This document maps the UI shell in `public/` and the key interaction surfaces.
 
 ## 5) Knowledge Graph UI
 
-- Graph is rendered in learning UI surfaces.
+- Graph is rendered in two surfaces:
+  - Home preview (`#home-knowledge-graph`) — lightweight SVG renderer, read-only.
+  - Learning screen (`#learning-graph`) — Cytoscape.js renderer when pan/zoom is enabled and the vendored libs load; falls back to the SVG renderer otherwise.
 - Pan + pinch zoom are mobile-first interactions.
 - Zoom is gesture-driven (not plus/minus buttons).
+- **Node context menu** uses `cytoscape-cxtmenu` — tuned for touch:
+  - Opens on `taphold` (phone long-press) or `cxttap` (desktop right-click).
+  - `menuRadius` adapts to viewport (`~32% of min edge`, clamped 100–160 px).
+  - Icon+label commands per node type: session → `📂 Open`, `🎯 Center`; concept → `📖 Open`, `💬 Ask`, `🎯 Center`.
+  - `.learning-graph-canvas` sets `touch-action:none` and `user-select:none` so the canvas owns gestures and `taphold` isn't hijacked by the OS text-selection UI.
+- **Bigger/Smaller toggle** (top-right of graph panel) expands the graph panel to full-screen viewport; persisted at `state.learningHub.graphExpanded`.
 
 ## 6) Script Load Order
 
@@ -86,6 +98,7 @@ This document maps the UI shell in `public/` and the key interaction surfaces.
 
 ## 7) UI Editing Guardrails
 
-- Keep `www/index.html` and `android/.../assets/public/index.html` aligned.
+- Keep `www/index.html` and `android/.../assets/public/index.html` aligned. **Use `npm run sync` — never copy files by hand** (drift has repeatedly bitten this project).
 - Add new clicks via `data-action`, not inline handlers.
 - If new stateful UI is added, ensure it is normalized in state shape routines.
+- Third-party libs (Cytoscape, cxtmenu) are vendored under `www/vendor/` so the app works offline. Do not revert to CDN includes — this is an Android/mobile app, it must not require a network round-trip to render.
