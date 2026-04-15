@@ -1,11 +1,35 @@
 import { makeExpoSecureStore } from './adapters/secure-store-expo';
 import { makeMmkvStore } from './adapters/kv-mmkv';
 import { makeSqliteVectorStore } from './adapters/sqlite-vector-store';
+import { makeOpenRouterClient } from './adapters/openrouter-client';
+import { makeSiliconflowClient } from './adapters/siliconflow-client';
 import { getRawDb } from './db/client';
+import { setCompleteImpl } from './ai/queue';
 import type { VectorStorePort } from './ports/vector-store';
 import type { SecureStorePort } from './ports/secure-store';
 import type { KvStorePort } from './ports/kv-store';
+import type { AiClientPort, AiCompleteInput } from './ports/ai-client';
 
 export const secureStore: SecureStorePort = makeExpoSecureStore();
 export const kv: KvStorePort = makeMmkvStore();
 export const vectorStore: VectorStorePort = makeSqliteVectorStore(getRawDb());
+
+export const openRouterClient: AiClientPort = makeOpenRouterClient(
+  () => secureStore.getApiKey('openrouter'),
+);
+export const siliconFlowClient: AiClientPort = makeSiliconflowClient(
+  () => secureStore.getApiKey('siliconflow'),
+);
+
+const clients: Record<string, AiClientPort> = {
+  openrouter: openRouterClient,
+  siliconflow: siliconFlowClient,
+};
+
+function routedComplete(input: AiCompleteInput): Promise<string> {
+  const client = clients[input.provider];
+  if (!client) throw new Error(`Unknown provider: ${input.provider}`);
+  return client.complete(input);
+}
+
+setCompleteImpl(routedComplete);

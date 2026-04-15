@@ -36,7 +36,9 @@
       "Bash(JAVA_HOME=\"C:/Program Files/Android/Android Studio/jbr\" ANDROID_HOME=\"C:/Users/muell/AppData/Local/Android/Sdk\" npx expo start --android)",
       "Bash(npx kill-port:*)",
       "Bash(powershell -Command \"Get-Process -Id \\(Get-NetTCPConnection -LocalPort 8081 -ErrorAction SilentlyContinue\\).OwningProcess -ErrorAction SilentlyContinue | Stop-Process -Force\")",
-      "Bash(npx expo:*)"
+      "Bash(npx expo:*)",
+      "Bash(xargs grep:*)",
+      "Bash(ls C:/CodeLens-v2/codelens-rn/for_gemini*)"
     ]
   }
 }

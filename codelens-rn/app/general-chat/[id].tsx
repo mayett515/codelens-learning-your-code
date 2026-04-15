@@ -1,22 +1,218 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  ActivityIndicator,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, router } from 'expo-router';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { colors, fontSize, spacing } from '@/src/ui/theme';
+import { getChatById, insertMessage } from '@/src/db/queries/chats';
+import { enqueue } from '@/src/ai/queue';
+import { buildGeneralSystemPrompt } from '@/src/domain/prompts';
+import { messageId as makeMessageId } from '@/src/domain/types';
+import { uid } from '@/src/lib/uid';
+import { ChatBubble } from '@/src/ui/components/ChatBubble';
+import { ChatInput } from '@/src/ui/components/ChatInput';
+import { BubbleMenu } from '@/src/ui/components/BubbleMenu';
+import type { ChatId, ChatMessage } from '@/src/domain/types';
 
 export default function GeneralChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const chatId = id as ChatId;
+  const queryClient = useQueryClient();
+  const listRef = useRef<FlatList>(null);
+
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
+  const [menuMessage, setMenuMessage] = useState<ChatMessage | null>(null);
+
+  const { data: chat } = useQuery({
+    queryKey: ['chat', chatId],
+    queryFn: () => getChatById(chatId),
+  });
+
+  const messages = chat?.messages ?? [];
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      setTimeout(() => listRef.current?.scrollToEnd({ animated: false }), 100);
+    }
+  }, [messages.length]);
+
+  const handleSend = useCallback(
+    async (text: string) => {
+      if (!chat) return;
+      setSending(true);
+      setError('');
+
+      const userMsg: ChatMessage = {
+        id: makeMessageId(uid()),
+        role: 'user',
+        content: text,
+        createdAt: new Date().toISOString(),
+      };
+      await insertMessage(chatId, userMsg);
+      queryClient.invalidateQueries({ queryKey: ['chat', chatId] });
+
+      try {
+        const aiMessages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }> = [
+          { role: 'system', content: buildGeneralSystemPrompt() },
+          ...messages.filter((m) => m.role !== 'system').map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
+          { role: 'user', content: text },
+        ];
+
+        const response = await enqueue('general', aiMessages);
+
+        const assistantMsg: ChatMessage = {
+          id: makeMessageId(uid()),
+          role: 'assistant',
+          content: response,
+          createdAt: new Date().toISOString(),
+        };
+        await insertMessage(chatId, assistantMsg);
+        queryClient.invalidateQueries({ queryKey: ['chat', chatId] });
+        queryClient.invalidateQueries({ queryKey: ['recentChats'] });
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Failed to get response');
+      } finally {
+        setSending(false);
+      }
+    },
+    [chat, messages, chatId, queryClient],
+  );
+
+  const handleDeleteMessage = useCallback(
+    async (_msg: ChatMessage) => {
+      queryClient.invalidateQueries({ queryKey: ['chat', chatId] });
+    },
+    [chatId, queryClient],
+  );
 
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>General Chat</Text>
-      <Text style={styles.sub}>Chat ID: {id}</Text>
-      <Text style={styles.sub}>Phase 3 — free-form AI chat</Text>
+      <KeyboardAvoidingView 
+        style={styles.keyboardAvoiding} 
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <View style={styles.header}>
+          <Pressable onPress={() => router.back()} hitSlop={12}>
+            <Text style={styles.backBtn}>{'<'}</Text>
+          </Pressable>
+          <Text style={styles.title} numberOfLines={1}>
+            {chat?.title ?? 'General Chat'}
+          </Text>
+        </View>
+
+        <FlatList
+          data={reversedMessages}
+          inverted
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <ChatBubble
+              message={item}
+              onLongPress={setMenuMessage}
+            />
+          )}
+          contentContainerStyle={styles.messageList}
+        />
+
+        {sending ? (
+          <View style={styles.typingBar}>
+            <ActivityIndicator size="small" color={colors.primary} />
+            <Text style={styles.typingText}>Thinking...</Text>
+          </View>
+        ) : null}
+
+        {error ? (
+          <View style={styles.errorBar}>
+            <Text style={styles.errorText}>{error}</Text>
+            <Pressable onPress={() => setError('')}>
+              <Text style={styles.errorDismiss}>X</Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        <ChatInput onSend={handleSend} disabled={sending} />
+      </KeyboardAvoidingView>
+
+      <BubbleMenu
+        visible={!!menuMessage}
+        message={menuMessage}
+        onClose={() => setMenuMessage(null)}
+        onDelete={handleDeleteMessage}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background, padding: spacing.lg },
-  title: { color: colors.text, fontSize: fontSize.xl, fontWeight: '700' },
-  sub: { color: colors.textSecondary, fontSize: fontSize.md, marginTop: spacing.sm },
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  keyboardAvoiding: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  backBtn: {
+    color: colors.primary,
+    fontSize: fontSize.xl,
+    fontWeight: '600',
+    paddingHorizontal: spacing.xs,
+  },
+  title: {
+    color: colors.text,
+    fontSize: fontSize.lg,
+    fontWeight: '600',
+    flex: 1,
+  },
+  messageList: {
+    paddingVertical: spacing.md,
+  },
+  typingBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xs,
+  },
+  typingText: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+  },
+  errorBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(224, 108, 117, 0.15)',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+  },
+  errorText: {
+    color: colors.red,
+    fontSize: fontSize.sm,
+    flex: 1,
+  },
+  errorDismiss: {
+    color: colors.red,
+    fontSize: fontSize.md,
+    fontWeight: '600',
+    paddingLeft: spacing.md,
+  },
 });

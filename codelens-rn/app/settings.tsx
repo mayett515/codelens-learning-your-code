@@ -1,18 +1,379 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import { colors, fontSize, spacing } from '@/src/ui/theme';
+import { secureStore } from '@/src/composition';
+import {
+  getChatConfig,
+  updateScopeProvider,
+  updateScopeModel,
+} from '@/src/ai/scopes';
+import type { ChatScope, Provider } from '@/src/domain/types';
+
+const SCOPES: ChatScope[] = ['section', 'general', 'learning'];
+const PROVIDERS: Provider[] = ['openrouter', 'siliconflow'];
+
+const PROVIDER_LABELS: Record<Provider, string> = {
+  openrouter: 'OpenRouter',
+  siliconflow: 'SiliconFlow',
+};
 
 export default function SettingsScreen() {
+  const [orKey, setOrKey] = useState('');
+  const [sfKey, setSfKey] = useState('');
+  const [orKeySet, setOrKeySet] = useState(false);
+  const [sfKeySet, setSfKeySet] = useState(false);
+  const [config, setConfig] = useState(getChatConfig());
+  const [saved, setSaved] = useState('');
+
+  useEffect(() => {
+    (async () => {
+      const or = await secureStore.getApiKey('openrouter');
+      const sf = await secureStore.getApiKey('siliconflow');
+      if (or) { setOrKeySet(true); setOrKey(''); }
+      if (sf) { setSfKeySet(true); setSfKey(''); }
+    })();
+  }, []);
+
+  async function saveOrKey() {
+    if (!orKey.trim()) return;
+    await secureStore.setApiKey('openrouter', orKey.trim());
+    setOrKeySet(true);
+    setOrKey('');
+    flash('OpenRouter key saved');
+  }
+
+  async function saveSfKey() {
+    if (!sfKey.trim()) return;
+    await secureStore.setApiKey('siliconflow', sfKey.trim());
+    setSfKeySet(true);
+    setSfKey('');
+    flash('SiliconFlow key saved');
+  }
+
+  async function clearOrKey() {
+    await secureStore.deleteApiKey('openrouter');
+    setOrKeySet(false);
+    flash('OpenRouter key cleared');
+  }
+
+  async function clearSfKey() {
+    await secureStore.deleteApiKey('siliconflow');
+    setSfKeySet(false);
+    flash('SiliconFlow key cleared');
+  }
+
+  function handleProviderChange(scope: ChatScope, provider: Provider) {
+    updateScopeProvider(scope, provider);
+    setConfig(getChatConfig());
+    flash(`${scope} → ${PROVIDER_LABELS[provider]}`);
+  }
+
+  function handleModelChange(scope: ChatScope, provider: Provider, model: string) {
+    updateScopeModel(scope, provider, model);
+    setConfig(getChatConfig());
+  }
+
+  function flash(msg: string) {
+    setSaved(msg);
+    setTimeout(() => setSaved(''), 2000);
+  }
+
   return (
     <SafeAreaView style={styles.container}>
-      <Text style={styles.title}>Settings</Text>
-      <Text style={styles.sub}>Phase 3 — providers, models, API keys, backup</Text>
+      <View style={styles.header}>
+        <Pressable onPress={() => router.back()} hitSlop={12}>
+          <Text style={styles.backBtn}>{'<'}</Text>
+        </Pressable>
+        <Text style={styles.title}>Settings</Text>
+      </View>
+
+      {saved ? (
+        <View style={styles.toast}>
+          <Text style={styles.toastText}>{saved}</Text>
+        </View>
+      ) : null}
+
+      <ScrollView style={styles.body} keyboardShouldPersistTaps="handled">
+        <Text style={styles.sectionTitle}>API Keys</Text>
+
+        <View style={styles.keySection}>
+          <Text style={styles.label}>OpenRouter</Text>
+          {orKeySet ? (
+            <View style={styles.keyRow}>
+              <Text style={styles.keySet}>Key set</Text>
+              <Pressable style={styles.clearBtn} onPress={clearOrKey}>
+                <Text style={styles.clearBtnText}>Clear</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View style={styles.keyRow}>
+              <TextInput
+                style={styles.keyInput}
+                placeholder="sk-or-..."
+                placeholderTextColor={colors.textSecondary}
+                value={orKey}
+                onChangeText={setOrKey}
+                autoCapitalize="none"
+                autoCorrect={false}
+                secureTextEntry
+              />
+              <Pressable style={styles.saveBtn} onPress={saveOrKey}>
+                <Text style={styles.saveBtnText}>Save</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.keySection}>
+          <Text style={styles.label}>SiliconFlow</Text>
+          {sfKeySet ? (
+            <View style={styles.keyRow}>
+              <Text style={styles.keySet}>Key set</Text>
+              <Pressable style={styles.clearBtn} onPress={clearSfKey}>
+                <Text style={styles.clearBtnText}>Clear</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View style={styles.keyRow}>
+              <TextInput
+                style={styles.keyInput}
+                placeholder="sk-..."
+                placeholderTextColor={colors.textSecondary}
+                value={sfKey}
+                onChangeText={setSfKey}
+                autoCapitalize="none"
+                autoCorrect={false}
+                secureTextEntry
+              />
+              <Pressable style={styles.saveBtn} onPress={saveSfKey}>
+                <Text style={styles.saveBtnText}>Save</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+
+        <Text style={styles.sectionTitle}>Model Config</Text>
+        <Text style={styles.hint}>Each scope has its own provider and model.</Text>
+
+        {SCOPES.map((scope) => {
+          const scopeConfig = config[scope];
+          return (
+            <View key={scope} style={styles.scopeSection}>
+              <Text style={styles.scopeTitle}>{scope.toUpperCase()}</Text>
+
+              <View style={styles.providerRow}>
+                {PROVIDERS.map((p) => (
+                  <Pressable
+                    key={p}
+                    style={[
+                      styles.providerBtn,
+                      scopeConfig.provider === p && styles.providerBtnActive,
+                    ]}
+                    onPress={() => handleProviderChange(scope, p)}
+                  >
+                    <Text
+                      style={[
+                        styles.providerBtnText,
+                        scopeConfig.provider === p && styles.providerBtnTextActive,
+                      ]}
+                    >
+                      {PROVIDER_LABELS[p]}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+
+              <Text style={styles.modelLabel}>
+                Model ({PROVIDER_LABELS[scopeConfig.provider]})
+              </Text>
+              <TextInput
+                style={styles.modelInput}
+                value={scopeConfig.models[scopeConfig.provider]}
+                onChangeText={(text) =>
+                  handleModelChange(scope, scopeConfig.provider, text)
+                }
+                placeholder="model-id"
+                placeholderTextColor={colors.textSecondary}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </View>
+          );
+        })}
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: colors.background, padding: spacing.lg },
-  title: { color: colors.text, fontSize: fontSize.xl, fontWeight: '700' },
-  sub: { color: colors.textSecondary, fontSize: fontSize.md, marginTop: spacing.sm },
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  backBtn: {
+    color: colors.primary,
+    fontSize: fontSize.xl,
+    fontWeight: '600',
+    paddingHorizontal: spacing.xs,
+  },
+  title: {
+    color: colors.text,
+    fontSize: fontSize.xl,
+    fontWeight: '700',
+  },
+  toast: {
+    backgroundColor: colors.green,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.lg,
+    alignItems: 'center',
+  },
+  toastText: {
+    color: colors.background,
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+  },
+  body: {
+    flex: 1,
+    padding: spacing.lg,
+  },
+  sectionTitle: {
+    color: colors.text,
+    fontSize: fontSize.lg,
+    fontWeight: '700',
+    marginTop: spacing.lg,
+    marginBottom: spacing.sm,
+  },
+  label: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: spacing.xs,
+  },
+  keySection: {
+    marginBottom: spacing.md,
+  },
+  keyRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    alignItems: 'center',
+  },
+  keyInput: {
+    flex: 1,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    color: colors.text,
+    fontSize: fontSize.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  saveBtn: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 8,
+  },
+  saveBtnText: {
+    color: colors.text,
+    fontSize: fontSize.md,
+    fontWeight: '600',
+  },
+  keySet: {
+    color: colors.green,
+    fontSize: fontSize.md,
+    flex: 1,
+  },
+  clearBtn: {
+    backgroundColor: colors.surfaceLight,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: 8,
+  },
+  clearBtnText: {
+    color: colors.red,
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+  },
+  hint: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    marginBottom: spacing.md,
+  },
+  scopeSection: {
+    backgroundColor: colors.surface,
+    borderRadius: 12,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  scopeTitle: {
+    color: colors.primary,
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+    letterSpacing: 1,
+    marginBottom: spacing.sm,
+  },
+  providerRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  providerBtn: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    borderRadius: 6,
+    backgroundColor: colors.background,
+  },
+  providerBtnActive: {
+    backgroundColor: 'rgba(96, 139, 219, 0.2)',
+    borderWidth: 1,
+    borderColor: colors.primary,
+  },
+  providerBtnText: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    fontWeight: '500',
+  },
+  providerBtnTextActive: {
+    color: colors.primary,
+  },
+  modelLabel: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    marginBottom: spacing.xs,
+  },
+  modelInput: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    color: colors.text,
+    fontSize: fontSize.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    fontFamily: 'monospace',
+  },
 });

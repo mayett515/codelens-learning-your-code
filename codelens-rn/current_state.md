@@ -44,9 +44,11 @@
 **Database client** (`src/db/client.ts`):
 - op-sqlite `open()` + drizzle ORM init
 - `initDatabase()` — creates all tables with IF NOT EXISTS, sets WAL + foreign keys
-- sqlite-vec extension load (vec0) with fallback warning
-- `embeddings_vec` virtual table (384-dim FLOAT vectors)
+- sqlite-vec virtual table (vec0) created directly (no loadExtension — statically compiled)
+- `embeddings_vec` virtual table (384-dim FLOAT vectors, concept_id TEXT metadata — no PRIMARY KEY on metadata)
 - `getRawDb()` for direct SQL access (needed by vector store adapter)
+- Proxy wrapper mapping Drizzle's deprecated methods to op-sqlite v15 API
+- Parameter sanitization (undefined→null, objects→JSON.stringify, preserves ArrayBuffer/Float32Array for vectors)
 
 **Typed CRUD query helpers** (`src/db/queries/`):
 - `projects.ts` — getAllProjects, getProjectById, insertProject, updateProject, deleteProject
@@ -58,7 +60,7 @@
 - `embeddings-meta.ts` — getMetaByConceptId, upsertMeta, deleteMeta, deleteAllMeta
 
 **Adapters** (`src/adapters/`):
-- `sqlite-vector-store.ts` — full VectorStorePort implementation using op-sqlite raw SQL + vec0 virtual table, transactional upsert/delete, Float32Array → ArrayBuffer blob conversion
+- `sqlite-vector-store.ts` — full VectorStorePort implementation using op-sqlite raw SQL + vec0, DELETE+INSERT upsert pattern (vec0 doesn't support INSERT OR REPLACE on metadata columns)
 - `kv-mmkv.ts` — KvStorePort via react-native-mmkv `createMMKV()`
 - `secure-store-expo.ts` — SecureStorePort via expo-secure-store
 
@@ -74,38 +76,106 @@
 - Dev screen route registered
 
 **RAG smoke-test dev screen** (`app/dev.tsx`):
-- "Run RAG Smoke Test" button
 - Tests full stack: DB init → project insert → concept insert → vec0 upsert → topMatches query → cleanup
-- Generates 384-dim L2-normalized stub vectors with different seeds
-- Scrollable log output with color-coded error/pass lines
-- Accessible from home screen via "Dev Smoke Test" button
+- **PASSED on device** — Phase 1 demo checkpoint confirmed.
 
-**TypeScript**: `tsc --noEmit` passes with zero errors
+**TypeScript**: `tsc --noEmit` passes with zero errors.
+
+## Phase 2: Project Viewer + Mark System — COMPLETE
+
+### What's Done
+
+**Domain: Marker logic** (`src/domain/marker.ts`):
+- `applyMark(marks, line, color)` — adds new mark at depth 0, or increments depth if same color already exists
+- `eraseMark(marks, line, color)` — decrements depth if > 0 (returns `hadDepth: true`), removes at depth 0
+- `applyRangeMark(ranges, startLine, endLine, color)` — same depth logic for range marks, normalizes line order
+- `eraseRangeMark(ranges, startLine, endLine, color)` — same depth-decrement-then-remove pattern
+- `getLineMarkColor(marks, ranges, line)` — checks line marks first, then range marks, returns color + depth
+- `hasMarksAtLine(marks, ranges, line)` — boolean helper
+- Pure functions, no React/IO imports — hexagonal boundary respected
+
+**GitHub fetcher** (`src/lib/github.ts`):
+- `parseGitHubUrl(url)` — extracts owner/repo/branch from GitHub URLs (handles .git suffix, /tree/branch)
+- `fetchGitHubRepo(url, projectId)` — fetches repo tree via GitHub API, downloads all text files via raw.githubusercontent.com
+- `extractRepoName(url)` — helper for project naming
+- Text file detection via extension whitelist (ts, js, py, go, rs, etc.)
+- Batched downloads (10 concurrent) with `Promise.allSettled` for resilience
+- Auto-fallback from main→master branch on 404
+
+**Home screen** (`app/index.tsx`):
+- Project cards with source badge (GH/Paste), name, date
+- FlatList sorted by createdAt descending
+- FAB button opens new project modal
+- Empty state when no projects exist
+- TanStack Query integration for reactive project list
+- Dev and Settings buttons in header
+
+**New project modal** (`src/ui/components/NewProjectModal.tsx`):
+- Tab UI: GitHub import vs Paste Code
+- GitHub tab: URL input, imports all text files, creates project + files in DB
+- Paste tab: project name, optional filename, code textarea
+- Loading state with ActivityIndicator
+- Error display
+- Auto-navigates to project viewer on success
+
+**Project viewer** (`app/project/[id].tsx`):
+- Header with back button, project name, View/Mark mode toggle
+- Recent files bar (horizontal scroll, max 8, most-recent-first per spec)
+- File picker button showing current file path
+- Code viewer with marks rendered
+- Color picker bar (5 colors) shown in mark mode
+- Range select mode via long-press (sets start line, tap for end line)
+- Mark on tap: applies mark or triggers erase flow
+- Erase confirmation bar for marks with depth > 0
+- File selection updates recentFileIds in DB
+
+**Code viewer** (`src/ui/components/CodeViewer.tsx`):
+- Line numbers + monospace code rendering
+- Mark background colors with depth-based alpha (darker = higher depth)
+- Depth indicator bar (3px colored bar on left edge) for depth > 0
+- Horizontal scroll for long lines, vertical scroll for file
+- Touch handlers for line press and long press
+
+**File picker modal** (`src/ui/components/FilePickerModal.tsx`):
+- Two search modes: path+content (default) and filename-only (per spec)
+- Mode toggle buttons
+- File count display
+- Sorted alphabetically by path
+- Directory path in muted color, filename highlighted
+
+**Color picker** (`src/ui/components/ColorPicker.tsx`):
+- 5 mark colors (red, green, yellow, blue, purple) matching theme
+- Active color highlighted with border
+
+**Erase confirmation** (`src/ui/components/EraseConfirmBar.tsx`):
+- Animated slide-in bar when erasing a mark with depth > 0
+- "Erase mark? Tap again to confirm" with Erase/Cancel buttons
+- Per spec: single accidental tap never wipes nested work
+
+**Zustand stores**:
+- `stores/mark-color.ts` — active mark color state (default: yellow)
+- Existing `stores/interaction-mode.ts` and `stores/selection.ts` used by project viewer
+
+**TypeScript**: `tsc --noEmit` passes with zero errors.
 
 ### Demo Checkpoint
 
-Open dev screen → tap "Run RAG Smoke Test" → should see:
-1. Database initialized
-2. Test project + 3 concepts inserted
-3. 3 vectors upserted into vec0
-4. topMatches returns 3 results ranked by cosine similarity
-5. Cleanup completes
-6. "RAG SMOKE TEST PASSED"
+1. Home screen shows project cards (or empty state)
+2. FAB → New Project modal → import GitHub repo or paste code
+3. Project viewer: select file via picker, view code with line numbers
+4. Toggle to Mark mode → color picker appears
+5. Tap line → mark applied with color background
+6. Tap same-color line again → depth increments (darker shade + left bar indicator)
+7. Tap marked line to erase → if depth > 0, confirmation bar appears
+8. Long-press line → range select mode → tap end line → range marked
+9. Recent files bar shows last 8 opened files per project
+10. File picker: search by path+content or filename-only
 
-**Requires native dev client build** (`npx expo run:android`) since op-sqlite and react-native-mmkv need native modules.
+**Device testing deferred** — code-complete, TypeScript-clean, ready for on-device verification.
 
 ---
 
 ## What's NOT Done Yet (Remaining Phases)
-
-### Phase 2 — Project Viewer + Mark System
-- [ ] Home screen with project cards (replace placeholder)
-- [ ] New project modal (GitHub URL input + paste code)
-- [ ] `src/lib/github.ts` — GitHub raw content fetcher
-- [ ] `app/project/[id].tsx` — file picker, code viewer, mode toggle (view/mark)
-- [ ] `domain/marker.ts` — mark/range mark/erase with depth logic (preserve from 07-PRESERVE)
-- [ ] File picker modal with both search modes (path+content / filename only)
-- [ ] Erase confirmation for marks with depth > 0
 
 ### Phase 3 — Section + General Chats
 - [ ] `src/ai/queue.ts` — serialized queue, cooldowns (OR: 1100ms, SF: 1500ms), retry/backoff, model fallback
