@@ -49,7 +49,9 @@
       "Bash(node codelens-rn/node_modules/typescript/bin/tsc -p codelens-rn/tsconfig.json --noEmit)",
       "Bash(git mv:*)",
       "Bash(ls -la /c/CodeLens-v2/codelens-rn/*.json)",
-      "Bash(npx vitest:*)"
+      "Bash(npx vitest:*)",
+      "Bash(npm test:*)",
+      "Bash(node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit)"
     ]
   }
 }

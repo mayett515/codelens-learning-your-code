@@ -57,6 +57,10 @@ function wrapForDrizzle(raw: DB): any {
 
 export const db = drizzle(wrapForDrizzle(opsqlite), { schema });
 
+export type Database = typeof db;
+export type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0];
+export type DbOrTx = Database | Transaction;
+
 export function initDatabase() {
   opsqlite.executeSync('PRAGMA journal_mode = WAL;');
   opsqlite.executeSync('PRAGMA foreign_keys = ON;');

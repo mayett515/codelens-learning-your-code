@@ -1,5 +1,6 @@
 import { eq, desc } from 'drizzle-orm';
 import { db } from '../../../db/client';
+import type { DbOrTx } from '../../../db/client';
 import { learningSessions } from '../../../db/schema';
 import { parseConceptIds } from './codecs';
 import type { LearningSession, SessionId, ChatId } from '../../../domain/types';
@@ -38,8 +39,9 @@ export async function getSessionById(
 
 export async function insertSession(
   session: LearningSession,
+  executor: DbOrTx = db,
 ): Promise<void> {
-  await db.insert(learningSessions).values({
+  await executor.insert(learningSessions).values({
     id: session.id,
     title: session.title,
     source: session.source,

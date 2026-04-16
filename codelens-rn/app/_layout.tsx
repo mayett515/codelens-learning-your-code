@@ -8,6 +8,7 @@ import 'react-native-reanimated';
 
 import { handleHardwareBack } from '@/src/lib/back-handler';
 import { initDatabase } from '@/src/db/client';
+import { runVectorGC } from '@/src/features/learning';
 
 const queryClient = new QueryClient();
 
@@ -18,6 +19,14 @@ export default function RootLayout() {
     try {
       initDatabase();
       setDbReady(true);
+      // Vector GC — fire-and-forget, never block UI on eviction.
+      runVectorGC()
+        .then((r) => {
+          if (r.evicted > 0) {
+            console.log(`[vec-gc] evicted ${r.evicted}, remaining ${r.remaining}`);
+          }
+        })
+        .catch((e) => console.warn('[vec-gc] failed:', e));
     } catch (e) {
       console.error('DB init failed:', e);
       setDbReady(true);

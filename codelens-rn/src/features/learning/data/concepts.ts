@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { db } from '../../../db/client';
+import type { DbOrTx } from '../../../db/client';
 import { concepts } from '../../../db/schema';
 import { parseTaxonomy, parseSessionIds } from './codecs';
 import type { Concept, ConceptId } from '../../../domain/types';
@@ -24,13 +25,17 @@ export async function getAllConcepts(): Promise<Concept[]> {
 
 export async function getConceptById(
   id: ConceptId,
+  executor: DbOrTx = db,
 ): Promise<Concept | undefined> {
-  const rows = await db.select().from(concepts).where(eq(concepts.id, id));
+  const rows = await executor.select().from(concepts).where(eq(concepts.id, id));
   return rows[0] ? rowToConcept(rows[0]) : undefined;
 }
 
-export async function insertConcept(concept: Concept): Promise<void> {
-  await db.insert(concepts).values({
+export async function insertConcept(
+  concept: Concept,
+  executor: DbOrTx = db,
+): Promise<void> {
+  await executor.insert(concepts).values({
     id: concept.id,
     name: concept.name,
     summary: concept.summary,
@@ -45,6 +50,7 @@ export async function insertConcept(concept: Concept): Promise<void> {
 export async function updateConcept(
   id: ConceptId,
   data: Partial<Pick<Concept, 'name' | 'summary' | 'taxonomy' | 'strength' | 'sessionIds' | 'updatedAt'>>,
+  executor: DbOrTx = db,
 ): Promise<void> {
   const values: Record<string, unknown> = {};
   if (data.name !== undefined) values.name = data.name;
@@ -53,7 +59,7 @@ export async function updateConcept(
   if (data.strength !== undefined) values.strength = data.strength;
   if (data.sessionIds !== undefined) values.sessionIds = data.sessionIds;
   if (data.updatedAt !== undefined) values.updatedAt = data.updatedAt;
-  await db.update(concepts).set(values).where(eq(concepts.id, id));
+  await executor.update(concepts).set(values).where(eq(concepts.id, id));
 }
 
 export async function deleteConcept(id: ConceptId): Promise<void> {

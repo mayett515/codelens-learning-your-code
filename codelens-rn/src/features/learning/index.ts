@@ -12,6 +12,8 @@ export { retrieveRelatedConcepts, findMergeCandidates } from './application/retr
 export type { RetrievalResult } from './application/retrieve';
 export { ensureEmbedded, syncPendingEmbeddings, reEmbedAll } from './application/sync';
 export { commitLearningSession } from './application/commit';
+export { runVectorGC, HOT_TIER_LIMIT, GC_BATCH_TARGET } from './application/gc';
+export type { GcResult } from './application/gc';
 
 // UI
 export { SaveAsLearningModal } from './ui/SaveAsLearningModal';

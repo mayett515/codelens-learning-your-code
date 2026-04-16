@@ -1,12 +1,13 @@
 import type { DB } from '@op-engineering/op-sqlite';
 import { migration001 } from './001-initial-schema';
+import { migration002 } from './002-concepts-fts';
 
 export interface Migration {
   version: number;
   up: string[];
 }
 
-const MIGRATIONS: Migration[] = [migration001];
+const MIGRATIONS: Migration[] = [migration001, migration002];
 
 export function runMigrations(db: DB): void {
   db.executeSync(`
