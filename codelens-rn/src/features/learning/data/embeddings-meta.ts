@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
-import { db } from '../client';
-import { embeddingsMeta } from '../schema';
-import type { ConceptId, Provider } from '../../domain/types';
+import { db } from '../../../db/client';
+import { embeddingsMeta } from '../../../db/schema';
+import type { ConceptId, Provider } from '../../../domain/types';
 
 export interface EmbeddingMetaRow {
   conceptId: ConceptId;

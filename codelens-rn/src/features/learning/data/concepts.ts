@@ -1,20 +1,16 @@
 import { eq } from 'drizzle-orm';
-import { db } from '../client';
-import { concepts } from '../schema';
-import type {
-  Concept,
-  ConceptId,
-  ConceptTaxonomy,
-  SessionId,
-} from '../../domain/types';
+import { db } from '../../../db/client';
+import { concepts } from '../../../db/schema';
+import { parseTaxonomy, parseSessionIds } from './codecs';
+import type { Concept, ConceptId } from '../../../domain/types';
 
 function rowToConcept(row: typeof concepts.$inferSelect): Concept {
   return {
     id: row.id as ConceptId,
     name: row.name,
     summary: row.summary,
-    taxonomy: (row.taxonomy ?? { tags: [] }) as ConceptTaxonomy,
-    sessionIds: (row.sessionIds ?? []) as SessionId[],
+    taxonomy: parseTaxonomy(row.taxonomy),
+    sessionIds: parseSessionIds(row.sessionIds),
     strength: row.strength,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -38,8 +34,8 @@ export async function insertConcept(concept: Concept): Promise<void> {
     id: concept.id,
     name: concept.name,
     summary: concept.summary,
-    taxonomy: concept.taxonomy as any,
-    sessionIds: concept.sessionIds as any,
+    taxonomy: concept.taxonomy,
+    sessionIds: concept.sessionIds,
     strength: concept.strength,
     createdAt: concept.createdAt,
     updatedAt: concept.updatedAt,

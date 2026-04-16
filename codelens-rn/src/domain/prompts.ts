@@ -36,3 +36,4 @@ Answer questions about this code. Explain clearly. Use short paragraphs.`;
 export function buildGeneralSystemPrompt(): string {
   return `You are a helpful coding assistant. The user is learning programming by reading code on their phone. Be concise and clear — they're on a small screen. Use short paragraphs and code blocks when helpful.`;
 }
+

@@ -15,7 +15,11 @@ import {
   getChatConfig,
   updateScopeProvider,
   updateScopeModel,
+  getEmbedConfig,
+  updateEmbedProvider,
+  updateEmbedModel,
 } from '@/src/ai/scopes';
+import { reEmbedAll } from '@/src/features/learning';
 import type { ChatScope, Provider } from '@/src/domain/types';
 
 const SCOPES: ChatScope[] = ['section', 'general', 'learning'];
@@ -32,6 +36,8 @@ export default function SettingsScreen() {
   const [orKeySet, setOrKeySet] = useState(false);
   const [sfKeySet, setSfKeySet] = useState(false);
   const [config, setConfig] = useState(getChatConfig());
+  const [embedCfg, setEmbedCfg] = useState(getEmbedConfig());
+  const [reEmbedding, setReEmbedding] = useState(false);
   const [saved, setSaved] = useState('');
 
   useEffect(() => {
@@ -80,6 +86,29 @@ export default function SettingsScreen() {
   function handleModelChange(scope: ChatScope, provider: Provider, model: string) {
     updateScopeModel(scope, provider, model);
     setConfig(getChatConfig());
+  }
+
+  function handleEmbedProviderChange(provider: Provider) {
+    updateEmbedProvider(provider);
+    setEmbedCfg(getEmbedConfig());
+    flash(`Embed → ${PROVIDER_LABELS[provider]}`);
+  }
+
+  function handleEmbedModelChange(model: string) {
+    updateEmbedModel(model);
+    setEmbedCfg(getEmbedConfig());
+  }
+
+  async function handleReEmbed() {
+    setReEmbedding(true);
+    try {
+      const result = await reEmbedAll(true);
+      flash(`Re-embedded: ${result.succeeded} ok, ${result.failed} failed`);
+    } catch (e) {
+      flash(`Re-embed error: ${e instanceof Error ? e.message : 'unknown'}`);
+    } finally {
+      setReEmbedding(false);
+    }
   }
 
   function flash(msg: string) {
@@ -209,6 +238,59 @@ export default function SettingsScreen() {
             </View>
           );
         })}
+
+        <Text style={styles.sectionTitle}>Embedding</Text>
+        <Text style={styles.hint}>
+          Used for concept similarity search. Model must output 384-dim vectors.
+        </Text>
+
+        <View style={styles.scopeSection}>
+          <Text style={styles.scopeTitle}>PROVIDER</Text>
+          <View style={styles.providerRow}>
+            {PROVIDERS.map((p) => (
+              <Pressable
+                key={p}
+                style={[
+                  styles.providerBtn,
+                  embedCfg.provider === p && styles.providerBtnActive,
+                ]}
+                onPress={() => handleEmbedProviderChange(p)}
+              >
+                <Text
+                  style={[
+                    styles.providerBtnText,
+                    embedCfg.provider === p && styles.providerBtnTextActive,
+                  ]}
+                >
+                  {PROVIDER_LABELS[p]}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <Text style={styles.modelLabel}>
+            Model ({PROVIDER_LABELS[embedCfg.provider]})
+          </Text>
+          <TextInput
+            style={styles.modelInput}
+            value={embedCfg.model}
+            onChangeText={handleEmbedModelChange}
+            placeholder="model-id"
+            placeholderTextColor={colors.textSecondary}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+
+          <Pressable
+            style={[styles.reEmbedBtn, reEmbedding && styles.reEmbedBtnDisabled]}
+            onPress={handleReEmbed}
+            disabled={reEmbedding}
+          >
+            <Text style={styles.reEmbedBtnText}>
+              {reEmbedding ? 'Re-embedding...' : 'Re-embed All'}
+            </Text>
+          </Pressable>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -375,5 +457,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     fontFamily: 'monospace',
+  },
+  reEmbedBtn: {
+    marginTop: spacing.md,
+    backgroundColor: colors.surfaceLight,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  reEmbedBtnDisabled: {
+    opacity: 0.5,
+  },
+  reEmbedBtnText: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    fontWeight: '600',
   },
 });

@@ -29,25 +29,65 @@ export function makeSqliteVectorStore(rawDb: DB): VectorStorePort {
 
     async topMatches(query: TopMatchesQuery): Promise<TopMatch[]> {
       const vecBlob = float32ToBlob(query.vector);
-      const k = query.limit;
+      const vecK = query.candidateIds ? 100 : Math.min(query.limit * 3, 100);
 
-      const result = await rawDb.execute(
+      const vecResult = await rawDb.execute(
         `SELECT concept_id, distance
          FROM embeddings_vec
          WHERE embedding MATCH ? AND k = ?
          ORDER BY distance`,
-        [vecBlob, k],
+        [vecBlob, vecK],
       );
 
-      return result.rows.map((row) => {
-        const distance = row['distance'] as number;
-        const cosine = 1 - (distance * distance) / 2;
-        return {
-          id: row['concept_id'] as ConceptId,
+      if (vecResult.rows.length === 0) return [];
+
+      const vecHits = vecResult.rows.map((row) => ({
+        id: row['concept_id'] as ConceptId,
+        distance: row['distance'] as number,
+      }));
+
+      const ids = vecHits.map((h) => h.id);
+      const placeholders = ids.map(() => '?').join(',');
+      const conceptResult = await rawDb.execute(
+        `SELECT id, strength, updated_at FROM concepts WHERE id IN (${placeholders})`,
+        ids,
+      );
+
+      const conceptMap = new Map<string, { strength: number; updatedAt: string }>();
+      for (const row of conceptResult.rows) {
+        conceptMap.set(row['id'] as string, {
+          strength: row['strength'] as number,
+          updatedAt: row['updated_at'] as string,
+        });
+      }
+
+      const now = Date.now();
+      const candidateSet = query.candidateIds
+        ? new Set<string>(query.candidateIds)
+        : null;
+
+      const results: TopMatch[] = [];
+
+      for (const hit of vecHits) {
+        if (candidateSet && !candidateSet.has(hit.id)) continue;
+
+        const cosine = 1 - (hit.distance * hit.distance) / 2;
+        const concept = conceptMap.get(hit.id);
+        const strength = concept?.strength ?? 0.5;
+        const daysSince = concept?.updatedAt
+          ? (now - new Date(concept.updatedAt).getTime()) / 86_400_000
+          : 30;
+        const recency = 1 / (1 + daysSince / 30);
+
+        results.push({
+          id: hit.id,
           cosine,
-          score: cosine,
-        };
-      });
+          score: cosine * 0.7 + recency * 0.2 + strength * 0.1,
+        });
+      }
+
+      results.sort((a, b) => b.score - a.score);
+      return results.slice(0, query.limit);
     },
 
     async delete(id: ConceptId) {

@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, real, primaryKey } from 'drizzle-orm/sqlite-core';
 
 export const projects = sqliteTable('projects', {
   id: text('id').primaryKey(),
@@ -74,10 +74,10 @@ export const concepts = sqliteTable('concepts', {
   name: text('name').notNull(),
   summary: text('summary').notNull(),
   taxonomy: text('taxonomy', { mode: 'json' }).notNull().$type<{
-    domain?: string;
-    subdomain?: string;
-    pattern?: string;
-    language?: string;
+    domain?: string | undefined;
+    subdomain?: string | undefined;
+    pattern?: string | undefined;
+    language?: string | undefined;
     tags: string[];
   }>().default({ tags: [] }),
   sessionIds: text('session_ids', { mode: 'json' })
@@ -96,7 +96,9 @@ export const conceptLinks = sqliteTable('concept_links', {
     enum: ['related', 'prereq', 'example-of'],
   }).notNull(),
   weight: real('weight').notNull().default(0.5),
-});
+}, (t) => [
+  primaryKey({ columns: [t.fromId, t.toId] }),
+]);
 
 export const embeddingsMeta = sqliteTable('embeddings_meta', {
   conceptId: text('concept_id').primaryKey(),

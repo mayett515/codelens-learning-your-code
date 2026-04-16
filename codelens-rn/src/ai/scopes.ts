@@ -62,3 +62,29 @@ export function updateScopeModel(scope: ChatScope, provider: Provider, model: st
 export function setChatConfig(config: ChatConfig): void {
   kv.set(KV_KEY, config);
 }
+
+export interface EmbedConfig {
+  provider: Provider;
+  model: string;
+}
+
+const EMBED_KV_KEY = 'embed_config';
+
+const DEFAULT_EMBED_CONFIG: EmbedConfig = {
+  provider: 'siliconflow',
+  model: 'BAAI/bge-small-en-v1.5',
+};
+
+export function getEmbedConfig(): EmbedConfig {
+  return kv.get<EmbedConfig>(EMBED_KV_KEY) ?? DEFAULT_EMBED_CONFIG;
+}
+
+export function updateEmbedProvider(provider: Provider): void {
+  const config = getEmbedConfig();
+  kv.set(EMBED_KV_KEY, { ...config, provider });
+}
+
+export function updateEmbedModel(model: string): void {
+  const config = getEmbedConfig();
+  kv.set(EMBED_KV_KEY, { ...config, model });
+}

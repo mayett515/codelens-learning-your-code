@@ -16,6 +16,7 @@ import { getRecentChats, insertChat } from '@/src/db/queries/chats';
 import { NewProjectModal } from '@/src/ui/components/NewProjectModal';
 import { chatId as makeChatId } from '@/src/domain/types';
 import { uid } from '@/src/lib/uid';
+import { chatKeys, projectKeys } from '@/src/hooks/query-keys';
 import type { Project, ProjectId, Chat } from '@/src/domain/types';
 
 export default function HomeScreen() {
@@ -23,12 +24,12 @@ export default function HomeScreen() {
   const queryClient = useQueryClient();
 
   const { data: projects = [], isLoading } = useQuery({
-    queryKey: ['projects'],
+    queryKey: projectKeys.all,
     queryFn: getAllProjects,
   });
 
   const { data: recentChats = [] } = useQuery({
-    queryKey: ['recentChats'],
+    queryKey: chatKeys.recent,
     queryFn: () => getRecentChats(5),
   });
 
@@ -39,7 +40,7 @@ export default function HomeScreen() {
   const handleProjectCreated = useCallback(
     (id: ProjectId) => {
       setModalVisible(false);
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: projectKeys.all });
       router.push(`/project/${id}`);
     },
     [queryClient],
@@ -55,7 +56,7 @@ export default function HomeScreen() {
       createdAt: now,
       updatedAt: now,
     });
-    queryClient.invalidateQueries({ queryKey: ['recentChats'] });
+    queryClient.invalidateQueries({ queryKey: chatKeys.recent });
     router.push(`/general-chat/${newChatId}`);
   }, [queryClient]);
 
@@ -64,6 +65,8 @@ export default function HomeScreen() {
       router.push(`/general-chat/${chat.id}`);
     } else if (chat.scope === 'section') {
       router.push(`/chat/${chat.id}`);
+    } else if (chat.scope === 'learning' && chat.conceptId) {
+      router.push(`/learning/chat/${chat.conceptId}`);
     } else {
       router.push(`/chat/${chat.id}`);
     }
@@ -108,6 +111,12 @@ export default function HomeScreen() {
         <View style={styles.headerButtons}>
           <Pressable style={styles.chatButton} onPress={handleNewGeneralChat}>
             <Text style={styles.chatButtonText}>Chat</Text>
+          </Pressable>
+          <Pressable
+            style={styles.learnButton}
+            onPress={() => router.push('/learning')}
+          >
+            <Text style={styles.learnButtonText}>Learn</Text>
           </Pressable>
           <Pressable
             style={styles.devButton}
@@ -222,6 +231,17 @@ const styles = StyleSheet.create({
   },
   chatButtonText: {
     color: colors.text,
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+  },
+  learnButton: {
+    backgroundColor: `${colors.purple}30`,
+    paddingVertical: spacing.xs + 2,
+    paddingHorizontal: spacing.md,
+    borderRadius: 6,
+  },
+  learnButtonText: {
+    color: colors.purple,
     fontSize: fontSize.sm,
     fontWeight: '600',
   },

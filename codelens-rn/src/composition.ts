@@ -5,10 +5,11 @@ import { makeOpenRouterClient } from './adapters/openrouter-client';
 import { makeSiliconflowClient } from './adapters/siliconflow-client';
 import { getRawDb } from './db/client';
 import { setCompleteImpl } from './ai/queue';
+import { setEmbedImpl } from './ai/embed';
 import type { VectorStorePort } from './ports/vector-store';
 import type { SecureStorePort } from './ports/secure-store';
 import type { KvStorePort } from './ports/kv-store';
-import type { AiClientPort, AiCompleteInput } from './ports/ai-client';
+import type { AiClientPort, AiCompleteInput, AiEmbedInput } from './ports/ai-client';
 
 export const secureStore: SecureStorePort = makeExpoSecureStore();
 export const kv: KvStorePort = makeMmkvStore();
@@ -33,3 +34,11 @@ function routedComplete(input: AiCompleteInput): Promise<string> {
 }
 
 setCompleteImpl(routedComplete);
+
+function routedEmbed(input: AiEmbedInput): Promise<Float32Array> {
+  const client = clients[input.api];
+  if (!client) throw new Error(`Unknown provider: ${input.api}`);
+  return client.embed(input);
+}
+
+setEmbedImpl(routedEmbed);

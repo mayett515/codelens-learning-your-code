@@ -33,6 +33,7 @@ import { EraseConfirmBar } from '@/src/ui/components/EraseConfirmBar';
 import { insertChat } from '@/src/db/queries/chats';
 import { chatId as makeChatId } from '@/src/domain/types';
 import { uid } from '@/src/lib/uid';
+import { chatKeys, fileKeys, projectKeys } from '@/src/hooks/query-keys';
 import type {
   ProjectId,
   FileId,
@@ -70,17 +71,17 @@ export default function ProjectViewerScreen() {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { data: project } = useQuery({
-    queryKey: ['project', projectId],
+    queryKey: projectKeys.detail(projectId),
     queryFn: () => getProjectById(projectId),
   });
 
   const { data: files = [] } = useQuery({
-    queryKey: ['files', projectId],
+    queryKey: fileKeys.byProject(projectId),
     queryFn: () => getFilesByProject(projectId),
   });
 
   const { data: currentFile } = useQuery({
-    queryKey: ['file', currentFileId],
+    queryKey: currentFileId ? fileKeys.detail(currentFileId) : fileKeys.root,
     queryFn: () => (currentFileId ? getFileById(currentFileId) : null),
     enabled: !!currentFileId,
   });
@@ -98,7 +99,7 @@ export default function ProjectViewerScreen() {
       saveTimer.current = setTimeout(async () => {
         await updateFileMarks(fileId, marks, ranges);
         // Optimistically update the cache instead of invalidating to prevent ping-pong re-renders
-        queryClient.setQueryData<SourceFile | null | undefined>(['file', fileId], (old) => {
+        queryClient.setQueryData<SourceFile | null | undefined>(fileKeys.detail(fileId), (old) => {
           if (!old) return old;
           return { ...old, marks, ranges };
         });
@@ -130,7 +131,7 @@ export default function ProjectViewerScreen() {
       if (!project) return;
       const recent = [fid, ...project.recentFileIds.filter((r) => r !== fid)].slice(0, 8);
       await updateProject(projectId, { recentFileIds: recent });
-      queryClient.invalidateQueries({ queryKey: ['project', projectId] });
+      queryClient.invalidateQueries({ queryKey: projectKeys.detail(projectId) });
     },
     [project, projectId, queryClient, resetSelection, currentFileId, localMarks, localRanges],
   );
@@ -170,7 +171,7 @@ export default function ProjectViewerScreen() {
         updatedAt: now,
       });
 
-      queryClient.invalidateQueries({ queryKey: ['recentChats'] });
+      queryClient.invalidateQueries({ queryKey: chatKeys.recent });
       router.push(`/chat/${newChatId}`);
     },
     [currentFile, localMarks, localRanges, projectId, queryClient],

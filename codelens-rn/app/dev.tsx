@@ -11,7 +11,7 @@ import { colors, fontSize, spacing } from '@/src/ui/theme';
 import { initDatabase } from '@/src/db/client';
 import { vectorStore } from '@/src/composition';
 import * as projectQueries from '@/src/db/queries/projects';
-import * as conceptQueries from '@/src/db/queries/concepts';
+import * as conceptQueries from '@/src/features/learning/data/concepts';
 import {
   projectId,
   conceptId,

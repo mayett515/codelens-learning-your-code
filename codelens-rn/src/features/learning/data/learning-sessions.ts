@@ -1,12 +1,8 @@
 import { eq, desc } from 'drizzle-orm';
-import { db } from '../client';
-import { learningSessions } from '../schema';
-import type {
-  LearningSession,
-  SessionId,
-  ChatId,
-  ConceptId,
-} from '../../domain/types';
+import { db } from '../../../db/client';
+import { learningSessions } from '../../../db/schema';
+import { parseConceptIds } from './codecs';
+import type { LearningSession, SessionId, ChatId } from '../../../domain/types';
 
 function rowToSession(
   row: typeof learningSessions.$inferSelect,
@@ -16,7 +12,7 @@ function rowToSession(
     title: row.title,
     source: row.source as LearningSession['source'],
     sourceChatId: row.sourceChatId as ChatId,
-    conceptIds: (row.conceptIds ?? []) as ConceptId[],
+    conceptIds: parseConceptIds(row.conceptIds),
     createdAt: row.createdAt,
     rawSnippet: row.rawSnippet,
   };
@@ -48,7 +44,7 @@ export async function insertSession(
     title: session.title,
     source: session.source,
     sourceChatId: session.sourceChatId,
-    conceptIds: session.conceptIds as any,
+    conceptIds: session.conceptIds,
     createdAt: session.createdAt,
     rawSnippet: session.rawSnippet,
   });

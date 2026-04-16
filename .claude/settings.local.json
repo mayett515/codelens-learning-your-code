@@ -39,7 +39,17 @@
       "Bash(npx expo:*)",
       "Bash(xargs grep:*)",
       "Bash(ls C:/CodeLens-v2/codelens-rn/for_gemini*)",
-      "Bash(ls C:/CodeLens-v2/codelens-rn/gemini_optimizations*)"
+      "Bash(ls C:/CodeLens-v2/codelens-rn/gemini_optimizations*)",
+      "Bash(npx --package=typescript tsc --noEmit)",
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Bash(node node_modules/typescript/bin/tsc --noEmit)",
+      "Bash(node node_modules/.package-lock.json)",
+      "Bash(ls node_modules/.bin/tsc*)",
+      "Bash(node codelens-rn/node_modules/typescript/bin/tsc --noEmit)",
+      "Bash(node codelens-rn/node_modules/typescript/bin/tsc -p codelens-rn/tsconfig.json --noEmit)",
+      "Bash(git mv:*)",
+      "Bash(ls -la /c/CodeLens-v2/codelens-rn/*.json)",
+      "Bash(npx vitest:*)"
     ]
   }
 }

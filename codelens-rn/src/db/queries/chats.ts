@@ -1,4 +1,4 @@
-import { eq, desc } from 'drizzle-orm';
+import { eq, and, desc } from 'drizzle-orm';
 import { db } from '../client';
 import { chats, chatMessages } from '../schema';
 import type {
@@ -52,6 +52,26 @@ export async function getChatById(
     .select()
     .from(chatMessages)
     .where(eq(chatMessages.chatId, id))
+    .orderBy(chatMessages.createdAt);
+
+  return rowToChat(rows[0], msgs.map(rowToMessage));
+}
+
+export async function getChatByConceptId(
+  cId: ConceptId,
+): Promise<Chat | undefined> {
+  const rows = await db
+    .select()
+    .from(chats)
+    .where(and(eq(chats.conceptId, cId), eq(chats.scope, 'learning')))
+    .orderBy(desc(chats.createdAt))
+    .limit(1);
+  if (!rows[0]) return undefined;
+
+  const msgs = await db
+    .select()
+    .from(chatMessages)
+    .where(eq(chatMessages.chatId, rows[0].id))
     .orderBy(chatMessages.createdAt);
 
   return rowToChat(rows[0], msgs.map(rowToMessage));
