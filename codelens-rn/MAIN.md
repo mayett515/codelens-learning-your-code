@@ -59,5 +59,4 @@ Minimal doc bundles per task type, to keep prompts small:
 
 ## Current Status
 
-**Phase 1 complete** (domain + persistence foundation, RAG smoke test passing on device).
-**Next: Phase 2** — Project viewer + mark system. See `rewrite-spec/09-BUILD-PHASES.md`.
+**Phases 0–6 complete.** Architecture consolidation + scaling hardening (Gemini CTO review fixes) landed on 2026-04-16. Phase 6 — Backup, Polish, Hardening — landed on 2026-04-17: `.codelens` export/restore archive (NDJSON + Zip with Base64 vectors), two-step clear-all-data, empty-state audit, dark-splash config, and design token / asset specs under `design/`. See `current_state.md` for the full breakdown.

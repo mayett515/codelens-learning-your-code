@@ -175,43 +175,70 @@
 
 ---
 
+## Phase 3: Section + General Chats — COMPLETE
+
+- `src/ai/queue.ts` — serialized queue with per-provider cooldowns, retry/backoff, fallback.
+- OpenRouter + SiliconFlow adapters implementing `AiClientPort`.
+- Section chat screen (code-scoped), General chat screen.
+- Bubble long-press menu (copy, save-as-learning, delete).
+- Settings screen with per-scope provider/model + API key input.
+- Recent chats on home.
+
+## Phase 4: Learning Hub Core — COMPLETE
+
+- `features/learning/application/extract.ts` — AI-powered concept extraction with zod validation.
+- `features/learning/application/sync.ts` — `ensureEmbedded`, `syncPendingEmbeddings`, `reEmbedAll`.
+- `features/learning/application/retrieve.ts` — hybrid retrieval (vec + FTS5) with JIT rehydration.
+- `features/learning/application/commit.ts` — transactional learning session commit (Drizzle `db.transaction`).
+- Learning Hub index (sessions list, concept list, search), Learning chat with retrieved context injection.
+- Save-as-learning preview modal with merge suggestions.
+
+## Phase 5: Knowledge Graph — COMPLETE
+
+- Vendored Cytoscape.js + cxtmenu into `assets/vendor/cytoscape/`.
+- `assets/graph.html` WebView entry + `src/graph/WebViewGraph.tsx` component.
+- Typed postMessage protocol, cxtmenu touch-tuned for phone, lifecycle-safe (destroy on unmount).
+- Home graph preview + fullscreen expansion toggle.
+- Stronger Android back navigation.
+
+## Architecture Consolidation (2026-04-16) — COMPLETE
+
+6-PR consolidation between Phases 4 and 5 to clean up technical debt before Phase 6:
+
+- **PR1**: Migrated learning-owned code from flat `src/` to `src/features/learning/{application,data,ui,state,lib,hooks}` with a public barrel `index.ts`. Core infra stays in `src/`.
+- **PR2**: Extracted use-cases + hooks, thinned route screens to composition + JSX.
+- **PR3**: Query key factories (`src/hooks/query-keys.ts`, `features/learning/data/query-keys.ts`) — zero hardcoded `queryKey: [...]` strings.
+- **PR4**: Zod codec hardening at the DB JSON boundary (zero `as any` in learning data files).
+- **PR5**: Version-tracked migration scaffolding (`src/db/migrations/`) with `schema_version` table.
+- Vitest testing infrastructure + 8 regression tests for pure async flows (send-flow, find-or-create-chat).
+- `ARCHITECTURE.md` written.
+
+Reviewed by Gemini + Codex; all findings fixed.
+
+## Scaling Hardening (2026-04-16) — COMPLETE
+
+Addressed 3 scaling foresight items from the Gemini CTO review:
+
+1. **Drizzle transaction context** — `commit.ts` now uses `db.transaction(async (tx) => {...})`. Data-layer helpers accept optional `executor: DbOrTx = db`.
+2. **uid() entropy** — swapped `Math.random()` for `expo-crypto` `randomUUID()`. Crypto-grade RFC 4122 v4 UUIDs. `vitest.config.ts` aliases `expo-crypto` → Node-backed stub.
+3. **sqlite-vec memory / Hot-Cold tier** — new migration 002 adds `concepts_fts` (FTS5) auto-synced via triggers. `retrieve.ts` performs hybrid vec+FTS search with JIT rehydration. `runVectorGC()` on app boot evicts weak+old vectors down to `GC_BATCH_TARGET`, concept rows stay intact. Active vector memory mathematically bounded (~7.5 MB at 5k vectors).
+
+See `ARCHITECTURE.md` §§ "Migration system", "Hot/Cold vector tier", "Transaction discipline".
+
+## Phase 6 — Backup, Polish, Hardening (2026-04-17) — COMPLETE
+
+- **Backup export / restore** — `src/features/backup/{format,codecs,export,import,clear}.ts`. `.codelens` archives are NDJSON + Zip with a `metadata.json` (magic, format/schema/app versions, counts), per-table `.ndjson` streams, `preferences.json` for MMKV keys, `secure_keys.json` for provider-id hints only (keys are **never** exported — user re-enters on restore). Vectors preserved as Base64 Float32 blobs per concept row → zero re-embed cost on restore. Format v1, schema v2.
+- **Restore strategy** — wipe-then-restore (no merge). Row data in a single Drizzle transaction; vectors applied post-tx because sqlite-vec virtual tables don't always participate cleanly in rollback. FTS5 re-sync verified after restore (belt-and-braces in case trigger misfires on bulk INSERTs). Schema-version hook in place for future migrators.
+- **Clear all data** — double-confirm modal (typed `DELETE` + optional red "also delete API keys" checkbox, off by default). Clears vector store, Drizzle tables (FK-safe order), `concepts_fts`, app-owned MMKV keys.
+- **BackupSection UI** — stacked Export/Restore/Clear buttons in `app/settings.tsx`, toast feedback, restore-result modal listing per-table counts and missing API-key providers.
+- **Empty states** — polished across `app/` (home, learning hub, general chat, recent chats stub).
+- **App icon + splash** — `app.json` splash background switched to dark `#0f1117` (both modes) for flashbang-free launches. Real PNGs pending; `design/ASSETS.md` + `design/THEME_SPECS.md` capture exact specs for Figma handoff.
+- Round-trip codec tests in `src/features/backup/__tests__/codecs.test.ts` (Float32Array → base64 → Float32Array, byte-for-byte).
+
 ## What's NOT Done Yet (Remaining Phases)
 
-### Phase 3 — Section + General Chats
-- [ ] `src/ai/queue.ts` — serialized queue, cooldowns (OR: 1100ms, SF: 1500ms), retry/backoff, model fallback
-- [ ] `src/adapters/openrouter-client.ts` — AiClientPort for OpenRouter
-- [ ] `src/adapters/siliconflow-client.ts` — AiClientPort for SiliconFlow
-- [ ] Section chat screen with code context
-- [ ] General chat screen
-- [ ] Bubble long-press menu (copy, save as learning, delete)
-- [ ] Settings: provider/model selectors per scope, API key input
-- [ ] Recent chats on home (top 5)
-
-### Phase 4 — Learning Hub Core
-- [ ] `learning/extract.ts` — concept extraction via AI + zod
-- [ ] `learning/sync.ts` — embed on concept create
-- [ ] `learning/retrieve.ts` — hybrid retrieval (vector + recency + scope)
-- [ ] Learning hub: sessions list, concept list, search
-- [ ] Learning review chat with retrieved context
-- [ ] Save-as-learning preview modal with merge suggestion
-- [ ] Settings: learning scope + embedding model
-
-### Phase 5 — Knowledge Graph
-- [ ] Vendor Cytoscape.js + cxtmenu into `assets/vendor/cytoscape/`
-- [ ] `assets/graph.html` — WebView entry
-- [ ] `src/graph/messages.ts` — typed postMessage protocol
-- [ ] `src/graph/WebViewGraph.tsx` — component with lifecycle (destroy on unmount)
-- [ ] Cytoscape touch-tuned config from 07-PRESERVE
-- [ ] Bigger/Smaller toggle, home graph preview
-
-### Phase 6 — Backup, Polish, Hardening
-- [ ] Backup export/restore with re-embed on signature mismatch
-- [ ] Clear all data with double-confirm
-- [ ] Empty states for every screen
-- [ ] App icon, splash screen
-
 ### Phase 7 — Resume Polish
-- [ ] README.md with architecture diagram, stack, RAG explanation
+- [ ] Top-level README.md with architecture diagram, stack, RAG explanation, screenshots
 - [ ] Tag v1.0 release
 
 ## Non-Goals (from 08-NON-GOALS.md — do NOT build)

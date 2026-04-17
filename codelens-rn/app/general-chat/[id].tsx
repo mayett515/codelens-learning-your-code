@@ -70,15 +70,24 @@ export default function GeneralChatScreen() {
           </Text>
         </View>
 
-        <FlatList
-          data={reversedMessages}
-          inverted
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <ChatBubble message={item} onLongPress={setMenuMessage} />
-          )}
-          contentContainerStyle={styles.messageList}
-        />
+        {messages.length === 0 ? (
+          <View style={styles.empty}>
+            <Text style={styles.emptyText}>Ask anything</Text>
+            <Text style={styles.emptyHint}>
+              A general-purpose chat — no code context attached.
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={reversedMessages}
+            inverted
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <ChatBubble message={item} onLongPress={setMenuMessage} />
+            )}
+            contentContainerStyle={styles.messageList}
+          />
+        )}
 
         {sending ? (
           <View style={styles.typingBar}>
@@ -131,4 +140,7 @@ const styles = StyleSheet.create({
   },
   errorText: { color: colors.red, fontSize: fontSize.sm, flex: 1 },
   errorDismiss: { color: colors.red, fontSize: fontSize.md, fontWeight: '600', paddingLeft: spacing.md },
+  empty: { flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: spacing.xl },
+  emptyText: { color: colors.textSecondary, fontSize: fontSize.lg, fontWeight: '600' },
+  emptyHint: { color: colors.textSecondary, fontSize: fontSize.md, textAlign: 'center', marginTop: spacing.sm, opacity: 0.7 },
 });

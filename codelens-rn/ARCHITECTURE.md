@@ -142,6 +142,22 @@ JSON columns (taxonomy, sessionIds, conceptIds) use Zod codecs at the read bound
 
 SQL schema is managed through version-tracked migrations (`src/db/migrations/`). A `schema_version` table tracks the current version. `initDatabase()` runs pending migrations on startup. `initVec0()` runs separately (vec0 virtual tables have a different lifecycle).
 
+Migrations:
+- `001-initial-schema.ts` — all core tables + indexes.
+- `002-concepts-fts.ts` — FTS5 virtual table `concepts_fts` mirroring `concepts.name + summary`, kept in sync via AFTER INSERT / UPDATE / DELETE triggers. Update trigger uses the FTS5 `'delete'` command to purge the old tokenised row before re-inserting.
+
+### Hot/Cold vector tier (memory-bounded RAG)
+
+sqlite-vec is fast but loads 384-dim float32 vectors into memory for L2 distance search. On low-end Android, thousands of concepts cause OOM risk. The hot/cold tier architecture caps active vector memory while preserving all user data:
+
+- **Hot tier** — `embeddings_vec` (vec0 virtual table). Capped at `HOT_TIER_LIMIT` (5000 vectors ≈ 7.5 MB RAM).
+- **Cold tier** — `concepts_fts` (FTS5). Disk-backed inverted index, near-zero RAM, covers ALL concepts regardless of hot-tier membership.
+- **GC** (`src/features/learning/application/gc.ts`) — on app boot, `runVectorGC()` evicts the weakest + oldest concepts (`strength < 0.3 AND updated_at > 90 days`) down to `GC_BATCH_TARGET` (4500). Only vectors + `embeddings_meta` are removed; concept rows stay intact.
+- **Hybrid retrieval** (`retrieve.ts`) — every `retrieveRelatedConcepts()` call runs vec top-K **and** FTS5 keyword search in parallel, merges by concept ID (vec wins on overlap), assigns synthetic sub-worst scores to FTS-only matches.
+- **JIT rehydration** — when a cold concept surfaces via FTS5, `ensureEmbedded()` is fired to re-embed and promote it back to the hot tier. Self-healing.
+
+Result: active vector search space is mathematically bounded regardless of total concept count. No data loss — cold concepts remain fully searchable and rejoin the hot tier on access.
+
 ### Hexagonal architecture
 
 AI and vector storage use ports/adapters:
@@ -170,13 +186,46 @@ All IDs use branded types (`ProjectId`, `FileId`, `ChatId`, `ConceptId`, `Sessio
 ## TypeScript
 
 - Compiler: `node codelens-rn/node_modules/typescript/bin/tsc -p codelens-rn/tsconfig.json --noEmit` (NOT `npx tsc`)
-- `crypto.randomUUID()` unavailable in Hermes — use `uid()` from `src/lib/uid.ts`
+- `uid()` in `src/lib/uid.ts` wraps `expo-crypto` `randomUUID()` — crypto-grade RFC 4122 v4 UUIDs, safe under concurrent / offline-first writes.
 - Zod 4.3.6 — import from `'zod'` (not `'zod/v4'`)
+
+## Transaction discipline
+
+Writes that must be atomic (e.g. `commitLearningSession`) use Drizzle's `db.transaction(async (tx) => { ... })`. Data-layer helpers (`insertConcept`, `updateConcept`, `getConceptById`, `insertSession`) accept an optional `executor: DbOrTx = db` parameter so a transaction scope can be threaded through. This guarantees all writes share the same connection context.
+
+## Backup / restore
+
+Backup and restore live in `src/features/backup/` and power the Export / Import / Clear-all-data buttons in Settings.
+
+**Archive format** — `.codelens` (a Zip with known entries):
+- `metadata.json` — `ARCHIVE_MAGIC = 'codelens-backup'`, `FORMAT_VERSION = 1`, `SCHEMA_VERSION = 2`, `APP_VERSION = '1.0.0'`, `createdAt`, per-table row counts.
+- `projects.ndjson`, `files.ndjson`, `chats.ndjson`, `chat_messages.ndjson`, `learning_sessions.ndjson`, `concept_links.ndjson` — one JSON row per line.
+- `concepts.ndjson` — each row is enriched with an `embedding: { vectorBase64, model, api, signature, updatedAt }` field when a vector is known for that concept. The vector is a Base64-encoded `Float32Array` (RFC 4648, hand-rolled — Hermes lacks `Buffer` and `btoa/atob` are not binary-safe; see `src/features/backup/codecs.ts`).
+- `preferences.json` — MMKV dumps of `chat_config` + `embed_config`.
+- `secure_keys.json` — provider **IDs only** (e.g. `['openrouter', 'siliconflow']`). Actual keys never leave the device.
+
+**Restore strategy** — wipe-then-restore:
+1. Read + validate the archive fully (reject on bad magic, or `formatVersion > FORMAT_VERSION`) before touching any on-device data — if the file is corrupt, the current DB is left intact.
+2. `clearAllData()` runs (see below) to zero the DB + MMKV.
+3. Rows are inserted inside a Drizzle transaction in FK-safe order. Batches are capped at 100 rows to stay under op-sqlite's SQL-size ceiling.
+4. **Vectors are applied POST-transaction.** sqlite-vec virtual-table rollback is unreliable inside nested transactions, so each vector is upserted through `vectorStore.upsert()` after the row-data commit. Per-vector failures do not abort restore (tracked in `vecFailed` counter).
+5. **FTS5 self-heal**: after restore, `SELECT COUNT(*) FROM concepts_fts` is compared against the number of inserted concepts. If they diverge (trigger misfire on bulk inserts), the FTS index is rebuilt from scratch.
+
+**Clear-all-data** (`clearAllData`):
+1. `vectorStore.deleteAll()` (clears both the vec0 table and `embeddings_meta`).
+2. Drizzle transaction deleting `chat_messages`, `chats`, `concept_links`, `concepts`, `learning_sessions`, `files`, `projects` in FK-safe order.
+3. `DELETE FROM concepts_fts` in a try/catch — guard against trigger misfire on bulk deletes.
+4. `kv.delete('chat_config')` + `kv.delete('embed_config')`.
+5. If `includeApiKeys` is true (opt-in red checkbox in the confirm modal — default OFF), `secureStore.deleteApiKey()` is called per provider. API keys survive by default because re-entering them on mobile is high-friction; the nuke option is reserved for the "sell my phone" case.
+
+**Merge-on-restore is intentionally not supported.** 99% of restore flows are either new-phone clone or rollback; merge requires conflict-resolution UI that the product does not want to ship.
 
 ## Testing
 
 Tests use Vitest with dependency injection for pure async functions:
-- `src/hooks/__tests__/send-flow.test.ts` — send failure paths
-- `src/features/learning/hooks/__tests__/find-or-create-chat.test.ts` — race condition + error discrimination
+- `src/hooks/__tests__/send-flow.test.ts` — send failure paths (4 tests)
+- `src/features/learning/hooks/__tests__/find-or-create-chat.test.ts` — race condition + error discrimination (4 tests)
+
+`vitest.config.ts` aliases `expo-crypto` → `src/test/expo-crypto-stub.ts` (backed by `node:crypto`) so tests don't pull in React Native's Flow-typed entry.
 
 Run: `npm test` (or `npx vitest run`)

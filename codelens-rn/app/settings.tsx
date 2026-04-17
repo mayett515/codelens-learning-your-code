@@ -20,6 +20,7 @@ import {
   updateEmbedModel,
 } from '@/src/ai/scopes';
 import { reEmbedAll } from '@/src/features/learning';
+import { BackupSection } from '@/src/features/backup';
 import type { ChatScope, Provider } from '@/src/domain/types';
 
 const SCOPES: ChatScope[] = ['section', 'general', 'learning'];
@@ -291,6 +292,8 @@ export default function SettingsScreen() {
             </Text>
           </Pressable>
         </View>
+
+        <BackupSection onFlash={flash} />
       </ScrollView>
     </SafeAreaView>
   );
