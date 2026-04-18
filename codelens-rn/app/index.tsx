@@ -104,11 +104,15 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>CodeLens</Text>
-          <Text style={styles.subtitle}>Learn code on your phone</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={styles.title} numberOfLines={1} adjustsFontSizeToFit>CodeLens</Text>
         </View>
-        <View style={styles.headerButtons}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          style={{ flexShrink: 1, marginLeft: 16 }}
+          contentContainerStyle={styles.headerButtons}
+        >
           <Pressable style={styles.chatButton} onPress={handleNewGeneralChat}>
             <Text style={styles.chatButtonText}>Chat</Text>
           </Pressable>
@@ -130,7 +134,7 @@ export default function HomeScreen() {
           >
             <Text style={styles.settingsButtonText}>S</Text>
           </Pressable>
-        </View>
+        </ScrollView>
       </View>
 
       {recentChats.length > 0 && (
@@ -220,8 +224,12 @@ const styles = StyleSheet.create({
   },
   headerButtons: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
     gap: spacing.sm,
     marginTop: spacing.xs,
+    flex: 1,
+    marginLeft: spacing.md,
   },
   chatButton: {
     backgroundColor: colors.primary,

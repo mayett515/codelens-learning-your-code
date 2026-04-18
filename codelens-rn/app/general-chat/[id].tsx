@@ -59,7 +59,7 @@ export default function GeneralChatScreen() {
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
         style={styles.keyboardAvoiding}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
       >
         <View style={styles.header}>
           <Pressable onPress={() => router.back()} hitSlop={12}>

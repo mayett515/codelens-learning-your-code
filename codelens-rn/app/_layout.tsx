@@ -6,6 +6,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
+// Force early initialization of Dependency Injection container
+import '@/src/composition';
+
 import { handleHardwareBack } from '@/src/lib/back-handler';
 import { initDatabase } from '@/src/db/client';
 import { runVectorGC } from '@/src/features/learning';

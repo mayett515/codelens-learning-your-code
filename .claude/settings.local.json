@@ -51,7 +51,11 @@
       "Bash(ls -la /c/CodeLens-v2/codelens-rn/*.json)",
       "Bash(npx vitest:*)",
       "Bash(npm test:*)",
-      "Bash(node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit)"
+      "Bash(node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit)",
+      "Bash(ls codelens-rn/*.md)",
+      "Bash(ls *.md)",
+      "Bash(wc -l codelens-rn/PHASE_6/*.md)",
+      "WebSearch"
     ]
   }
 }

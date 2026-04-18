@@ -7,11 +7,12 @@ export function makeOpenRouterClient(getApiKey: () => Promise<string | null>): A
     async complete(input: AiCompleteInput): Promise<string> {
       const apiKey = await getApiKey();
       if (!apiKey) throw new Error('OpenRouter API key not set');
+      const cleanKey = apiKey.trim();
 
       const res = await fetch(`${BASE_URL}/chat/completions`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          'Authorization': `Bearer ${cleanKey}`,
           'Content-Type': 'application/json',
           'HTTP-Referer': 'https://codelens.app',
           'X-Title': 'CodeLens',
@@ -39,11 +40,12 @@ export function makeOpenRouterClient(getApiKey: () => Promise<string | null>): A
     async embed(input: AiEmbedInput): Promise<Float32Array> {
       const apiKey = await getApiKey();
       if (!apiKey) throw new Error('OpenRouter API key not set');
+      const cleanKey = apiKey.trim();
 
       const res = await fetch(`${BASE_URL}/embeddings`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          'Authorization': `Bearer ${cleanKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({

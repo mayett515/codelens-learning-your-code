@@ -7,11 +7,12 @@ export function makeSiliconflowClient(getApiKey: () => Promise<string | null>): 
     async complete(input: AiCompleteInput): Promise<string> {
       const apiKey = await getApiKey();
       if (!apiKey) throw new Error('SiliconFlow API key not set');
+      const cleanKey = apiKey.trim();
 
       const res = await fetch(`${BASE_URL}/chat/completions`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          'Authorization': `Bearer ${cleanKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -37,11 +38,12 @@ export function makeSiliconflowClient(getApiKey: () => Promise<string | null>): 
     async embed(input: AiEmbedInput): Promise<Float32Array> {
       const apiKey = await getApiKey();
       if (!apiKey) throw new Error('SiliconFlow API key not set');
+      const cleanKey = apiKey.trim();
 
       const res = await fetch(`${BASE_URL}/embeddings`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          'Authorization': `Bearer ${cleanKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({

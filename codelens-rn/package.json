@@ -64,6 +64,7 @@
   },
   "private": true,
   "op-sqlite": {
-    "sqliteVec": true
+    "sqliteVec": true,
+    "fts5": true
   }
 }

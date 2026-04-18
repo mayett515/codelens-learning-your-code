@@ -1,0 +1,1092 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Phase 6 QA Release Checklist - Neon</title>
+  <style>
+    :root {
+      --bg-0: #0b0c10;
+      --bg-1: #12141b;
+      --bg-2: #171a22;
+      --line: #2d313d;
+      --text: #d9dde7;
+      --text-dim: #98a0b2;
+      --neon-red: #ff3b5c;
+      --neon-yellow: #ffe44d;
+      --neon-orange: #ff8e2b;
+      --ok: #8aff80;
+      --fail: #ff3b5c;
+      --blocked: #ff8e2b;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 24px;
+      background:
+        radial-gradient(circle at 15% 0%, #1e212d 0%, #0b0c10 40%),
+        linear-gradient(#0b0c10, #0b0c10);
+      color: var(--text);
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.35;
+    }
+
+    .wrap {
+      max-width: 1300px;
+      margin: 0 auto;
+      display: grid;
+      gap: 16px;
+    }
+
+    .card {
+      background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45);
+    }
+
+    h1 {
+      margin: 0 0 4px;
+      font-size: 30px;
+      letter-spacing: 0.3px;
+      color: #f8f9fc;
+      text-shadow: 0 0 10px rgba(255, 255, 255, 0.08);
+    }
+
+    h2 {
+      margin: 0 0 10px;
+      font-size: 17px;
+      color: #f0f2f8;
+      letter-spacing: 0.25px;
+    }
+
+    p {
+      margin: 0;
+      color: var(--text-dim);
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    button {
+      border: 1px solid var(--line);
+      background: #1e2230;
+      color: #e7ebf7;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    button:hover {
+      border-color: #4a5164;
+      background: #252a3a;
+    }
+
+    .grid-meta {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(180px, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .field {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      background: #121520;
+    }
+
+    .label {
+      display: block;
+      color: var(--text-dim);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      margin-bottom: 6px;
+    }
+
+    .write {
+      display: block;
+      min-height: 26px;
+      padding: 4px 2px;
+      border-bottom: 1px dashed #434959;
+      outline: none;
+      font-weight: 600;
+      letter-spacing: 0.2px;
+    }
+
+    .write.red {
+      color: var(--neon-red);
+      text-shadow: 0 0 8px rgba(255, 59, 92, 0.26);
+    }
+
+    .write.yellow {
+      color: var(--neon-yellow);
+      text-shadow: 0 0 8px rgba(255, 228, 77, 0.25);
+    }
+
+    .write.orange {
+      color: var(--neon-orange);
+      text-shadow: 0 0 8px rgba(255, 142, 43, 0.24);
+    }
+
+    .legend {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(150px, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .pill {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      color: var(--text-dim);
+      background: #121520;
+    }
+
+    .pill strong {
+      color: #fff;
+    }
+
+    .pill.red strong {
+      color: var(--neon-red);
+    }
+
+    .pill.yellow strong {
+      color: var(--neon-yellow);
+    }
+
+    .pill.orange strong {
+      color: var(--neon-orange);
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(120px, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .summary .box {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px;
+      background: #111420;
+      text-align: center;
+    }
+
+    .summary .n {
+      display: block;
+      font-size: 20px;
+      font-weight: 700;
+      margin-top: 2px;
+    }
+
+    .n.ok {
+      color: var(--ok);
+    }
+
+    .n.fail {
+      color: var(--fail);
+    }
+
+    .n.blocked {
+      color: var(--blocked);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      margin-top: 8px;
+    }
+
+    th,
+    td {
+      border: 1px solid #323747;
+      padding: 8px;
+      vertical-align: top;
+      background: #10131d;
+    }
+
+    th {
+      background: #1a1e2a;
+      color: #f2f4fb;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.55px;
+    }
+
+    td {
+      font-size: 13px;
+      color: var(--text);
+    }
+
+    .col-id {
+      width: 58px;
+      text-align: center;
+      font-weight: 700;
+      color: #f1f4ff;
+    }
+
+    .col-prio {
+      width: 58px;
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .prio-p0 {
+      color: var(--neon-red);
+      text-shadow: 0 0 8px rgba(255, 59, 92, 0.22);
+    }
+
+    .prio-p1 {
+      color: var(--neon-yellow);
+      text-shadow: 0 0 8px rgba(255, 228, 77, 0.2);
+    }
+
+    .status-select {
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid #454c5f;
+      background: #1a1e2b;
+      color: #eef2ff;
+      padding: 6px 8px;
+      font-weight: 700;
+      outline: none;
+      margin-bottom: 6px;
+    }
+
+    .status-pass {
+      border-color: #4c8f49;
+      box-shadow: 0 0 0 1px rgba(138, 255, 128, 0.2) inset;
+    }
+
+    .status-fail {
+      border-color: #c53550;
+      box-shadow: 0 0 0 1px rgba(255, 59, 92, 0.25) inset;
+    }
+
+    .status-blocked {
+      border-color: #ca6f2c;
+      box-shadow: 0 0 0 1px rgba(255, 142, 43, 0.25) inset;
+    }
+
+    .status-na {
+      border-color: #545c70;
+    }
+
+    .note {
+      min-height: 42px;
+      border: 1px dashed #41485a;
+      border-radius: 8px;
+      padding: 6px;
+      outline: none;
+      background: #101420;
+      font-size: 12px;
+    }
+
+    .count-table td,
+    .count-table th {
+      text-align: left;
+    }
+
+    .count-table .entity {
+      font-weight: 600;
+      color: #f1f4ff;
+    }
+
+    .gate {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .gate .pane {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px;
+      background: #121623;
+    }
+
+    .big-write {
+      min-height: 74px;
+      border: 1px dashed #3e4558;
+      border-radius: 10px;
+      padding: 8px;
+      outline: none;
+      margin-top: 6px;
+    }
+
+    .small {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    ul,
+    ol {
+      margin: 8px 0 0 18px;
+      padding: 0;
+      color: var(--text);
+    }
+
+    li {
+      margin: 4px 0;
+    }
+
+    code,
+    pre {
+      font-family: Consolas, "Courier New", monospace;
+    }
+
+    .intro-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .intro-pane {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #121623;
+      padding: 10px;
+    }
+
+    .intro-pane h3 {
+      margin: 0;
+      font-size: 14px;
+      color: #f6f8ff;
+      letter-spacing: 0.2px;
+    }
+
+    .intro-pane p {
+      margin-top: 7px;
+      color: var(--text);
+      font-size: 13px;
+    }
+
+    .glossary {
+      margin-top: 8px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(220px, 1fr));
+      gap: 8px;
+    }
+
+    .term {
+      border: 1px solid #363c4b;
+      border-radius: 8px;
+      background: #101420;
+      padding: 8px;
+    }
+
+    .term b {
+      color: #f1f4ff;
+    }
+
+    .term span {
+      display: block;
+      margin-top: 4px;
+      color: var(--text-dim);
+      font-size: 12px;
+    }
+
+    .step-map {
+      margin-top: 10px;
+    }
+
+    .step-map td,
+    .step-map th {
+      font-size: 12px;
+    }
+
+    .step-map .scol {
+      width: 68px;
+      text-align: center;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .step-map .where {
+      color: var(--neon-yellow);
+      font-weight: 600;
+    }
+
+    .step-map .tests {
+      color: var(--neon-orange);
+      font-weight: 700;
+    }
+
+    details.guide-step {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #121623;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+
+    details.guide-step > summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 10px 12px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #f6f8ff;
+      background: #1a1f2c;
+      border-bottom: 1px solid #303649;
+    }
+
+    details.guide-step > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    details.guide-step > summary::before {
+      content: "+ ";
+      color: var(--neon-orange);
+    }
+
+    details.guide-step[open] > summary::before {
+      content: "- ";
+      color: var(--neon-yellow);
+    }
+
+    .step-body {
+      padding: 10px 12px 12px;
+    }
+
+    .step-row {
+      margin-bottom: 8px;
+      font-size: 13px;
+    }
+
+    .step-row b {
+      color: #ffffff;
+    }
+
+    .step-pass {
+      border-left: 3px solid var(--neon-red);
+      background: #111521;
+      padding: 8px 10px;
+      border-radius: 8px;
+      margin-top: 8px;
+      color: var(--text);
+      font-size: 13px;
+    }
+
+    .step-evidence {
+      border-left: 3px solid var(--neon-yellow);
+      background: #111521;
+      padding: 8px 10px;
+      border-radius: 8px;
+      margin-top: 8px;
+      color: var(--text);
+      font-size: 13px;
+    }
+
+    pre.script {
+      margin: 8px 0 0;
+      border: 1px solid #3a4154;
+      border-radius: 8px;
+      background: #0f1320;
+      color: #ffd580;
+      padding: 10px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 12px;
+      line-height: 1.35;
+      max-height: 360px;
+      overflow: auto;
+    }
+
+    @media (max-width: 1100px) {
+      .grid-meta,
+      .legend,
+      .summary,
+      .gate,
+      .intro-grid,
+      .glossary {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    @media (max-width: 720px) {
+      body {
+        padding: 12px;
+      }
+
+      .grid-meta,
+      .legend,
+      .summary,
+      .gate,
+      .intro-grid,
+      .glossary {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media print {
+      body {
+        background: #0b0c10 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      .toolbar {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <section class="card">
+      <div class="toolbar">
+        <button onclick="window.print()">Print / Save PDF</button>
+        <button onclick="resetStatuses()">Reset Status</button>
+      </div>
+
+      <h1>Phase 6 QA Release Checklist</h1>
+      <p>Backup, restore, clear-all-data, interruption handling, and release gate.</p>
+
+      <div class="grid-meta">
+        <div class="field">
+          <span class="label">Release Build</span>
+          <span class="write red" contenteditable="true"></span>
+        </div>
+        <div class="field">
+          <span class="label">Tester</span>
+          <span class="write yellow" contenteditable="true"></span>
+        </div>
+        <div class="field">
+          <span class="label">Date</span>
+          <span class="write orange" contenteditable="true"></span>
+        </div>
+        <div class="field">
+          <span class="label">Branch / Commit</span>
+          <span class="write red" contenteditable="true"></span>
+        </div>
+        <div class="field">
+          <span class="label">Android Device</span>
+          <span class="write yellow" contenteditable="true"></span>
+        </div>
+        <div class="field">
+          <span class="label">iOS Device</span>
+          <span class="write orange" contenteditable="true"></span>
+        </div>
+        <div class="field">
+          <span class="label">Start Time</span>
+          <span class="write red" contenteditable="true"></span>
+        </div>
+        <div class="field">
+          <span class="label">End Time</span>
+          <span class="write yellow" contenteditable="true"></span>
+        </div>
+      </div>
+
+      <div class="legend">
+        <div class="pill red"><strong>P0</strong> must pass on Android and iOS</div>
+        <div class="pill yellow"><strong>P1</strong> should pass before ship</div>
+        <div class="pill orange"><strong>Blocked</strong> means not shippable</div>
+        <div class="pill"><strong>Rule:</strong> any P0 fail => ship blocked</div>
+      </div>
+
+      <div class="summary">
+        <div class="box">Total Tests<span class="n" id="sum-total">12</span></div>
+        <div class="box">Pass<span class="n ok" id="sum-pass">0</span></div>
+        <div class="box">Fail<span class="n fail" id="sum-fail">0</span></div>
+        <div class="box">Blocked<span class="n blocked" id="sum-blocked">0</span></div>
+        <div class="box">N/A<span class="n" id="sum-na">0</span></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>What The App Does (For New Testers)</h2>
+      <div class="intro-grid">
+        <div class="intro-pane">
+          <h3>Product In One Line</h3>
+          <p>
+            CodeLens is a local-first mobile app for learning code. You import
+            code, chat about it, save useful chat bubbles as learning concepts,
+            and search those concepts later using embeddings.
+          </p>
+        </div>
+        <div class="intro-pane">
+          <h3>Why Phase 6 QA Matters</h3>
+          <p>
+            Phase 6 is all about data safety: backup export, restore, clear-all,
+            and resilience against bad files or app interruption. This checklist
+            verifies that user data survives real-world failures.
+          </p>
+        </div>
+      </div>
+
+      <div class="glossary">
+        <div class="term"><b>Project</b><span>A code workspace in the app.</span></div>
+        <div class="term"><b>File</b><span>A source file inside a project.</span></div>
+        <div class="term"><b>Mark / Range</b><span>Highlighted code region for study context.</span></div>
+        <div class="term"><b>General Chat</b><span>Chat without attached code context.</span></div>
+        <div class="term"><b>Section Chat</b><span>Chat tied to selected code.</span></div>
+        <div class="term"><b>Learning Concept</b><span>Structured knowledge extracted from chat.</span></div>
+        <div class="term"><b>Learning Session</b><span>A grouped save event for one or more concepts.</span></div>
+        <div class="term"><b>Embedding</b><span>384-float vector used for semantic similarity.</span></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Step Map (What Belongs To What)</h2>
+      <p>Run Steps 1 to 8 in order. Each step maps to specific test IDs in the matrix below.</p>
+      <table class="step-map">
+        <thead>
+          <tr>
+            <th class="scol">Step</th>
+            <th>Phase</th>
+            <th>Do This On</th>
+            <th>Maps To Test IDs</th>
+            <th>Primary Goal</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="scol">1</td><td>Preflight</td><td class="where">Both devices + notes</td><td class="tests">Setup</td><td>Start clean and track baseline counts.</td></tr>
+          <tr><td class="scol">2</td><td>Create Golden Dataset</td><td class="where">Device A</td><td class="tests">Feeds T01-T06, T12</td><td>Create real data that can be validated after restore.</td></tr>
+          <tr><td class="scol">3</td><td>Export + Archive Audit</td><td class="where">Device A + Desktop</td><td class="tests">T01-T04</td><td>Verify backup file structure and vector fidelity.</td></tr>
+          <tr><td class="scol">4</td><td>Fresh Install Restore</td><td class="where">Android + iOS clean install</td><td class="tests">T05-T06</td><td>Prove full recovery from backup on empty app.</td></tr>
+          <tr><td class="scol">5</td><td>Clear-All Data</td><td class="where">Android + iOS</td><td class="tests">T07-T08</td><td>Verify destructive flows with and without key wipe.</td></tr>
+          <tr><td class="scol">6</td><td>Failure Paths</td><td class="where">Android + iOS</td><td class="tests">T09-T10</td><td>Ensure bad input/cancel paths fail safely.</td></tr>
+          <tr><td class="scol">7</td><td>Interruption Test</td><td class="where">Android + iOS</td><td class="tests">T11</td><td>No crash loop after kill during restore.</td></tr>
+          <tr><td class="scol">8</td><td>Post-Restore Smoke</td><td class="where">Android + iOS</td><td class="tests">T12</td><td>Normal app workflows still work after restore.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>Guided Step-by-Step Runbook</h2>
+      <p>Each step tells you where to do it, exactly what to do, and what PASS means.</p>
+
+      <details class="guide-step" open>
+        <summary>Step 1 - Preflight</summary>
+        <div class="step-body">
+          <div class="step-row"><b>Purpose:</b> Set the baseline so all later comparisons are meaningful.</div>
+          <div class="step-row"><b>Where:</b> One physical Android + one physical iOS device.</div>
+          <ol>
+            <li>Use build from commit <code>e58a317</code>.</li>
+            <li>Record device models and OS versions in header fields.</li>
+            <li>Start a count table for: projects, files, chats, chat_messages, learning_sessions, concepts, concept_links, embeddings.</li>
+          </ol>
+          <div class="step-pass"><b>PASS if:</b> both devices are ready and your baseline table exists before testing.</div>
+          <div class="step-evidence"><b>Evidence to capture:</b> tester name, devices, commit hash, start time.</div>
+        </div>
+      </details>
+
+      <details class="guide-step">
+        <summary>Step 2 - Create Golden Dataset (Device A)</summary>
+        <div class="step-body">
+          <div class="step-row"><b>Purpose:</b> Create realistic data to prove backup and restore are complete.</div>
+          <div class="step-row"><b>Where:</b> Device A (source device for export).</div>
+          <ol>
+            <li>Open <code>Settings</code>. Save both API keys (dummy values are fine).</li>
+            <li>Change one chat model and one embedding model to non-default strings.</li>
+            <li>Create 2 projects (one paste; one GitHub import path if available).</li>
+            <li>Create at least 4 files total with marks/ranges.</li>
+            <li>Create 1 general chat with 4+ messages.</li>
+            <li>Create 1 section chat with 4+ messages.</li>
+            <li>Save at least 3 chat bubbles as learning.</li>
+            <li>Open Learning Hub; confirm Concepts and Sessions are non-zero.</li>
+            <li>Open Dev screen; run <code>Run RAG Smoke Test</code> once.</li>
+          </ol>
+          <div class="step-pass"><b>PASS if:</b> all listed entities exist and Dev smoke test succeeds once pre-export.</div>
+          <div class="step-evidence"><b>Evidence to capture:</b> baseline counts and screenshots of Learning Hub non-zero totals.</div>
+        </div>
+      </details>
+
+      <details class="guide-step">
+        <summary>Step 3 - Export + Tear Apart Archive</summary>
+        <div class="step-body">
+          <div class="step-row"><b>Purpose:</b> Validate the exported backup file internals before restore.</div>
+          <div class="step-row"><b>Where:</b> Export on Device A, inspect on desktop PowerShell.</div>
+          <ol>
+            <li>On Device A: <code>Settings -> Data -> Export backup</code>.</li>
+            <li>Save the <code>.codelens</code> file to desktop.</li>
+            <li>Run the audit script below in PowerShell (set <code>$src</code> first).</li>
+            <li>Confirm <code>metadata.magic = codelens-backup</code>, <code>formatVersion = 1</code>, <code>schemaVersion = 2</code>.</li>
+            <li>Confirm NDJSON counts match metadata counts.</li>
+            <li>Confirm at least one embedding decodes to 1536 bytes.</li>
+          </ol>
+          <pre class="script">$src = "C:\path\to\codelens-backup-YYYY-MM-DD.codelens"
+$work = "$env:TEMP\codelens_audit"
+if (Test-Path $work) { Remove-Item -Recurse -Force $work }
+New-Item -ItemType Directory -Path $work | Out-Null
+Copy-Item $src "$work\backup.zip"
+Expand-Archive -LiteralPath "$work\backup.zip" -DestinationPath "$work\unzipped" -Force
+
+$required = @(
+  "metadata.json","preferences.json","secure_keys.json",
+  "projects.ndjson","files.ndjson","chats.ndjson","chat_messages.ndjson",
+  "learning_sessions.ndjson","concepts.ndjson","concept_links.ndjson"
+)
+$missing = $required | Where-Object { -not (Test-Path "$work\unzipped\$_") }
+"Missing files: $($missing -join ', ')"
+
+$meta = Get-Content "$work\unzipped\metadata.json" -Raw | ConvertFrom-Json
+$meta | ConvertTo-Json -Depth 5
+
+function Count-Ndjson([string]$p) {
+  if (-not (Test-Path $p)) { return 0 }
+  return ((Get-Content $p) | Where-Object { $_.Trim().Length -gt 0 }).Count
+}
+@{
+  projects = Count-Ndjson "$work\unzipped\projects.ndjson"
+  files = Count-Ndjson "$work\unzipped\files.ndjson"
+  chats = Count-Ndjson "$work\unzipped\chats.ndjson"
+  chat_messages = Count-Ndjson "$work\unzipped\chat_messages.ndjson"
+  learning_sessions = Count-Ndjson "$work\unzipped\learning_sessions.ndjson"
+  concepts = Count-Ndjson "$work\unzipped\concepts.ndjson"
+  concept_links = Count-Ndjson "$work\unzipped\concept_links.ndjson"
+} | ConvertTo-Json
+
+node -e "const fs=require('fs');const p='$work\\\\unzipped\\\\concepts.ndjson';const lines=fs.readFileSync(p,'utf8').split('\\n').filter(Boolean).map(JSON.parse);const e=lines.find(x=>x.embedding);if(!e){console.log('No embedded concepts found');process.exit(0)};const len=Buffer.from(e.embedding.vectorBase64,'base64').length;console.log('First embedding bytes:',len,'(expect 1536)')"</pre>
+          <div class="step-pass"><b>PASS if:</b> archive structure is complete and metadata/count/vector checks all match.</div>
+          <div class="step-evidence"><b>Evidence to capture:</b> PowerShell output and metadata snapshot.</div>
+        </div>
+      </details>
+
+      <details class="guide-step">
+        <summary>Step 4 - Fresh Install Restore (Critical)</summary>
+        <div class="step-body">
+          <div class="step-row"><b>Purpose:</b> Prove a clean device can fully recover from backup.</div>
+          <div class="step-row"><b>Where:</b> Android and iOS clean installs.</div>
+          <ol>
+            <li>Android: clear app storage or reinstall. iOS: uninstall + reinstall.</li>
+            <li>Confirm app starts empty (<code>No projects yet</code>).</li>
+            <li>Go to <code>Settings -> Data -> Restore from backup</code>.</li>
+            <li>Select known-good <code>.codelens</code> file and complete restore.</li>
+            <li>Validate <code>Restore complete</code> counts.</li>
+            <li>Verify UI data is back: home projects, recent chats, learning concepts/sessions, chat histories.</li>
+            <li>Verify API keys are not restored as secrets and missing providers are listed.</li>
+          </ol>
+          <div class="step-pass"><b>PASS if:</b> restored data is complete and keys require re-entry by design.</div>
+          <div class="step-evidence"><b>Evidence to capture:</b> restore modal screenshot + before/after home screen.</div>
+        </div>
+      </details>
+
+      <details class="guide-step">
+        <summary>Step 5 - Clear-All Data Tests</summary>
+        <div class="step-body">
+          <div class="step-row"><b>Purpose:</b> Validate destructive flow safety with both key-handling modes.</div>
+          <div class="step-row"><b>Where:</b> Android and iOS.</div>
+          <ol>
+            <li>Run <code>Clear all data</code> with checkbox OFF, type <code>DELETE</code>.</li>
+            <li>Confirm flash message <code>All data cleared</code>.</li>
+            <li>Verify app data is gone and API keys are still present.</li>
+            <li>Re-import backup.</li>
+            <li>Run <code>Clear all data</code> with checkbox ON, type <code>DELETE</code>.</li>
+            <li>Re-open Settings and verify key inputs are empty (keys wiped).</li>
+          </ol>
+          <div class="step-pass"><b>PASS if:</b> both modes behave exactly as intended (preserve vs wipe keys).</div>
+          <div class="step-evidence"><b>Evidence to capture:</b> settings key state after each clear path.</div>
+        </div>
+      </details>
+
+      <details class="guide-step">
+        <summary>Step 6 - Failure Path Tests</summary>
+        <div class="step-body">
+          <div class="step-row"><b>Purpose:</b> Ensure bad inputs and user cancellation fail safely without corruption.</div>
+          <div class="step-row"><b>Where:</b> Android and iOS.</div>
+          <ol>
+            <li>Cancel document picker during restore.</li>
+            <li>Restore random non-zip file.</li>
+            <li>Restore zip missing <code>metadata.json</code>.</li>
+            <li>Restore archive with bumped formatVersion (edit metadata to higher value).</li>
+            <li>Restore corrupted NDJSON (truncate one line in <code>concepts.ndjson</code>).</li>
+          </ol>
+          <div class="step-pass"><b>PASS if:</b> app never crashes, shows clear <code>Restore failed: ...</code> feedback, remains usable.</div>
+          <div class="step-evidence"><b>Evidence to capture:</b> error toasts and app still running after each case.</div>
+        </div>
+      </details>
+
+      <details class="guide-step">
+        <summary>Step 7 - Interruption / Kill Tests</summary>
+        <div class="step-body">
+          <div class="step-row"><b>Purpose:</b> Validate recovery if restore is interrupted mid-flight.</div>
+          <div class="step-row"><b>Where:</b> Android and iOS.</div>
+          <ol>
+            <li>Start restoring a larger archive and kill app during spinner.</li>
+            <li>Re-open app immediately.</li>
+            <li>Confirm no crash loop and app opens cleanly.</li>
+            <li>Run restore again and confirm it still succeeds.</li>
+          </ol>
+          <div class="step-pass"><b>PASS if:</b> app recovers and can restore successfully after forced interruption.</div>
+          <div class="step-evidence"><b>Evidence to capture:</b> reopen state + successful retry restore.</div>
+        </div>
+      </details>
+
+      <details class="guide-step">
+        <summary>Step 8 - Post-Restore Functional Smoke</summary>
+        <div class="step-body">
+          <div class="step-row"><b>Purpose:</b> Confirm normal user behavior still works after all destructive tests.</div>
+          <div class="step-row"><b>Where:</b> Android and iOS.</div>
+          <ol>
+            <li>Send one new general chat message.</li>
+            <li>Save one bubble as learning.</li>
+            <li>Open learning chat for that concept.</li>
+            <li>Run Dev screen smoke test once.</li>
+          </ol>
+          <div class="step-pass"><b>PASS if:</b> no runtime errors and retrieval/learning flows still function.</div>
+          <div class="step-evidence"><b>Evidence to capture:</b> quick note of successful send, save-learning, and dev smoke.</div>
+        </div>
+      </details>
+    </section>
+
+    <section class="card">
+      <h2>Test Matrix</h2>
+      <table>
+        <thead>
+          <tr>
+            <th class="col-id">ID</th>
+            <th class="col-prio">Prio</th>
+            <th>Scenario</th>
+            <th>Expected</th>
+            <th>Android Result</th>
+            <th>iOS Result</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="col-id">T01</td>
+            <td class="col-prio prio-p0">P0</td>
+            <td>Export backup</td>
+            <td>.codelens file created, share flow works, success message shown.</td>
+            <td>
+              <select class="status-select status-na">
+                <option>N/A</option><option>PASS</option><option>FAIL</option><option>BLOCKED</option>
+              </select>
+              <div class="note write yellow" contenteditable="true"></div>
+            </td>
+            <td>
+              <select class="status-select status-na">
+                <option>N/A</option><option>PASS</option><option>FAIL</option><option>BLOCKED</option>
+              </select>
+              <div class="note write yellow" contenteditable="true"></div>
+            </td>
+            <td><div class="note write orange" contenteditable="true"></div></td>
+          </tr>
+          <tr>
+            <td class="col-id">T02</td>
+            <td class="col-prio prio-p0">P0</td>
+            <td>Archive structure audit</td>
+            <td>All required files exist. metadata magic/version/schema values valid.</td>
+            <td><select class="status-select status-na"><option>N/A</option><option>PASS</option><option>FAIL</option><option>BLOCKED</option></select><div class="note write red" contenteditable="true"></div></td>
+            <td><select class="status-select status-na"><option>N/A</option><option>PASS</option><option>FAIL</option><option>BLOCKED</option></select><div class="note write red" contenteditable="true"></div></td>
+            <td><div class="note write orange" contenteditable="true"></div></td>
+          </tr>
+          <tr>
+            <td class="col-id">T03</td>
+            <td class="col-prio prio-p0">P0</td>
+            <td>NDJSON count consistency</td>
+            <td>NDJSON row counts match metadata counts for all entities.</td>
+            <td><select class="status-select status-na"><option>N/A</option><option>PASS</option><option>FAIL</option><option>BLOCKED</option></select><div class="note write yellow" contenteditable="true"></div></td>
+            <td><select class="status-select status-na"><option>N/A</option><option>PASS</option><option>FAIL</option><option>BLOCKED</option></select><div class="note write yellow" contenteditable="true"></div></td>
+            <td><div class="note write orange" contenteditable="true"></div></td>
+          </tr>
+          <tr>
+            <td class="col-id">T04</td>
+            <td class="col-prio prio-p0">P0</td>
+            <td>Embedding payload audit</td>
+            <td>At least one embedding decodes to 1536 bytes (384 float32).</td>
+            <td><select class="status-select status-na"><option>N/A</option><option>PASS</option><option>FAIL</option><option>BLOCKED</option></select><div class="note write red" contenteditable="true"></div></td>
+            <td><select class="status-select status-na"><option>N/A</option><option>PASS</option><option>FAIL</option><option>BLOCKED</option></select><div class="note write red" contenteditable="true"></div></td>
+            <td><div class="note write orange" contenteditable="true"></div></td>
+          </tr>
+          <tr>
+            <td class="col-id">T05</td>
+            <td class="col-prio prio-p0">P0</td>
+            <td>Fresh install restore</td>
+            <td>Restore succeeds on clean install and shows expected counts.</td>
+            <td><select class="status-select status-na"><option>N/A</option><option>PASS</option><option>FAIL</option><option>BLOCKED</option></select><div class="note write yellow" contenteditable="true"></div></td>
+            <td><select class="status-select status-na"><option>N/A</option><option>PASS</option><option>FAIL</option><option>BLOCKED</option></select><div class="note write yellow" contenteditable="true"></div></td>
+            <td><div class="note write orange" contenteditable="true"></div></td>
+          </tr>
+          <tr>
+            <td class="col-id">T06</td>
+            <td class="col-prio prio-p0">P0</td>
+            <td>Data parity in UI</td>
+            <td>Projects/chats/concepts/sessions/messages are present and usable.</td>
+            <td><select class="status-select status-na"><option>N/A</option><option>PASS</option><option>FAIL</option><option>BLOCKED</option></select><div class="note write red" contenteditable="true"></div></td>
+            <td><select class="status-select status-na"><option>N/A</option><option>PASS</option><option>FAIL</option><option>BLOCKED</option></select><div class="note write red" contenteditable="true"></div></td>
+            <td><div class="note write orange" contenteditable="true"></div></td>
+          </tr>
+          <tr>
+            <td class="col-id">T07</td>
+            <td class="col-prio prio-p0">P0</td>
+            <td>Clear-all with keys preserved</td>
+            <td>All app data removed, API keys remain when checkbox is OFF.</td>
+            <td><select class="status-select status-na"><option>N/A</option><option>PASS</option><option>FAIL</option><option>BLOCKED</option></select><div class="note write yellow" contenteditable="true"></div></td>
+            <td><select class="status-select status-na"><option>N/A</option><option>PASS</option><option>FAIL</option><option>BLOCKED</option></select><div class="note write yellow" contenteditable="true"></div></td>
+            <td><div class="note write orange" contenteditable="true"></div></td>
+          </tr>
+          <tr>
+            <td class="col-id">T08</td>
+            <td class="col-prio prio-p0">P0</td>
+            <td>Clear-all with keys wiped</td>
+            <td>All app data removed, API keys removed when checkbox is ON.</td>
+            <td><select class="status-select status-na"><option>N/A</option><option>PASS</option><option>FAIL</option><option>BLOCKED</option></select><div class="note write red" contenteditable="true"></div></td>
+            <td><select class="status-select status-na"><option>N/A</option><option>PASS</option><option>FAIL</option><option>BLOCKED</option></select><div class="note write red" contenteditable="true"></div></td>
+            <td><div class="note write orange" contenteditable="true"></div></td>
+          </tr>
+          <tr>
+            <td class="col-id">T09</td>
+            <td class="col-prio prio-p0">P0</td>
+            <td>Cancel import</td>
+            <td>No destructive changes, no crash, no fake success message.</td>
+            <td><select class="status-select status-na"><option>N/A</option><option>PASS</option><option>FAIL</option><option>BLOCKED</option></select><div class="note write yellow" contenteditable="true"></div></td>
+            <td><select class="status-select status-na"><option>N/A</option><option>PASS</option><option>FAIL</option><option>BLOCKED</option></select><div class="note write yellow" contenteditable="true"></div></td>
+            <td><div class="note write orange" contenteditable="true"></div></td>
+          </tr>
+          <tr>
+            <td class="col-id">T10</td>
+            <td class="col-prio prio-p0">P0</td>
+            <td>Bad/corrupt import files</td>
+            <td>Clear restore error shown, app stays stable and usable.</td>
+            <td><select class="status-select status-na"><option>N/A</option><option>PASS</option><option>FAIL</option><option>BLOCKED</option></select><div class="note write red" contenteditable="true"></div></td>
+            <td><select class="status-select status-na"><option>N/A</option><option>PASS</option><option>FAIL</option><option>BLOCKED</option></select><div class="note write red" contenteditable="true"></div></td>
+            <td><div class="note write orange" contenteditable="true"></div></td>
+          </tr>
+          <tr>
+            <td class="col-id">T11</td>
+            <td class="col-prio prio-p0">P0</td>
+            <td>Kill during restore</td>
+            <td>No crash loop; app reopens; retry restore succeeds.</td>
+            <td><select class="status-select status-na"><option>N/A</option><option>PASS</option><option>FAIL</option><option>BLOCKED</option></select><div class="note write yellow" contenteditable="true"></div></td>
+            <td><select class="status-select status-na"><option>N/A</option><option>PASS</option><option>FAIL</option><option>BLOCKED</option></select><div class="note write yellow" contenteditable="true"></div></td>
+            <td><div class="note write orange" contenteditable="true"></div></td>
+          </tr>
+          <tr>
+            <td class="col-id">T12</td>
+            <td class="col-prio prio-p1">P1</td>
+            <td>Post-restore functional smoke</td>
+            <td>Send message, save learning, open learning chat, run dev smoke test.</td>
+            <td><select class="status-select status-na"><option>N/A</option><option>PASS</option><option>FAIL</option><option>BLOCKED</option></select><div class="note write yellow" contenteditable="true"></div></td>
+            <td><select class="status-select status-na"><option>N/A</option><option>PASS</option><option>FAIL</option><option>BLOCKED</option></select><div class="note write yellow" contenteditable="true"></div></td>
+            <td><div class="note write orange" contenteditable="true"></div></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>Data Count Parity Sheet (Pre vs Post Restore)</h2>
+      <table class="count-table">
+        <thead>
+          <tr>
+            <th>Entity</th>
+            <th>Pre Export Count</th>
+            <th>Post Restore Count</th>
+            <th>Match (Y/N)</th>
+            <th>Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="entity">projects</td><td><div class="write red" contenteditable="true"></div></td><td><div class="write yellow" contenteditable="true"></div></td><td><div class="write orange" contenteditable="true"></div></td><td><div class="note write yellow" contenteditable="true"></div></td></tr>
+          <tr><td class="entity">files</td><td><div class="write red" contenteditable="true"></div></td><td><div class="write yellow" contenteditable="true"></div></td><td><div class="write orange" contenteditable="true"></div></td><td><div class="note write yellow" contenteditable="true"></div></td></tr>
+          <tr><td class="entity">chats</td><td><div class="write red" contenteditable="true"></div></td><td><div class="write yellow" contenteditable="true"></div></td><td><div class="write orange" contenteditable="true"></div></td><td><div class="note write yellow" contenteditable="true"></div></td></tr>
+          <tr><td class="entity">chat_messages</td><td><div class="write red" contenteditable="true"></div></td><td><div class="write yellow" contenteditable="true"></div></td><td><div class="write orange" contenteditable="true"></div></td><td><div class="note write yellow" contenteditable="true"></div></td></tr>
+          <tr><td class="entity">learning_sessions</td><td><div class="write red" contenteditable="true"></div></td><td><div class="write yellow" contenteditable="true"></div></td><td><div class="write orange" contenteditable="true"></div></td><td><div class="note write yellow" contenteditable="true"></div></td></tr>
+          <tr><td class="entity">concepts</td><td><div class="write red" contenteditable="true"></div></td><td><div class="write yellow" contenteditable="true"></div></td><td><div class="write orange" contenteditable="true"></div></td><td><div class="note write yellow" contenteditable="true"></div></td></tr>
+          <tr><td class="entity">concept_links</td><td><div class="write red" contenteditable="true"></div></td><td><div class="write yellow" contenteditable="true"></div></td><td><div class="write orange" contenteditable="true"></div></td><td><div class="note write yellow" contenteditable="true"></div></td></tr>
+          <tr><td class="entity">embeddings</td><td><div class="write red" contenteditable="true"></div></td><td><div class="write yellow" contenteditable="true"></div></td><td><div class="write orange" contenteditable="true"></div></td><td><div class="note write yellow" contenteditable="true"></div></td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <h2>Release Gate Decision</h2>
+      <div class="gate">
+        <div class="pane">
+          <span class="label">Verdict (SHIP / BLOCK)</span>
+          <div class="write red" contenteditable="true"></div>
+          <div class="small">Rule: any P0 fail on either platform => BLOCK.</div>
+        </div>
+        <div class="pane">
+          <span class="label">Must Fix Before Ship</span>
+          <div class="big-write write orange" contenteditable="true"></div>
+        </div>
+      </div>
+      <div class="gate">
+        <div class="pane">
+          <span class="label">Nice To Have Before Ship</span>
+          <div class="big-write write yellow" contenteditable="true"></div>
+        </div>
+        <div class="pane">
+          <span class="label">Final Sign-off</span>
+          <div class="small">QA:</div>
+          <div class="write red" contenteditable="true"></div>
+          <div class="small">Engineering:</div>
+          <div class="write yellow" contenteditable="true"></div>
+          <div class="small">Date/Time:</div>
+          <div class="write orange" contenteditable="true"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    function applyStatusClass(selectEl) {
+      selectEl.classList.remove('status-pass', 'status-fail', 'status-blocked', 'status-na');
+      const v = selectEl.value;
+      if (v === 'PASS') selectEl.classList.add('status-pass');
+      else if (v === 'FAIL') selectEl.classList.add('status-fail');
+      else if (v === 'BLOCKED') selectEl.classList.add('status-blocked');
+      else selectEl.classList.add('status-na');
+    }
+
+    function updateSummary() {
+      const sels = Array.from(document.querySelectorAll('.status-select'));
+      let pass = 0;
+      let fail = 0;
+      let blocked = 0;
+      let na = 0;
+      sels.forEach((s) => {
+        if (s.value === 'PASS') pass++;
+        else if (s.value === 'FAIL') fail++;
+        else if (s.value === 'BLOCKED') blocked++;
+        else na++;
+      });
+      document.getElementById('sum-pass').textContent = String(pass);
+      document.getElementById('sum-fail').textContent = String(fail);
+      document.getElementById('sum-blocked').textContent = String(blocked);
+      document.getElementById('sum-na').textContent = String(na);
+      document.getElementById('sum-total').textContent = String(sels.length);
+    }
+
+    function resetStatuses() {
+      document.querySelectorAll('.status-select').forEach((s) => {
+        s.value = 'N/A';
+        applyStatusClass(s);
+      });
+      updateSummary();
+    }
+
+    document.querySelectorAll('.status-select').forEach((s) => {
+      applyStatusClass(s);
+      s.addEventListener('change', () => {
+        applyStatusClass(s);
+        updateSummary();
+      });
+    });
+    updateSummary();
+  </script>
+</body>
+</html>
