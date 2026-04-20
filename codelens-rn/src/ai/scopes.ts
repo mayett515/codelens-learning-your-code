@@ -10,8 +10,9 @@ import {
   OPENROUTER_DEFAULT_MODEL,
   SILICONFLOW_DEFAULT_MODEL,
 } from './fallback';
-import { kv } from '../composition';
+import { makeMmkvStore } from '../adapters/kv-mmkv';
 
+const kv = makeMmkvStore();
 const KV_KEY = 'chat_config';
 
 function defaultScopeModelConfig(): ScopeModelConfig {

@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/CodeLens-v2//**)",
+      "Read(//c/CodeLens-v2/codelens-rn//**)"
+    ]
+  }
+}

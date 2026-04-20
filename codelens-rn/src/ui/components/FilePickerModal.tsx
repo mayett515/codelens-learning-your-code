@@ -7,6 +7,8 @@ import {
   Pressable,
   FlatList,
   StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { colors, fontSize, spacing } from '../theme';
 import type { SourceFile, FileId } from '@/src/domain/types';
@@ -84,7 +86,10 @@ export function FilePickerModal({ visible, files, onSelect, onClose }: Props) {
       transparent
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
+      <KeyboardAvoidingView
+        style={styles.overlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
         <View style={styles.container}>
           <View style={styles.header}>
             <Text style={styles.title}>Files</Text>
@@ -154,7 +159,7 @@ export function FilePickerModal({ visible, files, onSelect, onClose }: Props) {
             keyboardShouldPersistTaps="handled"
           />
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

@@ -1,0 +1,13 @@
+diff --git a/node_modules/@op-engineering/op-sqlite/package.json b/node_modules/@op-engineering/op-sqlite/package.json
+index 4f9ca41..9b6f6b4 100644
+--- a/node_modules/@op-engineering/op-sqlite/package.json
++++ b/node_modules/@op-engineering/op-sqlite/package.json
+@@ -7,7 +7,8 @@
+   "react-native": "src/index",
+   "exports": {
+     ".": {
+       "source": "./src/index.ts",
++      "react-native": "./lib/module/index.js",
+       "node": "./node/dist/index.js",
+       "types": "./lib/typescript/src/index.d.ts",
+       "default": "./lib/module/index.js"
