@@ -1,34 +1,85 @@
-import type { ChatConfig, ChatScope, Provider, ScopeModelConfig } from '../domain/types';
+import type {
+  ChatConfig,
+  ChatScope,
+  Provider,
+  ScopeModelConfig,
+} from '../domain/types';
+import {
+  defaultFallbackModels,
+  normalizeModelList,
+  OPENROUTER_DEFAULT_MODEL,
+  SILICONFLOW_DEFAULT_MODEL,
+} from './fallback';
 import { kv } from '../composition';
 
 const KV_KEY = 'chat_config';
 
+function defaultScopeModelConfig(): ScopeModelConfig {
+  return {
+    provider: 'openrouter',
+    models: {
+      openrouter: OPENROUTER_DEFAULT_MODEL,
+      siliconflow: SILICONFLOW_DEFAULT_MODEL,
+    },
+    fallbackModels: defaultFallbackModels(),
+    allowCrossProviderFallback: true,
+    freeTierFallbacksOnly: true,
+  };
+}
+
 const DEFAULT_CONFIG: ChatConfig = {
-  section: {
-    provider: 'openrouter',
-    models: {
-      openrouter: 'google/gemini-2.0-flash-exp:free',
-      siliconflow: 'Qwen/Qwen2.5-7B-Instruct',
-    },
-  },
-  general: {
-    provider: 'openrouter',
-    models: {
-      openrouter: 'google/gemini-2.0-flash-exp:free',
-      siliconflow: 'Qwen/Qwen2.5-7B-Instruct',
-    },
-  },
-  learning: {
-    provider: 'openrouter',
-    models: {
-      openrouter: 'google/gemini-2.0-flash-exp:free',
-      siliconflow: 'Qwen/Qwen2.5-7B-Instruct',
-    },
-  },
+  section: defaultScopeModelConfig(),
+  general: defaultScopeModelConfig(),
+  learning: defaultScopeModelConfig(),
 };
 
 export function getChatConfig(): ChatConfig {
-  return kv.get<ChatConfig>(KV_KEY) ?? DEFAULT_CONFIG;
+  const raw = kv.get<unknown>(KV_KEY);
+  if (!raw || typeof raw !== 'object') return normalizeChatConfig(DEFAULT_CONFIG);
+  return normalizeChatConfig(raw as Partial<Record<ChatScope, unknown>>);
+}
+
+function normalizeChatConfig(raw: Partial<Record<ChatScope, unknown>>): ChatConfig {
+  return {
+    section: normalizeScopeConfig(raw.section),
+    general: normalizeScopeConfig(raw.general),
+    learning: normalizeScopeConfig(raw.learning),
+  };
+}
+
+function normalizeScopeConfig(raw: unknown): ScopeModelConfig {
+  const defaults = defaultScopeModelConfig();
+  if (!raw || typeof raw !== 'object') return defaults;
+
+  const value = raw as Partial<ScopeModelConfig>;
+  const provider = value.provider === 'siliconflow' ? 'siliconflow' : 'openrouter';
+
+  const openrouterModel = value.models?.openrouter?.trim() || defaults.models.openrouter;
+  const siliconflowModel = value.models?.siliconflow?.trim() || defaults.models.siliconflow;
+
+  return {
+    provider,
+    models: {
+      openrouter: openrouterModel,
+      siliconflow: siliconflowModel,
+    },
+    fallbackModels: {
+      openrouter: normalizeModelList(
+        value.fallbackModels?.openrouter ?? defaults.fallbackModels.openrouter,
+      ),
+      siliconflow: normalizeModelList(
+        value.fallbackModels?.siliconflow ?? defaults.fallbackModels.siliconflow,
+      ),
+    },
+    allowCrossProviderFallback:
+      typeof value.allowCrossProviderFallback === 'boolean'
+        ? value.allowCrossProviderFallback
+        : defaults.allowCrossProviderFallback,
+    freeTierFallbacksOnly:
+      typeof value.freeTierFallbacksOnly === 'boolean'
+        ? value.freeTierFallbacksOnly
+        : defaults.freeTierFallbacksOnly,
+  };
 }
 
 export function getScopeConfig(scope: ChatScope): ScopeModelConfig {
@@ -54,13 +105,41 @@ export function updateScopeModel(scope: ChatScope, provider: Provider, model: st
   const config = getChatConfig();
   config[scope] = {
     ...config[scope],
-    models: { ...config[scope].models, [provider]: model },
+    models: { ...config[scope].models, [provider]: model.trim() },
   };
   kv.set(KV_KEY, config);
 }
 
-export function setChatConfig(config: ChatConfig): void {
+export function updateScopeFallbackModels(
+  scope: ChatScope,
+  provider: Provider,
+  models: string[],
+): void {
+  const config = getChatConfig();
+  config[scope] = {
+    ...config[scope],
+    fallbackModels: {
+      ...config[scope].fallbackModels,
+      [provider]: normalizeModelList(models),
+    },
+  };
   kv.set(KV_KEY, config);
+}
+
+export function updateScopeCrossProviderFallback(scope: ChatScope, enabled: boolean): void {
+  const config = getChatConfig();
+  config[scope] = { ...config[scope], allowCrossProviderFallback: enabled };
+  kv.set(KV_KEY, config);
+}
+
+export function updateScopeFreeTierFallbacksOnly(scope: ChatScope, enabled: boolean): void {
+  const config = getChatConfig();
+  config[scope] = { ...config[scope], freeTierFallbacksOnly: enabled };
+  kv.set(KV_KEY, config);
+}
+
+export function setChatConfig(config: ChatConfig): void {
+  kv.set(KV_KEY, normalizeChatConfig(config));
 }
 
 export interface EmbedConfig {

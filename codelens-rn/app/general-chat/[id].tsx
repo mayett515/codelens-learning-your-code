@@ -14,14 +14,16 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { colors, fontSize, spacing } from '@/src/ui/theme';
 import { chatKeys } from '@/src/hooks/query-keys';
-import { getChatById, deleteMessage } from '@/src/db/queries/chats';
+import { getChatById, deleteMessage, updateChatModelOverride } from '@/src/db/queries/chats';
 import { buildGeneralSystemPrompt } from '@/src/domain/prompts';
+import { getScopeConfig } from '@/src/ai/scopes';
 import { useSendMessage } from '@/src/hooks/use-send-message';
 import { ChatBubble } from '@/src/ui/components/ChatBubble';
 import { ChatInput } from '@/src/ui/components/ChatInput';
 import { BubbleMenu } from '@/src/ui/components/BubbleMenu';
+import { ChatModelPickerModal } from '@/src/ui/components/ChatModelPickerModal';
 import { SaveAsLearningModal, useSaveLearningStore } from '@/src/features/learning';
-import type { ChatId, ChatMessage } from '@/src/domain/types';
+import type { ChatId, ChatMessage, ChatModelOverride } from '@/src/domain/types';
 
 const BUILD_GENERAL_PROMPT = () => buildGeneralSystemPrompt();
 
@@ -31,6 +33,8 @@ export default function GeneralChatScreen() {
   const queryClient = useQueryClient();
   const openLearning = useSaveLearningStore((s) => s.open);
   const [menuMessage, setMenuMessage] = useState<ChatMessage | null>(null);
+  const [modelPickerVisible, setModelPickerVisible] = useState(false);
+  const scopeConfig = getScopeConfig('general');
 
   const { data: chat } = useQuery({
     queryKey: chatKeys.detail(chatId),
@@ -40,7 +44,13 @@ export default function GeneralChatScreen() {
   const messages = chat?.messages ?? [];
   const reversedMessages = useMemo(() => [...messages].reverse(), [messages]);
 
-  const { send, sending, error, clearError } = useSendMessage(chatId, 'general', BUILD_GENERAL_PROMPT, messages);
+  const { send, sending, error, clearError } = useSendMessage(
+    chatId,
+    'general',
+    BUILD_GENERAL_PROMPT,
+    messages,
+    chat?.modelOverride,
+  );
 
   const handleDeleteMessage = useCallback(
     async (msg: ChatMessage) => {
@@ -53,6 +63,24 @@ export default function GeneralChatScreen() {
   const handleSaveAsLearning = useCallback(
     (msg: ChatMessage) => openLearning(msg, chatId),
     [openLearning, chatId],
+  );
+
+  const handleSaveModelOverride = useCallback(
+    async (override: ChatModelOverride) => {
+      await updateChatModelOverride(chatId, override);
+      queryClient.invalidateQueries({ queryKey: chatKeys.detail(chatId) });
+      queryClient.invalidateQueries({ queryKey: chatKeys.recent });
+    },
+    [chatId, queryClient],
+  );
+
+  const handleClearModelOverride = useCallback(
+    async () => {
+      await updateChatModelOverride(chatId, undefined);
+      queryClient.invalidateQueries({ queryKey: chatKeys.detail(chatId) });
+      queryClient.invalidateQueries({ queryKey: chatKeys.recent });
+    },
+    [chatId, queryClient],
   );
 
   return (
@@ -68,6 +96,16 @@ export default function GeneralChatScreen() {
           <Text style={styles.title} numberOfLines={1}>
             {chat?.title ?? 'General Chat'}
           </Text>
+          <Pressable
+            style={[styles.modelBtn, chat?.modelOverride && styles.modelBtnActive]}
+            onPress={() => setModelPickerVisible(true)}
+          >
+            <Text
+              style={[styles.modelBtnText, chat?.modelOverride && styles.modelBtnTextActive]}
+            >
+              {chat?.modelOverride ? 'Model*' : 'Model'}
+            </Text>
+          </Pressable>
         </View>
 
         {messages.length === 0 ? (
@@ -116,6 +154,17 @@ export default function GeneralChatScreen() {
         onSaveAsLearning={handleSaveAsLearning}
       />
       <SaveAsLearningModal />
+      {chat ? (
+        <ChatModelPickerModal
+          visible={modelPickerVisible}
+          scope="general"
+          scopeConfig={scopeConfig}
+          currentOverride={chat.modelOverride}
+          onClose={() => setModelPickerVisible(false)}
+          onSave={handleSaveModelOverride}
+          onClear={handleClearModelOverride}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -131,6 +180,20 @@ const styles = StyleSheet.create({
   },
   backBtn: { color: colors.primary, fontSize: fontSize.xl, fontWeight: '600', paddingHorizontal: spacing.xs },
   title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '600', flex: 1 },
+  modelBtn: {
+    backgroundColor: colors.surfaceLight,
+    borderRadius: 6,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs + 1,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  modelBtnActive: {
+    borderColor: colors.primary,
+    backgroundColor: 'rgba(96, 139, 219, 0.2)',
+  },
+  modelBtnText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '700' },
+  modelBtnTextActive: { color: colors.primary },
   messageList: { paddingVertical: spacing.md },
   typingBar: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingVertical: spacing.xs },
   typingText: { color: colors.textSecondary, fontSize: fontSize.sm },

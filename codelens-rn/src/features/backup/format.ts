@@ -6,7 +6,7 @@
  * - APP_VERSION: mirror package.json and app.json.
  */
 export const FORMAT_VERSION = 1;
-export const SCHEMA_VERSION = 2;
+export const SCHEMA_VERSION = 3;
 export const APP_VERSION = '1.0.0';
 
 export const ARCHIVE_MAGIC = 'codelens-backup';

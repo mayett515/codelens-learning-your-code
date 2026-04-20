@@ -41,6 +41,16 @@ export const chats = sqliteTable('chats', {
   endLine: integer('end_line'),
   folderId: text('folder_id'),
   conceptId: text('concept_id'),
+  modelOverride: text('model_override', { mode: 'json' }).$type<{
+    provider: 'openrouter' | 'siliconflow';
+    model: string;
+    fallbackModels?: {
+      openrouter: string[];
+      siliconflow: string[];
+    } | undefined;
+    allowCrossProviderFallback?: boolean | undefined;
+    freeTierFallbacksOnly?: boolean | undefined;
+  } | null>(),
   title: text('title').notNull(),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),

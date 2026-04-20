@@ -15,10 +15,14 @@ import {
   getChatConfig,
   updateScopeProvider,
   updateScopeModel,
+  updateScopeFallbackModels,
+  updateScopeCrossProviderFallback,
+  updateScopeFreeTierFallbacksOnly,
   getEmbedConfig,
   updateEmbedProvider,
   updateEmbedModel,
 } from '@/src/ai/scopes';
+import { formatModelListInput, parseModelListInput } from '@/src/ai/fallback';
 import { reEmbedAll } from '@/src/features/learning';
 import { BackupSection } from '@/src/features/backup';
 import type { ChatScope, Provider } from '@/src/domain/types';
@@ -87,6 +91,23 @@ export default function SettingsScreen() {
   function handleModelChange(scope: ChatScope, provider: Provider, model: string) {
     updateScopeModel(scope, provider, model);
     setConfig(getChatConfig());
+  }
+
+  function handleFallbackModelsChange(scope: ChatScope, provider: Provider, text: string) {
+    updateScopeFallbackModels(scope, provider, parseModelListInput(text));
+    setConfig(getChatConfig());
+  }
+
+  function handleCrossProviderFallbackToggle(scope: ChatScope, enabled: boolean) {
+    updateScopeCrossProviderFallback(scope, enabled);
+    setConfig(getChatConfig());
+    flash(`${scope} cross-provider fallback ${enabled ? 'enabled' : 'disabled'}`);
+  }
+
+  function handleFreeTierFallbacksOnlyToggle(scope: ChatScope, enabled: boolean) {
+    updateScopeFreeTierFallbacksOnly(scope, enabled);
+    setConfig(getChatConfig());
+    flash(`${scope} free-tier fallbacks ${enabled ? 'enabled' : 'disabled'}`);
   }
 
   function handleEmbedProviderChange(provider: Provider) {
@@ -192,7 +213,9 @@ export default function SettingsScreen() {
         </View>
 
         <Text style={styles.sectionTitle}>Model Config</Text>
-        <Text style={styles.hint}>Each scope has its own provider and model.</Text>
+        <Text style={styles.hint}>
+          Each scope has its own primary model and fallback hierarchy.
+        </Text>
 
         {SCOPES.map((scope) => {
           const scopeConfig = config[scope];
@@ -232,6 +255,84 @@ export default function SettingsScreen() {
                   handleModelChange(scope, scopeConfig.provider, text)
                 }
                 placeholder="model-id"
+                placeholderTextColor={colors.textSecondary}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+
+              <View style={styles.toggleRow}>
+                <Text style={styles.toggleLabel}>Cross-provider fallback</Text>
+                <Pressable
+                  style={[
+                    styles.toggleBtn,
+                    scopeConfig.allowCrossProviderFallback && styles.toggleBtnActive,
+                  ]}
+                  onPress={() =>
+                    handleCrossProviderFallbackToggle(
+                      scope,
+                      !scopeConfig.allowCrossProviderFallback,
+                    )
+                  }
+                >
+                  <Text
+                    style={[
+                      styles.toggleBtnText,
+                      scopeConfig.allowCrossProviderFallback && styles.toggleBtnTextActive,
+                    ]}
+                  >
+                    {scopeConfig.allowCrossProviderFallback ? 'ON' : 'OFF'}
+                  </Text>
+                </Pressable>
+              </View>
+
+              <View style={styles.toggleRow}>
+                <Text style={styles.toggleLabel}>Free-tier fallback models only</Text>
+                <Pressable
+                  style={[
+                    styles.toggleBtn,
+                    scopeConfig.freeTierFallbacksOnly && styles.toggleBtnActive,
+                  ]}
+                  onPress={() =>
+                    handleFreeTierFallbacksOnlyToggle(
+                      scope,
+                      !scopeConfig.freeTierFallbacksOnly,
+                    )
+                  }
+                >
+                  <Text
+                    style={[
+                      styles.toggleBtnText,
+                      scopeConfig.freeTierFallbacksOnly && styles.toggleBtnTextActive,
+                    ]}
+                  >
+                    {scopeConfig.freeTierFallbacksOnly ? 'ON' : 'OFF'}
+                  </Text>
+                </Pressable>
+              </View>
+
+              <Text style={styles.modelLabel}>Fallback hierarchy (OpenRouter)</Text>
+              <TextInput
+                style={styles.fallbackInput}
+                multiline
+                value={formatModelListInput(scopeConfig.fallbackModels.openrouter)}
+                onChangeText={(text) =>
+                  handleFallbackModelsChange(scope, 'openrouter', text)
+                }
+                placeholder="one model per line"
+                placeholderTextColor={colors.textSecondary}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+
+              <Text style={styles.modelLabel}>Fallback hierarchy (SiliconFlow)</Text>
+              <TextInput
+                style={styles.fallbackInput}
+                multiline
+                value={formatModelListInput(scopeConfig.fallbackModels.siliconflow)}
+                onChangeText={(text) =>
+                  handleFallbackModelsChange(scope, 'siliconflow', text)
+                }
+                placeholder="one model per line"
                 placeholderTextColor={colors.textSecondary}
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -460,6 +561,55 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     fontFamily: 'monospace',
+  },
+  fallbackInput: {
+    backgroundColor: colors.background,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    color: colors.text,
+    fontSize: fontSize.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    fontFamily: 'monospace',
+    minHeight: 72,
+    textAlignVertical: 'top',
+    marginBottom: spacing.sm,
+  },
+  toggleRow: {
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  toggleLabel: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    flex: 1,
+  },
+  toggleBtn: {
+    minWidth: 54,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    paddingVertical: spacing.xs + 2,
+    paddingHorizontal: spacing.sm,
+  },
+  toggleBtnActive: {
+    borderColor: colors.primary,
+    backgroundColor: 'rgba(96, 139, 219, 0.2)',
+  },
+  toggleBtnText: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+  },
+  toggleBtnTextActive: {
+    color: colors.primary,
   },
   reEmbedBtn: {
     marginTop: spacing.md,

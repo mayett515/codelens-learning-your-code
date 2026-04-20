@@ -75,6 +75,7 @@
       flex-wrap: wrap;
       gap: 8px;
       margin-bottom: 10px;
+      align-items: center;
     }
 
     button {
@@ -90,6 +91,30 @@
     button:hover {
       border-color: #4a5164;
       background: #252a3a;
+    }
+
+    .toolbar .warn {
+      border-color: #5a2f37;
+      background: #2a151a;
+      color: #ffd7de;
+    }
+
+    .toolbar .warn:hover {
+      border-color: #8a404f;
+      background: #341920;
+    }
+
+    .autosave {
+      margin-left: auto;
+      border: 1px solid #343b4d;
+      background: #131725;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      color: var(--text-dim);
+      min-height: 32px;
+      display: inline-flex;
+      align-items: center;
     }
 
     .grid-meta {
@@ -556,10 +581,16 @@
       <div class="toolbar">
         <button onclick="window.print()">Print / Save PDF</button>
         <button onclick="resetStatuses()">Reset Status</button>
+        <button onclick="exportDraft()">Export Draft JSON</button>
+        <button onclick="document.getElementById('import-draft-file').click()">Import Draft JSON</button>
+        <button class="warn" onclick="clearAllForNewRun()">New Test Run (Clear All)</button>
+        <span id="autosave-indicator" class="autosave">Autosave: not saved yet</span>
       </div>
+      <input id="import-draft-file" type="file" accept=".json,application/json" style="display:none" />
 
       <h1>Phase 6 QA Release Checklist</h1>
       <p>Backup, restore, clear-all-data, interruption handling, and release gate.</p>
+      <p class="small" style="margin-top:8px;">Tip: this sheet autosaves in your browser. Use Export Draft JSON to move notes between devices.</p>
 
       <div class="grid-meta">
         <div class="field">
@@ -1043,6 +1074,111 @@ node -e "const fs=require('fs');const p='$work\\\\unzipped\\\\concepts.ndjson';c
   </div>
 
   <script>
+    const DRAFT_STORAGE_KEY = 'codelens.phase6.qa.neon.v2';
+
+    function editableNodes() {
+      return Array.from(document.querySelectorAll('[contenteditable="true"]'));
+    }
+
+    function collectDraft() {
+      return {
+        version: 2,
+        savedAt: new Date().toISOString(),
+        statuses: Array.from(document.querySelectorAll('.status-select')).map((s) => s.value),
+        editable: editableNodes().map((el) => el.innerText)
+      };
+    }
+
+    function setAutosaveText(text) {
+      const el = document.getElementById('autosave-indicator');
+      if (el) el.textContent = text;
+    }
+
+    function saveDraft() {
+      try {
+        const draft = collectDraft();
+        localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
+        setAutosaveText(`Autosave: ${new Date().toLocaleTimeString()}`);
+      } catch (_) {
+        setAutosaveText('Autosave: failed');
+      }
+    }
+
+    function applyDraft(draft) {
+      if (!draft || typeof draft !== 'object') return;
+      const selects = Array.from(document.querySelectorAll('.status-select'));
+      const editables = editableNodes();
+      if (Array.isArray(draft.statuses)) {
+        for (let i = 0; i < Math.min(selects.length, draft.statuses.length); i += 1) {
+          selects[i].value = draft.statuses[i];
+          applyStatusClass(selects[i]);
+        }
+      }
+      if (Array.isArray(draft.editable)) {
+        for (let i = 0; i < Math.min(editables.length, draft.editable.length); i += 1) {
+          editables[i].innerText = draft.editable[i] ?? '';
+        }
+      }
+      updateSummary();
+      if (draft.savedAt) setAutosaveText(`Autosave: restored ${new Date(draft.savedAt).toLocaleString()}`);
+    }
+
+    function loadDraft() {
+      try {
+        const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        applyDraft(parsed);
+      } catch (_) {
+        setAutosaveText('Autosave: restore failed');
+      }
+    }
+
+    function exportDraft() {
+      const draft = collectDraft();
+      const blob = new Blob([JSON.stringify(draft, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+      a.href = url;
+      a.download = `phase6-qa-draft-${stamp}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      saveDraft();
+    }
+
+    function importDraftFromFile(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(String(reader.result || '{}'));
+          applyDraft(parsed);
+          saveDraft();
+        } catch (_) {
+          window.alert('Invalid draft JSON file.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function clearAllForNewRun() {
+      const ok = window.confirm('Start a new test run? This clears all notes/statuses in this sheet.');
+      if (!ok) return;
+      document.querySelectorAll('.status-select').forEach((s) => {
+        s.value = 'N/A';
+        applyStatusClass(s);
+      });
+      editableNodes().forEach((el) => {
+        el.innerText = '';
+      });
+      localStorage.removeItem(DRAFT_STORAGE_KEY);
+      updateSummary();
+      setAutosaveText('Autosave: cleared for new run');
+    }
+
     function applyStatusClass(selectEl) {
       selectEl.classList.remove('status-pass', 'status-fail', 'status-blocked', 'status-na');
       const v = selectEl.value;
@@ -1084,9 +1220,22 @@ node -e "const fs=require('fs');const p='$work\\\\unzipped\\\\concepts.ndjson';c
       s.addEventListener('change', () => {
         applyStatusClass(s);
         updateSummary();
+        saveDraft();
       });
     });
+    editableNodes().forEach((el) => {
+      el.addEventListener('input', () => saveDraft());
+    });
+    const importInput = document.getElementById('import-draft-file');
+    if (importInput) {
+      importInput.addEventListener('change', (e) => {
+        const target = e.target;
+        if (target && target.files && target.files[0]) importDraftFromFile(target.files[0]);
+        target.value = '';
+      });
+    }
     updateSummary();
+    loadDraft();
   </script>
 </body>
 </html>

@@ -4,6 +4,7 @@ import { chats, chatMessages } from '../schema';
 import type {
   Chat,
   ChatId,
+  ChatModelOverride,
   ChatMessage,
   ChatScope,
   ConceptId,
@@ -17,6 +18,8 @@ function rowToChat(
   row: typeof chats.$inferSelect,
   messages: ChatMessage[] = [],
 ): Chat {
+  const modelOverride = normalizeChatModelOverride(row.modelOverride);
+
   return {
     id: row.id as ChatId,
     scope: row.scope as ChatScope,
@@ -26,6 +29,7 @@ function rowToChat(
     endLine: row.endLine ?? undefined,
     folderId: (row.folderId as FolderId) ?? undefined,
     conceptId: (row.conceptId as ConceptId) ?? undefined,
+    modelOverride,
     title: row.title,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -106,6 +110,7 @@ export async function insertChat(
     endLine: chat.endLine ?? null,
     folderId: chat.folderId ?? null,
     conceptId: chat.conceptId ?? null,
+    modelOverride: chat.modelOverride ?? null,
     title: chat.title,
     createdAt: chat.createdAt,
     updatedAt: chat.updatedAt,
@@ -134,6 +139,68 @@ export async function deleteMessage(id: MessageId): Promise<void> {
   await db.delete(chatMessages).where(eq(chatMessages.id, id));
 }
 
+export async function updateChatModelOverride(
+  chatId: ChatId,
+  modelOverride?: ChatModelOverride,
+): Promise<void> {
+  await db
+    .update(chats)
+    .set({
+      modelOverride: modelOverride ?? null,
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(chats.id, chatId));
+}
+
 export async function deleteChat(id: ChatId): Promise<void> {
   await db.delete(chats).where(eq(chats.id, id));
+}
+
+function normalizeChatModelOverride(raw: unknown): ChatModelOverride | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+
+  const value = raw as Partial<ChatModelOverride>;
+  if (value.provider !== 'openrouter' && value.provider !== 'siliconflow') {
+    return undefined;
+  }
+
+  const model = value.model?.trim();
+  if (!model) return undefined;
+
+  return {
+    provider: value.provider,
+    model,
+    fallbackModels: value.fallbackModels
+      ? {
+          openrouter: normalizeModelList(value.fallbackModels.openrouter),
+          siliconflow: normalizeModelList(value.fallbackModels.siliconflow),
+        }
+      : undefined,
+    allowCrossProviderFallback:
+      typeof value.allowCrossProviderFallback === 'boolean'
+        ? value.allowCrossProviderFallback
+        : undefined,
+    freeTierFallbacksOnly:
+      typeof value.freeTierFallbacksOnly === 'boolean'
+        ? value.freeTierFallbacksOnly
+        : undefined,
+  };
+}
+
+function normalizeModelList(models: unknown): string[] {
+  if (!Array.isArray(models)) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+
+  for (const model of models) {
+    if (typeof model !== 'string') continue;
+    const trimmed = model.trim();
+    if (!trimmed) continue;
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(trimmed);
+  }
+
+  return out;
 }

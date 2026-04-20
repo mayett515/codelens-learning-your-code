@@ -1,15 +1,21 @@
 import { messageId as makeMessageId } from '../domain/types';
 import { uid } from '../lib/uid';
-import type { ChatId, ChatMessage, ChatScope } from '../domain/types';
+import type { ChatId, ChatMessage, ChatModelOverride, ChatScope } from '../domain/types';
 
 export interface SendFlowDeps {
   chatId: ChatId;
   text: string;
   scope: ChatScope;
+  routingOverride?: ChatModelOverride | undefined;
   buildSystemPrompt: () => string;
   messages: ChatMessage[];
   insertMessage: (chatId: ChatId, msg: ChatMessage) => Promise<void>;
-  enqueue: (scope: ChatScope, msgs: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>) => Promise<string>;
+  enqueue: (
+    scope: ChatScope,
+    msgs: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>,
+    signal?: AbortSignal | undefined,
+    options?: { routingOverride?: ChatModelOverride | undefined } | undefined,
+  ) => Promise<string>;
   onUserMessageInserted?: (() => void) | undefined;
 }
 
@@ -32,7 +38,9 @@ export async function executeSendFlow(deps: SendFlowDeps): Promise<void> {
     { role: 'user', content: deps.text },
   ];
 
-  const response = await deps.enqueue(deps.scope, aiMessages);
+  const response = await deps.enqueue(deps.scope, aiMessages, undefined, {
+    routingOverride: deps.routingOverride,
+  });
 
   const assistantMsg: ChatMessage = {
     id: makeMessageId(uid()),

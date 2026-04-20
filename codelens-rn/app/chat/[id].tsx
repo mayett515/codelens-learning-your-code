@@ -14,15 +14,17 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { colors, fontSize, spacing } from '@/src/ui/theme';
 import { chatKeys, fileKeys } from '@/src/hooks/query-keys';
-import { getChatById, deleteMessage } from '@/src/db/queries/chats';
+import { getChatById, deleteMessage, updateChatModelOverride } from '@/src/db/queries/chats';
 import { getFileById } from '@/src/db/queries/files';
 import { buildSectionSystemPrompt } from '@/src/domain/prompts';
+import { getScopeConfig } from '@/src/ai/scopes';
 import { useSendMessage } from '@/src/hooks/use-send-message';
 import { ChatBubble } from '@/src/ui/components/ChatBubble';
 import { ChatInput } from '@/src/ui/components/ChatInput';
 import { BubbleMenu } from '@/src/ui/components/BubbleMenu';
+import { ChatModelPickerModal } from '@/src/ui/components/ChatModelPickerModal';
 import { SaveAsLearningModal, useSaveLearningStore } from '@/src/features/learning';
-import type { ChatId, ChatMessage } from '@/src/domain/types';
+import type { ChatId, ChatMessage, ChatModelOverride } from '@/src/domain/types';
 
 export default function SectionChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -30,6 +32,8 @@ export default function SectionChatScreen() {
   const queryClient = useQueryClient();
   const openLearning = useSaveLearningStore((s) => s.open);
   const [menuMessage, setMenuMessage] = useState<ChatMessage | null>(null);
+  const [modelPickerVisible, setModelPickerVisible] = useState(false);
+  const scopeConfig = getScopeConfig('section');
 
   const { data: chat } = useQuery({
     queryKey: chatKeys.detail(chatId),
@@ -56,7 +60,13 @@ export default function SectionChatScreen() {
     return 'You are a helpful coding assistant. Be concise.';
   }, [file, chat]);
 
-  const { send, sending, error, clearError } = useSendMessage(chatId, 'section', buildPrompt, messages);
+  const { send, sending, error, clearError } = useSendMessage(
+    chatId,
+    'section',
+    buildPrompt,
+    messages,
+    chat?.modelOverride,
+  );
 
   const handleDeleteMessage = useCallback(
     async (msg: ChatMessage) => {
@@ -69,6 +79,24 @@ export default function SectionChatScreen() {
   const handleSaveAsLearning = useCallback(
     (msg: ChatMessage) => openLearning(msg, chatId),
     [openLearning, chatId],
+  );
+
+  const handleSaveModelOverride = useCallback(
+    async (override: ChatModelOverride) => {
+      await updateChatModelOverride(chatId, override);
+      queryClient.invalidateQueries({ queryKey: chatKeys.detail(chatId) });
+      queryClient.invalidateQueries({ queryKey: chatKeys.recent });
+    },
+    [chatId, queryClient],
+  );
+
+  const handleClearModelOverride = useCallback(
+    async () => {
+      await updateChatModelOverride(chatId, undefined);
+      queryClient.invalidateQueries({ queryKey: chatKeys.detail(chatId) });
+      queryClient.invalidateQueries({ queryKey: chatKeys.recent });
+    },
+    [chatId, queryClient],
   );
 
   const codeContext =
@@ -94,6 +122,16 @@ export default function SectionChatScreen() {
               <Text style={styles.context} numberOfLines={1}>{codeContext}</Text>
             ) : null}
           </View>
+          <Pressable
+            style={[styles.modelBtn, chat?.modelOverride && styles.modelBtnActive]}
+            onPress={() => setModelPickerVisible(true)}
+          >
+            <Text
+              style={[styles.modelBtnText, chat?.modelOverride && styles.modelBtnTextActive]}
+            >
+              {chat?.modelOverride ? 'Model*' : 'Model'}
+            </Text>
+          </Pressable>
         </View>
 
         <FlatList
@@ -133,6 +171,17 @@ export default function SectionChatScreen() {
         onSaveAsLearning={handleSaveAsLearning}
       />
       <SaveAsLearningModal />
+      {chat ? (
+        <ChatModelPickerModal
+          visible={modelPickerVisible}
+          scope="section"
+          scopeConfig={scopeConfig}
+          currentOverride={chat.modelOverride}
+          onClose={() => setModelPickerVisible(false)}
+          onSave={handleSaveModelOverride}
+          onClear={handleClearModelOverride}
+        />
+      ) : null}
     </SafeAreaView>
   );
 }
@@ -150,6 +199,20 @@ const styles = StyleSheet.create({
   headerInfo: { flex: 1 },
   title: { color: colors.text, fontSize: fontSize.lg, fontWeight: '600' },
   context: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: 2 },
+  modelBtn: {
+    backgroundColor: colors.surfaceLight,
+    borderRadius: 6,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs + 1,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  modelBtnActive: {
+    borderColor: colors.primary,
+    backgroundColor: 'rgba(96, 139, 219, 0.2)',
+  },
+  modelBtnText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: '700' },
+  modelBtnTextActive: { color: colors.primary },
   messageList: { paddingVertical: spacing.md },
   typingBar: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg, paddingVertical: spacing.xs },
   typingText: { color: colors.textSecondary, fontSize: fontSize.sm },

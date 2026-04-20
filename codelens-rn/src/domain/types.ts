@@ -79,6 +79,7 @@ export interface Chat {
   endLine?: number | undefined;
   folderId?: FolderId | undefined;
   conceptId?: ConceptId | undefined;
+  modelOverride?: ChatModelOverride | undefined;
   title: string;
   createdAt: string;
   updatedAt: string;
@@ -99,6 +100,17 @@ export type Provider = 'openrouter' | 'siliconflow';
 export interface ScopeModelConfig {
   provider: Provider;
   models: Record<Provider, string>;
+  fallbackModels: Record<Provider, string[]>;
+  allowCrossProviderFallback: boolean;
+  freeTierFallbacksOnly: boolean;
+}
+
+export interface ChatModelOverride {
+  provider: Provider;
+  model: string;
+  fallbackModels?: Record<Provider, string[]> | undefined;
+  allowCrossProviderFallback?: boolean | undefined;
+  freeTierFallbacksOnly?: boolean | undefined;
 }
 
 export interface ChatConfig {

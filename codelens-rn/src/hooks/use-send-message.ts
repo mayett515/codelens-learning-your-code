@@ -4,7 +4,7 @@ import { insertMessage } from '../db/queries/chats';
 import { enqueue } from '../ai/queue';
 import { executeSendFlow } from './send-flow';
 import { chatKeys } from './query-keys';
-import type { ChatId, ChatMessage, ChatScope } from '../domain/types';
+import type { ChatId, ChatMessage, ChatModelOverride, ChatScope } from '../domain/types';
 
 interface UseSendMessageResult {
   send: (text: string) => Promise<void>;
@@ -18,6 +18,7 @@ export function useSendMessage(
   scope: ChatScope,
   buildSystemPrompt: () => string,
   messages: ChatMessage[],
+  routingOverride?: ChatModelOverride,
 ): UseSendMessageResult {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
@@ -36,6 +37,7 @@ export function useSendMessage(
           chatId,
           text,
           scope,
+          routingOverride,
           buildSystemPrompt,
           messages: messagesRef.current,
           insertMessage,
@@ -51,7 +53,7 @@ export function useSendMessage(
         setSending(false);
       }
     },
-    [chatId, scope, buildSystemPrompt, queryClient],
+    [chatId, scope, buildSystemPrompt, queryClient, routingOverride],
   );
 
   return { send, sending, error, clearError: useCallback(() => setError(''), []) };
