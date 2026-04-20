@@ -136,7 +136,7 @@ export function NewProjectModal({ visible, onClose, onCreated }: Props) {
     >
       <KeyboardAvoidingView
         style={styles.overlay}
-        behavior="padding"
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <View style={styles.container}>
           <View style={styles.header}>

@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Read(//c/CodeLens-v2//**)",
-      "Read(//c/CodeLens-v2/codelens-rn//**)"
+      "Read(//c/CodeLens-v2/codelens-rn//**)",
+      "Bash(node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit)",
+      "Bash(node /c/CodeLens-v2/codelens-rn/node_modules/typescript/bin/tsc -p /c/CodeLens-v2/codelens-rn/tsconfig.json --noEmit)"
     ]
   }
 }

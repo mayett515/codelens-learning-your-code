@@ -6,6 +6,8 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -153,6 +155,10 @@ export default function SettingsScreen() {
         </View>
       ) : null}
 
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
       <ScrollView style={styles.body} keyboardShouldPersistTaps="handled">
         <Text style={styles.sectionTitle}>API Keys</Text>
 
@@ -396,6 +402,7 @@ export default function SettingsScreen() {
 
         <BackupSection onFlash={flash} />
       </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
