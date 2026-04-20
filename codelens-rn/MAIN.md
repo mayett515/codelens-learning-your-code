@@ -16,6 +16,20 @@ Master map of docs for the React Native rewrite. If another agent (Claude / Code
    - Purpose: Expo default — run commands, nothing project-specific yet.
    - Include when: rarely; use `rewrite-spec/09-BUILD-PHASES.md` for real build/run workflow.
 
+## Architecture Contracts (Read Early)
+
+1. [whatwe_agreedonthearchitecture.md](whatwe_agreedonthearchitecture.md)
+   - Purpose: Strict LLM execution contract (hard constraints, do/don't rules, verification checklist).
+   - Include when: any AI agent edits code in this repo.
+
+2. [whatwe_agreedonthearchitecture_humans.md](whatwe_agreedonthearchitecture_humans.md)
+   - Purpose: Human-readable version of the same architecture agreement and tradeoffs.
+   - Include when: onboarding collaborators or sanity-checking architecture decisions.
+
+3. [inspiredlinks.md](inspiredlinks.md)
+   - Purpose: Curated external inspiration links we agreed to learn from.
+   - Include when: architecture discussion, TS/RN best-practice reviews, or refactor planning.
+
 ## Session Notes (Not Canonical)
 
 Dated handoff notes from specific work sessions. Useful for context, not for architecture.
@@ -30,6 +44,7 @@ Minimal doc bundles per task type, to keep prompts small:
 
 1. **New phase kickoff**
    - `MAIN.md`
+   - `whatwe_agreedonthearchitecture.md`
    - `rewrite-spec/00-START-HERE.md`
    - `rewrite-spec/09-BUILD-PHASES.md`
    - `current_state.md`

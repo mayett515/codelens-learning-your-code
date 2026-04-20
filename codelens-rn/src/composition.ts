@@ -3,6 +3,7 @@ import { makeMmkvStore } from './adapters/kv-mmkv';
 import { makeSqliteVectorStore } from './adapters/sqlite-vector-store';
 import { makeOpenRouterClient } from './adapters/openrouter-client';
 import { makeSiliconflowClient } from './adapters/siliconflow-client';
+import { getLocalEmbedding, isLocalEmbedModel } from './adapters/local-embedder';
 import { getRawDb } from './db/client';
 import { setCompleteImpl } from './ai/queue';
 import { setEmbedImpl } from './ai/embed';
@@ -36,6 +37,10 @@ function routedComplete(input: AiCompleteInput): Promise<string> {
 setCompleteImpl(routedComplete);
 
 function routedEmbed(input: AiEmbedInput): Promise<Float32Array> {
+  if (isLocalEmbedModel(input.model)) {
+    return getLocalEmbedding(input);
+  }
+
   const client = clients[input.api];
   if (!client) throw new Error(`Unknown provider: ${input.api}`);
   return client.embed(input);
