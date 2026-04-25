@@ -1,0 +1,617 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CodeLens — Java vs RN Comparison</title>
+  <style>
+    :root {
+      --bg-0: #0b0c10;
+      --bg-1: #12141b;
+      --bg-2: #171a22;
+      --bg-3: #1e2130;
+      --line: #2d313d;
+      --text: #d9dde7;
+      --text-dim: #98a0b2;
+      --neon-blue: #4fc3f7;
+      --neon-green: #8aff80;
+      --neon-yellow: #ffe44d;
+      --neon-orange: #ff8e2b;
+      --neon-red: #ff3b5c;
+      --neon-purple: #c678dd;
+      --java: #ff8e2b;
+      --rn: #4fc3f7;
+      --both: #8aff80;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: radial-gradient(circle at 15% 0%, #1e212d 0%, #0b0c10 40%), linear-gradient(#0b0c10, #0b0c10);
+      color: var(--text);
+      font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      line-height: 1.4;
+      padding: 28px 20px;
+      min-height: 100vh;
+    }
+    .wrap { max-width: 1400px; margin: 0 auto; }
+
+    /* HEADER */
+    .header { margin-bottom: 28px; }
+    .header h1 { font-size: 28px; color: #f8f9fc; letter-spacing: 0.3px; margin-bottom: 4px; }
+    .header p { color: var(--text-dim); font-size: 14px; }
+    .header .subtitle { color: var(--neon-blue); font-size: 13px; margin-top: 6px; }
+
+    /* LEGEND */
+    .legend {
+      display: flex; gap: 20px; flex-wrap: wrap;
+      margin-bottom: 24px; padding: 14px 18px;
+      background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px;
+    }
+    .leg { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+    /* STATS ROW */
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin-bottom: 28px; }
+    .stat {
+      background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px;
+      padding: 16px; text-align: center;
+    }
+    .stat .num { font-size: 32px; font-weight: 700; line-height: 1; margin-bottom: 4px; }
+    .stat .lbl { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.8px; }
+
+    /* COLUMNS */
+    .columns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+    @media (max-width: 900px) { .columns { grid-template-columns: 1fr; } }
+
+    .col-header {
+      padding: 14px 16px; border-radius: 10px 10px 0 0;
+      font-size: 13px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase;
+    }
+    .col-java .col-header  { background: rgba(255,142,43,0.15); border: 1px solid rgba(255,142,43,0.3); color: var(--java); }
+    .col-rn .col-header    { background: rgba(79,195,247,0.15); border: 1px solid rgba(79,195,247,0.3); color: var(--rn); }
+    .col-both .col-header  { background: rgba(138,255,128,0.1); border: 1px solid rgba(138,255,128,0.25); color: var(--both); }
+
+    .col-body {
+      border: 1px solid var(--line); border-top: none;
+      border-radius: 0 0 10px 10px;
+      background: var(--bg-1);
+      overflow: hidden;
+    }
+
+    /* FEATURE CARDS */
+    .feature {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      cursor: pointer;
+      transition: background 0.15s;
+      position: relative;
+    }
+    .feature:last-child { border-bottom: none; }
+    .feature:hover { background: var(--bg-3); }
+    .feature.has-note { padding-bottom: 8px; }
+
+    .feature-top { display: flex; align-items: flex-start; gap: 8px; }
+    .feature-title { font-size: 13px; font-weight: 600; color: var(--text); flex: 1; }
+    .feature-tags { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 5px; }
+
+    .tag {
+      font-size: 10px; padding: 2px 7px; border-radius: 20px;
+      font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase;
+    }
+    .tag-high   { background: rgba(255,59,92,0.2);  color: #ff3b5c; }
+    .tag-medium { background: rgba(255,142,43,0.2); color: #ff8e2b; }
+    .tag-low    { background: rgba(98,109,130,0.3); color: #98a0b2; }
+    .tag-easy   { background: rgba(138,255,128,0.15); color: #8aff80; }
+    .tag-hard   { background: rgba(198,120,221,0.2); color: #c678dd; }
+    .tag-ai     { background: rgba(79,195,247,0.15); color: #4fc3f7; }
+    .tag-ux     { background: rgba(255,235,59,0.15); color: #ffe44d; }
+
+    .note-area {
+      margin-top: 8px;
+      width: 100%;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 12px;
+      font-family: inherit;
+      padding: 7px 10px;
+      resize: vertical;
+      min-height: 52px;
+      display: none;
+    }
+    .note-area:focus { outline: none; border-color: var(--neon-blue); }
+    .note-area.visible { display: block; }
+    .note-hint { font-size: 10px; color: var(--text-dim); margin-top: 3px; display: none; }
+    .note-hint.visible { display: block; }
+
+    /* SECTION DIVIDERS */
+    .section-label {
+      font-size: 10px; text-transform: uppercase; letter-spacing: 1px;
+      color: var(--text-dim); padding: 8px 14px 4px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(0,0,0,0.2);
+    }
+
+    /* EXPORT BUTTON */
+    .export-bar {
+      display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+      padding: 16px 18px;
+      background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px;
+      margin-bottom: 20px;
+    }
+    .export-bar p { font-size: 13px; color: var(--text-dim); flex: 1; }
+    .btn {
+      padding: 9px 18px; border-radius: 8px; border: none;
+      font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn-blue { background: rgba(79,195,247,0.2); color: var(--neon-blue); border: 1px solid rgba(79,195,247,0.4); }
+    .btn-green { background: rgba(138,255,128,0.15); color: var(--neon-green); border: 1px solid rgba(138,255,128,0.3); }
+
+    /* FULL TABLE */
+    .table-wrap { overflow-x: auto; margin-bottom: 28px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th {
+      text-align: left; padding: 10px 14px;
+      background: var(--bg-2); border-bottom: 1px solid var(--line);
+      color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px;
+    }
+    td { padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    tr:hover td { background: var(--bg-3); }
+    tr:last-child td { border-bottom: none; }
+
+    .badge {
+      display: inline-block; padding: 2px 9px; border-radius: 20px;
+      font-size: 11px; font-weight: 600;
+    }
+    .badge-java  { background: rgba(255,142,43,0.2); color: var(--java); }
+    .badge-rn    { background: rgba(79,195,247,0.2); color: var(--rn); }
+    .badge-both  { background: rgba(138,255,128,0.15); color: var(--both); }
+    .badge-rn-better { background: rgba(79,195,247,0.2); color: var(--neon-blue); }
+
+    .card { background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-bottom: 16px; }
+    h2.section-title { font-size: 16px; color: #f0f2f8; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HEADER -->
+  <div class="header">
+    <h1>CodeLens — Java vs React Native</h1>
+    <p>Feature comparison: what was kept, what was improved, what needs to come back.</p>
+    <p class="subtitle">Click any feature card to add a note. Export to Markdown when done.</p>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats">
+    <div class="stat">
+      <div class="num" style="color: var(--neon-orange)">14</div>
+      <div class="lbl">Java-only features</div>
+    </div>
+    <div class="stat">
+      <div class="num" style="color: var(--neon-blue)">5</div>
+      <div class="lbl">RN improvements</div>
+    </div>
+    <div class="stat">
+      <div class="num" style="color: var(--neon-green)">12</div>
+      <div class="lbl">Shared / ported</div>
+    </div>
+    <div class="stat">
+      <div class="num" style="color: var(--neon-red)">3</div>
+      <div class="lbl">High impact gaps</div>
+    </div>
+    <div class="stat">
+      <div class="num" style="color: #ffe44d">6</div>
+      <div class="lbl">Low effort fixes</div>
+    </div>
+  </div>
+
+  <!-- EXPORT BAR -->
+  <div class="export-bar">
+    <p>Add notes by clicking any feature. When done, export everything (including your notes) to Markdown.</p>
+    <button class="btn btn-blue" onclick="exportMd()">Export to Markdown</button>
+    <button class="btn btn-green" onclick="clearNotes()">Clear all notes</button>
+  </div>
+
+  <!-- THREE COLUMNS -->
+  <div class="columns">
+
+    <!-- JAVA ONLY -->
+    <div class="col-java">
+      <div class="col-header">⚠ Java Only — Missing in RN</div>
+      <div class="col-body">
+
+        <div class="section-label">AI / Prompts</div>
+
+        <div class="feature" onclick="toggleNote(this)" data-id="dot-connector" data-category="AI" data-effort="medium" data-impact="high">
+          <div class="feature-top"><span class="feature-title">Dot Connector (memory injection)</span></div>
+          <div class="feature-tags">
+            <span class="tag tag-high">High Impact</span>
+            <span class="tag tag-ai">AI</span>
+            <span class="tag tag-easy">Medium effort</span>
+          </div>
+          <div class="note-hint visible">↓ click to add note</div>
+          <textarea class="note-area" placeholder="Add notes, decisions, ideas..." onclick="event.stopPropagation()"></textarea>
+        </div>
+
+        <div class="feature" onclick="toggleNote(this)" data-id="personas" data-category="AI" data-effort="low" data-impact="high">
+          <div class="feature-top"><span class="feature-title">Persona / Gem system (5 built-in + custom)</span></div>
+          <div class="feature-tags">
+            <span class="tag tag-high">High Impact</span>
+            <span class="tag tag-ai">AI</span>
+            <span class="tag tag-easy">Low effort</span>
+          </div>
+          <div class="note-hint visible">↓ click to add note</div>
+          <textarea class="note-area" placeholder="Add notes, decisions, ideas..." onclick="event.stopPropagation()"></textarea>
+        </div>
+
+        <div class="feature" onclick="toggleNote(this)" data-id="rich-learning-prompts" data-category="AI" data-effort="medium" data-impact="medium">
+          <div class="feature-top"><span class="feature-title">Learning chat: code snippets + Socratic pattern</span></div>
+          <div class="feature-tags">
+            <span class="tag tag-medium">Medium Impact</span>
+            <span class="tag tag-ai">AI</span>
+          </div>
+          <div class="note-hint visible">↓ click to add note</div>
+          <textarea class="note-area" placeholder="Add notes, decisions, ideas..." onclick="event.stopPropagation()"></textarea>
+        </div>
+
+        <div class="feature" onclick="toggleNote(this)" data-id="multi-prompt" data-category="AI" data-effort="low" data-impact="medium">
+          <div class="feature-top"><span class="feature-title">Multi-part system prompt composition</span></div>
+          <div class="feature-tags">
+            <span class="tag tag-medium">Medium Impact</span>
+            <span class="tag tag-ai">AI</span>
+            <span class="tag tag-easy">Low effort</span>
+          </div>
+          <div class="note-hint visible">↓ click to add note</div>
+          <textarea class="note-area" placeholder="Add notes, decisions, ideas..." onclick="event.stopPropagation()"></textarea>
+        </div>
+
+        <div class="section-label">UI / UX</div>
+
+        <div class="feature" onclick="toggleNote(this)" data-id="line-chat" data-category="UX" data-effort="medium" data-impact="medium">
+          <div class="feature-top"><span class="feature-title">Line-level mini chat (double-tap)</span></div>
+          <div class="feature-tags">
+            <span class="tag tag-medium">Medium Impact</span>
+            <span class="tag tag-ux">UX</span>
+          </div>
+          <div class="note-hint visible">↓ click to add note</div>
+          <textarea class="note-area" placeholder="Add notes, decisions, ideas..." onclick="event.stopPropagation()"></textarea>
+        </div>
+
+        <div class="feature" onclick="toggleNote(this)" data-id="bookmarks" data-category="UX" data-effort="medium" data-impact="low">
+          <div class="feature-top"><span class="feature-title">Message border color + bookmark system</span></div>
+          <div class="feature-tags">
+            <span class="tag tag-low">Low Impact</span>
+            <span class="tag tag-ux">UX</span>
+          </div>
+          <div class="note-hint visible">↓ click to add note</div>
+          <textarea class="note-area" placeholder="Add notes, decisions, ideas..." onclick="event.stopPropagation()"></textarea>
+        </div>
+
+        <div class="feature" onclick="toggleNote(this)" data-id="session-refs" data-category="UX" data-effort="high" data-impact="low">
+          <div class="feature-top"><span class="feature-title">Session reference markers in messages</span></div>
+          <div class="feature-tags">
+            <span class="tag tag-low">Low Impact</span>
+            <span class="tag tag-ux">UX</span>
+            <span class="tag tag-hard">High effort</span>
+          </div>
+          <div class="note-hint visible">↓ click to add note</div>
+          <textarea class="note-area" placeholder="Add notes, decisions, ideas..." onclick="event.stopPropagation()"></textarea>
+        </div>
+
+        <div class="feature" onclick="toggleNote(this)" data-id="strength-viz" data-category="UX" data-effort="low" data-impact="high">
+          <div class="feature-top"><span class="feature-title">Concept strength visualization (color gradient)</span></div>
+          <div class="feature-tags">
+            <span class="tag tag-high">High Impact</span>
+            <span class="tag tag-ux">UX</span>
+            <span class="tag tag-easy">Low effort</span>
+          </div>
+          <div class="note-hint visible">↓ click to add note</div>
+          <textarea class="note-area" placeholder="Add notes, decisions, ideas..." onclick="event.stopPropagation()"></textarea>
+        </div>
+
+        <div class="feature" onclick="toggleNote(this)" data-id="graph-modes" data-category="UX" data-effort="medium" data-impact="low">
+          <div class="feature-top"><span class="feature-title">Graph: 3 view modes + pinch zoom</span></div>
+          <div class="feature-tags">
+            <span class="tag tag-low">Low Impact</span>
+            <span class="tag tag-ux">UX</span>
+          </div>
+          <div class="note-hint visible">↓ click to add note</div>
+          <textarea class="note-area" placeholder="Add notes, decisions, ideas..." onclick="event.stopPropagation()"></textarea>
+        </div>
+
+        <div class="feature" onclick="toggleNote(this)" data-id="folder-tree" data-category="UX" data-effort="high" data-impact="low">
+          <div class="feature-top"><span class="feature-title">File picker: folder tree + search snippets</span></div>
+          <div class="feature-tags">
+            <span class="tag tag-low">Low Impact</span>
+            <span class="tag tag-ux">UX</span>
+            <span class="tag tag-hard">High effort</span>
+          </div>
+          <div class="note-hint visible">↓ click to add note</div>
+          <textarea class="note-area" placeholder="Add notes, decisions, ideas..." onclick="event.stopPropagation()"></textarea>
+        </div>
+
+        <div class="feature" onclick="toggleNote(this)" data-id="session-cards" data-category="UX" data-effort="low" data-impact="medium">
+          <div class="feature-top"><span class="feature-title">Session cards: counts + Today grouping</span></div>
+          <div class="feature-tags">
+            <span class="tag tag-medium">Medium Impact</span>
+            <span class="tag tag-ux">UX</span>
+            <span class="tag tag-easy">Low effort</span>
+          </div>
+          <div class="note-hint visible">↓ click to add note</div>
+          <textarea class="note-area" placeholder="Add notes, decisions, ideas..." onclick="event.stopPropagation()"></textarea>
+        </div>
+
+        <div class="feature" onclick="toggleNote(this)" data-id="concept-preview" data-category="UX" data-effort="low" data-impact="medium">
+          <div class="feature-top"><span class="feature-title">Concept preview modal (full taxonomy)</span></div>
+          <div class="feature-tags">
+            <span class="tag tag-medium">Medium Impact</span>
+            <span class="tag tag-ux">UX</span>
+            <span class="tag tag-easy">Low effort</span>
+          </div>
+          <div class="note-hint visible">↓ click to add note</div>
+          <textarea class="note-area" placeholder="Add notes, decisions, ideas..." onclick="event.stopPropagation()"></textarea>
+        </div>
+
+        <div class="feature" onclick="toggleNote(this)" data-id="cancel-request" data-category="UX" data-effort="low" data-impact="medium">
+          <div class="feature-top"><span class="feature-title">Cancel in-flight AI request button</span></div>
+          <div class="feature-tags">
+            <span class="tag tag-medium">Medium Impact</span>
+            <span class="tag tag-ux">UX</span>
+            <span class="tag tag-easy">Low effort</span>
+          </div>
+          <div class="note-hint visible">↓ click to add note</div>
+          <textarea class="note-area" placeholder="Add notes, decisions, ideas..." onclick="event.stopPropagation()"></textarea>
+        </div>
+
+        <div class="feature" onclick="toggleNote(this)" data-id="color-names" data-category="UX" data-effort="low" data-impact="low">
+          <div class="feature-top"><span class="feature-title">Mark color name customization</span></div>
+          <div class="feature-tags">
+            <span class="tag tag-low">Low Impact</span>
+            <span class="tag tag-ux">UX</span>
+            <span class="tag tag-easy">Low effort</span>
+          </div>
+          <div class="note-hint visible">↓ click to add note</div>
+          <textarea class="note-area" placeholder="Add notes, decisions, ideas..." onclick="event.stopPropagation()"></textarea>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- RN BETTER -->
+    <div class="col-rn">
+      <div class="col-header">✦ RN Does Better</div>
+      <div class="col-body">
+
+        <div class="feature" onclick="toggleNote(this)" data-id="extraction" data-category="AI" data-effort="-" data-impact="high">
+          <div class="feature-top"><span class="feature-title">Concept extraction (strict Zod schema + retry)</span></div>
+          <div class="feature-tags">
+            <span class="tag tag-high">Improvement</span>
+            <span class="tag tag-ai">AI</span>
+          </div>
+          <div class="note-hint visible">↓ click to add note</div>
+          <textarea class="note-area" placeholder="Add notes..." onclick="event.stopPropagation()"></textarea>
+        </div>
+
+        <div class="feature" onclick="toggleNote(this)" data-id="local-embeddings" data-category="AI" data-effort="-" data-impact="high">
+          <div class="feature-top"><span class="feature-title">Local-first embeddings via ExecuTorch (offline)</span></div>
+          <div class="feature-tags">
+            <span class="tag tag-high">Improvement</span>
+            <span class="tag tag-ai">AI</span>
+          </div>
+          <div class="note-hint visible">↓ click to add note</div>
+          <textarea class="note-area" placeholder="Add notes..." onclick="event.stopPropagation()"></textarea>
+        </div>
+
+        <div class="feature" onclick="toggleNote(this)" data-id="hot-cold" data-category="Infra" data-effort="-" data-impact="high">
+          <div class="feature-top"><span class="feature-title">Hot/Cold vector tier — bounded memory (~7.5MB cap)</span></div>
+          <div class="feature-tags">
+            <span class="tag tag-high">Improvement</span>
+          </div>
+          <div class="note-hint visible">↓ click to add note</div>
+          <textarea class="note-area" placeholder="Add notes..." onclick="event.stopPropagation()"></textarea>
+        </div>
+
+        <div class="feature" onclick="toggleNote(this)" data-id="transactions" data-category="Infra" data-effort="-" data-impact="high">
+          <div class="feature-top"><span class="feature-title">Drizzle transactions — atomic writes, no data corruption</span></div>
+          <div class="feature-tags">
+            <span class="tag tag-high">Improvement</span>
+          </div>
+          <div class="note-hint visible">↓ click to add note</div>
+          <textarea class="note-area" placeholder="Add notes..." onclick="event.stopPropagation()"></textarea>
+        </div>
+
+        <div class="feature" onclick="toggleNote(this)" data-id="backup" data-category="Feature" data-effort="-" data-impact="high">
+          <div class="feature-top"><span class="feature-title">Full backup/restore (.codelens archive with vectors)</span></div>
+          <div class="feature-tags">
+            <span class="tag tag-high">Improvement</span>
+          </div>
+          <div class="note-hint visible">↓ click to add note</div>
+          <textarea class="note-area" placeholder="Add notes..." onclick="event.stopPropagation()"></textarea>
+        </div>
+
+        <div class="feature" onclick="toggleNote(this)" data-id="fallback" data-category="AI" data-effort="-" data-impact="medium">
+          <div class="feature-top"><span class="feature-title">Multi-provider fallback engine (SiliconFlow / OpenRouter)</span></div>
+          <div class="feature-tags">
+            <span class="tag tag-medium">Improvement</span>
+            <span class="tag tag-ai">AI</span>
+          </div>
+          <div class="note-hint visible">↓ click to add note</div>
+          <textarea class="note-area" placeholder="Add notes..." onclick="event.stopPropagation()"></textarea>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- BOTH / SHARED -->
+    <div class="col-both">
+      <div class="col-header">✓ In Both Versions</div>
+      <div class="col-body">
+
+        <div class="feature" onclick="toggleNote(this)" data-id="shared-marks" data-category="Both">
+          <div class="feature-top"><span class="feature-title">Code marking / range marking with depth</span></div>
+          <textarea class="note-area" placeholder="Add notes..." onclick="event.stopPropagation()"></textarea>
+        </div>
+        <div class="feature" onclick="toggleNote(this)" data-id="shared-github" data-category="Both">
+          <div class="feature-top"><span class="feature-title">GitHub repo import</span></div>
+          <textarea class="note-area" placeholder="Add notes..." onclick="event.stopPropagation()"></textarea>
+        </div>
+        <div class="feature" onclick="toggleNote(this)" data-id="shared-section-chat" data-category="Both">
+          <div class="feature-top"><span class="feature-title">Section chat (code-scoped)</span></div>
+          <textarea class="note-area" placeholder="Add notes..." onclick="event.stopPropagation()"></textarea>
+        </div>
+        <div class="feature" onclick="toggleNote(this)" data-id="shared-general-chat" data-category="Both">
+          <div class="feature-top"><span class="feature-title">General chat</span></div>
+          <textarea class="note-area" placeholder="Add notes..." onclick="event.stopPropagation()"></textarea>
+        </div>
+        <div class="feature" onclick="toggleNote(this)" data-id="shared-learning" data-category="Both">
+          <div class="feature-top"><span class="feature-title">Save as Learning + concept extraction</span></div>
+          <textarea class="note-area" placeholder="Add notes..." onclick="event.stopPropagation()"></textarea>
+        </div>
+        <div class="feature" onclick="toggleNote(this)" data-id="shared-hub" data-category="Both">
+          <div class="feature-top"><span class="feature-title">Learning Hub (concepts + sessions list)</span></div>
+          <textarea class="note-area" placeholder="Add notes..." onclick="event.stopPropagation()"></textarea>
+        </div>
+        <div class="feature" onclick="toggleNote(this)" data-id="shared-graph" data-category="Both">
+          <div class="feature-top"><span class="feature-title">Knowledge graph (Cytoscape)</span></div>
+          <textarea class="note-area" placeholder="Add notes..." onclick="event.stopPropagation()"></textarea>
+        </div>
+        <div class="feature" onclick="toggleNote(this)" data-id="shared-vector" data-category="Both">
+          <div class="feature-top"><span class="feature-title">Vector similarity search (RAG retrieval)</span></div>
+          <textarea class="note-area" placeholder="Add notes..." onclick="event.stopPropagation()"></textarea>
+        </div>
+        <div class="feature" onclick="toggleNote(this)" data-id="shared-settings" data-category="Both">
+          <div class="feature-top"><span class="feature-title">Per-scope model config (section / general / learning)</span></div>
+          <textarea class="note-area" placeholder="Add notes..." onclick="event.stopPropagation()"></textarea>
+        </div>
+        <div class="feature" onclick="toggleNote(this)" data-id="shared-recent" data-category="Both">
+          <div class="feature-top"><span class="feature-title">Recent files per project</span></div>
+          <textarea class="note-area" placeholder="Add notes..." onclick="event.stopPropagation()"></textarea>
+        </div>
+        <div class="feature" onclick="toggleNote(this)" data-id="shared-filepicker" data-category="Both">
+          <div class="feature-top"><span class="feature-title">File picker with dual search modes</span></div>
+          <textarea class="note-area" placeholder="Add notes..." onclick="event.stopPropagation()"></textarea>
+        </div>
+        <div class="feature" onclick="toggleNote(this)" data-id="shared-dark" data-category="Both">
+          <div class="feature-top"><span class="feature-title">Dark theme</span></div>
+          <textarea class="note-area" placeholder="Add notes..." onclick="event.stopPropagation()"></textarea>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- FULL PRIORITY TABLE -->
+  <div class="card">
+    <h2 class="section-title">Post-v1.0 Priority Backlog</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Feature</th>
+            <th>Category</th>
+            <th>Effort</th>
+            <th>Impact</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>Memory injection in section chats (Dot Connector)</td><td><span class="tag tag-ai">AI</span></td><td>Medium</td><td><span class="tag tag-high">High</span></td><td>Java only</td></tr>
+          <tr><td>2</td><td>Persona toggle (Quick Helper / Debug Bot / Reviewer)</td><td><span class="tag tag-ai">AI</span></td><td>Low</td><td><span class="tag tag-high">High</span></td><td>Java only</td></tr>
+          <tr><td>3</td><td>Concept strength visualization</td><td><span class="tag tag-ux">UX</span></td><td>Low</td><td><span class="tag tag-high">High</span></td><td>Java only</td></tr>
+          <tr><td>4</td><td>Code snippets in learning review prompts</td><td><span class="tag tag-ai">AI</span></td><td>Medium</td><td><span class="tag tag-medium">Medium</span></td><td>Java only</td></tr>
+          <tr><td>5</td><td>Cancel in-flight AI request</td><td><span class="tag tag-ux">UX</span></td><td>Low</td><td><span class="tag tag-medium">Medium</span></td><td>Java only</td></tr>
+          <tr><td>6</td><td>Concept preview modal</td><td><span class="tag tag-ux">UX</span></td><td>Low</td><td><span class="tag tag-medium">Medium</span></td><td>Java only</td></tr>
+          <tr><td>7</td><td>Session cards with counts + Today grouping</td><td><span class="tag tag-ux">UX</span></td><td>Low</td><td><span class="tag tag-medium">Medium</span></td><td>Java only</td></tr>
+          <tr><td>8</td><td>Line-level mini chat (double-tap)</td><td><span class="tag tag-ux">UX</span></td><td>Medium</td><td><span class="tag tag-medium">Medium</span></td><td>Java only</td></tr>
+          <tr><td>9</td><td>Learner Gem persona for learning chat</td><td><span class="tag tag-ai">AI</span></td><td>Low</td><td><span class="tag tag-medium">Medium</span></td><td>Java only</td></tr>
+          <tr><td>10</td><td>Message bookmarks + border color tagging</td><td><span class="tag tag-ux">UX</span></td><td>Medium</td><td><span class="tag tag-low">Low</span></td><td>Java only</td></tr>
+          <tr><td>11</td><td>Graph pinch zoom + view mode switching</td><td><span class="tag tag-ux">UX</span></td><td>Medium</td><td><span class="tag tag-low">Low</span></td><td>Java only</td></tr>
+          <tr><td>12</td><td>File picker folder tree</td><td><span class="tag tag-ux">UX</span></td><td>High</td><td><span class="tag tag-low">Low</span></td><td>Java only</td></tr>
+          <tr><td>13</td><td>Session reference markers in messages</td><td><span class="tag tag-ux">UX</span></td><td>High</td><td><span class="tag tag-low">Low</span></td><td>Java only</td></tr>
+          <tr><td>14</td><td>Mark color name customization</td><td><span class="tag tag-ux">UX</span></td><td>Low</td><td><span class="tag tag-low">Low</span></td><td>Java only</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function toggleNote(el) {
+    const ta = el.querySelector('.note-area');
+    const hint = el.querySelector('.note-hint');
+    ta.classList.toggle('visible');
+    if (ta.classList.contains('visible')) {
+      ta.focus();
+      if (hint) hint.style.display = 'none';
+    } else {
+      if (hint && !ta.value.trim()) hint.style.display = 'block';
+    }
+  }
+
+  function exportMd() {
+    const lines = [];
+    lines.push('# CodeLens — Java vs RN Feature Comparison');
+    lines.push('');
+    lines.push('## Java-Only Features (Missing in RN)');
+    lines.push('');
+
+    document.querySelectorAll('.col-java .feature').forEach(f => {
+      const title = f.querySelector('.feature-title').textContent;
+      const tags = [...f.querySelectorAll('.tag')].map(t => t.textContent.trim()).join(' · ');
+      const note = f.querySelector('.note-area').value.trim();
+      lines.push(`### ${title}`);
+      lines.push(`_${tags}_`);
+      if (note) { lines.push(''); lines.push(`> ${note.replace(/\n/g, '\n> ')}`); }
+      lines.push('');
+    });
+
+    lines.push('## RN Improvements over Java');
+    lines.push('');
+    document.querySelectorAll('.col-rn .feature').forEach(f => {
+      const title = f.querySelector('.feature-title').textContent;
+      const note = f.querySelector('.note-area').value.trim();
+      lines.push(`- **${title}**`);
+      if (note) lines.push(`  - ${note}`);
+    });
+
+    lines.push('');
+    lines.push('## In Both Versions');
+    lines.push('');
+    document.querySelectorAll('.col-both .feature').forEach(f => {
+      const title = f.querySelector('.feature-title').textContent;
+      const note = f.querySelector('.note-area').value.trim();
+      lines.push(`- ${title}${note ? ' — ' + note : ''}`);
+    });
+
+    lines.push('');
+    lines.push('## Post-v1.0 Priority Backlog');
+    lines.push('');
+    lines.push('| # | Feature | Effort | Impact |');
+    lines.push('|---|---------|--------|--------|');
+    document.querySelectorAll('table tbody tr').forEach((tr, i) => {
+      const cells = [...tr.querySelectorAll('td')];
+      if (cells.length >= 5) {
+        lines.push(`| ${i+1} | ${cells[1].textContent.trim()} | ${cells[3].textContent.trim()} | ${cells[4].textContent.trim()} |`);
+      }
+    });
+
+    const md = lines.join('\n');
+    const blob = new Blob([md], { type: 'text/markdown' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'version_comparison.md';
+    a.click();
+  }
+
+  function clearNotes() {
+    if (!confirm('Clear all notes?')) return;
+    document.querySelectorAll('.note-area').forEach(ta => { ta.value = ''; ta.classList.remove('visible'); });
+    document.querySelectorAll('.note-hint').forEach(h => { h.style.display = 'block'; });
+  }
+</script>
+</body>
+</html>
