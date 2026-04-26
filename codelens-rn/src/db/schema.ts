@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real, primaryKey } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, real, primaryKey, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 export const projects = sqliteTable('projects', {
   id: text('id').primaryKey(),
@@ -83,6 +83,36 @@ export const concepts = sqliteTable('concepts', {
   id: text('id').primaryKey(),
   name: text('name').notNull(),
   summary: text('summary').notNull(),
+  normalizedKey: text('normalized_key').notNull().default(''),
+  canonicalSummary: text('canonical_summary'),
+  conceptType: text('concept_type', {
+    enum: [
+      'mechanism',
+      'mental_model',
+      'pattern',
+      'architecture_principle',
+      'language_feature',
+      'api_idiom',
+      'data_structure',
+      'algorithmic_idea',
+      'performance_principle',
+      'debugging_heuristic',
+      'failure_mode',
+      'testing_principle',
+    ],
+  }).notNull().default('mental_model'),
+  coreConcept: text('core_concept'),
+  architecturalPattern: text('architectural_pattern'),
+  programmingParadigm: text('programming_paradigm'),
+  languageOrRuntime: text('language_or_runtime_json', { mode: 'json' }).notNull().$type<string[]>().default([]),
+  surfaceFeatures: text('surface_features_json', { mode: 'json' }).notNull().$type<string[]>().default([]),
+  prerequisites: text('prerequisites_json', { mode: 'json' }).notNull().$type<string[]>().default([]),
+  relatedConcepts: text('related_concepts_json', { mode: 'json' }).notNull().$type<string[]>().default([]),
+  contrastConcepts: text('contrast_concepts_json', { mode: 'json' }).notNull().$type<string[]>().default([]),
+  representativeCaptureIds: text('representative_capture_ids_json', { mode: 'json' }).notNull().$type<string[]>().default([]),
+  familiarityScore: real('familiarity_score').notNull().default(0),
+  importanceScore: real('importance_score').notNull().default(0),
+  languageSyntaxLegacy: text('language_syntax_legacy'),
   taxonomy: text('taxonomy', { mode: 'json' }).notNull().$type<{
     domain?: string | undefined;
     subdomain?: string | undefined;
@@ -97,7 +127,40 @@ export const concepts = sqliteTable('concepts', {
   strength: real('strength').notNull().default(0.5),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
-});
+}, (t) => [
+  uniqueIndex('unique_concepts_normalized_key').on(t.normalizedKey),
+  index('idx_concepts_concept_type').on(t.conceptType),
+]);
+
+export const learningCaptures = sqliteTable('learning_captures', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
+  whatClicked: text('what_clicked').notNull(),
+  whyItMattered: text('why_it_mattered'),
+  rawSnippet: text('raw_snippet').notNull(),
+  snippetLang: text('snippet_lang'),
+  snippetSourcePath: text('snippet_source_path'),
+  snippetStartLine: integer('snippet_start_line'),
+  snippetEndLine: integer('snippet_end_line'),
+  chatMessageId: text('chat_message_id'),
+  sessionId: text('session_id'),
+  state: text('state', { enum: ['unresolved', 'linked', 'proposed_new'] }).notNull().default('unresolved'),
+  linkedConceptId: text('linked_concept_id').references(() => concepts.id, { onDelete: 'set null' }),
+  editableUntil: integer('editable_until').notNull(),
+  extractionConfidence: real('extraction_confidence'),
+  derivedFromCaptureId: text('derived_from_capture_id'),
+  embeddingStatus: text('embedding_status', { enum: ['pending', 'ready', 'failed'] }).notNull().default('pending'),
+  embeddingRetryCount: integer('embedding_retry_count').notNull().default(0),
+  conceptHint: text('concept_hint_json', { mode: 'json' }).$type<unknown | null>(),
+  keywords: text('keywords_json', { mode: 'json' }).notNull().$type<string[]>().default([]),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+}, (t) => [
+  index('idx_captures_state').on(t.state),
+  index('idx_captures_linked_concept').on(t.linkedConceptId),
+  index('idx_captures_session').on(t.sessionId),
+  index('idx_captures_created_at').on(t.createdAt),
+]);
 
 export const conceptLinks = sqliteTable('concept_links', {
   fromId: text('from_id').notNull(),

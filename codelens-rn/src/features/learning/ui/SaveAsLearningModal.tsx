@@ -5,21 +5,20 @@ import {
   Text,
   Pressable,
   ScrollView,
-  TextInput,
   ActivityIndicator,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
-import { learningKeys } from '../data/query-keys';
+import { captureKeys, conceptKeys } from '../data/query-keys';
 import { useSaveLearningStore } from '../state/save-learning';
-import { extractConcepts } from '../application/extract';
-import { findMergeCandidates } from '../application/retrieve';
-import { commitLearningSession } from '../application/commit';
-import { ConceptChip } from './ConceptChip';
+import { prepareSaveCandidates } from '../services/prepareSaveCandidates';
+import { saveCapture } from '../services/saveCapture';
+import { CandidateCaptureCard } from './cards/CandidateCaptureCard';
+import { CaptureCardFull } from './cards/CaptureCardFull';
 import { colors, fontSize, spacing } from '../../../ui/theme';
-import type { ConceptId } from '../../../domain/types';
+import type { ConceptType } from '../types/learning';
 
 export function SaveAsLearningModal() {
   const store = useSaveLearningStore();
@@ -33,37 +32,25 @@ export function SaveAsLearningModal() {
 
     (async () => {
       try {
-        const currentSnippet = useSaveLearningStore.getState().snippet;
-        const result = await extractConcepts(currentSnippet, controller.signal);
+        const state = useSaveLearningStore.getState();
+        const candidates = await prepareSaveCandidates(
+          {
+            selectedText: state.snippet,
+            chatMessageId: state.sourceMessageId,
+            sessionId: state.sourceChatId,
+          },
+          { signal: controller.signal },
+        );
         if (cancelled) return;
 
-        const s = useSaveLearningStore.getState();
-        s.setExtractionResult(result.title, result.concepts);
-
-        const suggestions: Array<{ conceptIndex: number; candidates: Awaited<ReturnType<typeof findMergeCandidates>> }> = [];
-        for (let i = 0; i < result.concepts.length; i++) {
-          try {
-            const candidates = await findMergeCandidates(
-              result.concepts[i].name,
-              result.concepts[i].summary,
-            );
-            if (candidates.length > 0) {
-              suggestions.push({ conceptIndex: i, candidates });
-            }
-          } catch {
-            // merge candidate lookup is non-critical
-          }
-        }
-
+        useSaveLearningStore.getState().setCandidates(candidates);
+        useSaveLearningStore.getState().setPhase('reviewing');
+      } catch (error) {
         if (cancelled) return;
-        const s2 = useSaveLearningStore.getState();
-        s2.setMergeSuggestions(suggestions);
-        s2.setPhase('reviewing');
-      } catch (e) {
-        if (cancelled) return;
-        useSaveLearningStore
-          .getState()
-          .setError(e instanceof Error ? e.message : 'Extraction failed');
+        const message = error instanceof Error
+          ? error.message
+          : "Couldn't extract your capture. Try again.";
+        useSaveLearningStore.getState().setError(message);
       }
     })();
 
@@ -73,45 +60,39 @@ export function SaveAsLearningModal() {
     };
   }, [store.visible, store.phase]);
 
-  const handleSave = useCallback(async () => {
-    const s = useSaveLearningStore.getState();
-    s.setPhase('saving');
-
-    try {
-      const newConcepts = s.extractedConcepts.filter(
-        (_, i) => s.selectedIndices.has(i) && !s.mergeTargets.has(i),
-      );
-      const mergedIds = [...s.mergeTargets.entries()]
-        .filter(([i]) => s.selectedIndices.has(i))
-        .map(([, id]) => id);
-
-      await commitLearningSession({
-        sourceChatId: s.sourceChatId!,
-        snippet: s.snippet,
-        title: s.extractedTitle,
-        newConcepts,
-        mergedConceptIds: mergedIds,
-      });
-
-      queryClient.invalidateQueries({ queryKey: learningKeys.sessions.all });
-      queryClient.invalidateQueries({ queryKey: learningKeys.concepts.all });
-      useSaveLearningStore.getState().close();
-    } catch (e) {
-      useSaveLearningStore
-        .getState()
-        .setError(e instanceof Error ? e.message : 'Save failed');
-    }
-  }, [queryClient]);
-
   const handleRetry = useCallback(() => {
     useSaveLearningStore.getState().setPhase('extracting');
   }, []);
 
-  const handleMerge = useCallback((index: number, existingId: ConceptId) => {
-    useSaveLearningStore.getState().acceptMerge(index, existingId);
-  }, []);
+  const handleSave = useCallback(async (candidateId: string, index: number) => {
+    const current = useSaveLearningStore.getState();
+    const candidate = current.candidates[index];
+    if (!candidate) return;
+    const currentState = current.saveStates[candidateId]?.state;
+    if (currentState === 'saving' || currentState === 'saved') return;
+
+    current.setCandidateSaveState(candidateId, { state: 'saving', error: null });
+    try {
+      const captureId = await saveCapture(candidate);
+      useSaveLearningStore
+        .getState()
+        .setCandidateSaveState(candidateId, { state: 'saved', captureId, error: null });
+      queryClient.invalidateQueries({ queryKey: captureKeys.all });
+      queryClient.invalidateQueries({ queryKey: conceptKeys.all });
+    } catch (error) {
+      useSaveLearningStore.getState().setCandidateSaveState(candidateId, {
+        state: 'failed',
+        error: error instanceof Error ? error.message : 'Save failed',
+      });
+    }
+  }, [queryClient]);
 
   if (!store.visible) return null;
+
+  const inspectingIndex = store.inspectingCandidateId
+    ? Number(store.inspectingCandidateId.replace('candidate-', ''))
+    : -1;
+  const inspectingCandidate = inspectingIndex >= 0 ? store.candidates[inspectingIndex] : null;
 
   return (
     <Modal
@@ -127,7 +108,7 @@ export function SaveAsLearningModal() {
         <Pressable style={styles.backdrop} onPress={store.close} />
         <View style={styles.container}>
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>Save as Learning</Text>
+            <Text style={styles.headerTitle}>Save Capture</Text>
             <Pressable onPress={store.close} hitSlop={8}>
               <Text style={styles.closeBtn}>X</Text>
             </Pressable>
@@ -136,104 +117,39 @@ export function SaveAsLearningModal() {
           {store.phase === 'extracting' && (
             <View style={styles.center}>
               <ActivityIndicator size="large" color={colors.primary} />
-              <Text style={styles.statusText}>Extracting concepts...</Text>
+              <Text style={styles.statusText}>Finding what clicked...</Text>
             </View>
           )}
 
-          {(store.phase === 'reviewing' || store.phase === 'saving') && (
-            <>
-              <ScrollView
-                style={styles.body}
-                keyboardShouldPersistTaps="handled"
-              >
-                <Text style={styles.label}>Title</Text>
-                <TextInput
-                  style={styles.titleInput}
-                  value={store.extractedTitle}
-                  onChangeText={store.editTitle}
-                  placeholderTextColor={colors.textSecondary}
-                />
-
-                <Text style={styles.label}>Snippet</Text>
-                <TextInput
-                  style={styles.snippetInput}
-                  value={store.snippet}
-                  onChangeText={store.editSnippet}
-                  multiline
-                  numberOfLines={4}
-                  placeholderTextColor={colors.textSecondary}
-                />
-
-                <Text style={styles.label}>
-                  Concepts ({store.selectedIndices.size}/
-                  {store.extractedConcepts.length})
-                </Text>
-                <View style={styles.conceptList}>
-                  {store.extractedConcepts.map((concept, index) => {
-                    const isMerged = store.mergeTargets.has(index);
-                    const suggestion = store.mergeSuggestions.find(
-                      (s) => s.conceptIndex === index,
-                    );
-
-                    return (
-                      <View key={index} style={styles.conceptRow}>
-                        <ConceptChip
-                          name={
-                            isMerged ? `\u2197 ${concept.name}` : concept.name
-                          }
-                          selected={store.selectedIndices.has(index)}
-                          onPress={() => store.toggleConceptSelection(index)}
-                          variant={isMerged ? 'merge' : 'default'}
-                        />
-                        <Text style={styles.conceptSummary} numberOfLines={2}>
-                          {concept.summary}
-                        </Text>
-                        {suggestion && !isMerged && (
-                          <View style={styles.mergeRow}>
-                            <Text style={styles.mergeLabel}>Similar:</Text>
-                            {suggestion.candidates.slice(0, 2).map((cand) => (
-                              <ConceptChip
-                                key={cand.concept.id}
-                                name={cand.concept.name}
-                                selected={false}
-                                onPress={() =>
-                                  handleMerge(index, cand.concept.id)
-                                }
-                                variant="merge"
-                              />
-                            ))}
-                          </View>
-                        )}
-                      </View>
-                    );
-                  })}
-                </View>
-              </ScrollView>
-
-              <View style={styles.footer}>
-                <Pressable
-                  style={[
-                    styles.saveBtn,
-                    (store.phase === 'saving' ||
-                      store.selectedIndices.size === 0) &&
-                      styles.saveBtnDisabled,
-                  ]}
-                  onPress={handleSave}
-                  disabled={
-                    store.phase === 'saving' || store.selectedIndices.size === 0
-                  }
-                >
-                  {store.phase === 'saving' ? (
-                    <ActivityIndicator size="small" color={colors.text} />
-                  ) : (
-                    <Text style={styles.saveBtnText}>
-                      Save {store.selectedIndices.size} Concept
-                      {store.selectedIndices.size !== 1 ? 's' : ''}
-                    </Text>
-                  )}
-                </Pressable>
-              </View>
-            </>
+          {store.phase === 'reviewing' && (
+            <ScrollView style={styles.body} keyboardShouldPersistTaps="handled">
+              {store.candidates.map((candidate, index) => {
+                const candidateId = `candidate-${index}`;
+                const saveStatus = store.saveStates[candidateId];
+                const conceptType = candidate.conceptHint?.proposedConceptType ?? null;
+                return (
+                  <View key={candidateId}>
+                    <CandidateCaptureCard
+                      candidateId={candidateId}
+                      title={candidate.title}
+                      whatClicked={candidate.whatClicked}
+                      rawSnippet={candidate.rawSnippet}
+                      conceptType={conceptType as ConceptType | null}
+                      linkedConceptName={candidate.linkedConceptName}
+                      isNewLanguageForExistingConcept={candidate.isNewLanguageForExistingConcept}
+                      crossLanguageHint={buildCrossLanguageHint(candidate)}
+                      extractionConfidence={candidate.extractionConfidence}
+                      saveState={saveStatus?.state ?? 'idle'}
+                      onSave={() => handleSave(candidateId, index)}
+                      onInspect={() => store.inspectCandidate(candidateId)}
+                    />
+                    {saveStatus?.state === 'failed' && saveStatus.error ? (
+                      <Text style={styles.errorInline}>{saveStatus.error}</Text>
+                    ) : null}
+                  </View>
+                );
+              })}
+            </ScrollView>
           )}
 
           {store.phase === 'error' && (
@@ -245,9 +161,57 @@ export function SaveAsLearningModal() {
             </View>
           )}
         </View>
+
+        {inspectingCandidate ? (
+          <Modal
+            animationType="fade"
+            transparent
+            visible={!!store.inspectingCandidateId}
+            onRequestClose={() => store.inspectCandidate(null)}
+          >
+            <View style={styles.inspectOverlay}>
+              <View style={styles.inspectContainer}>
+                <ScrollView>
+                  <CaptureCardFull
+                    title={inspectingCandidate.title}
+                    conceptType={inspectingCandidate.conceptHint?.proposedConceptType ?? null}
+                    whatClicked={inspectingCandidate.whatClicked}
+                    whyItMattered={inspectingCandidate.whyItMattered}
+                    rawSnippet={inspectingCandidate.rawSnippet}
+                    snippetLang={inspectingCandidate.snippetLang}
+                    snippetSourcePath={inspectingCandidate.snippetSourcePath}
+                    snippetStartLine={inspectingCandidate.snippetStartLine}
+                    snippetEndLine={inspectingCandidate.snippetEndLine}
+                    linkedConcept={inspectingCandidate.linkedConceptId && inspectingCandidate.linkedConceptName
+                      ? {
+                          id: inspectingCandidate.linkedConceptId,
+                          name: inspectingCandidate.linkedConceptName,
+                        }
+                      : null}
+                    derivedFromCaptureId={inspectingCandidate.derivedFromCaptureId}
+                  />
+                </ScrollView>
+                <Pressable style={styles.doneBtn} onPress={() => store.inspectCandidate(null)}>
+                  <Text style={styles.doneText}>Done</Text>
+                </Pressable>
+              </View>
+            </View>
+          </Modal>
+        ) : null}
       </KeyboardAvoidingView>
     </Modal>
   );
+}
+
+function buildCrossLanguageHint(candidate: {
+  isNewLanguageForExistingConcept: boolean;
+  linkedConceptName: string | null;
+  linkedConceptLanguages: string[] | null;
+}): string | null {
+  if (!candidate.isNewLanguageForExistingConcept || !candidate.linkedConceptName) return null;
+  const language = candidate.linkedConceptLanguages?.[0];
+  if (!language) return null;
+  return `You also saved ${candidate.linkedConceptName} in ${language}.`;
 }
 
 const styles = StyleSheet.create({
@@ -263,7 +227,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
-    maxHeight: '80%',
+    maxHeight: '84%',
     paddingBottom: spacing.lg,
   },
   header: {
@@ -277,7 +241,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: fontSize.lg,
-    fontWeight: '600',
+    fontWeight: '700',
     color: colors.text,
   },
   closeBtn: {
@@ -287,73 +251,6 @@ const styles = StyleSheet.create({
   body: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
-  },
-  label: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-    marginTop: spacing.md,
-  },
-  titleInput: {
-    backgroundColor: colors.surfaceLight,
-    borderRadius: 8,
-    padding: spacing.sm,
-    color: colors.text,
-    fontSize: fontSize.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  snippetInput: {
-    backgroundColor: colors.surfaceLight,
-    borderRadius: 8,
-    padding: spacing.sm,
-    color: colors.text,
-    fontSize: fontSize.sm,
-    borderWidth: 1,
-    borderColor: colors.border,
-    maxHeight: 120,
-    textAlignVertical: 'top',
-  },
-  conceptList: {
-    marginTop: spacing.xs,
-  },
-  conceptRow: {
-    marginBottom: spacing.sm,
-  },
-  conceptSummary: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    marginTop: 2,
-    marginLeft: spacing.xs,
-  },
-  mergeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: spacing.xs,
-    marginLeft: spacing.md,
-  },
-  mergeLabel: {
-    fontSize: fontSize.sm,
-    color: colors.textSecondary,
-    marginRight: spacing.xs,
-  },
-  footer: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-  },
-  saveBtn: {
-    backgroundColor: colors.primary,
-    borderRadius: 8,
-    padding: spacing.md,
-    alignItems: 'center',
-  },
-  saveBtnDisabled: {
-    opacity: 0.5,
-  },
-  saveBtnText: {
-    fontSize: fontSize.md,
-    fontWeight: '600',
-    color: colors.text,
   },
   center: {
     padding: spacing.xl,
@@ -372,6 +269,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: spacing.md,
   },
+  errorInline: {
+    color: colors.red,
+    fontSize: fontSize.sm,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.md,
+  },
   retryBtn: {
     backgroundColor: colors.surfaceLight,
     borderRadius: 8,
@@ -381,5 +284,28 @@ const styles = StyleSheet.create({
   retryBtnText: {
     fontSize: fontSize.md,
     color: colors.primary,
+  },
+  inspectOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    padding: spacing.md,
+  },
+  inspectContainer: {
+    maxHeight: '88%',
+    backgroundColor: colors.surface,
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  doneBtn: {
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary,
+  },
+  doneText: {
+    color: colors.text,
+    fontSize: fontSize.md,
+    fontWeight: '700',
   },
 });

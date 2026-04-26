@@ -3,7 +3,9 @@ import { db } from '../../../db/client';
 import type { DbOrTx } from '../../../db/client';
 import { learningSessions } from '../../../db/schema';
 import { parseConceptIds } from './codecs';
-import type { LearningSession, SessionId, ChatId } from '../../../domain/types';
+import { sortSessionsForHub } from './hubOrdering';
+import type { ConceptId as LegacyConceptId, LearningSession, SessionId, ChatId } from '../../../domain/types';
+import type { ConceptId } from '../types/ids';
 
 function rowToSession(
   row: typeof learningSessions.$inferSelect,
@@ -25,6 +27,52 @@ export async function getAllSessions(): Promise<LearningSession[]> {
     .from(learningSessions)
     .orderBy(desc(learningSessions.createdAt));
   return rows.map(rowToSession);
+}
+
+export async function getRecentSessions(limit: number): Promise<LearningSession[]> {
+  const rows = await db
+    .select()
+    .from(learningSessions)
+    .orderBy(desc(learningSessions.createdAt))
+    .limit(limit);
+  return sortSessionsForHub(rows.map(rowToSession));
+}
+
+export async function ensureLearningSessionForCapture(
+  input: {
+    sessionId: string;
+    sourceChatId: string;
+    conceptId: ConceptId | null;
+    title: string;
+    rawSnippet: string;
+    createdAt: number;
+  },
+  executor: DbOrTx = db,
+): Promise<void> {
+  const id = input.sessionId as SessionId;
+  const rows = await executor.select().from(learningSessions).where(eq(learningSessions.id, id));
+  const conceptId = input.conceptId as unknown as LegacyConceptId | null;
+
+  if (rows[0]) {
+    if (!conceptId) return;
+    const conceptIds = parseConceptIds(rows[0].conceptIds);
+    if (conceptIds.includes(conceptId)) return;
+    await executor
+      .update(learningSessions)
+      .set({ conceptIds: [...conceptIds, conceptId] })
+      .where(eq(learningSessions.id, id));
+    return;
+  }
+
+  await executor.insert(learningSessions).values({
+    id,
+    title: input.title,
+    source: 'bubble',
+    sourceChatId: input.sourceChatId as ChatId,
+    conceptIds: conceptId ? [conceptId] : [],
+    createdAt: new Date(input.createdAt).toISOString(),
+    rawSnippet: input.rawSnippet,
+  });
 }
 
 export async function getSessionById(

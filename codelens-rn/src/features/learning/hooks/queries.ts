@@ -39,3 +39,12 @@ export function useRelatedConcepts(conceptId: ConceptId, concept: Concept | unde
     enabled: !!concept,
   });
 }
+
+export { useRecentCaptures } from './useRecentCaptures';
+export { useConceptList } from './useConceptList';
+export type { ConceptListFilters, ConceptListSort } from './useConceptList';
+export { useRecentSessions } from './useRecentSessions';
+export { useSessionFlashback } from './useSessionFlashback';
+export type { SessionFlashbackData } from './useSessionFlashback';
+export { useKnowledgeHealthConcepts } from './useKnowledgeHealthConcepts';
+export { useConceptCaptures } from './useConceptCaptures';

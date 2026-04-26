@@ -115,9 +115,69 @@ More explicitly:
 ## 5. Current status
 
 - Product/design specs are complete.
-- Next work is implementation.
-- Codex should start with Stage 10 playbook, Phase A.
+- Stage 10 implementation has started in `C:\CodeLens-v2\codelens-rn`.
+- Phase A - Architecture prep and baseline checks is complete as of 2026-04-26.
+- Next work is Phase F / Stage 5 Promotion System.
 - Do not write new feature specs unless user explicitly asks.
+
+Phase A results:
+- Required repo architecture docs and guards were read.
+- Baseline typecheck passed: `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit`.
+- Baseline tests passed: `npm.cmd test` = 6 files, 27 tests.
+- Added static guard tests at `C:\CodeLens-v2\codelens-rn\src\__tests__\stage10-architecture-guards.test.ts`.
+- Added Stage 1 migration fixture SQL snapshots at `C:\CodeLens-v2\codelens-rn\src\features\learning\data\migrations\fixtures\`.
+- Current RN app has legacy learning/session/concept code and a WebView/Cytoscape graph. Treat these as known drift to replace in the relevant locked stages, not as source-of-truth behavior.
+
+Phase B results:
+- Stage 1 Data Foundation code is implemented in `C:\CodeLens-v2\codelens-rn`.
+- Added branded capture/concept IDs, Stage 1 types, codecs, repos, query keys, strength helper, Drizzle schema additions, migration 004, SQL migration artifact, and fixture snapshots.
+- Automated verification passed: `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit`; `npm.cmd test` = 10 files, 37 tests.
+- Static guard searches passed for hardcoded learning query arrays, Stage 1 data-layer `as any`, and persona/extractor leakage.
+- Device migration verification passed on a Samsung SM_A165F via USB debugging after `npm.cmd run android` reported `BUILD SUCCESSFUL in 12m 48s`.
+- Device DB verification passed: `schema_version: 4`, `learning_captures exists: True`, `concepts_capture_unlink_bd` trigger exists, Stage 1 concept columns missing: `[]`, and deleting a linked concept produced `('unresolved', None)` for the linked capture.
+- Windows DB pull note: PowerShell `>` corrupted binary DB pulls by doubling bytes; use `cmd /c "adb exec-out run-as ... > file"` for future DB pulls.
+- `npm.cmd run lint` currently fails on pre-existing `react/display-name` errors in `src/ui/components/ChatBubble.tsx` and `src/ui/components/CodeViewer.tsx`; this is separate from the Stage 1 work.
+
+Phase C results:
+- Stage 2 Extractor and Save Flow service layer is implemented in `C:\CodeLens-v2\codelens-rn`.
+- Added extractor prompt composition, extractor Zod schemas, retry-on-invalid-JSON runner, capture embedding text builder, save modal candidate data types, vector concept pre-check, candidate preparation, and capture-first `saveCapture`.
+- Save flow behavior is capture-first: no auto-concept creation, confidence-gated concept linking, DB transaction before embedding enqueue, and embedding failure does not roll back capture persistence.
+- Added cross-language existing-concept language append support and capture embedding retry increment helper.
+- Automated verification passed: `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit`; `npm.cmd test` = 13 files, 52 tests.
+- Integration note: legacy `SaveAsLearningModal` still renders old concept-first review UI. Stage 2 service contracts are ready; Stage 3 should replace modal internals with candidate cards and wire individual card saves through `prepareSaveCandidates` + `saveCapture`.
+
+Phase D results:
+- Stage 3 Card Components are implemented in `C:\CodeLens-v2\codelens-rn`.
+- Added six distinct card components: `CandidateCaptureCard`, `CaptureCardCompact`, `CaptureCardFull`, `ConceptCardCompact`, `ConceptCardFull`, and `CaptureChip`.
+- Added shared primitives: `ConceptTypeChip`, `StrengthIndicator`, `StateChip`, `SourceBreadcrumb`, and `LanguageChip`.
+- Reworked `SaveAsLearningModal` to use the capture-first Stage 2 services and `CandidateCaptureCard`; saves are independent per candidate, inspect does not save, and the old concept-first selection/merge/save-all flow is gone.
+- Reworked `useSaveLearningStore` for candidate-first modal state and per-candidate save status.
+- Automated verification passed: `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit`; `npm.cmd test` = 14 files, 56 tests.
+- Static guard tests now cover card existence, forbidden card props/base-card patterns, compact-card snippet exclusion, and save modal use of Stage 2 services.
+
+Phase E results:
+- Stage 4 Learning Hub Surfaces are implemented in `C:\CodeLens-v2\codelens-rn`.
+- Replaced the old tabbed sessions/concepts route with a feature-owned `LearningHubScreen`.
+- Added Hub sections/surfaces: `RecentCapturesSection`, `ConceptListSection`, `SessionCardsSection`, `SessionFlashbackScreen`, `KnowledgeHealthEntry`, and `KnowledgeHealthScreen`.
+- Added required Stage 4 hooks: `useRecentCaptures`, `useConceptList`, `useRecentSessions`, `useSessionFlashback`, and `useKnowledgeHealthConcepts`.
+- Added deterministic Hub ordering helpers: recent captures by `createdAt DESC` then `id ASC`; concepts weakest-first via `computeStrength`, then `updatedAt DESC`, then `name ASC`.
+- Hub list surfaces use compact cards only; full capture/concept cards open from detail modals. Flashback is read-only and has no live-chat input.
+- Automated verification passed: `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit`; `npm.cmd test` = 16 files, 62 tests.
+- Stage 4 guard tests cover required file/hook presence, thin route/no DB access from route, compact-card-only Hub lists, read-only flashback, and no quiz/streak/due health language.
+- Post-review fixes before Stage 5:
+  - `conceptMatchPreCheck` skips legacy vector hits before loading Stage 1 concepts.
+  - `LearningHubScreen` loads linked captures through a per-concept query for `ConceptCardFull` evidence/provenance.
+  - `saveCapture` creates/updates a `learning_sessions` row for the capture's session/chat grouping key.
+  - migration 005 safely rebuilds legacy `normalized_key` values: Stage-1 `c_...` rows keep canonical normalized keys, legacy/duplicate rows get deterministic suffixed keys so the unique index cannot abort or block future promotions.
+  - `getLearningConceptByNormalizedKey` ignores non-Stage-1 legacy rows.
+  - candidate retry state can clear prior errors.
+  - Added regression tests for these fixes.
+- Device migration 005 smoke test passed on Samsung SM_A165F after rebuilding/opening the app:
+  - copied DB reported `schema_version: 5`
+  - `unique_concepts_normalized_key` index exists
+  - duplicate normalized keys: `0`
+  - that device DB currently has `0` concepts/captures/sessions, so this verifies migration execution/no startup wedge but does not exercise the legacy-duplicate suffix branch with live legacy rows.
+- Integration note: concept detail in the Stage 4 modal now uses per-concept capture evidence/provenance. Stage 5 may expand this while implementing promotion flows. The Stage 4 concept list filters out pre-Stage-1 legacy concept IDs so old local rows do not crash the new branded-ID Hub.
 
 This means future work should be implementation, testing, migration safety, and integration discipline, not reopening product semantics that are already locked.
 

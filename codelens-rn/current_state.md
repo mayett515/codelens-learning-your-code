@@ -235,6 +235,192 @@ See `ARCHITECTURE.md` §§ "Migration system", "Hot/Cold vector tier", "Transact
 - **App icon + splash** — `app.json` splash background switched to dark `#0f1117` (both modes) for flashbang-free launches. Real PNGs pending; `design/ASSETS.md` + `design/THEME_SPECS.md` capture exact specs for Figma handoff.
 - Round-trip codec tests in `src/features/backup/__tests__/codecs.test.ts` (Float32Array → base64 → Float32Array, byte-for-byte).
 
+## Stage 10 Locked Learning-System Implementation
+
+### Phase A - Architecture Prep and Baseline Checks - COMPLETE (2026-04-26)
+
+- Required architecture docs and comparison-folder guards were read before edits.
+- Baseline inventory confirmed current overlap areas:
+  - Save entry: `SaveAsLearningModal` is wired from section/general/learning chat bubble menus.
+  - Chat composer: `ChatInput` plus `useSendMessage` and learning chat prompt helpers.
+  - Learning Hub: `app/learning/index.tsx` currently shows legacy sessions/concepts.
+  - Concept detail/chat entry: `app/learning/chat/[id].tsx`.
+  - File viewer line actions: `app/project/[id].tsx` and `CodeViewer`.
+  - Graph entry/backend: legacy `src/graph/WebViewGraph.tsx` and Cytoscape assets exist.
+  - Settings/storage: `app/settings.tsx`, backup feature, `src/db/*`, op-sqlite + Drizzle.
+- `strict` and `exactOptionalPropertyTypes` are enabled in `tsconfig.json`.
+- Persistence baseline still uses Drizzle + `@op-engineering/op-sqlite`; sqlite-vec and FTS5 are configured.
+- Added Phase A static guard tests in `src/__tests__/stage10-architecture-guards.test.ts`:
+  - learning query keys stay factory-owned
+  - persona code stays out of extractor files
+  - future Stage 3 cards stay free of density/variant props
+  - future Stage 9 graph code stays off WebView/SVG/Cytoscape backends
+- Added Stage 1 migration fixture snapshots under `src/features/learning/data/migrations/fixtures/`.
+- Verification:
+  - `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit` passes.
+  - `npm.cmd test` passes: 6 files, 27 tests.
+
+Known drift to resolve in later phases, not Phase A:
+- Existing learning model is session/concept-first; Stage 1/2 must replace it with capture-first schema and save contracts.
+- Existing graph uses WebView/Cytoscape; Stage 9 must replace it with native Skia concept-only graph.
+- Existing `src/domain/` is legacy architecture from the prior rewrite; do not expand it for the new locked learning work.
+
+Next locked step after Phase B was Phase C / Stage 2 Extractor and Save Flow.
+
+### Phase B - Stage 1 Data Foundation - COMPLETE / DEVICE MIGRATION GATED (2026-04-26)
+
+- Read `STAGE_1_DATA_FOUNDATION.md` before schema work.
+- Added capture-first data contracts:
+  - branded `LearningCaptureId` / `ConceptId` with `nanoid(21)` in `src/features/learning/types/ids.ts`
+  - locked concept type union and capture/concept domain shapes in `src/features/learning/types/learning.ts`
+  - capture and concept Zod codecs/mappers in `src/features/learning/codecs/`
+  - `learning_captures` table and upgraded concept fields in `src/db/schema.ts`
+  - Stage 1 migration `src/db/migrations/004-capture-first-model.ts`
+  - SQL migration artifact `src/features/learning/data/migrations/0004_capture_first_model.sql`
+  - capture/concept repos with `DbOrTx` threading
+  - capture/concept query key factories
+  - `computeStrength`
+- Added tests:
+  - codec round trips and loud malformed JSON failures
+  - branded ID generation/guards
+  - migration SQL contract checks
+  - strength monotonicity/clamping
+- Verification:
+  - `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit` passes.
+  - `npm.cmd test` passes: 10 files, 37 tests.
+  - Static searches found no hardcoded learning `queryKey: [...]`, no new `as any` in Stage 1 learning data/codecs/types/strength files, and no persona imports in learning code.
+- Device migration verification:
+  - User built and installed the RN app from normal PowerShell with `npm.cmd run android`; Gradle reported `BUILD SUCCESSFUL in 12m 48s`.
+  - App was opened on a Samsung SM_A165F via USB debugging.
+  - Pulled the device DB from package `com.anonymous.codelensrn` using `adb exec-out run-as ...`.
+  - Windows note: PowerShell `>` corrupted binary DB pulls by doubling bytes; use `cmd /c "adb exec-out ... > file"` for future DB pulls.
+  - Verified copied device DB:
+    - `schema_version: 4`
+    - `learning_captures exists: True`
+    - `concepts_capture_unlink_bd` trigger exists
+    - Stage 1 concept columns missing: `[]`
+    - deleting a linked concept produced `('unresolved', None)` for the linked capture.
+- Additional note:
+  - `npm.cmd run lint` currently fails on pre-existing `react/display-name` errors in `src/ui/components/ChatBubble.tsx` and `src/ui/components/CodeViewer.tsx`; not introduced by Stage 1.
+- Existing legacy learning screens still use old session/concept code; Stage 2+ should wire the new capture-first contracts instead of extending the legacy save flow.
+
+### Phase C - Stage 2 Extractor and Save Flow - CODE IMPLEMENTED (2026-04-26)
+
+- Read `STAGE_2_EXTRACTOR_AND_SAVE_FLOW.md` before Stage 2 work.
+- Added capture-first extractor and save-flow contracts:
+  - extractor prompt composition in `src/features/learning/extractor/extractorPrompt.ts`
+  - extractor Zod schemas in `src/features/learning/extractor/extractorSchema.ts`
+  - retry-on-invalid-JSON extractor runner in `src/features/learning/extractor/runExtractor.ts`
+  - capture embedding text builder in `src/features/learning/extractor/buildCaptureEmbeddingText.ts`
+  - save modal candidate data types in `src/features/learning/types/saveModal.ts`
+  - vector concept pre-check service in `src/features/learning/services/conceptMatchPreCheck.ts`
+  - candidate preparation service in `src/features/learning/services/prepareSaveCandidates.ts`
+  - capture-first `saveCapture` service in `src/features/learning/services/saveCapture.ts`
+- Updated Stage 1 capture concept hint shape to Stage 2's locked hint metadata.
+- Added `appendConceptLanguage` to the Stage 1 concept repo for cross-language existing-concept matches.
+- Updated capture embedding retry helper to increment retry count instead of requiring the caller to provide the next count.
+- Added focused Stage 2 tests covering:
+  - extractor schema validation and snippet cap
+  - invalid JSON retry exactly once
+  - failure after second invalid extractor response
+  - candidate mapping with match similarity
+  - unresolved save when no match
+  - low-confidence link blocked while capture still saves
+  - link allowed by similarity or confidence
+  - cross-language language append
+  - derived capture parent write
+  - DB failure does not enqueue embedding
+  - saving one candidate does not mutate another
+- Verification:
+  - `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit` passes.
+  - `npm.cmd test` passes: 13 files, 52 tests.
+- Integration note:
+  - The legacy `SaveAsLearningModal` still renders the old concept-first review UI. Stage 2 service contracts are implemented; Stage 3 should replace the modal internals with candidate cards and then wire individual card saves through `prepareSaveCandidates` + `saveCapture`.
+
+### Phase D - Stage 3 Card Components - CODE IMPLEMENTED (2026-04-26)
+
+- Read `STAGE_3_CARD_COMPONENTS.md` before card/modal work.
+- Added six distinct card components under `src/features/learning/ui/cards/`:
+  - `CandidateCaptureCard`
+  - `CaptureCardCompact`
+  - `CaptureCardFull`
+  - `ConceptCardCompact`
+  - `ConceptCardFull`
+  - `CaptureChip`
+- Added shared primitives under `src/features/learning/ui/primitives/`:
+  - `ConceptTypeChip`
+  - `StrengthIndicator`
+  - `StateChip`
+  - `SourceBreadcrumb`
+  - `LanguageChip`
+- Reworked `SaveAsLearningModal` to use the Stage 2 capture-first services:
+  - extraction uses `prepareSaveCandidates`
+  - visible decision surface uses `CandidateCaptureCard`
+  - individual candidate Save buttons call `saveCapture`
+  - saved/failed state is tracked per candidate
+  - Inspect opens a full capture preview without saving
+  - no concept-first selection list, no merge UI, no Save All action
+- Reworked `useSaveLearningStore` for candidate-first modal state.
+- Added Stage 3 guard tests proving:
+  - all six card components exist
+  - card components do not use forbidden `variant`/`density`/`mode`/`isCompact`/`isFull` props or base-card names
+  - compact cards do not render snippets/evidence
+  - save modal imports candidate cards and Stage 2 services, not the old concept-first commit/extract flow
+- Verification:
+  - `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit` passes.
+  - `npm.cmd test` passes: 14 files, 56 tests.
+- Integration note:
+  - Stage 3 provides the card component layer and candidate-first save modal. Stage 4 should consume compact/full cards in Learning Hub surfaces and may add route/modal hosts for persisted full capture/concept views.
+
+### Phase E - Stage 4 Learning Hub Surfaces - CODE IMPLEMENTED (2026-04-26)
+
+- Read `STAGE_4_LEARNING_HUB_SURFACES.md` before Hub work.
+- Replaced the legacy tabbed learning route with a feature-owned capture-first `LearningHubScreen`.
+- Added required Stage 4 Hub surfaces:
+  - `RecentCapturesSection`
+  - `ConceptListSection`
+  - `SessionCardsSection`
+  - `SessionFlashbackScreen`
+  - `KnowledgeHealthEntry`
+  - `KnowledgeHealthScreen`
+- Added required Stage 4 query hooks:
+  - `useRecentCaptures({ limit })`
+  - `useConceptList({ sort, filters })`
+  - `useRecentSessions({ limit })`
+  - `useSessionFlashback(sessionId)`
+  - `useKnowledgeHealthConcepts()`
+- Added deterministic Hub ordering helpers:
+  - recent captures sort by `createdAt DESC`, then `id ASC`
+  - concept list defaults to weakest-first via `computeStrength`, then `updatedAt DESC`, then `name ASC`
+  - recent sessions remain secondary and limited to five
+- Hub list surfaces use compact cards only. Full capture/concept views open through detail modals; flashback is read-only and has no live-chat input.
+- Added Stage 4 tests for:
+  - capture/concept Hub ordering
+  - required surface and hook presence
+  - thin route/no direct DB access from the route
+  - compact-card-only Hub lists
+  - read-only flashback and no quiz/streak/due health language
+- Verification:
+  - `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit` passes.
+  - `npm.cmd test` passes: 16 files, 62 tests.
+- Integration note:
+  - Stage 4 modal concept detail now loads linked captures through a per-concept query instead of reusing only the 10 recent Hub captures.
+  - The Stage 4 concept list filters out pre-Stage-1 legacy concept IDs so old local rows do not crash the new branded-ID Hub.
+- Post-review fixes before Stage 5:
+  - `conceptMatchPreCheck` skips legacy vector hits before loading Stage 1 concepts.
+  - `saveCapture` creates/updates a `learning_sessions` row for the capture's session/chat grouping key.
+  - candidate retry state can clear prior errors.
+  - migration 005 safely rebuilds legacy `normalized_key` values: Stage-1 `c_...` rows keep canonical normalized keys, legacy/duplicate rows get deterministic suffixed keys so the unique index cannot abort or block future promotions.
+  - `getLearningConceptByNormalizedKey` ignores non-Stage-1 legacy rows.
+  - added regression tests for legacy vector-match skipping, session row creation, retry-error clearing, and per-concept capture loading.
+- Device migration 005 smoke test:
+  - User rebuilt/opened the app on Samsung SM_A165F on 2026-04-26.
+  - Pulled `device-v5-codelens.db` plus WAL/SHM with `cmd /c "adb exec-out ... > file"`.
+  - Verified copied DB: `schema_version: 5`, `unique_concepts_normalized_key` index count `1`, duplicate normalized keys `0`.
+  - That device DB currently has `0` concepts/captures/sessions, so this verifies migration execution/no startup wedge but did not exercise the legacy-duplicate suffix branch with live legacy rows.
+
+Next locked step: Phase F / Stage 5 Promotion System. Read `STAGE_5_PROMOTION_SYSTEM.md` before editing promotion or concept creation flows.
+
 ## What's NOT Done Yet (Remaining Phases)
 
 ### Phase 7 — Resume Polish
