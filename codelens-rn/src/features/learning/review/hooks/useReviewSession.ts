@@ -6,7 +6,7 @@ import type { ConceptId } from '../../types/ids';
 
 export function useReviewSession(conceptId: ConceptId | null) {
   return useQuery({
-    queryKey: conceptId ? reviewKeys.session(conceptId) : [...reviewKeys.all(), 'session', 'none'] as const,
+    queryKey: conceptId ? reviewKeys.session(conceptId) : reviewKeys.sessionDisabled(),
     queryFn: async () => {
       if (!conceptId) return null;
       const [concept, captures] = await Promise.all([

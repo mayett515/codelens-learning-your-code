@@ -58,7 +58,8 @@
       "WebSearch",
       "Bash(git -C /c/CodeLens-v2 log --oneline -5)",
       "Bash(git -C /c/CodeLens-v2 status --short)",
-      "Bash(npm.cmd test *)"
+      "Bash(npm.cmd test *)",
+      "Bash(git -C C:/CodeLens-v2/codelens-rn show HEAD:src/db/migrations/index.ts)"
     ]
   }
 }

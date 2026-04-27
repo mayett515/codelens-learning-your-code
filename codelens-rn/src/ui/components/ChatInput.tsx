@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   View,
   TextInput,
@@ -15,7 +15,9 @@ import {
   useDotConnectorRetrieve,
   useDotConnectorSettings,
   useSendWithInjection,
+  withoutRemoved,
 } from '../../features/learning/dot-connector';
+import { formatMemoriesForInjection } from '../../features/learning/retrieval';
 import type { DotConnectorIndicatorStatus } from '../../features/learning/dot-connector';
 
 interface Props {
@@ -31,9 +33,20 @@ export function ChatInput({ onSend, disabled }: Props) {
   );
   const [previewVisible, setPreviewVisible] = useState(false);
   const [removedMemoryIds, setRemovedMemoryIds] = useState<string[]>([]);
-  const retrieval = useDotConnectorRetrieve(text, settings, perTurnEnabled, removedMemoryIds);
+  const retrieval = useDotConnectorRetrieve(text, settings, perTurnEnabled);
   const { prepareSend } = useSendWithInjection(settings);
   const config = getInjectionModeConfig(settings.injectionMode);
+  const activeMemories = useMemo(
+    () => withoutRemoved(retrieval.snapshot?.result.memories ?? [], removedMemoryIds),
+    [retrieval.snapshot, removedMemoryIds],
+  );
+  const activeInjection = useMemo(
+    () => formatMemoriesForInjection(activeMemories, {
+      tokenBudget: config.tokenBudget,
+      maxItems: config.limit,
+    }),
+    [activeMemories, config.limit, config.tokenBudget],
+  );
   const indicatorStatus: DotConnectorIndicatorStatus = useMemo(() => {
     if (!settings.enableDotConnector || !perTurnEnabled) return 'disabled';
     if (retrieval.isLoading) return 'loading';
@@ -44,6 +57,10 @@ export function ChatInput({ onSend, disabled }: Props) {
     if (status === 'ok') return 'ok';
     return 'idle';
   }, [settings.enableDotConnector, perTurnEnabled, retrieval.error, retrieval.isLoading, retrieval.result]);
+
+  useEffect(() => {
+    setPerTurnEnabled(settings.enableDotConnector && settings.dotConnectorPerTurnDefault === 'on');
+  }, [settings.enableDotConnector, settings.dotConnectorPerTurnDefault]);
 
   async function handleSend() {
     const trimmed = text.trim();
@@ -62,9 +79,9 @@ export function ChatInput({ onSend, disabled }: Props) {
 
   const previewState = retrieval.snapshot
     ? {
-      memories: retrieval.snapshot.result.memories,
+      memories: activeMemories,
       diagnostics: retrieval.snapshot.result.diagnostics,
-      injection: retrieval.snapshot.injection,
+      injection: activeInjection,
       maxItems: config.limit,
     }
     : null;
@@ -85,7 +102,7 @@ export function ChatInput({ onSend, disabled }: Props) {
           />
           <DotConnectorIndicator
             status={indicatorStatus}
-            count={retrieval.snapshot?.injection.includedCount ?? 0}
+            count={activeInjection.includedCount}
             maxItems={config.limit}
             onTapPreview={() => {
               if (previewState) setPreviewVisible(true);
@@ -94,6 +111,9 @@ export function ChatInput({ onSend, disabled }: Props) {
             perTurnEnabled={perTurnEnabled}
             partialReason={retrieval.result?.diagnostics.partialReason}
           />
+          {retrieval.partialNotice ? (
+            <Text style={styles.diagnosticsNotice} numberOfLines={2}>{retrieval.partialNotice}</Text>
+          ) : null}
         </View>
         <Pressable
           style={[styles.sendBtn, disabled && styles.sendBtnDisabled]}
@@ -147,6 +167,10 @@ const styles = StyleSheet.create({
   inputColumn: {
     flex: 1,
     gap: spacing.xs,
+  },
+  diagnosticsNotice: {
+    color: colors.yellow,
+    fontSize: fontSize.sm,
   },
   sendBtn: {
     backgroundColor: colors.primary,

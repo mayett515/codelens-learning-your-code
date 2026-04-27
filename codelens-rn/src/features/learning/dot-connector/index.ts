@@ -16,6 +16,7 @@ export {
   SEND_RETRIEVAL_FRESHNESS_MS,
   SEND_RETRIEVAL_TIMEOUT_MS,
   sortPreviewMemories,
+  withoutRemoved,
 } from './services';
 export type {
   DotConnectorIndicatorStatus,

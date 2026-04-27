@@ -154,6 +154,7 @@ describe('Stage 7 Dot Connector contracts', () => {
 
   it('send reuses a fresh identical typing result', async () => {
     const retrieve = vi.fn(async () => result([captureMemory()]));
+    const bumpLastAccessed = vi.fn(async () => undefined);
     const typingSnapshot = {
       query: 'closure',
       result: result([conceptMemory()]),
@@ -165,10 +166,12 @@ describe('Stage 7 Dot Connector contracts', () => {
       settings,
       perTurnEnabled: true,
       retrieve,
+      bumpLastAccessed,
       typingSnapshot,
       now: () => 5_000,
     });
     expect(retrieve).not.toHaveBeenCalled();
+    expect(bumpLastAccessed).toHaveBeenCalledWith([{ kind: 'concept', id: conceptId }]);
     expect(send.reusedTypingResult).toBe(true);
     expect(send.outboundText).toContain('<codelens_memory_context>');
     expect(send.outboundText).toContain('Closure');

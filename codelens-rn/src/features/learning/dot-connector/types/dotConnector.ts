@@ -29,6 +29,7 @@ export interface SendInjectionInput {
   removedMemoryIds?: string[] | undefined;
   typingSnapshot?: TypingRetrievalSnapshot | null | undefined;
   retrieve?: (opts: RetrieveOptions) => Promise<RetrieveResult>;
+  bumpLastAccessed?: ((items: Array<{ kind: 'capture' | 'concept'; id: string }>) => Promise<void>) | undefined;
   now?: () => number;
 }
 

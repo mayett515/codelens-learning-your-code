@@ -233,5 +233,3 @@ export const reviewEvents = sqliteTable('review_events', {
   index('idx_review_events_concept').on(t.conceptId),
   index('idx_review_events_created').on(t.createdAt),
 ]);
-
-export * from '../features/ai-providers/data/schema';

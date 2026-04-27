@@ -7,7 +7,6 @@ import { migration005 } from './005-normalize-legacy-concept-keys';
 import { migration006 } from './006-promotion-system';
 import { migration007 } from './007-retrieval-engine';
 import { migration008 } from './008-review-events';
-import { migration009 } from './009-dynamic-providers';
 
 export interface Migration {
   version: number;
@@ -32,7 +31,6 @@ const MIGRATIONS: Migration[] = [
   // Marked non-transactional out of caution — see runMigrations comment below.
   { ...migration007, nonTransactional: true },
   migration008,
-  migration009,
 ];
 
 /*

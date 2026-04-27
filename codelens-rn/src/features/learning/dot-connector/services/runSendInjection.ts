@@ -1,9 +1,10 @@
 import { formatMemoriesForInjection } from '../../retrieval/services/formatMemoriesForInjection';
 import { retrieveRelevantMemories } from '../../retrieval/services/retrieveRelevantMemories';
 import { RetrievalUnavailableError } from '../../retrieval/types/retrieval';
+import { getRawDb } from '../../../../db/client';
 import { getInjectionModeConfig } from './dotConnectorSettings';
 import { withoutRemoved } from './runTypingRetrieval';
-import type { RetrieveDiagnostics } from '../../retrieval/types/retrieval';
+import type { RetrieveDiagnostics, RetrievedMemory } from '../../retrieval/types/retrieval';
 import type { SendInjectionInput, SendInjectionResult } from '../types/dotConnector';
 
 export const SEND_RETRIEVAL_FRESHNESS_MS = 5_000;
@@ -25,7 +26,7 @@ export async function runSendInjection(input: SendInjectionInput): Promise<SendI
     && now() - typingSnapshot.createdAt <= SEND_RETRIEVAL_FRESHNESS_MS;
 
   try {
-    const result = fresh
+    let result = fresh
       ? typingSnapshot.result
       : await withTimeout(
         (input.retrieve ?? retrieveRelevantMemories)({
@@ -38,6 +39,23 @@ export async function runSendInjection(input: SendInjectionInput): Promise<SendI
         }),
         SEND_RETRIEVAL_TIMEOUT_MS,
       );
+    if (fresh && result.memories.length > 0) {
+      try {
+        await (input.bumpLastAccessed ?? bumpRetrievedMemoriesLastAccessed)(
+          result.memories.map((memory) => ({ kind: memory.kind, id: String(memory.id) })),
+        );
+      } catch {
+        result = {
+          ...result,
+          diagnostics: {
+            ...result.diagnostics,
+            lastAccessedBumpFailed: true,
+            status: result.diagnostics.status === 'unavailable' ? 'unavailable' : 'partial',
+            partialReason: result.diagnostics.partialReason ?? 'Could not update memory access time',
+          },
+        };
+      }
+    }
     const memories = withoutRemoved(result.memories, input.removedMemoryIds ?? []);
     const injection = formatMemoriesForInjection(memories, {
       tokenBudget: config.tokenBudget,
@@ -72,6 +90,31 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
     }),
   ]).finally(() => {
     if (timeoutId) clearTimeout(timeoutId);
+  });
+}
+
+async function bumpRetrievedMemoriesLastAccessed(memories: Array<{ kind: RetrievedMemory['kind']; id: string }>): Promise<void> {
+  const now = Date.now();
+  const captureIds = memories
+    .filter((memory) => memory.kind === 'capture')
+    .map((memory) => String(memory.id));
+  const conceptIds = memories
+    .filter((memory) => memory.kind === 'concept')
+    .map((memory) => String(memory.id));
+  const raw = getRawDb();
+  await raw.transaction(async (tx) => {
+    if (captureIds.length > 0) {
+      await tx.execute(
+        `UPDATE learning_captures SET last_accessed_at = ? WHERE id IN (${captureIds.map(() => '?').join(',')})`,
+        [now, ...captureIds],
+      );
+    }
+    if (conceptIds.length > 0) {
+      await tx.execute(
+        `UPDATE concepts SET last_accessed_at = ? WHERE id IN (${conceptIds.map(() => '?').join(',')})`,
+        [now, ...conceptIds],
+      );
+    }
   });
 }
 

@@ -25,5 +25,6 @@ export interface ApplyReviewRatingInput {
   rating: ReviewRatingOrSkip;
   recallText?: string;
   recordRecallText?: boolean;
+  sessionStart?: number;
   now?: number;
 }

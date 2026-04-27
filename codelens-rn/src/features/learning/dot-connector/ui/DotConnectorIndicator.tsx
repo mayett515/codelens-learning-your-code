@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, fontSize, spacing } from '../../../../ui/theme';
 import type { DotConnectorIndicatorStatus } from '../types/dotConnector';
 
@@ -23,9 +23,12 @@ export function DotConnectorIndicator(props: DotConnectorIndicatorProps) {
         accessibilityRole="button"
         accessibilityLabel={labelFor(props.status, props.count)}
       >
-        <Text style={[styles.text, disabled && styles.textMuted]} numberOfLines={1}>
-          {labelFor(props.status, props.count)}
-        </Text>
+        <View style={styles.labelRow}>
+          {props.status === 'loading' ? <ActivityIndicator size="small" color={colors.primaryLight} /> : null}
+          <Text style={[styles.text, disabled && styles.textMuted]} numberOfLines={1}>
+            {labelFor(props.status, props.count)}
+          </Text>
+        </View>
         {props.status === 'partial' && props.partialReason ? (
           <Text style={styles.warning} numberOfLines={1}>{props.partialReason}</Text>
         ) : null}
@@ -77,6 +80,11 @@ const styles = StyleSheet.create({
   },
   textMuted: {
     color: colors.textSecondary,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   warning: {
     color: colors.yellow,

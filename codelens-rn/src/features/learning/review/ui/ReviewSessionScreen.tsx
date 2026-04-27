@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { colors, fontSize, spacing } from '../../../../ui/theme';
 import { ConceptTypeChip } from '../../ui/primitives/ConceptTypeChip';
@@ -21,6 +21,7 @@ export function ReviewSessionScreen(props: {
 }) {
   const [reflection, setReflection] = useState('');
   const [phase, setPhase] = useState<'reflect' | 'rate' | 'done'>('reflect');
+  const sessionStartRef = useRef(Date.now());
   const settings = useReviewSettings();
   const session = useReviewSession(props.conceptId);
   const ratingMutation = useApplyReviewRating();
@@ -38,8 +39,11 @@ export function ReviewSessionScreen(props: {
     return (
       <ReviewResultScreen
         conceptName={data.concept.name}
+        summary={data.concept.canonicalSummary}
+        captures={data.captures}
         onDone={props.onDone}
         onOpenConcept={() => props.onOpenConcept?.(props.conceptId)}
+        onOpenCapture={props.onOpenCapture}
         onContinueInChat={props.onContinueInChat ? () => props.onContinueInChat?.(props.conceptId) : undefined}
       />
     );
@@ -55,6 +59,7 @@ export function ReviewSessionScreen(props: {
       rating,
       recallText: reflection,
       recordRecallText: settings.recordRecallText,
+      sessionStart: sessionStartRef.current,
     });
     setPhase('done');
   };

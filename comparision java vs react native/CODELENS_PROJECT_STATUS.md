@@ -242,6 +242,15 @@ Phase H results:
   - copied DB reported `schema_version: 8`
   - `review_events` exists with the locked audit columns
   - `idx_review_events_concept` and `idx_review_events_created` exist
+- Opus follow-up fixes before Stage 8:
+  - Dot Connector and Review settings now persist through the existing MMKV settings store.
+  - Fresh typing-result reuse at send time still bumps `last_accessed_at` for included memories.
+  - `dotConnectorPerTurnDefault` is exposed in Settings.
+  - `applyReviewRating` rejects duplicate commits for the same `(conceptId, sessionStart)`.
+  - Preview memory removal is turn-local and no longer re-runs typing retrieval.
+  - Review query keys, mounted ChatInput settings sync, persistent-partial diagnostics notice, loading spinner, threshold editing, and review result context were tightened.
+  - Removed stray provider-branch imports from `src/db/migrations/index.ts` and `src/db/schema.ts`; provider work remains isolated in `C:\CodeLens-v2-provider`.
+  - Follow-up verification passed: `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit`; `npm.cmd test` = 25 files, 115 tests.
 
 This means future work should be implementation, testing, migration safety, and integration discipline, not reopening product semantics that are already locked.
 

@@ -1,6 +1,9 @@
 import { create } from 'zustand';
+import { loadLearningSetting, saveLearningSetting } from '../../settingsStorage';
 import { DEFAULT_REVIEW_SETTINGS, parseReviewSettings } from '../services/reviewSettings';
 import type { ReviewSettings } from '../types/review';
+
+const STORAGE_KEY = 'learning.review.settings.v1';
 
 interface ReviewSettingsStore {
   settings: ReviewSettings;
@@ -8,11 +11,15 @@ interface ReviewSettingsStore {
 }
 
 const useReviewSettingsStore = create<ReviewSettingsStore>((set) => ({
-  settings: DEFAULT_REVIEW_SETTINGS,
+  settings: parseReviewSettings(
+    loadLearningSetting<Partial<ReviewSettings>>(STORAGE_KEY) ?? DEFAULT_REVIEW_SETTINGS,
+  ),
   updateSettings: (patch) =>
-    set((state) => ({
-      settings: parseReviewSettings({ ...state.settings, ...patch }),
-    })),
+    set((state) => {
+      const settings = parseReviewSettings({ ...state.settings, ...patch });
+      saveLearningSetting(STORAGE_KEY, settings);
+      return { settings };
+    }),
 }));
 
 export function useReviewSettings(): ReviewSettings {

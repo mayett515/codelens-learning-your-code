@@ -101,6 +101,14 @@ describe('Stage 7 review contracts', () => {
     expect(mocks.insertReviewEvent).not.toHaveBeenCalled();
   });
 
+  it('rejects duplicate ratings for the same review session', async () => {
+    await applyReviewRating({ conceptId, rating: 'strong', sessionStart: 500, now: 100 });
+    await expect(
+      applyReviewRating({ conceptId, rating: 'weak', sessionStart: 500, now: 101 }),
+    ).rejects.toThrow(/already saved/);
+    expect(mocks.insertReviewEvent).toHaveBeenCalledTimes(1);
+  });
+
   it('persists recall text only when the user opts in', async () => {
     await applyReviewRating({
       conceptId,

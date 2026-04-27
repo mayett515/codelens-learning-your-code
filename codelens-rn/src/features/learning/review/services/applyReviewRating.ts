@@ -10,32 +10,46 @@ export const REVIEW_RATING_DELTAS: Record<ReviewRating, number> = {
   weak: -0.05,
 };
 
+const committedReviewSessions = new Set<string>();
+
 export async function applyReviewRating(input: ApplyReviewRatingInput): Promise<void> {
   if (input.rating === 'skip') return;
 
   const rating: ReviewRating = input.rating;
   const delta = REVIEW_RATING_DELTAS[rating];
   const now = input.now ?? Date.now();
+  const idempotencyKey = input.sessionStart === undefined
+    ? null
+    : `${input.conceptId}:${input.sessionStart}`;
+  if (idempotencyKey !== null && committedReviewSessions.has(idempotencyKey)) {
+    throw new Error('This review rating was already saved');
+  }
+  if (idempotencyKey !== null) committedReviewSessions.add(idempotencyKey);
   const recallText = input.recordRecallText ? truncateRecall(input.recallText ?? '') : null;
 
-  await db.transaction(async (tx) => {
-    const concept = await getLearningConceptById(input.conceptId, tx);
-    if (!concept) throw new Error('This concept was deleted');
+  try {
+    await db.transaction(async (tx) => {
+      const concept = await getLearningConceptById(input.conceptId, tx);
+      if (!concept) throw new Error('This concept was deleted');
 
-    const familiarityBefore = concept.familiarityScore;
-    const familiarityAfter = clamp01(familiarityBefore + delta);
-    await updateConceptFamiliarity(input.conceptId, familiarityAfter, now, tx);
-    await insertReviewEvent({
-      id: newReviewEventId(),
-      conceptId: input.conceptId,
-      rating,
-      delta,
-      familiarityBefore,
-      familiarityAfter,
-      userRecallText: recallText,
-      createdAt: now,
-    }, tx);
-  });
+      const familiarityBefore = concept.familiarityScore;
+      const familiarityAfter = clamp01(familiarityBefore + delta);
+      await updateConceptFamiliarity(input.conceptId, familiarityAfter, now, tx);
+      await insertReviewEvent({
+        id: newReviewEventId(),
+        conceptId: input.conceptId,
+        rating,
+        delta,
+        familiarityBefore,
+        familiarityAfter,
+        userRecallText: recallText,
+        createdAt: now,
+      }, tx);
+    });
+  } catch (error) {
+    if (idempotencyKey !== null) committedReviewSessions.delete(idempotencyKey);
+    throw error;
+  }
 }
 
 function clamp01(value: number): number {

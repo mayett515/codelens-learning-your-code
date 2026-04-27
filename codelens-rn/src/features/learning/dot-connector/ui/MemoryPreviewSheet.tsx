@@ -22,7 +22,7 @@ export function MemoryPreviewSheet(props: MemoryPreviewSheetProps) {
     <Modal visible={props.visible} animationType="slide" transparent onRequestClose={props.onClose}>
       <Pressable style={styles.backdrop} onPress={props.onClose} />
       <View style={styles.sheet}>
-        <Text style={styles.title}>Memories for this turn - {props.injection.includedCount} of {props.maxItems}</Text>
+        <Text style={styles.title}>Memories for this turn: {props.injection.includedCount} of {props.maxItems}</Text>
         {props.diagnostics?.status === 'partial' && props.diagnostics.partialReason ? (
           <Text style={styles.notice}>{props.diagnostics.partialReason}</Text>
         ) : null}
@@ -53,7 +53,7 @@ export function MemoryPreviewSheet(props: MemoryPreviewSheetProps) {
         </ScrollView>
         <View style={styles.footer}>
           <Text style={styles.footerText}>
-            Inject {props.injection.includedCount} - {props.injection.totalTokensApprox} tokens
+            Inject {props.injection.includedCount}, approx {props.injection.totalTokensApprox} tokens
           </Text>
           <View style={styles.footerActions}>
             <Pressable style={styles.secondaryButton} onPress={props.onDisableTurn}>

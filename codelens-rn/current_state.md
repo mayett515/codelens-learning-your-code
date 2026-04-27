@@ -618,6 +618,18 @@ Next locked step after Stage 7: Phase I / Stage 8 Personas & Chat UX. Read `STAG
 - Verification:
   - `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit` passes.
   - `npm.cmd test` passes: 25 files, 114 tests.
+- Opus follow-up fixes before Stage 8:
+  - Dot Connector and Review settings now persist through the existing MMKV settings store instead of resetting on app reload.
+  - Send-time reuse of a fresh typing retrieval now still bumps `last_accessed_at` for included memories; bump failure is reflected in diagnostics.
+  - Settings now exposes `dotConnectorPerTurnDefault`.
+  - `applyReviewRating` is idempotent per `(conceptId, sessionStart)` so rapid duplicate rating commits are rejected.
+  - Removing a memory in the preview is now a local turn filter and no longer re-runs typing retrieval.
+  - Review session placeholder query keys now come from `reviewKeys`.
+  - Mounted chat inputs reset per-turn state when Dot Connector settings change.
+  - Persistent partial retrievals now surface a one-time diagnostics notice, and the loading indicator shows a spinner.
+  - Review result screen now includes the concept summary and linked compact captures.
+  - Removed stray provider-branch imports from `src/db/migrations/index.ts` and `src/db/schema.ts`; provider work remains isolated in `C:\CodeLens-v2-provider`.
+  - Follow-up verification: `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit` passes; `npm.cmd test` passes: 25 files, 115 tests.
 - Device migration 008 smoke test passed on Samsung SM_A165F on 2026-04-27:
   - `npm.cmd run android` built/installed successfully; Expo skipped dev-server startup because port 8081 was already in use, then the app was opened via ADB.
   - Pulled DB plus WAL/SHM with `cmd /c "adb exec-out ... > file"`.

@@ -54,6 +54,7 @@ export default function SettingsScreen() {
   const updateDotConnectorSettings = useUpdateDotConnectorSettings();
   const reviewSettings = useReviewSettings();
   const updateReviewSettings = useUpdateReviewSettings();
+  const [weakThresholdText, setWeakThresholdText] = useState(String(reviewSettings.weakConceptThreshold));
   const [reEmbedding, setReEmbedding] = useState(false);
   const [saved, setSaved] = useState('');
 
@@ -65,6 +66,10 @@ export default function SettingsScreen() {
       if (sf) { setSfKeySet(true); setSfKey(''); }
     })();
   }, []);
+
+  useEffect(() => {
+    setWeakThresholdText(String(reviewSettings.weakConceptThreshold));
+  }, [reviewSettings.weakConceptThreshold]);
 
   async function saveOrKey() {
     if (!orKey.trim()) return;
@@ -442,6 +447,21 @@ export default function SettingsScreen() {
             ))}
           </View>
           <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>Memory injection default for each turn</Text>
+            <Pressable
+              style={[styles.toggleBtn, dotConnectorSettings.dotConnectorPerTurnDefault === 'on' && styles.toggleBtnActive]}
+              onPress={() => {
+                const next = dotConnectorSettings.dotConnectorPerTurnDefault === 'on' ? 'off' : 'on';
+                updateDotConnectorSettings({ dotConnectorPerTurnDefault: next });
+                flash(`Per-turn memory default ${next}`);
+              }}
+            >
+              <Text style={[styles.toggleBtnText, dotConnectorSettings.dotConnectorPerTurnDefault === 'on' && styles.toggleBtnTextActive]}>
+                {dotConnectorSettings.dotConnectorPerTurnDefault === 'on' ? 'ON' : 'OFF'}
+              </Text>
+            </Pressable>
+          </View>
+          <View style={styles.toggleRow}>
             <Text style={styles.toggleLabel}>Review Mode</Text>
             <Pressable
               style={[styles.toggleBtn, reviewSettings.enableReviewMode && styles.toggleBtnActive]}
@@ -458,10 +478,17 @@ export default function SettingsScreen() {
           <Text style={styles.modelLabel}>Show concepts with strength below</Text>
           <TextInput
             style={styles.modelInput}
-            value={String(reviewSettings.weakConceptThreshold)}
-            onChangeText={(value) => {
-              const next = Number(value);
-              if (!Number.isNaN(next)) updateReviewSettings({ weakConceptThreshold: Math.max(0, Math.min(1, next)) });
+            value={weakThresholdText}
+            onChangeText={setWeakThresholdText}
+            onEndEditing={() => {
+              const next = Number(weakThresholdText);
+              if (Number.isNaN(next)) {
+                setWeakThresholdText(String(reviewSettings.weakConceptThreshold));
+                return;
+              }
+              const clamped = Math.max(0, Math.min(1, next));
+              updateReviewSettings({ weakConceptThreshold: clamped });
+              setWeakThresholdText(String(clamped));
             }}
             keyboardType="decimal-pad"
           />

@@ -6,6 +6,8 @@ export const reviewKeys = {
     [...reviewKeys.all(), 'weakConcepts', threshold] as const,
   session: (conceptId: ConceptId) =>
     [...reviewKeys.all(), 'session', conceptId] as const,
+  sessionDisabled: () =>
+    [...reviewKeys.all(), 'session', 'disabled'] as const,
   events: (conceptId: ConceptId) =>
     [...reviewKeys.all(), 'events', conceptId] as const,
 };
