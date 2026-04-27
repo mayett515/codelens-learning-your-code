@@ -42,6 +42,7 @@ function candidate(overrides: Partial<SaveModalCandidateData> = {}): SaveModalCa
     extractionConfidence: null,
     matchSimilarity: null,
     conceptHint: null,
+    keywords: ['closure', 'scope'],
     ...overrides,
   };
 }
@@ -83,6 +84,7 @@ describe('Stage 2 saveCapture', () => {
       linkedConceptId: null,
       embeddingStatus: 'pending',
       editableUntil: 1_800_086_400_000,
+      keywords: ['closure', 'scope'],
     });
     expect(d.enqueued).toHaveLength(1);
   });

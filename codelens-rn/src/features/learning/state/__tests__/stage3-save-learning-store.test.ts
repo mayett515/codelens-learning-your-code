@@ -21,6 +21,7 @@ const candidate: SaveModalCandidateData = {
   extractionConfidence: null,
   matchSimilarity: null,
   conceptHint: null,
+  keywords: ['closure'],
 };
 
 describe('save learning store', () => {

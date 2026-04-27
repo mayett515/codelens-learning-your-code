@@ -4,13 +4,21 @@ import { migration002 } from './002-concepts-fts';
 import { migration003 } from './003-chat-model-overrides';
 import { migration004 } from './004-capture-first-model';
 import { migration005 } from './005-normalize-legacy-concept-keys';
+import { migration006 } from './006-promotion-system';
 
 export interface Migration {
   version: number;
   up: string[];
 }
 
-const MIGRATIONS: Migration[] = [migration001, migration002, migration003, migration004, migration005];
+const MIGRATIONS: Migration[] = [
+  migration001,
+  migration002,
+  migration003,
+  migration004,
+  migration005,
+  migration006,
+];
 
 export function runMigrations(db: DB): void {
   db.executeSync(`

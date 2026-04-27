@@ -56,6 +56,7 @@ describe('Stage 2 prepareSaveCandidates', () => {
                 whatClicked: 'The returned function can still read the outer variable.',
                 whyItMattered: null,
                 rawSnippet: 'const value = 1; return () => value;',
+                keywords: ['closure', 'scope'],
                 conceptHint: {
                   proposedName: 'Closure',
                   proposedNormalizedKey: 'closure',
@@ -78,6 +79,7 @@ describe('Stage 2 prepareSaveCandidates', () => {
       matchSimilarity: 0.72,
       snippetLang: 'typescript',
       isNewLanguageForExistingConcept: true,
+      keywords: ['closure', 'scope'],
     });
   });
 });

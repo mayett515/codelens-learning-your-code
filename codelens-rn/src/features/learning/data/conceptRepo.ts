@@ -94,3 +94,30 @@ export async function appendConceptLanguage(
     })
     .where(eq(concepts.id, id));
 }
+
+export async function appendConceptSurfaceFeatures(
+  id: ConceptId,
+  surfaceFeatures: string[],
+  executor: DbOrTx = db,
+): Promise<void> {
+  const concept = await getLearningConceptById(id, executor);
+  if (!concept) throw new Error(`Cannot append surface features for missing concept: ${id}`);
+
+  const existing = new Set(concept.surfaceFeatures.map((value) => value.toLowerCase()));
+  const next = [...concept.surfaceFeatures];
+  for (const feature of surfaceFeatures) {
+    const normalized = feature.trim();
+    if (!normalized || existing.has(normalized.toLowerCase())) continue;
+    existing.add(normalized.toLowerCase());
+    next.push(normalized);
+  }
+  if (next.length === concept.surfaceFeatures.length) return;
+
+  await executor
+    .update(concepts)
+    .set({
+      surfaceFeatures: next,
+      updatedAt: toIso(Date.now()),
+    })
+    .where(eq(concepts.id, id));
+}

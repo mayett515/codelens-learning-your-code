@@ -1,4 +1,4 @@
-import { asc, desc, eq, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { db, type DbOrTx } from '../../../db/client';
 import { learningCaptures } from './schema';
 import { captureRowToDomain, validateCaptureForWrite } from '../codecs/capture';
@@ -78,6 +78,57 @@ export async function getCapturesBySessionId(
     .where(eq(learningCaptures.sessionId, sessionId))
     .orderBy(desc(learningCaptures.createdAt), asc(learningCaptures.id));
   return rows.map(captureRowToDomain);
+}
+
+export async function getCapturesByIds(
+  ids: LearningCaptureId[],
+  executor: DbOrTx = db,
+): Promise<LearningCapture[]> {
+  if (ids.length === 0) return [];
+  const rows = await executor
+    .select()
+    .from(learningCaptures)
+    .where(inArray(learningCaptures.id, ids))
+    .orderBy(desc(learningCaptures.createdAt), asc(learningCaptures.id));
+  return rows.map(captureRowToDomain);
+}
+
+export async function findEligibleCapturesForClustering(
+  executor: DbOrTx = db,
+): Promise<LearningCapture[]> {
+  const rows = await executor
+    .select()
+    .from(learningCaptures)
+    .where(
+      and(
+        or(eq(learningCaptures.state, 'unresolved'), eq(learningCaptures.state, 'proposed_new')),
+        isNull(learningCaptures.linkedConceptId),
+        eq(learningCaptures.embeddingStatus, 'ready'),
+      ),
+    )
+    .orderBy(desc(learningCaptures.createdAt), asc(learningCaptures.id));
+  return rows.map(captureRowToDomain);
+}
+
+export async function linkCaptureToConcept(
+  id: LearningCaptureId,
+  conceptId: ConceptId,
+  updatedAt: number,
+  executor: DbOrTx = db,
+): Promise<void> {
+  await executor
+    .update(learningCaptures)
+    .set({
+      state: 'linked',
+      linkedConceptId: conceptId,
+      updatedAt,
+    })
+    .where(
+      and(
+        eq(learningCaptures.id, id),
+        isNull(learningCaptures.linkedConceptId),
+      ),
+    );
 }
 
 export async function setCaptureEmbeddingStatus(

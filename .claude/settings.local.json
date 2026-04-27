@@ -55,7 +55,9 @@
       "Bash(ls codelens-rn/*.md)",
       "Bash(ls *.md)",
       "Bash(wc -l codelens-rn/PHASE_6/*.md)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(git -C /c/CodeLens-v2 log --oneline -5)",
+      "Bash(git -C /c/CodeLens-v2 status --short)"
     ]
   }
 }

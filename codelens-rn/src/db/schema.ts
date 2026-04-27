@@ -180,3 +180,32 @@ export const embeddingsMeta = sqliteTable('embeddings_meta', {
   signature: text('signature').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
+
+export const promotionSuggestionsCache = sqliteTable('promotion_suggestions_cache', {
+  clusterFingerprint: text('cluster_fingerprint').primaryKey(),
+  captureIds: text('capture_ids_json', { mode: 'json' }).notNull().$type<string[]>(),
+  proposedName: text('proposed_name').notNull(),
+  proposedNormalizedKey: text('proposed_normalized_key').notNull(),
+  proposedConceptType: text('proposed_concept_type').notNull(),
+  sharedKeywords: text('shared_keywords_json', { mode: 'json' }).notNull().$type<string[]>(),
+  sessionCount: integer('session_count').notNull(),
+  captureCount: integer('capture_count').notNull(),
+  meanSimilarity: real('mean_similarity').notNull(),
+  avgExtractionConfidence: real('avg_extraction_confidence').notNull(),
+  clusterScore: real('cluster_score').notNull(),
+  maxCaptureCreatedAt: integer('max_capture_created_at').notNull().default(0),
+  computedAt: integer('computed_at').notNull(),
+}, (t) => [
+  index('idx_promotion_cache_score').on(t.clusterScore),
+]);
+
+export const promotionDismissals = sqliteTable('promotion_dismissals', {
+  clusterFingerprint: text('cluster_fingerprint').primaryKey(),
+  dismissedAt: integer('dismissed_at').notNull(),
+  captureIds: text('capture_ids_json', { mode: 'json' }).notNull().$type<string[]>(),
+  captureCount: integer('capture_count').notNull(),
+  isPermanent: integer('is_permanent', { mode: 'boolean' }).notNull().default(false),
+  proposedNormalizedKey: text('proposed_normalized_key').notNull().default(''),
+}, (t) => [
+  index('idx_promotion_dismissals_at').on(t.dismissedAt),
+]);

@@ -17,6 +17,7 @@ interface CandidateCaptureCardProps {
   saveState: CandidateSaveState;
   onSave: () => void;
   onInspect: () => void;
+  onMakeConcept?: () => void;
 }
 
 export function CandidateCaptureCard({
@@ -30,10 +31,12 @@ export function CandidateCaptureCard({
   saveState,
   onSave,
   onInspect,
+  onMakeConcept,
 }: CandidateCaptureCardProps) {
   const isSaving = saveState === 'saving';
   const isSaved = saveState === 'saved';
   const confidenceLow = extractionConfidence !== null && extractionConfidence !== undefined && extractionConfidence < 0.7;
+  const canMakeConcept = !linkedConceptName && extractionConfidence !== null && extractionConfidence !== undefined && extractionConfidence >= 0.7;
 
   return (
     <View style={styles.card}>
@@ -55,6 +58,11 @@ export function CandidateCaptureCard({
         ) : null}
       </View>
       <View style={styles.actions}>
+        {canMakeConcept && onMakeConcept ? (
+          <Pressable style={styles.inspectButton} onPress={onMakeConcept}>
+            <Text style={styles.inspectText}>Make concept</Text>
+          </Pressable>
+        ) : null}
         <Pressable style={styles.inspectButton} onPress={onInspect}>
           <Text style={styles.inspectText}>Inspect</Text>
         </Pressable>

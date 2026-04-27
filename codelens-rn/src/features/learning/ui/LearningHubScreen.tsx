@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { colors, fontSize, spacing } from '../../../ui/theme';
 import { syncPendingEmbeddings } from '../application/sync';
+import { maybeRecomputeSuggestions } from '../promotion/services/maybeRecomputeSuggestions';
 import { computeStrength } from '../strength/computeStrength';
 import { useConceptList } from '../hooks/useConceptList';
 import { useConceptCaptures } from '../hooks/useConceptCaptures';
@@ -19,6 +20,8 @@ import { SessionCardsSection } from './SessionCardsSection';
 import { SessionFlashbackScreen } from './SessionFlashbackScreen';
 import { CaptureCardFull } from './cards/CaptureCardFull';
 import { ConceptCardFull } from './cards/ConceptCardFull';
+import { PromotionSuggestionsSection } from '../promotion/ui/PromotionSuggestionsSection';
+import { PromotionReviewScreen } from '../promotion/ui/PromotionReviewScreen';
 import type { ConceptId, LearningCaptureId } from '../types/ids';
 import type { LearningCapture, LearningConcept } from '../types/learning';
 
@@ -26,12 +29,14 @@ type Detail =
   | { type: 'capture'; id: LearningCaptureId }
   | { type: 'concept'; id: ConceptId }
   | { type: 'session'; id: string }
+  | { type: 'promotion'; fingerprint: string }
   | { type: 'health' }
   | null;
 
 export function LearningHubScreen() {
   useEffect(() => {
     syncPendingEmbeddings().catch(() => undefined);
+    maybeRecomputeSuggestions('hub_open').catch(() => undefined);
   }, []);
 
   const [detail, setDetail] = useState<Detail>(null);
@@ -68,6 +73,7 @@ export function LearningHubScreen() {
           conceptsById={conceptsById}
           onOpenCapture={(id) => setDetail({ type: 'capture', id })}
         />
+        <PromotionSuggestionsSection onOpenReview={(fingerprint) => setDetail({ type: 'promotion', fingerprint })} />
         <ConceptListSection concepts={concepts} onOpenConcept={(id) => setDetail({ type: 'concept', id })} />
         <SessionCardsSection sessions={sessions} onOpenSession={(id) => setDetail({ type: 'session', id })} />
         <KnowledgeHealthEntry concepts={healthConcepts} onOpen={() => setDetail({ type: 'health' })} />
@@ -121,6 +127,12 @@ export function LearningHubScreen() {
         ) : null}
         {detail?.type === 'session' ? (
           <SessionFlashbackScreen session={flashback?.session} captures={flashback?.captures ?? []} />
+        ) : null}
+        {detail?.type === 'promotion' ? (
+          <PromotionReviewScreen
+            fingerprint={detail.fingerprint}
+            onComplete={(conceptId) => setDetail({ type: 'concept', id: conceptId as ConceptId })}
+          />
         ) : null}
         {detail?.type === 'health' ? (
           <KnowledgeHealthScreen

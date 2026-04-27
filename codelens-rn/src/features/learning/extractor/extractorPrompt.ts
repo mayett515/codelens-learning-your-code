@@ -17,6 +17,7 @@ For each capture, extract:
 - whatClicked: the insight in the user's own language - what they understood
 - whyItMattered: why this is useful or important (null if not clear from the text)
 - rawSnippet: the most relevant fragment quoted directly - never paraphrase
+- keywords: 2 to 6 short normalized keywords for clustering later. Use lowercase, no punctuation, no language-only tokens unless the language is the core idea.
 - conceptHint: the concept this maps to (reasoning stays internal - see rules below)
 
 Internal concept_type reasoning (NEVER shown in UI - classification is for system use only):

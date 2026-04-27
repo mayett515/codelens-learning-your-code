@@ -37,6 +37,7 @@ interface SaveCaptureDeps {
     createdAt: number;
   }, executor: DbOrTx) => Promise<void>;
   embeddingQueue: EmbeddingQueue;
+  schedulePromotionRecompute: () => Promise<void>;
   now: () => number;
   newId: () => LearningCaptureId;
 }
@@ -66,6 +67,10 @@ const defaultDeps: SaveCaptureDeps = {
   appendLanguage: appendConceptLanguage,
   ensureSession: ensureLearningSessionForCapture,
   embeddingQueue: defaultEmbeddingQueue,
+  schedulePromotionRecompute: async () => {
+    const { maybeRecomputeSuggestions } = await import('../promotion/services/maybeRecomputeSuggestions');
+    await maybeRecomputeSuggestions('post_save');
+  },
   now: Date.now,
   newId: newLearningCaptureId,
 };
@@ -73,6 +78,7 @@ const defaultDeps: SaveCaptureDeps = {
 export async function saveCapture(
   candidate: SaveModalCandidateData,
   deps: Partial<SaveCaptureDeps> = {},
+  options: { saveAsProposedNew?: boolean } = {},
 ): Promise<LearningCaptureId> {
   const resolvedDeps = { ...defaultDeps, ...deps };
   const captureId = resolvedDeps.newId();
@@ -86,7 +92,7 @@ export async function saveCapture(
     const linkedConceptId = candidate.linkedConceptId && linkingAllowed
       ? candidate.linkedConceptId
       : null;
-    const state = linkedConceptId ? 'linked' : 'unresolved';
+    const state = linkedConceptId ? 'linked' : options.saveAsProposedNew ? 'proposed_new' : 'unresolved';
 
     if (linkedConceptId && candidate.isNewLanguageForExistingConcept && candidate.snippetLang) {
       await resolvedDeps.appendLanguage(linkedConceptId, candidate.snippetLang, tx);
@@ -131,7 +137,7 @@ export async function saveCapture(
         embeddingStatus: 'pending',
         embeddingRetryCount: 0,
         conceptHint: candidate.conceptHint,
-        keywords: [],
+        keywords: candidate.keywords,
         createdAt: now,
         updatedAt: now,
       },
@@ -142,7 +148,10 @@ export async function saveCapture(
   resolvedDeps.embeddingQueue.enqueue({
     captureId,
     text: buildCaptureEmbeddingText(candidate),
-    onSuccess: () => setCaptureEmbeddingStatus(captureId, 'ready', resolvedDeps.now()),
+    onSuccess: async () => {
+      await setCaptureEmbeddingStatus(captureId, 'ready', resolvedDeps.now());
+      await resolvedDeps.schedulePromotionRecompute();
+    },
     onFailure: () => incrementCaptureEmbeddingRetry(captureId, resolvedDeps.now()),
   });
 

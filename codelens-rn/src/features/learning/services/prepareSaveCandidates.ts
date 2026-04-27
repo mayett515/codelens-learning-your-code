@@ -64,6 +64,7 @@ export async function prepareSaveCandidates(
       extractionConfidence: candidate.conceptHint?.extractionConfidence ?? null,
       matchSimilarity,
       conceptHint: candidate.conceptHint,
+      keywords: candidate.keywords.map((keyword) => keyword.trim().toLowerCase()).filter(Boolean),
     };
   });
 }

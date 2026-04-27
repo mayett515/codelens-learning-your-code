@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import {
   Modal,
   View,
@@ -15,6 +15,7 @@ import { captureKeys, conceptKeys } from '../data/query-keys';
 import { useSaveLearningStore } from '../state/save-learning';
 import { prepareSaveCandidates } from '../services/prepareSaveCandidates';
 import { saveCapture } from '../services/saveCapture';
+import { PromotionReviewScreen } from '../promotion/ui/PromotionReviewScreen';
 import { CandidateCaptureCard } from './cards/CandidateCaptureCard';
 import { CaptureCardFull } from './cards/CaptureCardFull';
 import { colors, fontSize, spacing } from '../../../ui/theme';
@@ -23,6 +24,7 @@ import type { ConceptType } from '../types/learning';
 export function SaveAsLearningModal() {
   const store = useSaveLearningStore();
   const queryClient = useQueryClient();
+  const [promotionCaptureId, setPromotionCaptureId] = useState<import('../types/ids').LearningCaptureId | null>(null);
 
   useEffect(() => {
     if (!store.visible || store.phase !== 'extracting') return;
@@ -87,6 +89,26 @@ export function SaveAsLearningModal() {
     }
   }, [queryClient]);
 
+  const handleMakeConcept = useCallback(async (candidateId: string, index: number) => {
+    const current = useSaveLearningStore.getState();
+    const candidate = current.candidates[index];
+    if (!candidate) return;
+    current.setCandidateSaveState(candidateId, { state: 'saving', error: null });
+    try {
+      const captureId = await saveCapture(candidate, {}, { saveAsProposedNew: true });
+      useSaveLearningStore
+        .getState()
+        .setCandidateSaveState(candidateId, { state: 'saved', captureId, error: null });
+      setPromotionCaptureId(captureId);
+      queryClient.invalidateQueries({ queryKey: captureKeys.all });
+    } catch (error) {
+      useSaveLearningStore.getState().setCandidateSaveState(candidateId, {
+        state: 'failed',
+        error: error instanceof Error ? error.message : 'Save failed',
+      });
+    }
+  }, [queryClient]);
+
   if (!store.visible) return null;
 
   const inspectingIndex = store.inspectingCandidateId
@@ -142,6 +164,7 @@ export function SaveAsLearningModal() {
                       saveState={saveStatus?.state ?? 'idle'}
                       onSave={() => handleSave(candidateId, index)}
                       onInspect={() => store.inspectCandidate(candidateId)}
+                      onMakeConcept={() => handleMakeConcept(candidateId, index)}
                     />
                     {saveStatus?.state === 'failed' && saveStatus.error ? (
                       <Text style={styles.errorInline}>{saveStatus.error}</Text>
@@ -196,6 +219,22 @@ export function SaveAsLearningModal() {
                 </Pressable>
               </View>
             </View>
+          </Modal>
+        ) : null}
+        {promotionCaptureId ? (
+          <Modal
+            animationType="slide"
+            visible={!!promotionCaptureId}
+            onRequestClose={() => setPromotionCaptureId(null)}
+          >
+            <PromotionReviewScreen
+              singleCaptureId={promotionCaptureId}
+              onCancel={() => setPromotionCaptureId(null)}
+              onComplete={() => {
+                setPromotionCaptureId(null);
+                store.close();
+              }}
+            />
           </Modal>
         ) : null}
       </KeyboardAvoidingView>

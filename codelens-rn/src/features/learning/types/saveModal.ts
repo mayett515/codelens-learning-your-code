@@ -21,6 +21,7 @@ export interface SaveModalCandidateData {
   extractionConfidence: number | null;
   matchSimilarity: number | null;
   conceptHint: z.infer<typeof CaptureHintSchema> | null;
+  keywords: string[];
 }
 
 export type CandidateSaveState = 'idle' | 'saving' | 'saved' | 'failed';

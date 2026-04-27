@@ -117,7 +117,7 @@ More explicitly:
 - Product/design specs are complete.
 - Stage 10 implementation has started in `C:\CodeLens-v2\codelens-rn`.
 - Phase A - Architecture prep and baseline checks is complete as of 2026-04-26.
-- Next work is Phase F / Stage 5 Promotion System.
+- Next work is optional functional Stage 5 promotion smoke testing, then Phase G / Stage 6 Retrieval.
 - Do not write new feature specs unless user explicitly asks.
 
 Phase A results:
@@ -178,6 +178,38 @@ Phase E results:
   - duplicate normalized keys: `0`
   - that device DB currently has `0` concepts/captures/sessions, so this verifies migration execution/no startup wedge but does not exercise the legacy-duplicate suffix branch with live legacy rows.
 - Integration note: concept detail in the Stage 4 modal now uses per-concept capture evidence/provenance. Stage 5 may expand this while implementing promotion flows. The Stage 4 concept list filters out pre-Stage-1 legacy concept IDs so old local rows do not crash the new branded-ID Hub.
+
+Phase F results:
+- Stage 5 Promotion System is implemented in `C:\CodeLens-v2\codelens-rn` and lives under `src/features/learning/promotion/`.
+- Added migration 006 with `promotion_suggestions_cache` and `promotion_dismissals`.
+- Added promotion codecs, cache/dismissal repos, `promotionKeys`, clustering, fingerprinting, cooldown-backed recompute, promotion confirmation, link-existing, dismissal/rejection/restore, hooks, and UI surfaces.
+- Learning Hub now renders `PromotionSuggestionsSection` between Recent Captures and Concept List.
+- Save modal now exposes `Make concept` for eligible unlinked/high-confidence candidates; it saves as `proposed_new`, creates a single-capture suggestion, and opens the same `PromotionReviewScreen`.
+- Promotion confirmation inserts a concept only through the review screen, links captures in the same transaction, removes the cache row in the same transaction, and enqueues concept embedding after commit.
+- Link-existing appends languages/surface features and does not mutate familiarity or importance.
+- Automated verification passed: `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit`; `npm.cmd test` = 21 files, 78 tests.
+- Static sweeps passed for hardcoded promotion query arrays and forbidden promotion UI patterns.
+- Device migration 006 smoke test passed on Samsung SM_A165F after rebuilding/opening the app:
+  - copied DB reported `schema_version: 6`
+  - `promotion_suggestions_cache` exists with `max_capture_created_at`
+  - `promotion_dismissals` exists with `proposed_normalized_key`
+  - `idx_promotion_cache_score` and `idx_promotion_dismissals_at` exist
+  - copied DB currently has `0` suggestions/dismissals, so this verifies migration execution/no startup wedge; functional suggestion creation still needs real capture/embedding data to smoke-test.
+- Deferred Stage 5 QA item:
+  - Later, create at least 3 captures with shared keywords across at least 2 sessions, wait for capture embeddings to become `ready`, open the Learning Hub, and verify a Promotion Suggestions card appears.
+  - This is intentionally deferred; migration 006 device verification is complete.
+- Post-review fixes from Opus Stage 5 review:
+  - Capture keywords now flow from extractor schema through save modal data into `learning_captures.keywords_json`.
+  - Soft-dismissal resurface logic matches by `proposedNormalizedKey`.
+  - Single-capture promotion opens review directly without writing a fake one-capture Hub suggestion.
+  - Promotion review warning is source-aware and uses included capture count.
+  - Suggestion cache stores `max_capture_created_at` and ordering now includes all locked tie-breakers.
+  - Oversized clusters preserve surplus captures by chunking; deduped clusters are revalidated.
+  - Review screen surfaces non-conflict errors.
+  - Cooldown survives empty-cache recomputes in app memory.
+  - Promotion suggestion query keys are limit-aware and factory-owned.
+  - Link-existing dedupes languages before appending.
+  - Automated verification after fixes passed: `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit`; `npm.cmd test` = 21 files, 83 tests.
 
 This means future work should be implementation, testing, migration safety, and integration discipline, not reopening product semantics that are already locked.
 

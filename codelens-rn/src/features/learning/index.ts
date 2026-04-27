@@ -58,6 +58,7 @@ export type { ConceptMatch } from './services/conceptMatchPreCheck';
 export { prepareSaveCandidates } from './services/prepareSaveCandidates';
 export type { SaveCandidateSource } from './services/prepareSaveCandidates';
 export { saveCapture } from './services/saveCapture';
+export * from './promotion';
 
 // UI
 export { SaveAsLearningModal } from './ui/SaveAsLearningModal';

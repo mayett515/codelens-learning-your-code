@@ -419,7 +419,90 @@ Next locked step after Phase B was Phase C / Stage 2 Extractor and Save Flow.
   - Verified copied DB: `schema_version: 5`, `unique_concepts_normalized_key` index count `1`, duplicate normalized keys `0`.
   - That device DB currently has `0` concepts/captures/sessions, so this verifies migration execution/no startup wedge but did not exercise the legacy-duplicate suffix branch with live legacy rows.
 
-Next locked step: Phase F / Stage 5 Promotion System. Read `STAGE_5_PROMOTION_SYSTEM.md` before editing promotion or concept creation flows.
+### Phase F - Stage 5 Promotion System - CODE IMPLEMENTED / DEVICE MIGRATION GATED (2026-04-26)
+
+- Read `STAGE_5_PROMOTION_SYSTEM.md` before promotion work.
+- Added Stage 5 persistence:
+  - migration `006-promotion-system.ts`
+  - `promotion_suggestions_cache`
+  - `promotion_dismissals`
+  - promotion Zod codecs and row mappers
+  - cache/dismissal repos with `DbOrTx`
+- Added promotion clustering:
+  - eligible captures require unresolved/proposed_new, unlinked, and `embedding_status = 'ready'`
+  - vector similarity graph with `>= 0.75` edge threshold
+  - filters for size >= 3, >= 2 sessions, shared keyword, mean similarity >= 0.75
+  - SHA-256 fingerprint over sorted capture IDs
+  - soft/hard dismissal filtering and deterministic ordering
+  - cooldown-backed `maybeRecomputeSuggestions`
+- Added promotion services:
+  - `promoteToConcept`
+  - `linkCapturesToExistingConcept`
+  - `buildConceptFromCluster`
+  - `pickRepresentativeCaptureIds`
+  - dismiss/reject/restore helpers
+  - concept embedding enqueue outside the transaction
+- Added promotion hooks and key factories:
+  - `promotionKeys`
+  - `usePromotionSuggestions`
+  - `usePromotionSuggestion`
+  - `useDismissedSuggestions`
+  - `usePromoteConcept`
+  - `useLinkClusterToExisting`
+  - `useDismissCluster`
+  - `useRejectCluster`
+  - `useRestoreDismissal`
+- Added promotion UI:
+  - Hub `PromotionSuggestionsSection` between Recent Captures and Concept List
+  - `PromotionSuggestionCard`
+  - `PromotionReviewScreen`
+  - `NormalizedKeyConflictDialog`
+  - `DismissedSuggestionsScreen`
+  - Save modal `Make concept` action saves as `proposed_new`, creates a single-capture suggestion, then opens the same review screen.
+- Updated capture/concept repos for Stage 5:
+  - find eligible captures for clustering
+  - link capture to concept without mutating capture evidence fields
+  - append concept surface features for link-existing path
+  - schedule promotion recompute after capture embedding becomes ready
+- Added Stage 5 tests:
+  - clustering eligibility and dismissal behavior
+  - deterministic SHA-256 fingerprint
+  - representative capture ordering
+  - concept baseline scores and evidence IDs
+  - normalized-key conflict behavior
+  - atomic promotion/link-existing behavior
+  - promotion guard tests for module shape, Hub order, no pressure language, no forbidden card props
+- Verification:
+  - `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit` passes.
+  - `npm.cmd test` passes: 21 files, 78 tests.
+  - Static sweeps found no hardcoded promotion query arrays and no `CaptureCardFull`, `rawSnippet`, quiz/streak/due/ready pressure language in promotion UI.
+- Device migration 006 smoke test:
+  - User rebuilt/opened the app on Samsung SM_A165F on 2026-04-27.
+  - Pulled `device-v6-codelens.db` plus WAL/SHM with `cmd /c "adb exec-out ... > file"`.
+  - Verified copied DB: `schema_version: 6`.
+  - `promotion_suggestions_cache` exists with columns: `cluster_fingerprint`, `capture_ids_json`, `proposed_name`, `proposed_normalized_key`, `proposed_concept_type`, `shared_keywords_json`, `session_count`, `capture_count`, `mean_similarity`, `avg_extraction_confidence`, `cluster_score`, `max_capture_created_at`, `computed_at`.
+  - `promotion_dismissals` exists with columns: `cluster_fingerprint`, `dismissed_at`, `capture_ids_json`, `capture_count`, `is_permanent`, `proposed_normalized_key`.
+  - `idx_promotion_cache_score` and `idx_promotion_dismissals_at` exist.
+  - Current device DB has `0` promotion suggestions and `0` dismissals; functional suggestion creation still needs real capture/embedding data to smoke-test.
+- Deferred Stage 5 QA item:
+  - Later, create at least 3 captures with shared keywords across at least 2 sessions, wait for capture embeddings to become `ready`, open the Learning Hub, and verify a Promotion Suggestions card appears.
+  - This is intentionally deferred; migration 006 device verification is complete.
+- Post-review fixes from Opus Stage 5 review:
+  - Extractor/save flow now persists capture `keywords`, so clustering can satisfy the shared-keyword filter.
+  - Soft-dismissal resurface logic now matches dismissals by `proposedNormalizedKey`, not exact fingerprint only.
+  - Single-capture promotion no longer writes one-capture rows into `promotion_suggestions_cache`; it opens `PromotionReviewScreen` directly with a saved `proposed_new` capture.
+  - Promotion review warning is source-aware and based on included captures (`cluster` + included count < 2).
+  - Suggestion cache now stores `max_capture_created_at`; ordering includes score, count, max created_at, fingerprint.
+  - Oversized clusters preserve surplus captures by chunking instead of truncating to one top-12 cluster.
+  - Cluster assignment revalidates filters after deduplication.
+  - Review screen surfaces non-conflict errors instead of throwing unhandled async errors.
+  - Cooldown is held in-memory even when recompute yields an empty cache.
+  - Promotion suggestion query keys are limit-aware and factory-owned.
+  - Link-existing dedupes snippet languages before appending.
+  - Tests now cover the fixed keyword, dismissal, single-capture, ordering, and warning paths.
+  - Verification after fixes: `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit` passes; `npm.cmd test` passes: 21 files, 83 tests.
+
+Next locked step after optional functional promotion smoke test: Phase G / Stage 6 Retrieval. Read `STAGE_6_RETRIEVAL.md` before editing retrieval or Dot Connector-related behavior.
 
 ## What's NOT Done Yet (Remaining Phases)
 

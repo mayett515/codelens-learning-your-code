@@ -18,6 +18,7 @@ export const CaptureExtractorCandidateSchema = z.object({
   whatClicked: z.string().min(1).max(500),
   whyItMattered: z.string().max(700).nullable(),
   rawSnippet: z.string().min(1).max(800),
+  keywords: z.array(z.string().min(1).max(40)).max(8).default([]),
   conceptHint: CaptureHintSchema.nullable(),
 });
 
