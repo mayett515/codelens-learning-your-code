@@ -8,7 +8,7 @@ const DB_NAME = 'codelens.db';
 const opsqlite = open({ name: DB_NAME });
 
 // Drizzle's op-sqlite driver was written for an older API.
-// op-sqlite v15 renamed executeAsync→execute, executeRawAsync→executeRaw,
+// op-sqlite v15 renamed executeAsync->execute, executeRawAsync->executeRaw,
 // and returns rows as a plain array instead of { _array: [...] }.
 function wrapForDrizzle(raw: DB): any {
   const sanitizeParams = (params?: any[]) => {
@@ -17,9 +17,9 @@ function wrapForDrizzle(raw: DB): any {
       if (p === undefined) return null;
       // Convert arrays/objects to JSON strings, except for ArrayBuffers (used for vectors)
       if (
-        p !== null && 
-        typeof p === 'object' && 
-        !(p instanceof ArrayBuffer) && 
+        p !== null &&
+        typeof p === 'object' &&
+        !(p instanceof ArrayBuffer) &&
         !(p instanceof Uint8Array) &&
         !(p instanceof Float32Array)
       ) {
@@ -64,8 +64,13 @@ export type DbOrTx = Database | Transaction;
 export function initDatabase() {
   opsqlite.executeSync('PRAGMA journal_mode = WAL;');
   opsqlite.executeSync('PRAGMA foreign_keys = ON;');
-  runMigrations(opsqlite);
   initVec0();
+  runMigrations(opsqlite);
+  void import('../features/learning/retrieval/services/runHotColdGc')
+    .then(({ runHotColdGc }) => runHotColdGc())
+    .catch((error) => {
+      console.warn('[db] retrieval hot/cold maintenance failed', error);
+    });
 }
 
 function initVec0() {
@@ -77,10 +82,8 @@ function initVec0() {
       );
     `);
   } catch (error) {
-    console.warn(
-      'sqlite-vec extension not available or failed to initialize — vector search disabled.',
-      error
-    );
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`sqlite-vec extension not available or failed to initialize; migration cannot continue safely: ${message}`);
   }
 }
 

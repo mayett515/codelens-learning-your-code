@@ -7,6 +7,7 @@ import { removeSuggestionByFingerprint } from '../data/suggestionsCacheRepo';
 import { buildConceptFromCluster } from './buildConceptFromCluster';
 import { defaultConceptEmbeddingQueue, type ConceptEmbeddingQueue } from './conceptEmbedding';
 import { maybeRecomputeSuggestions } from './maybeRecomputeSuggestions';
+import { withCriticalWriteActivity } from '../../retrieval/services/activity';
 import type { ConceptId } from '../../types/ids';
 import type { LearningCaptureId } from '../../types/ids';
 import type { LearningCapture, LearningConcept } from '../../types/learning';
@@ -57,7 +58,7 @@ export async function promoteToConcept(
   let linkedCaptureIds: PromotionResult['linkedCaptureIds'] = [];
   let skippedCaptureIds: PromotionResult['skippedCaptureIds'] = [];
 
-  await resolvedDeps.database.transaction(async (tx) => {
+  await withCriticalWriteActivity(() => resolvedDeps.database.transaction(async (tx) => {
     const conflict = await resolvedDeps.findConceptByNormalizedKey(normalizedKey, tx);
     if (conflict) throw new NormalizedKeyConflictError(conflict);
 
@@ -76,7 +77,7 @@ export async function promoteToConcept(
     linkedCaptureIds = linkableCaptures.map((capture) => capture.id);
     const linkedSet = new Set(linkedCaptureIds);
     skippedCaptureIds = input.includedCaptureIds.filter((id) => !linkedSet.has(id));
-  });
+  }));
 
   if (concept) resolvedDeps.embeddingQueue.enqueue(concept);
   await resolvedDeps.recompute('post_promote');

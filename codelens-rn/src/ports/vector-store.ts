@@ -2,7 +2,7 @@ import type { ConceptId, Provider, TopMatch, TopMatchesQuery } from '../domain/t
 
 export interface VectorStorePort {
   upsert(input: {
-    id: ConceptId;
+    id: string;
     vector: Float32Array;
     model: string;
     api: Provider;
@@ -12,7 +12,7 @@ export interface VectorStorePort {
 
   topMatches(query: TopMatchesQuery): Promise<TopMatch[]>;
 
-  delete(id: ConceptId): Promise<void>;
+  delete(id: ConceptId | string): Promise<void>;
 
   deleteAll(): Promise<void>;
 }

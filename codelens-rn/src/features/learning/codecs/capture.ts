@@ -19,7 +19,8 @@ export const ConceptHintCodec = z.object({
   isNewLanguageForExistingConcept: z.boolean(),
 }).nullable();
 
-type LearningCaptureRow = typeof learningCaptures.$inferSelect;
+type LearningCaptureRow = Omit<typeof learningCaptures.$inferSelect, 'embeddingTier' | 'lastAccessedAt'> &
+  Partial<Pick<typeof learningCaptures.$inferSelect, 'embeddingTier' | 'lastAccessedAt'>>;
 
 function parseJson(raw: unknown, columnName: string): unknown {
   if (typeof raw === 'string') return JSON.parse(raw);

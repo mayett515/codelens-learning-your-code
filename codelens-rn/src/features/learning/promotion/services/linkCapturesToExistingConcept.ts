@@ -8,6 +8,7 @@ import {
 import { removeSuggestionByFingerprint } from '../data/suggestionsCacheRepo';
 import { defaultConceptEmbeddingQueue, type ConceptEmbeddingQueue } from './conceptEmbedding';
 import { maybeRecomputeSuggestions } from './maybeRecomputeSuggestions';
+import { withCriticalWriteActivity } from '../../retrieval/services/activity';
 import type { ConceptId, LearningCaptureId } from '../../types/ids';
 import type { LearningCapture, LearningConcept } from '../../types/learning';
 import type { LinkExistingInput, PromotionResult } from '../types/promotion';
@@ -52,7 +53,7 @@ export async function linkCapturesToExistingConcept(
   let linkedCaptureIds: LearningCaptureId[] = [];
   let skippedCaptureIds: LearningCaptureId[] = [];
 
-  await resolvedDeps.database.transaction(async (tx) => {
+  await withCriticalWriteActivity(() => resolvedDeps.database.transaction(async (tx) => {
     target = await resolvedDeps.getTargetConcept(input.targetConceptId, tx);
     if (!target) throw new PromotionCapturesChangedError();
     const captures = await resolvedDeps.getCaptures(input.includedCaptureIds, tx);
@@ -77,7 +78,7 @@ export async function linkCapturesToExistingConcept(
     linkedCaptureIds = linkableCaptures.map((capture) => capture.id);
     const linkedSet = new Set(linkedCaptureIds);
     skippedCaptureIds = input.includedCaptureIds.filter((id) => !linkedSet.has(id));
-  });
+  }));
 
   if (target) resolvedDeps.embeddingQueue.enqueue(target);
   await resolvedDeps.recompute('post_promote');

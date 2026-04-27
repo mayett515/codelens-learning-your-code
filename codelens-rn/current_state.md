@@ -484,9 +484,9 @@ Next locked step after Phase B was Phase C / Stage 2 Extractor and Save Flow.
   - `promotion_dismissals` exists with columns: `cluster_fingerprint`, `dismissed_at`, `capture_ids_json`, `capture_count`, `is_permanent`, `proposed_normalized_key`.
   - `idx_promotion_cache_score` and `idx_promotion_dismissals_at` exist.
   - Current device DB has `0` promotion suggestions and `0` dismissals; functional suggestion creation still needs real capture/embedding data to smoke-test.
-- Deferred Stage 5 QA item:
+- Deferred post-Stage-9 QA item:
   - Later, create at least 3 captures with shared keywords across at least 2 sessions, wait for capture embeddings to become `ready`, open the Learning Hub, and verify a Promotion Suggestions card appears.
-  - This is intentionally deferred; migration 006 device verification is complete.
+  - This is intentionally deferred until after Stages 7-9 are implemented; migration 006 device verification is complete.
 - Post-review fixes from Opus Stage 5 review:
   - Extractor/save flow now persists capture `keywords`, so clustering can satisfy the shared-keyword filter.
   - Soft-dismissal resurface logic now matches dismissals by `proposedNormalizedKey`, not exact fingerprint only.
@@ -502,9 +502,87 @@ Next locked step after Phase B was Phase C / Stage 2 Extractor and Save Flow.
   - Tests now cover the fixed keyword, dismissal, single-capture, ordering, and warning paths.
   - Verification after fixes: `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit` passes; `npm.cmd test` passes: 21 files, 83 tests.
 
-Next locked step after optional functional promotion smoke test: Phase G / Stage 6 Retrieval. Read `STAGE_6_RETRIEVAL.md` before editing retrieval or Dot Connector-related behavior.
+Next locked step: Phase H / Stage 7 Dot Connector & Review Mode. Read `STAGE_7_DOT_CONNECTOR_AND_REVIEW.md` before editing chat memory injection or review behavior. Optional functional Stage 5 promotion and Stage 6 retrieval live smokes are deferred until after Stage 9.
+
+### Phase G - Stage 6 Retrieval - COMPLETE (2026-04-27)
+
+- Read `STAGE_6_RETRIEVAL.md` plus the required architecture/status/guard docs before retrieval work.
+- Added Stage 6 persistence:
+  - migration `007-retrieval-engine.ts`
+  - `embedding_tier` and `last_accessed_at` on `learning_captures` and `concepts`
+  - `captures_fts`
+  - rebuilt `concepts_fts` to mirror Stage 1 concept fields
+  - trigger SQL artifacts under `src/features/learning/retrieval/data/`
+- Added feature-owned retrieval module under `src/features/learning/retrieval/`:
+  - typed retrieval contracts and `RetrievalUnavailableError`
+  - Zod egress codecs for retrieved capture/concept payloads
+  - sqlite-vec KNN repo/search, FTS5 repo/search with sanitizer, row mappers
+  - RRF scoring and deterministic ranking tie-breakers
+  - secondary recency/strength factors
+  - `retrieveRelevantMemories`
+  - token-budgeted `formatMemoriesForInjection`
+  - idempotent `ensureEmbedded`, `rehydrationQueue`, and `runHotColdGc`
+  - `retrievalKeys`, `useRetrieve`, `useEnsureEmbedded`, `useRunHotColdGc`
+- Updated vector writes so `embeddings_vec` owner IDs can be either `c_...` concepts or `lc_...` captures while preserving the existing physical metadata column name.
+- Updated capture embedding success to persist the normalized capture vector before marking the capture `ready`, enabling Stage 5 clustering and Stage 6 capture retrieval to use real capture vectors.
+- Retrieval GC is scheduled on app boot after DB init; it reconciles hot/cold tier drift, evicts vectors only from the hot tier, never deletes source rows, and never evicts unresolved/proposed_new captures.
+- Save and promotion hooks now invalidate retrieval query keys.
+- Added Stage 6 tests for:
+  - FTS query sanitizer escaping operators
+  - RRF scoring
+  - concept-wins ranking tie-breaker
+  - empty query short-circuit diagnostics
+  - deterministic injection format and parseable memory IDs
+  - token-budget drop-not-truncate behavior
+  - `maxItems` enforcement
+- Verification:
+  - `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit` passes.
+  - `npm.cmd test` passes: 22 files, 94 tests.
+  - Static sweeps found no hardcoded retrieval `queryKey: [...]`, no `as any` in Stage 6 retrieval data/codecs/types, and no quiz/streak/due/flashcard/classification-question language in retrieval code.
+- Post-review fixes from Opus Stage 6 review:
+  - migration 007 now backfills `embedding_tier = 'hot'` for existing `embeddings_vec` rows.
+  - `initVec0()` now runs before migrations so the backfill is safe on fresh installs.
+  - GC eviction now gates concepts by computed strength `< 0.3` and access age `> 90 days`, gates captures by linked state and access age, and evicts one item per transaction down to the target.
+  - boot-time tier drift reconciliation only corrects stale hot claims back to cold; it no longer promotes cold rows to hot outside vector write paths.
+  - recency/strength ranking factors now follow the Stage 6 formulas and use `last_accessed_at` with `created_at` fallback.
+  - rank tie-breaker now falls back to `created_at` when `last_accessed_at` is null.
+  - query embedding is bounded by a 1500ms timeout before falling back to FTS-only partial retrieval.
+  - `bumpLastAccessed` failures are returned in diagnostics via `lastAccessedBumpFailed`.
+  - JIT rehydration failure marks captures `embedding_status = 'failed'` and increments retry count.
+  - retrieval rehydration/vector helper paths no longer mutate `updated_at`.
+  - FTS score is rank-position based, single-character tokens are preserved, and `derivedChainRoot` is no longer a silent no-op for capture filters.
+  - `useRetrieve` now hashes filters with stable key ordering.
+  - removed the legacy `runVectorGC` barrel export in favor of Stage 6 `runHotColdGc`.
+  - migration SQL artifact now includes backfill and trigger definitions.
+  - Stage 6 `ensureEmbedded({ kind, id })` is now the public barrel export; the legacy concept-only helper is exported as `ensureConceptEmbedded` to avoid name collision.
+  - `derivedChainRoot` filtering now precomputes the capture chain once per retrieval call and uses an in-memory set for vec/FTS hits.
+  - recency factor now uses the exact Stage 6 formula `1 + 0.5 * exp(-ageDays / 30)` clamped to `[0.5, 1.5]`.
+  - sqlite-vec initialization now fails loudly before migrations if vec0 cannot be created, avoiding a half-migrated schema-version wedge.
+  - added a Stage 6 activity coordinator so hot/cold GC waits for active retrievals and save/promotion transactions instead of overlapping them.
+  - DB initialization failure now renders a clear local database error state instead of mounting the normal route stack with a broken DB.
+  - GC coordination is now two-way: while GC is active, new retrievals and critical writes wait; while retrievals/writes are active, GC waits or skips.
+  - post-commit capture/concept embedding vector writes now participate in critical-write activity coordination.
+  - shared `embeddings_vec` capture/concept owner prefix assumptions are documented beside vec search filtering.
+- Device migration 007 smoke test passed on Samsung SM_A165F on 2026-04-27:
+  - Cleared legacy app data, relaunched the installed RN app, and pulled `device-v7-codelens.db` plus WAL/SHM with `cmd /c "adb exec-out ... > file"`.
+  - Verified copied DB: `schema_version: 7`.
+  - Verified `learning_captures`, `captures_fts`, and rebuilt `concepts_fts` exist.
+  - Verified `embedding_tier` and `last_accessed_at` exist on both `learning_captures` and `concepts`.
+  - Verified retrieval indexes exist: `idx_captures_last_accessed`, `idx_captures_tier`, `idx_concepts_last_accessed`, `idx_concepts_tier`.
+  - Fresh device DB has `0` captures/concepts, so functional retrieval with real saved captures remains deferred post-Stage-9 QA; the migration/startup gate is complete.
+
+- Post-review follow-ups (2026-04-27):
+  - Filled three Stage 6 test gaps: GC eviction filter behavior, content-immutability invariant under retrieval and rehydration, and filter SQL path coverage in `matchesFilters`. Mocks are typed against `DB` from `@op-engineering/op-sqlite` and `LearningCapture`; no `as any`.
+  - Added a Retry button to the DB init error screen (re-runs `initDatabase()` inline).
+  - Made the migration runner atomic (Task 3): each migration body now runs inside `BEGIN IMMEDIATE ... COMMIT`, with `ROLLBACK` on failure. Migrations marked `nonTransactional: true` skip the wrapper. Currently only migration 007 is flagged, because it reads from the `embeddings_vec` (sqlite-vec) virtual table whose rollback semantics are not guaranteed. Source URLs (SQLite atomic commit, FTS5 transactional behavior, sqlite-vec README, project Phase 6 restore note) live in the file-level comment in `src/db/migrations/index.ts`.
+  - Added `src/db/migrations/__tests__/runner.test.ts` covering the wrapped-migration happy path, the non-transactional carve-out for v7, and rollback-on-failure (asserts `schema_version` is not bumped past the failing migration).
+  - Verification: `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit` passes; `npm.cmd test` passes: 23 files, 100 tests.
 
 ## What's NOT Done Yet (Remaining Phases)
+
+### Deferred post-Stage-9 QA
+- [ ] Stage 5 live promotion smoke: create at least 3 captures with shared keywords across at least 2 sessions, wait for `embedding_status = 'ready'`, open the Learning Hub, and verify a Promotion Suggestions card appears.
+- [ ] Stage 6 live retrieval smoke: create real saved captures and confirm `retrieveRelevantMemories` returns `{ memories, diagnostics }` with a sane diagnostics shape.
 
 ### Phase 7 — Resume Polish
 - [ ] Top-level README.md with architecture diagram, stack, RAG explanation, screenshots

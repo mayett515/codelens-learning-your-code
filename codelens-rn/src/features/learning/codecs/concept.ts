@@ -11,7 +11,8 @@ export const SurfaceFeaturesCodec = z.array(z.string()).default([]);
 export const ConceptIdArrayCodec = z.array(z.string().refine(isConceptId)).default([]);
 export const RepresentativeCaptureIdsCodec = z.array(z.string().refine(isLearningCaptureId)).default([]);
 
-type ConceptRow = typeof concepts.$inferSelect;
+type ConceptRow = Omit<typeof concepts.$inferSelect, 'embeddingTier' | 'lastAccessedAt'> &
+  Partial<Pick<typeof concepts.$inferSelect, 'embeddingTier' | 'lastAccessedAt'>>;
 
 function parseJson(raw: unknown, columnName: string): unknown {
   if (typeof raw === 'string') return JSON.parse(raw);

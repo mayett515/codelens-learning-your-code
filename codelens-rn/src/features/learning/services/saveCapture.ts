@@ -10,6 +10,9 @@ import {
   setCaptureEmbeddingStatus,
 } from '../data/captureRepo';
 import { buildCaptureEmbeddingText } from '../extractor/buildCaptureEmbeddingText';
+import { conceptSignature } from '../lib/hash';
+import { l2Normalize } from '../lib/l2';
+import { withCriticalWriteActivity } from '../retrieval/services/activity';
 import type { LearningCapture } from '../types/learning';
 import type { SaveModalCandidateData } from '../types/saveModal';
 
@@ -47,11 +50,22 @@ const defaultEmbeddingQueue: EmbeddingQueue = {
     const run = async (): Promise<void> => {
       try {
         const embedConfig = getEmbedConfig();
-        await enqueueEmbed(input.text, embedConfig.provider, embedConfig.model);
-        await input.onSuccess();
+        const raw = await enqueueEmbed(input.text, embedConfig.provider, embedConfig.model);
+        const { vectorStore } = await import('../../../composition');
+        await withCriticalWriteActivity(async () => {
+          await vectorStore.upsert({
+            id: input.captureId,
+            vector: l2Normalize(raw),
+            model: embedConfig.model,
+            api: embedConfig.provider,
+            signature: conceptSignature(input.text),
+            updatedAt: new Date().toISOString(),
+          });
+          await input.onSuccess();
+        });
       } catch (error) {
         console.warn('[learning] capture embedding failed after save', error);
-        await input.onFailure();
+        await withCriticalWriteActivity(input.onFailure);
       }
     };
 
@@ -84,7 +98,7 @@ export async function saveCapture(
   const captureId = resolvedDeps.newId();
   const now = resolvedDeps.now();
 
-  await resolvedDeps.database.transaction(async (tx) => {
+  await withCriticalWriteActivity(() => resolvedDeps.database.transaction(async (tx) => {
     const confidence = candidate.extractionConfidence ?? 0;
     const similarity = candidate.matchSimilarity ?? 0;
     const linkingAllowed = similarity >= 0.65 || confidence >= 0.70;
@@ -143,7 +157,7 @@ export async function saveCapture(
       },
       tx,
     );
-  });
+  }));
 
   resolvedDeps.embeddingQueue.enqueue({
     captureId,

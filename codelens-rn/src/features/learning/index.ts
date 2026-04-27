@@ -31,10 +31,8 @@ export { extractConcepts } from './application/extract';
 export type { ExtractedConcept, ExtractionResult } from './application/extract';
 export { retrieveRelatedConcepts, findMergeCandidates } from './application/retrieve';
 export type { RetrievalResult } from './application/retrieve';
-export { ensureEmbedded, syncPendingEmbeddings, reEmbedAll } from './application/sync';
+export { ensureEmbedded as ensureConceptEmbedded, syncPendingEmbeddings, reEmbedAll } from './application/sync';
 export { commitLearningSession } from './application/commit';
-export { runVectorGC, HOT_TIER_LIMIT, GC_BATCH_TARGET } from './application/gc';
-export type { GcResult } from './application/gc';
 export {
   BASE_APP_SYSTEM_PROMPT,
   EXTRACTOR_INSTRUCTIONS,
@@ -59,6 +57,7 @@ export { prepareSaveCandidates } from './services/prepareSaveCandidates';
 export type { SaveCandidateSource } from './services/prepareSaveCandidates';
 export { saveCapture } from './services/saveCapture';
 export * from './promotion';
+export * from './retrieval';
 
 // UI
 export { SaveAsLearningModal } from './ui/SaveAsLearningModal';

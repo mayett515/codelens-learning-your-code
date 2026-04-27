@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { useQueryClient } from '@tanstack/react-query';
 import { captureKeys, conceptKeys } from '../data/query-keys';
+import { retrievalKeys } from '../retrieval/data/queryKeys';
 import { useSaveLearningStore } from '../state/save-learning';
 import { prepareSaveCandidates } from '../services/prepareSaveCandidates';
 import { saveCapture } from '../services/saveCapture';
@@ -81,6 +82,7 @@ export function SaveAsLearningModal() {
         .setCandidateSaveState(candidateId, { state: 'saved', captureId, error: null });
       queryClient.invalidateQueries({ queryKey: captureKeys.all });
       queryClient.invalidateQueries({ queryKey: conceptKeys.all });
+      queryClient.invalidateQueries({ queryKey: retrievalKeys.all() });
     } catch (error) {
       useSaveLearningStore.getState().setCandidateSaveState(candidateId, {
         state: 'failed',
@@ -101,6 +103,7 @@ export function SaveAsLearningModal() {
         .setCandidateSaveState(candidateId, { state: 'saved', captureId, error: null });
       setPromotionCaptureId(captureId);
       queryClient.invalidateQueries({ queryKey: captureKeys.all });
+      queryClient.invalidateQueries({ queryKey: retrievalKeys.all() });
     } catch (error) {
       useSaveLearningStore.getState().setCandidateSaveState(candidateId, {
         state: 'failed',

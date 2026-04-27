@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { captureKeys, conceptKeys } from '../../data/query-keys';
 import { linkCapturesToExistingConcept } from '../services/linkCapturesToExistingConcept';
 import { promotionKeys } from '../data/queryKeys';
+import { retrievalKeys } from '../../retrieval/data/queryKeys';
 import type { LinkExistingInput, PromotionResult } from '../types/promotion';
 
 export function useLinkClusterToExisting() {
@@ -12,6 +13,7 @@ export function useLinkClusterToExisting() {
       void queryClient.invalidateQueries({ queryKey: promotionKeys.suggestions() });
       void queryClient.invalidateQueries({ queryKey: conceptKeys.byId(input.targetConceptId) });
       void queryClient.invalidateQueries({ queryKey: captureKeys.all });
+      void queryClient.invalidateQueries({ queryKey: retrievalKeys.all() });
     },
   });
 }

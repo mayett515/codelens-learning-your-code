@@ -112,6 +112,8 @@ export const concepts = sqliteTable('concepts', {
   representativeCaptureIds: text('representative_capture_ids_json', { mode: 'json' }).notNull().$type<string[]>().default([]),
   familiarityScore: real('familiarity_score').notNull().default(0),
   importanceScore: real('importance_score').notNull().default(0),
+  embeddingTier: text('embedding_tier', { enum: ['hot', 'cold'] }).notNull().default('cold'),
+  lastAccessedAt: integer('last_accessed_at'),
   languageSyntaxLegacy: text('language_syntax_legacy'),
   taxonomy: text('taxonomy', { mode: 'json' }).notNull().$type<{
     domain?: string | undefined;
@@ -130,6 +132,8 @@ export const concepts = sqliteTable('concepts', {
 }, (t) => [
   uniqueIndex('unique_concepts_normalized_key').on(t.normalizedKey),
   index('idx_concepts_concept_type').on(t.conceptType),
+  index('idx_concepts_tier').on(t.embeddingTier),
+  index('idx_concepts_last_accessed').on(t.lastAccessedAt),
 ]);
 
 export const learningCaptures = sqliteTable('learning_captures', {
@@ -151,6 +155,8 @@ export const learningCaptures = sqliteTable('learning_captures', {
   derivedFromCaptureId: text('derived_from_capture_id'),
   embeddingStatus: text('embedding_status', { enum: ['pending', 'ready', 'failed'] }).notNull().default('pending'),
   embeddingRetryCount: integer('embedding_retry_count').notNull().default(0),
+  embeddingTier: text('embedding_tier', { enum: ['hot', 'cold'] }).notNull().default('cold'),
+  lastAccessedAt: integer('last_accessed_at'),
   conceptHint: text('concept_hint_json', { mode: 'json' }).$type<unknown | null>(),
   keywords: text('keywords_json', { mode: 'json' }).notNull().$type<string[]>().default([]),
   createdAt: integer('created_at').notNull(),
@@ -160,6 +166,8 @@ export const learningCaptures = sqliteTable('learning_captures', {
   index('idx_captures_linked_concept').on(t.linkedConceptId),
   index('idx_captures_session').on(t.sessionId),
   index('idx_captures_created_at').on(t.createdAt),
+  index('idx_captures_tier').on(t.embeddingTier),
+  index('idx_captures_last_accessed').on(t.lastAccessedAt),
 ]);
 
 export const conceptLinks = sqliteTable('concept_links', {

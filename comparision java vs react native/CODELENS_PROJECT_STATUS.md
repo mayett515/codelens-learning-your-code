@@ -117,7 +117,8 @@ More explicitly:
 - Product/design specs are complete.
 - Stage 10 implementation has started in `C:\CodeLens-v2\codelens-rn`.
 - Phase A - Architecture prep and baseline checks is complete as of 2026-04-26.
-- Next work is optional functional Stage 5 promotion smoke testing, then Phase G / Stage 6 Retrieval.
+- Phase G / Stage 6 Retrieval is implemented and device migration 007 is verified on Samsung SM_A165F as of 2026-04-27.
+- Next work is Stage 7 - Dot Connector & Review Mode. Optional Stage 5 promotion and Stage 6 retrieval live smokes are deferred until after Stage 9.
 - Do not write new feature specs unless user explicitly asks.
 
 Phase A results:
@@ -195,9 +196,9 @@ Phase F results:
   - `promotion_dismissals` exists with `proposed_normalized_key`
   - `idx_promotion_cache_score` and `idx_promotion_dismissals_at` exist
   - copied DB currently has `0` suggestions/dismissals, so this verifies migration execution/no startup wedge; functional suggestion creation still needs real capture/embedding data to smoke-test.
-- Deferred Stage 5 QA item:
+- Deferred post-Stage-9 QA item:
   - Later, create at least 3 captures with shared keywords across at least 2 sessions, wait for capture embeddings to become `ready`, open the Learning Hub, and verify a Promotion Suggestions card appears.
-  - This is intentionally deferred; migration 006 device verification is complete.
+  - This is intentionally deferred until after Stages 7-9 are implemented; migration 006 device verification is complete.
 - Post-review fixes from Opus Stage 5 review:
   - Capture keywords now flow from extractor schema through save modal data into `learning_captures.keywords_json`.
   - Soft-dismissal resurface logic matches by `proposedNormalizedKey`.
@@ -210,6 +211,23 @@ Phase F results:
   - Promotion suggestion query keys are limit-aware and factory-owned.
   - Link-existing dedupes languages before appending.
   - Automated verification after fixes passed: `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit`; `npm.cmd test` = 21 files, 83 tests.
+
+Phase G results:
+- Stage 6 Retrieval is implemented in `C:\CodeLens-v2\codelens-rn` and lives under `src\features\learning\retrieval\`.
+- Added migration 007 with `embedding_tier` and `last_accessed_at` on `learning_captures` and `concepts`, `captures_fts`, rebuilt `concepts_fts`, FTS triggers, and retrieval tier/access indexes.
+- Added hybrid retrieval services for FTS5 + sqlite-vec search, RRF ranking, secondary factors, filters, diagnostics, injection formatting, hot/cold GC, JIT rehydration, and activity coordination.
+- Every retrieval call returns `{ memories, diagnostics }`; diagnostics expose `status`, backend availability, failed/timed-out sources, hit counts, rehydration count, duration, and last-access bump failures.
+- Automated verification passed on 2026-04-27: `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit`; `npm.cmd test` = 23 files, 100 tests.
+- Device migration 007 smoke test passed on Samsung SM_A165F after clearing legacy app data and reopening the installed RN app:
+  - copied DB reported `schema_version: 7`
+  - `learning_captures`, `captures_fts`, and rebuilt `concepts_fts` exist
+  - `embedding_tier` and `last_accessed_at` exist on both `learning_captures` and `concepts`
+  - `idx_captures_last_accessed`, `idx_captures_tier`, `idx_concepts_last_accessed`, and `idx_concepts_tier` exist
+  - copied DB currently has `0` captures/concepts, so functional retrieval with real saved captures remains deferred post-Stage-9 QA rather than a Stage 6 migration gate.
+
+Deferred post-Stage-9 QA:
+- Stage 5 live promotion smoke: create at least 3 captures with shared keywords across at least 2 sessions, wait for `embedding_status = 'ready'`, open the Learning Hub, and verify a Promotion Suggestions card appears.
+- Stage 6 live retrieval smoke: create real saved captures and confirm `retrieveRelevantMemories` returns `{ memories, diagnostics }` with a sane diagnostics shape.
 
 This means future work should be implementation, testing, migration safety, and integration discipline, not reopening product semantics that are already locked.
 

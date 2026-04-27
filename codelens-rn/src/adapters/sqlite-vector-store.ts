@@ -1,6 +1,6 @@
 import type { DB } from '@op-engineering/op-sqlite';
 import type { VectorStorePort } from '../ports/vector-store';
-import type { ConceptId, Provider, TopMatch, TopMatchesQuery } from '../domain/types';
+import type { ConceptId, TopMatch, TopMatchesQuery } from '../domain/types';
 
 export function makeSqliteVectorStore(rawDb: DB): VectorStorePort {
   return {
@@ -24,6 +24,22 @@ export function makeSqliteVectorStore(rawDb: DB): VectorStorePort {
            VALUES (?, ?)`,
           [input.id, vecBlob],
         );
+
+        if (String(input.id).startsWith('lc_')) {
+          await tx.execute(
+            `UPDATE learning_captures
+             SET embedding_tier = 'hot', updated_at = CAST(strftime('%s', 'now') AS INTEGER) * 1000
+             WHERE id = ?`,
+            [input.id],
+          );
+        } else if (String(input.id).startsWith('c_')) {
+          await tx.execute(
+            `UPDATE concepts
+             SET embedding_tier = 'hot', updated_at = datetime('now')
+             WHERE id = ?`,
+            [input.id],
+          );
+        }
       });
     },
 
@@ -90,7 +106,7 @@ export function makeSqliteVectorStore(rawDb: DB): VectorStorePort {
       return results.slice(0, query.limit);
     },
 
-    async delete(id: ConceptId) {
+    async delete(id) {
       await rawDb.transaction(async (tx) => {
         await tx.execute(
           'DELETE FROM embeddings_meta WHERE concept_id = ?',
@@ -100,6 +116,11 @@ export function makeSqliteVectorStore(rawDb: DB): VectorStorePort {
           'DELETE FROM embeddings_vec WHERE concept_id = ?',
           [id],
         );
+        if (String(id).startsWith('lc_')) {
+          await tx.execute(`UPDATE learning_captures SET embedding_tier = 'cold' WHERE id = ?`, [id]);
+        } else if (String(id).startsWith('c_')) {
+          await tx.execute(`UPDATE concepts SET embedding_tier = 'cold' WHERE id = ?`, [id]);
+        }
       });
     },
 
@@ -107,6 +128,8 @@ export function makeSqliteVectorStore(rawDb: DB): VectorStorePort {
       await rawDb.transaction(async (tx) => {
         await tx.execute('DELETE FROM embeddings_meta');
         await tx.execute('DELETE FROM embeddings_vec');
+        await tx.execute(`UPDATE learning_captures SET embedding_tier = 'cold'`);
+        await tx.execute(`UPDATE concepts SET embedding_tier = 'cold'`);
       });
     },
   };

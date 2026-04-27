@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BackHandler, Text, View } from 'react-native';
+import { BackHandler, Pressable, Text, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -11,29 +11,26 @@ import '@/src/composition';
 
 import { handleHardwareBack } from '@/src/lib/back-handler';
 import { initDatabase } from '@/src/db/client';
-import { runVectorGC } from '@/src/features/learning';
 
 const queryClient = new QueryClient();
 
 export default function RootLayout() {
   const [dbReady, setDbReady] = useState(false);
+  const [dbError, setDbError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const handleRetry = () => {
     try {
+      setDbError(null);
       initDatabase();
       setDbReady(true);
-      // Vector GC — fire-and-forget, never block UI on eviction.
-      runVectorGC()
-        .then((r) => {
-          if (r.evicted > 0) {
-            console.log(`[vec-gc] evicted ${r.evicted}, remaining ${r.remaining}`);
-          }
-        })
-        .catch((e) => console.warn('[vec-gc] failed:', e));
     } catch (e) {
       console.error('DB init failed:', e);
-      setDbReady(true);
+      setDbError(e instanceof Error ? e.message : String(e));
     }
+  };
+
+  useEffect(() => {
+    handleRetry();
   }, []);
 
   useEffect(() => {
@@ -43,6 +40,46 @@ export default function RootLayout() {
     );
     return () => sub.remove();
   }, []);
+
+  if (dbError) {
+    return (
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <View style={{ flex: 1, backgroundColor: '#0f1117', justifyContent: 'center', padding: 24 }}>
+          <Text style={{ color: '#f2f4f8', fontSize: 18, fontWeight: '700', marginBottom: 8 }}>
+            CodeLens could not open its local database.
+          </Text>
+          <Text style={{ color: '#a8b0c0', fontSize: 14, marginBottom: 24 }}>
+            {dbError}
+          </Text>
+          <Pressable
+            onPress={handleRetry}
+            style={{
+              minHeight: 44,
+              backgroundColor: '#1f2331',
+              justifyContent: 'center',
+              alignItems: 'center',
+              borderRadius: 8,
+              paddingHorizontal: 16,
+            }}
+          >
+            <Text style={{ color: '#f2f4f8', fontSize: 16, fontWeight: '600' }}>Retry</Text>
+          </Pressable>
+        </View>
+        <StatusBar style="light" />
+      </GestureHandlerRootView>
+    );
+  }
+
+  if (!dbReady) {
+    return (
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <View style={{ flex: 1, backgroundColor: '#0f1117', justifyContent: 'center', alignItems: 'center' }}>
+          <Text style={{ color: '#a8b0c0', fontSize: 14 }}>Opening CodeLens...</Text>
+        </View>
+        <StatusBar style="light" />
+      </GestureHandlerRootView>
+    );
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
