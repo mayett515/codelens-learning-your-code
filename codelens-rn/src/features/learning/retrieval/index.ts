@@ -1,7 +1,7 @@
 export { retrievalKeys } from './data/queryKeys';
 export { sanitizeFtsQuery } from './services/ftsSearch';
 export { retrieveRelevantMemories } from './services/retrieveRelevantMemories';
-export { formatMemoriesForInjection } from './services/formatMemoriesForInjection';
+export { formatMemoriesForInjection } from './formatting/formatMemoriesForInjection';
 export { ensureEmbedded } from './services/ensureEmbedded';
 export { runHotColdGc, HOT_TIER_LIMIT, GC_BATCH_TARGET } from './services/runHotColdGc';
 export { rehydrationQueue } from './services/rehydrationQueue';

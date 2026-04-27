@@ -2,6 +2,7 @@ import { open, type DB } from '@op-engineering/op-sqlite';
 import { drizzle } from 'drizzle-orm/op-sqlite';
 import * as schema from './schema';
 import { runMigrations } from './migrations';
+import { seedBuiltInPersonasSync } from '../features/personas/data/seedBuiltInPersonas';
 
 const DB_NAME = 'codelens.db';
 
@@ -66,6 +67,7 @@ export function initDatabase() {
   opsqlite.executeSync('PRAGMA foreign_keys = ON;');
   initVec0();
   runMigrations(opsqlite);
+  seedBuiltInPersonasSync(opsqlite);
   void import('../features/learning/retrieval/services/runHotColdGc')
     .then(({ runHotColdGc }) => runHotColdGc())
     .catch((error) => {

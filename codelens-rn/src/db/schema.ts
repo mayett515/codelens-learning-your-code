@@ -32,6 +32,21 @@ export const files = sqliteTable('files', {
   >().default([]),
 });
 
+export const personas = sqliteTable('personas', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  description: text('description').notNull(),
+  systemPromptLayer: text('system_prompt_layer').notNull(),
+  iconEmoji: text('icon_emoji'),
+  isBuiltIn: integer('is_built_in', { mode: 'boolean' }).notNull().default(false),
+  sortOrder: integer('sort_order').notNull().default(100),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+}, (t) => [
+  uniqueIndex('idx_personas_name').on(t.name),
+  index('idx_personas_sort').on(t.sortOrder, t.name),
+]);
+
 export const chats = sqliteTable('chats', {
   id: text('id').primaryKey(),
   scope: text('scope', { enum: ['section', 'general', 'learning'] }).notNull(),
@@ -41,6 +56,9 @@ export const chats = sqliteTable('chats', {
   endLine: integer('end_line'),
   folderId: text('folder_id'),
   conceptId: text('concept_id'),
+  personaId: text('persona_id').references(() => personas.id, { onDelete: 'set null' }),
+  // Stage 8: modelOverride is the legacy free-form override; modelOverrideId is the catalog-backed selector.
+  modelOverrideId: text('model_override_id'),
   modelOverride: text('model_override', { mode: 'json' }).$type<{
     provider: 'openrouter' | 'siliconflow';
     model: string;
