@@ -6,7 +6,9 @@ import type {
 } from '../domain/types';
 import {
   defaultFallbackModels,
+  GOOGLE_DEFAULT_MODEL,
   normalizeModelList,
+  OPENCODE_GO_DEFAULT_MODEL,
   OPENROUTER_DEFAULT_MODEL,
   SILICONFLOW_DEFAULT_MODEL,
 } from './fallback';
@@ -21,6 +23,8 @@ function defaultScopeModelConfig(): ScopeModelConfig {
     models: {
       openrouter: OPENROUTER_DEFAULT_MODEL,
       siliconflow: SILICONFLOW_DEFAULT_MODEL,
+      google: GOOGLE_DEFAULT_MODEL,
+      opencodego: OPENCODE_GO_DEFAULT_MODEL,
     },
     fallbackModels: defaultFallbackModels(),
     allowCrossProviderFallback: true,
@@ -53,16 +57,25 @@ function normalizeScopeConfig(raw: unknown): ScopeModelConfig {
   if (!raw || typeof raw !== 'object') return defaults;
 
   const value = raw as Partial<ScopeModelConfig>;
-  const provider = value.provider === 'siliconflow' ? 'siliconflow' : 'openrouter';
+  const provider =
+    value.provider === 'siliconflow' ||
+    value.provider === 'google' ||
+    value.provider === 'opencodego'
+      ? value.provider
+      : 'openrouter';
 
   const openrouterModel = value.models?.openrouter?.trim() || defaults.models.openrouter;
   const siliconflowModel = value.models?.siliconflow?.trim() || defaults.models.siliconflow;
+  const googleModel = value.models?.google?.trim() || defaults.models.google;
+  const opencodegoModel = value.models?.opencodego?.trim() || defaults.models.opencodego;
 
   return {
     provider,
     models: {
       openrouter: openrouterModel,
       siliconflow: siliconflowModel,
+      google: googleModel,
+      opencodego: opencodegoModel,
     },
     fallbackModels: {
       openrouter: normalizeModelList(
@@ -70,6 +83,12 @@ function normalizeScopeConfig(raw: unknown): ScopeModelConfig {
       ),
       siliconflow: normalizeModelList(
         value.fallbackModels?.siliconflow ?? defaults.fallbackModels.siliconflow,
+      ),
+      google: normalizeModelList(
+        value.fallbackModels?.google ?? defaults.fallbackModels.google,
+      ),
+      opencodego: normalizeModelList(
+        value.fallbackModels?.opencodego ?? defaults.fallbackModels.opencodego,
       ),
     },
     allowCrossProviderFallback:

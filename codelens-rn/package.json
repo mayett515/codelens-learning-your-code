@@ -10,7 +10,10 @@
     "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:providers": "vitest run src/ai/__tests__/fallback.test.ts src/adapters/__tests__/siliconflow-client.test.ts src/adapters/__tests__/google-client.test.ts src/adapters/__tests__/opencodego-client.test.ts src/features/ai-providers/services/__tests__/providerSmokeTest.test.ts src/adapters/__tests__/provider-live.smoke.test.ts",
+    "test:providers:live": "vitest run src/adapters/__tests__/provider-live.smoke.test.ts"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",

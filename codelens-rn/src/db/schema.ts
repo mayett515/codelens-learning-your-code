@@ -42,11 +42,13 @@ export const chats = sqliteTable('chats', {
   folderId: text('folder_id'),
   conceptId: text('concept_id'),
   modelOverride: text('model_override', { mode: 'json' }).$type<{
-    provider: 'openrouter' | 'siliconflow';
+    provider: 'openrouter' | 'siliconflow' | 'google' | 'opencodego';
     model: string;
     fallbackModels?: {
       openrouter: string[];
       siliconflow: string[];
+      google: string[];
+      opencodego: string[];
     } | undefined;
     allowCrossProviderFallback?: boolean | undefined;
     freeTierFallbacksOnly?: boolean | undefined;

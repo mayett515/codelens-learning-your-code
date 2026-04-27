@@ -16,6 +16,31 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npx expo start
    ```
 
+## Testing
+
+Vitest is configured in `vitest.config.ts` for Node-based unit tests under
+`src/**/*.test.ts` and `src/**/*.test.tsx`.
+
+On Windows PowerShell, prefer `npm.cmd` so execution policy does not block the
+npm shim:
+
+```powershell
+npm.cmd test
+npm.cmd run test:watch
+npm.cmd run test:providers
+```
+
+Live provider smoke tests are opt-in so normal test runs do not spend tokens:
+
+```powershell
+$env:RUN_LIVE_AI_TESTS='1'
+$env:OPENROUTER_API_KEY='<openrouter-key>'
+$env:SILICONFLOW_API_KEY='<siliconflow-key>'
+$env:GOOGLE_AI_STUDIO_API_KEY='<google-ai-studio-key>' # or GOOGLE_API_KEY
+$env:OPENCODE_GO_API_KEY='<opencode-go-key>'
+npm.cmd run test:providers:live
+```
+
 In the output, you'll find options to open the app in a
 
 - [development build](https://docs.expo.dev/develop/development-builds/introduction/)

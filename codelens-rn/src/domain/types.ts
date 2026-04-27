@@ -95,7 +95,7 @@ export interface ChatMessage {
 
 // ===== Provider config =====
 
-export type Provider = 'openrouter' | 'siliconflow';
+export type Provider = 'openrouter' | 'siliconflow' | 'google' | 'opencodego';
 
 export interface ScopeModelConfig {
   provider: Provider;

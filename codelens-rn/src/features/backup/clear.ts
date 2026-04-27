@@ -47,5 +47,7 @@ export async function clearAllData(options?: ClearOptions): Promise<void> {
   if (options?.includeApiKeys) {
     await secureStore.deleteApiKey('openrouter');
     await secureStore.deleteApiKey('siliconflow');
+    await secureStore.deleteApiKey('google');
+    await secureStore.deleteApiKey('opencodego');
   }
 }

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit)",
+      "Bash(tsc --version)",
+      "Bash(npx --prefix \"/c/CodeLens-v2-provider/codelens-rn\" tsc --version)"
+    ]
+  }
+}

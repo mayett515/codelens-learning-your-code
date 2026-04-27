@@ -24,6 +24,8 @@ interface EnqueueOptions {
 const COOLDOWNS: Record<Provider, number> = {
   openrouter: 1100,
   siliconflow: 1500,
+  google: 1100,
+  opencodego: 1100,
 };
 
 const MAX_RETRIES_PER_ATTEMPT = 2;
@@ -33,6 +35,8 @@ let processing = false;
 let lastCallTime: Record<Provider, number> = {
   openrouter: 0,
   siliconflow: 0,
+  google: 0,
+  opencodego: 0,
 };
 
 let completeImpl: ((input: AiCompleteInput) => Promise<string>) | null = null;

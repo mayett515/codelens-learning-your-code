@@ -160,7 +160,12 @@ function normalizeChatModelOverride(raw: unknown): ChatModelOverride | undefined
   if (!raw || typeof raw !== 'object') return undefined;
 
   const value = raw as Partial<ChatModelOverride>;
-  if (value.provider !== 'openrouter' && value.provider !== 'siliconflow') {
+  if (
+    value.provider !== 'openrouter' &&
+    value.provider !== 'siliconflow' &&
+    value.provider !== 'google' &&
+    value.provider !== 'opencodego'
+  ) {
     return undefined;
   }
 
@@ -174,6 +179,8 @@ function normalizeChatModelOverride(raw: unknown): ChatModelOverride | undefined
       ? {
           openrouter: normalizeModelList(value.fallbackModels.openrouter),
           siliconflow: normalizeModelList(value.fallbackModels.siliconflow),
+          google: normalizeModelList(value.fallbackModels.google),
+          opencodego: normalizeModelList(value.fallbackModels.opencodego),
         }
       : undefined,
     allowCrossProviderFallback:

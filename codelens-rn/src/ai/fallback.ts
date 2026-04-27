@@ -1,9 +1,11 @@
 import type { ChatModelOverride, Provider, ScopeModelConfig } from '../domain/types';
 
-const PROVIDERS: Provider[] = ['openrouter', 'siliconflow'];
+const PROVIDERS: Provider[] = ['openrouter', 'siliconflow', 'google', 'opencodego'];
 
 export const OPENROUTER_DEFAULT_MODEL = 'google/gemini-2.0-flash-exp:free';
 export const SILICONFLOW_DEFAULT_MODEL = 'Qwen/Qwen2.5-7B-Instruct';
+export const GOOGLE_DEFAULT_MODEL = 'gemini-2.5-flash';
+export const OPENCODE_GO_DEFAULT_MODEL = 'kimi-k2.5';
 
 export const OPENROUTER_FREE_FALLBACKS: string[] = [
   'meta-llama/llama-3.3-70b-instruct:free',
@@ -12,10 +14,41 @@ export const OPENROUTER_FREE_FALLBACKS: string[] = [
 ];
 
 export const SILICONFLOW_FREE_FALLBACKS: string[] = [
-  'Qwen/Qwen2.5-14B-Instruct',
-  'THUDM/GLM-4-9B-Chat',
-  'Qwen/Qwen2.5-7B-Instruct',
+  'tencent/Hunyuan-MT-7B',
 ];
+
+export const SILICONFLOW_PAID_FALLBACKS: string[] = [
+  'Qwen/Qwen2.5-7B-Instruct',
+  'Qwen/Qwen3-8B',
+  'THUDM/GLM-4-9B-0414',
+  'deepseek-ai/DeepSeek-R1-Distill-Qwen-14B',
+  'Qwen/Qwen2.5-14B-Instruct',
+  'Qwen/Qwen3-32B',
+];
+
+export const GOOGLE_FREE_FALLBACKS: string[] = [
+  'gemini-2.5-flash-lite',
+  'gemini-2.5-flash',
+];
+
+export const GOOGLE_PAID_FALLBACKS: string[] = [
+  'gemini-2.5-pro',
+];
+
+export const OPENCODE_GO_FALLBACKS: string[] = [
+  'kimi-k2.5',
+  'glm-5',
+  'mimo-v2-pro',
+  'mimo-v2-omni',
+];
+
+const SILICONFLOW_FREE_MODEL_IDS = new Set(
+  SILICONFLOW_FREE_FALLBACKS.map((model) => model.toLowerCase()),
+);
+
+const GOOGLE_FREE_MODEL_IDS = new Set(
+  GOOGLE_FREE_FALLBACKS.map((model) => model.toLowerCase()),
+);
 
 export interface CompletionAttempt {
   provider: Provider;
@@ -34,7 +67,15 @@ export interface CompletionRouting {
 export function defaultFallbackModels(): Record<Provider, string[]> {
   return {
     openrouter: [...OPENROUTER_FREE_FALLBACKS],
-    siliconflow: [...SILICONFLOW_FREE_FALLBACKS],
+    siliconflow: normalizeModelList([
+      ...SILICONFLOW_FREE_FALLBACKS,
+      ...SILICONFLOW_PAID_FALLBACKS,
+    ]),
+    google: normalizeModelList([
+      ...GOOGLE_FREE_FALLBACKS,
+      ...GOOGLE_PAID_FALLBACKS,
+    ]),
+    opencodego: [...OPENCODE_GO_FALLBACKS],
   };
 }
 
@@ -68,8 +109,15 @@ export function isLikelyFreeTierModel(provider: Provider, model: string): boolea
     return m.includes(':free') || m.startsWith('openrouter/free');
   }
 
-  // SiliconFlow documents "Pro/*" as paid family naming.
-  return !m.startsWith('pro/');
+  if (provider === 'siliconflow') {
+    return SILICONFLOW_FREE_MODEL_IDS.has(m);
+  }
+
+  if (provider === 'google') {
+    return GOOGLE_FREE_MODEL_IDS.has(m);
+  }
+
+  return false;
 }
 
 export function buildCompletionRouting(
@@ -86,11 +134,19 @@ export function buildCompletionRouting(
     siliconflow: normalizeModelList(
       override?.fallbackModels?.siliconflow ?? scopeConfig.fallbackModels.siliconflow,
     ),
+    google: normalizeModelList(
+      override?.fallbackModels?.google ?? scopeConfig.fallbackModels.google,
+    ),
+    opencodego: normalizeModelList(
+      override?.fallbackModels?.opencodego ?? scopeConfig.fallbackModels.opencodego,
+    ),
   };
 
   const models = {
     openrouter: scopeConfig.models.openrouter.trim(),
     siliconflow: scopeConfig.models.siliconflow.trim(),
+    google: scopeConfig.models.google.trim(),
+    opencodego: scopeConfig.models.opencodego.trim(),
   };
 
   return {

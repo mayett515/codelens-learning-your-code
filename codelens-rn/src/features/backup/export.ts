@@ -123,7 +123,7 @@ export async function exportBackup(): Promise<ExportResult> {
   // --- 4. Secure-store: NEVER export actual keys; record which providers
   //     had keys so the importer can prompt the user to re-enter. ---
   const providersWithKeys: string[] = [];
-  for (const provider of ['openrouter', 'siliconflow']) {
+  for (const provider of ['openrouter', 'siliconflow', 'google', 'opencodego']) {
     const k = await secureStore.getApiKey(provider);
     if (k) providersWithKeys.push(provider);
   }

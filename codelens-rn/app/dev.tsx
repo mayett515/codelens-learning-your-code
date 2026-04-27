@@ -7,6 +7,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 import { colors, fontSize, spacing } from '@/src/ui/theme';
 import { initDatabase } from '@/src/db/client';
 import { vectorStore } from '@/src/composition';
@@ -135,6 +136,14 @@ export default function DevScreen() {
         <Text style={styles.buttonText}>Run RAG Smoke Test</Text>
       </Pressable>
 
+      <Text style={styles.sandboxLabel}>Sandbox</Text>
+      <Pressable
+        style={[styles.button, styles.sandboxButton]}
+        onPress={() => router.push('/sandbox/providers')}
+      >
+        <Text style={styles.buttonText}>Add AI Provider</Text>
+      </Pressable>
+
       <ScrollView style={styles.logContainer}>
         {log.map((line, i) => (
           <Text
@@ -213,5 +222,19 @@ const styles = StyleSheet.create({
   passLine: {
     color: colors.green,
     fontWeight: '700',
+  },
+  sandboxLabel: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+  },
+  sandboxButton: {
+    backgroundColor: colors.surfaceLight,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
 });

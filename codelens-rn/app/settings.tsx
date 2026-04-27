@@ -30,18 +30,24 @@ import { BackupSection } from '@/src/features/backup';
 import type { ChatScope, Provider } from '@/src/domain/types';
 
 const SCOPES: ChatScope[] = ['section', 'general', 'learning'];
-const PROVIDERS: Provider[] = ['openrouter', 'siliconflow'];
+const PROVIDERS: Provider[] = ['openrouter', 'siliconflow', 'google', 'opencodego'];
 
 const PROVIDER_LABELS: Record<Provider, string> = {
   openrouter: 'OpenRouter',
   siliconflow: 'SiliconFlow',
+  google: 'Google AI Studio',
+  opencodego: 'OpenCode Go',
 };
 
 export default function SettingsScreen() {
   const [orKey, setOrKey] = useState('');
   const [sfKey, setSfKey] = useState('');
+  const [googleKey, setGoogleKey] = useState('');
+  const [openCodeGoKey, setOpenCodeGoKey] = useState('');
   const [orKeySet, setOrKeySet] = useState(false);
   const [sfKeySet, setSfKeySet] = useState(false);
+  const [googleKeySet, setGoogleKeySet] = useState(false);
+  const [openCodeGoKeySet, setOpenCodeGoKeySet] = useState(false);
   const [config, setConfig] = useState(getChatConfig());
   const [embedCfg, setEmbedCfg] = useState(getEmbedConfig());
   const [reEmbedding, setReEmbedding] = useState(false);
@@ -51,8 +57,12 @@ export default function SettingsScreen() {
     (async () => {
       const or = await secureStore.getApiKey('openrouter');
       const sf = await secureStore.getApiKey('siliconflow');
+      const google = await secureStore.getApiKey('google');
+      const openCodeGo = await secureStore.getApiKey('opencodego');
       if (or) { setOrKeySet(true); setOrKey(''); }
       if (sf) { setSfKeySet(true); setSfKey(''); }
+      if (google) { setGoogleKeySet(true); setGoogleKey(''); }
+      if (openCodeGo) { setOpenCodeGoKeySet(true); setOpenCodeGoKey(''); }
     })();
   }, []);
 
@@ -72,6 +82,22 @@ export default function SettingsScreen() {
     flash('SiliconFlow key saved');
   }
 
+  async function saveGoogleKey() {
+    if (!googleKey.trim()) return;
+    await secureStore.setApiKey('google', googleKey.trim());
+    setGoogleKeySet(true);
+    setGoogleKey('');
+    flash('Google AI Studio key saved');
+  }
+
+  async function saveOpenCodeGoKey() {
+    if (!openCodeGoKey.trim()) return;
+    await secureStore.setApiKey('opencodego', openCodeGoKey.trim());
+    setOpenCodeGoKeySet(true);
+    setOpenCodeGoKey('');
+    flash('OpenCode Go key saved');
+  }
+
   async function clearOrKey() {
     await secureStore.deleteApiKey('openrouter');
     setOrKeySet(false);
@@ -82,6 +108,18 @@ export default function SettingsScreen() {
     await secureStore.deleteApiKey('siliconflow');
     setSfKeySet(false);
     flash('SiliconFlow key cleared');
+  }
+
+  async function clearGoogleKey() {
+    await secureStore.deleteApiKey('google');
+    setGoogleKeySet(false);
+    flash('Google AI Studio key cleared');
+  }
+
+  async function clearOpenCodeGoKey() {
+    await secureStore.deleteApiKey('opencodego');
+    setOpenCodeGoKeySet(false);
+    flash('OpenCode Go key cleared');
   }
 
   function handleProviderChange(scope: ChatScope, provider: Provider) {
@@ -218,6 +256,62 @@ export default function SettingsScreen() {
           )}
         </View>
 
+        <View style={styles.keySection}>
+          <Text style={styles.label}>Google AI Studio</Text>
+          {googleKeySet ? (
+            <View style={styles.keyRow}>
+              <Text style={styles.keySet}>Key set</Text>
+              <Pressable style={styles.clearBtn} onPress={clearGoogleKey}>
+                <Text style={styles.clearBtnText}>Clear</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View style={styles.keyRow}>
+              <TextInput
+                style={styles.keyInput}
+                placeholder="AIza..."
+                placeholderTextColor={colors.textSecondary}
+                value={googleKey}
+                onChangeText={setGoogleKey}
+                autoCapitalize="none"
+                autoCorrect={false}
+                secureTextEntry
+              />
+              <Pressable style={styles.saveBtn} onPress={saveGoogleKey}>
+                <Text style={styles.saveBtnText}>Save</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.keySection}>
+          <Text style={styles.label}>OpenCode Go</Text>
+          {openCodeGoKeySet ? (
+            <View style={styles.keyRow}>
+              <Text style={styles.keySet}>Key set</Text>
+              <Pressable style={styles.clearBtn} onPress={clearOpenCodeGoKey}>
+                <Text style={styles.clearBtnText}>Clear</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View style={styles.keyRow}>
+              <TextInput
+                style={styles.keyInput}
+                placeholder="sk-..."
+                placeholderTextColor={colors.textSecondary}
+                value={openCodeGoKey}
+                onChangeText={setOpenCodeGoKey}
+                autoCapitalize="none"
+                autoCorrect={false}
+                secureTextEntry
+              />
+              <Pressable style={styles.saveBtn} onPress={saveOpenCodeGoKey}>
+                <Text style={styles.saveBtnText}>Save</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+
         <Text style={styles.sectionTitle}>Model Config</Text>
         <Text style={styles.hint}>
           Each scope has its own primary model and fallback hierarchy.
@@ -337,6 +431,34 @@ export default function SettingsScreen() {
                 value={formatModelListInput(scopeConfig.fallbackModels.siliconflow)}
                 onChangeText={(text) =>
                   handleFallbackModelsChange(scope, 'siliconflow', text)
+                }
+                placeholder="one model per line"
+                placeholderTextColor={colors.textSecondary}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+
+              <Text style={styles.modelLabel}>Fallback hierarchy (Google AI Studio)</Text>
+              <TextInput
+                style={styles.fallbackInput}
+                multiline
+                value={formatModelListInput(scopeConfig.fallbackModels.google)}
+                onChangeText={(text) =>
+                  handleFallbackModelsChange(scope, 'google', text)
+                }
+                placeholder="one model per line"
+                placeholderTextColor={colors.textSecondary}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+
+              <Text style={styles.modelLabel}>Fallback hierarchy (OpenCode Go)</Text>
+              <TextInput
+                style={styles.fallbackInput}
+                multiline
+                value={formatModelListInput(scopeConfig.fallbackModels.opencodego)}
+                onChangeText={(text) =>
+                  handleFallbackModelsChange(scope, 'opencodego', text)
                 }
                 placeholder="one model per line"
                 placeholderTextColor={colors.textSecondary}

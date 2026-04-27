@@ -12,6 +12,8 @@ interface EmbedQueueItem {
 const COOLDOWNS: Record<Provider, number> = {
   openrouter: 1100,
   siliconflow: 1500,
+  google: 1100,
+  opencodego: 1100,
 };
 
 const MAX_RETRIES = 3;
@@ -21,6 +23,8 @@ let processing = false;
 let lastCallTime: Record<Provider, number> = {
   openrouter: 0,
   siliconflow: 0,
+  google: 0,
+  opencodego: 0,
 };
 
 let embedImpl: ((input: AiEmbedInput) => Promise<Float32Array>) | null = null;

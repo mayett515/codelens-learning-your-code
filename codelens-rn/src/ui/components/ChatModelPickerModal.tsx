@@ -20,11 +20,13 @@ import type {
   ScopeModelConfig,
 } from '@/src/domain/types';
 
-const PROVIDERS: Provider[] = ['openrouter', 'siliconflow'];
+const PROVIDERS: Provider[] = ['openrouter', 'siliconflow', 'google', 'opencodego'];
 
 const PROVIDER_LABELS: Record<Provider, string> = {
   openrouter: 'OpenRouter',
   siliconflow: 'SiliconFlow',
+  google: 'Google AI Studio',
+  opencodego: 'OpenCode Go',
 };
 
 interface Props {

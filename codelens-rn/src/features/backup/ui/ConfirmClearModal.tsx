@@ -81,7 +81,7 @@ export function ConfirmClearModal({ visible, onClose, onConfirm }: ConfirmClearM
               {includeApiKeys ? <Text style={styles.checkboxMark}>×</Text> : null}
             </View>
             <Text style={styles.checkLabel}>
-              Also delete saved API keys (OpenRouter, SiliconFlow)
+              Also delete saved API keys (OpenRouter, SiliconFlow, Google AI Studio, OpenCode Go)
             </Text>
           </Pressable>
 
