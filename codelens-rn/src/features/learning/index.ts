@@ -21,7 +21,12 @@ export {
   getKnowledgeHealthConcepts,
 } from './data/conceptRepo';
 export { newLearningCaptureId, newConceptId, isLearningCaptureId, isConceptId } from './types/ids';
-export type { LearningCaptureId, ConceptId as LearningConceptId } from './types/ids';
+export {
+  newReviewEventId,
+  isReviewEventId,
+  unsafeReviewEventId,
+} from './types/ids';
+export type { LearningCaptureId, ConceptId as LearningConceptId, ReviewEventId } from './types/ids';
 export type { LearningCapture, LearningConcept, ConceptType, CaptureState, EmbeddingStatus, ConceptHint } from './types/learning';
 export type { SaveModalCandidateData, CandidateSaveState } from './types/saveModal';
 export { computeStrength } from './strength/computeStrength';
@@ -58,6 +63,8 @@ export type { SaveCandidateSource } from './services/prepareSaveCandidates';
 export { saveCapture } from './services/saveCapture';
 export * from './promotion';
 export * from './retrieval';
+export * from './dot-connector';
+export * from './review';
 
 // UI
 export { SaveAsLearningModal } from './ui/SaveAsLearningModal';

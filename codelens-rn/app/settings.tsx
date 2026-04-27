@@ -25,7 +25,13 @@ import {
   updateEmbedModel,
 } from '@/src/ai/scopes';
 import { formatModelListInput, parseModelListInput } from '@/src/ai/fallback';
-import { reEmbedAll } from '@/src/features/learning';
+import {
+  reEmbedAll,
+  useDotConnectorSettings,
+  useReviewSettings,
+  useUpdateDotConnectorSettings,
+  useUpdateReviewSettings,
+} from '@/src/features/learning';
 import { BackupSection } from '@/src/features/backup';
 import type { ChatScope, Provider } from '@/src/domain/types';
 
@@ -44,6 +50,10 @@ export default function SettingsScreen() {
   const [sfKeySet, setSfKeySet] = useState(false);
   const [config, setConfig] = useState(getChatConfig());
   const [embedCfg, setEmbedCfg] = useState(getEmbedConfig());
+  const dotConnectorSettings = useDotConnectorSettings();
+  const updateDotConnectorSettings = useUpdateDotConnectorSettings();
+  const reviewSettings = useReviewSettings();
+  const updateReviewSettings = useUpdateReviewSettings();
   const [reEmbedding, setReEmbedding] = useState(false);
   const [saved, setSaved] = useState('');
 
@@ -401,6 +411,72 @@ export default function SettingsScreen() {
         </View>
 
         <BackupSection onFlash={flash} />
+
+        <Text style={styles.sectionTitle}>Memory & Review</Text>
+        <View style={styles.scopeSection}>
+          <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>Dot Connector</Text>
+            <Pressable
+              style={[styles.toggleBtn, dotConnectorSettings.enableDotConnector && styles.toggleBtnActive]}
+              onPress={() => {
+                updateDotConnectorSettings({ enableDotConnector: !dotConnectorSettings.enableDotConnector });
+                flash(`Dot Connector ${dotConnectorSettings.enableDotConnector ? 'off' : 'on'}`);
+              }}
+            >
+              <Text style={[styles.toggleBtnText, dotConnectorSettings.enableDotConnector && styles.toggleBtnTextActive]}>
+                {dotConnectorSettings.enableDotConnector ? 'ON' : 'OFF'}
+              </Text>
+            </Pressable>
+          </View>
+          <View style={styles.providerRow}>
+            {(['conservative', 'standard', 'aggressive'] as const).map((mode) => (
+              <Pressable
+                key={mode}
+                style={[styles.providerBtn, dotConnectorSettings.injectionMode === mode && styles.providerBtnActive]}
+                onPress={() => updateDotConnectorSettings({ injectionMode: mode })}
+              >
+                <Text style={[styles.providerBtnText, dotConnectorSettings.injectionMode === mode && styles.providerBtnTextActive]}>
+                  {mode}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>Review Mode</Text>
+            <Pressable
+              style={[styles.toggleBtn, reviewSettings.enableReviewMode && styles.toggleBtnActive]}
+              onPress={() => {
+                updateReviewSettings({ enableReviewMode: !reviewSettings.enableReviewMode });
+                flash(`Review Mode ${reviewSettings.enableReviewMode ? 'off' : 'on'}`);
+              }}
+            >
+              <Text style={[styles.toggleBtnText, reviewSettings.enableReviewMode && styles.toggleBtnTextActive]}>
+                {reviewSettings.enableReviewMode ? 'ON' : 'OFF'}
+              </Text>
+            </Pressable>
+          </View>
+          <Text style={styles.modelLabel}>Show concepts with strength below</Text>
+          <TextInput
+            style={styles.modelInput}
+            value={String(reviewSettings.weakConceptThreshold)}
+            onChangeText={(value) => {
+              const next = Number(value);
+              if (!Number.isNaN(next)) updateReviewSettings({ weakConceptThreshold: Math.max(0, Math.min(1, next)) });
+            }}
+            keyboardType="decimal-pad"
+          />
+          <View style={styles.toggleRow}>
+            <Text style={styles.toggleLabel}>Save my reflection notes with each review</Text>
+            <Pressable
+              style={[styles.toggleBtn, reviewSettings.recordRecallText && styles.toggleBtnActive]}
+              onPress={() => updateReviewSettings({ recordRecallText: !reviewSettings.recordRecallText })}
+            >
+              <Text style={[styles.toggleBtnText, reviewSettings.recordRecallText && styles.toggleBtnTextActive]}>
+                {reviewSettings.recordRecallText ? 'ON' : 'OFF'}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
       </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

@@ -502,7 +502,7 @@ Next locked step after Phase B was Phase C / Stage 2 Extractor and Save Flow.
   - Tests now cover the fixed keyword, dismissal, single-capture, ordering, and warning paths.
   - Verification after fixes: `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit` passes; `npm.cmd test` passes: 21 files, 83 tests.
 
-Next locked step: Phase H / Stage 7 Dot Connector & Review Mode. Read `STAGE_7_DOT_CONNECTOR_AND_REVIEW.md` before editing chat memory injection or review behavior. Optional functional Stage 5 promotion and Stage 6 retrieval live smokes are deferred until after Stage 9.
+Next locked step after Stage 7: Phase I / Stage 8 Personas & Chat UX. Read `STAGE_8_PERSONAS_AND_CHAT_UX.md` before editing personas, cancel, mini chat, selected-code preview, or bookmarks. Optional functional Stage 5 promotion and Stage 6 retrieval live smokes are deferred until after Stage 9.
 
 ### Phase G - Stage 6 Retrieval - COMPLETE (2026-04-27)
 
@@ -577,6 +577,53 @@ Next locked step: Phase H / Stage 7 Dot Connector & Review Mode. Read `STAGE_7_D
   - Made the migration runner atomic (Task 3): each migration body now runs inside `BEGIN IMMEDIATE ... COMMIT`, with `ROLLBACK` on failure. Migrations marked `nonTransactional: true` skip the wrapper. Currently only migration 007 is flagged, because it reads from the `embeddings_vec` (sqlite-vec) virtual table whose rollback semantics are not guaranteed. Source URLs (SQLite atomic commit, FTS5 transactional behavior, sqlite-vec README, project Phase 6 restore note) live in the file-level comment in `src/db/migrations/index.ts`.
   - Added `src/db/migrations/__tests__/runner.test.ts` covering the wrapped-migration happy path, the non-transactional carve-out for v7, and rollback-on-failure (asserts `schema_version` is not bumped past the failing migration).
   - Verification: `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit` passes; `npm.cmd test` passes: 23 files, 100 tests.
+
+### Phase H - Stage 7 Dot Connector & Review Mode - COMPLETE (2026-04-27)
+
+- Read `STAGE_7_DOT_CONNECTOR_AND_REVIEW.md` plus required guard/master docs before Stage 7 work.
+- Added Stage 7 persistence:
+  - migration `008-review-events.ts`
+  - `review_events` audit table with cascade to concepts
+  - `idx_review_events_concept` and `idx_review_events_created`
+  - SQL artifact under `src/features/learning/review/data/migrations/0008_review_events.sql`
+- Added feature-owned Dot Connector module under `src/features/learning/dot-connector/`:
+  - settings defaults/codecs for `enableDotConnector`, `injectionMode`, and per-turn default
+  - locked injection mode mapping: conservative 3/800, standard 5/1500, aggressive 8/2000
+  - typing-time retrieval service with 450ms hook debounce, 3-char gate, no access bump
+  - send-time injection service with 5s fresh-result reuse and 1500ms timeout fallback
+  - stable memory context delimiters for outbound LLM messages only; visible chat transcript stores the original user text
+  - `DotConnectorIndicator`, per-turn toggle behavior, and `MemoryPreviewSheet` with per-memory removal for the current turn
+- Added feature-owned Review module under `src/features/learning/review/`:
+  - `ReviewEventId`, review event codec, repo, query keys, settings, hooks
+  - `applyReviewRating` as the only Stage 7 familiarity writer
+  - locked deltas: strong `+0.10`, partial `+0.05`, weak `-0.05`, skip no-op
+  - familiarity update and audit insert run in the same Drizzle transaction; `importance_score` is untouched
+  - `ReviewThresholdScreen`, `ReviewSessionScreen`, `SelfRatingPrompt`, reveal block, and result screen
+- Wired Stage 7 surfaces:
+  - chat composer now shows Dot Connector indicator beside the send flow and can inject best-effort memory context without blocking send
+  - send pipeline preserves the raw user message in chat history while sending the augmented outbound prompt to the LLM
+  - Learning Hub exposes explicit Review Mode browsing and `ConceptCardFull` Start Review entry
+  - Settings exposes Dot Connector, injection mode, Review Mode, weak threshold, and opt-in recall note persistence controls
+- Added Stage 7 tests for:
+  - injection mode mapping
+  - typing retrieval query-length gate and retrieval options
+  - per-turn toggle send skip
+  - fresh typing-result reuse at send time
+  - per-memory removal for a turn
+  - preview ordering tie-break
+  - locked review deltas
+  - strong/partial/weak/skip familiarity behavior
+  - opt-in recall note persistence and 2000-char cap
+  - review event codec rejection of skip audit rows
+- Verification:
+  - `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit` passes.
+  - `npm.cmd test` passes: 25 files, 114 tests.
+- Device migration 008 smoke test passed on Samsung SM_A165F on 2026-04-27:
+  - `npm.cmd run android` built/installed successfully; Expo skipped dev-server startup because port 8081 was already in use, then the app was opened via ADB.
+  - Pulled DB plus WAL/SHM with `cmd /c "adb exec-out ... > file"`.
+  - Verified copied DB: `schema_version: 8`.
+  - Verified `review_events` exists with columns `id`, `concept_id`, `rating`, `delta`, `familiarity_before`, `familiarity_after`, `user_recall_text`, `created_at`.
+  - Verified `idx_review_events_concept` and `idx_review_events_created` exist.
 
 ## What's NOT Done Yet (Remaining Phases)
 

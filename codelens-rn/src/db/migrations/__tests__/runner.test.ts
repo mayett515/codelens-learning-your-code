@@ -54,14 +54,15 @@ describe('runMigrations atomicity', () => {
     runMigrations(db);
 
     const sqls = calls.map((c) => c.sql);
-    // The only migration that should run is v7, and it must NOT be wrapped.
-    expect(sqls).not.toContain('BEGIN IMMEDIATE');
-    expect(sqls).not.toContain('COMMIT');
-    // schema_version must still be bumped to 7.
-    const bump = calls.find(
+    const bump7Index = calls.findIndex(
       (c) => c.sql.startsWith('UPDATE schema_version SET version = ?') && c.params?.[0] === 7,
     );
-    expect(bump).toBeDefined();
+    const sqlsThroughV7 = calls.slice(0, bump7Index + 1).map((c) => c.sql);
+    // v7 itself must NOT be wrapped; later transactional migrations may be.
+    expect(sqlsThroughV7).not.toContain('BEGIN IMMEDIATE');
+    expect(sqlsThroughV7).not.toContain('COMMIT');
+    // schema_version must still be bumped to 7.
+    expect(bump7Index).toBeGreaterThan(-1);
   });
 
   it('rolls back and rethrows when a transactional migration body fails', () => {

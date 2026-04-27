@@ -22,6 +22,9 @@ import { CaptureCardFull } from './cards/CaptureCardFull';
 import { ConceptCardFull } from './cards/ConceptCardFull';
 import { PromotionSuggestionsSection } from '../promotion/ui/PromotionSuggestionsSection';
 import { PromotionReviewScreen } from '../promotion/ui/PromotionReviewScreen';
+import { ReviewSessionScreen } from '../review/ui/ReviewSessionScreen';
+import { ReviewThresholdScreen } from '../review/ui/ReviewThresholdScreen';
+import { useReviewSettings } from '../review/hooks/useReviewSettings';
 import type { ConceptId, LearningCaptureId } from '../types/ids';
 import type { LearningCapture, LearningConcept } from '../types/learning';
 
@@ -30,6 +33,8 @@ type Detail =
   | { type: 'concept'; id: ConceptId }
   | { type: 'session'; id: string }
   | { type: 'promotion'; fingerprint: string }
+  | { type: 'reviewThreshold' }
+  | { type: 'reviewSession'; id: ConceptId }
   | { type: 'health' }
   | null;
 
@@ -40,6 +45,7 @@ export function LearningHubScreen() {
   }, []);
 
   const [detail, setDetail] = useState<Detail>(null);
+  const reviewSettings = useReviewSettings();
   const { data: captures = [] } = useRecentCaptures({ limit: 10 });
   const { data: concepts = [] } = useConceptList({ sort: 'weakest' });
   const { data: sessions = [] } = useRecentSessions({ limit: 5 });
@@ -77,6 +83,12 @@ export function LearningHubScreen() {
         <ConceptListSection concepts={concepts} onOpenConcept={(id) => setDetail({ type: 'concept', id })} />
         <SessionCardsSection sessions={sessions} onOpenSession={(id) => setDetail({ type: 'session', id })} />
         <KnowledgeHealthEntry concepts={healthConcepts} onOpen={() => setDetail({ type: 'health' })} />
+        {reviewSettings.enableReviewMode ? (
+          <Pressable style={styles.reviewEntry} onPress={() => setDetail({ type: 'reviewThreshold' })}>
+            <Text style={styles.reviewEntryTitle}>Review Mode</Text>
+            <Text style={styles.reviewEntryText}>Browse concepts to revisit in your own time.</Text>
+          </Pressable>
+        ) : null}
       </ScrollView>
 
       <DetailModal visible={detail !== null} onClose={() => setDetail(null)}>
@@ -118,7 +130,9 @@ export function LearningHubScreen() {
             linkedCaptures={capturesForConcept(selectedConcept.id, conceptCaptures)}
             representativeCaptureIds={selectedConcept.representativeCaptureIds}
             originSessions={originSessionsForConcept(selectedConcept.id, conceptCaptures)}
-            onStartReview={() => undefined}
+            onStartReview={() => {
+              if (reviewSettings.enableReviewMode) setDetail({ type: 'reviewSession', id: selectedConcept.id });
+            }}
             onViewGraph={() => undefined}
             onOpenConcept={(id) => setDetail({ type: 'concept', id })}
             onOpenCapture={(id) => setDetail({ type: 'capture', id })}
@@ -138,6 +152,21 @@ export function LearningHubScreen() {
           <KnowledgeHealthScreen
             concepts={healthConcepts}
             onOpenConcept={(id) => setDetail({ type: 'concept', id })}
+          />
+        ) : null}
+        {detail?.type === 'reviewThreshold' ? (
+          <ReviewThresholdScreen
+            onOpenConcept={(id) => setDetail({ type: 'reviewSession', id })}
+            onClose={() => setDetail(null)}
+          />
+        ) : null}
+        {detail?.type === 'reviewSession' ? (
+          <ReviewSessionScreen
+            conceptId={detail.id}
+            onDone={() => setDetail(null)}
+            onOpenConcept={(id) => setDetail({ type: 'concept', id })}
+            onOpenCapture={(id) => setDetail({ type: 'capture', id })}
+            onContinueInChat={(id) => router.push(`/learning/chat/${id}`)}
           />
         ) : null}
       </DetailModal>
@@ -274,5 +303,24 @@ const styles = StyleSheet.create({
     color: colors.primaryLight,
     fontSize: fontSize.md,
     fontWeight: '700',
+  },
+  reviewEntry: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    padding: spacing.md,
+    backgroundColor: colors.surface,
+  },
+  reviewEntryTitle: {
+    color: colors.text,
+    fontSize: fontSize.lg,
+    fontWeight: '800',
+  },
+  reviewEntryText: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    marginTop: spacing.xs,
   },
 });

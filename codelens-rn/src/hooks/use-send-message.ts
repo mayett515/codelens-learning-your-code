@@ -7,7 +7,7 @@ import { chatKeys } from './query-keys';
 import type { ChatId, ChatMessage, ChatModelOverride, ChatScope } from '../domain/types';
 
 interface UseSendMessageResult {
-  send: (text: string) => Promise<void>;
+  send: (text: string, opts?: { outboundText?: string }) => Promise<void>;
   sending: boolean;
   error: string;
   clearError: () => void;
@@ -27,7 +27,7 @@ export function useSendMessage(
   messagesRef.current = messages;
 
   const send = useCallback(
-    async (text: string) => {
+    async (text: string, opts?: { outboundText?: string }) => {
       if (!chatId) return;
       setSending(true);
       setError('');
@@ -39,6 +39,7 @@ export function useSendMessage(
           scope,
           routingOverride,
           buildSystemPrompt,
+          prepareUserContent: opts?.outboundText ? async () => opts.outboundText as string : undefined,
           messages: messagesRef.current,
           insertMessage,
           enqueue,

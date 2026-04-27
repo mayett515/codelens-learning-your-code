@@ -117,8 +117,8 @@ More explicitly:
 - Product/design specs are complete.
 - Stage 10 implementation has started in `C:\CodeLens-v2\codelens-rn`.
 - Phase A - Architecture prep and baseline checks is complete as of 2026-04-26.
-- Phase G / Stage 6 Retrieval is implemented and device migration 007 is verified on Samsung SM_A165F as of 2026-04-27.
-- Next work is Stage 7 - Dot Connector & Review Mode. Optional Stage 5 promotion and Stage 6 retrieval live smokes are deferred until after Stage 9.
+- Phase H / Stage 7 Dot Connector & Review Mode is implemented and device migration 008 is verified on Samsung SM_A165F as of 2026-04-27.
+- Next work is Stage 8 - Personas & Chat UX. Optional Stage 5 promotion and Stage 6 retrieval live smokes are deferred until after Stage 9.
 - Do not write new feature specs unless user explicitly asks.
 
 Phase A results:
@@ -228,6 +228,20 @@ Phase G results:
 Deferred post-Stage-9 QA:
 - Stage 5 live promotion smoke: create at least 3 captures with shared keywords across at least 2 sessions, wait for `embedding_status = 'ready'`, open the Learning Hub, and verify a Promotion Suggestions card appears.
 - Stage 6 live retrieval smoke: create real saved captures and confirm `retrieveRelevantMemories` returns `{ memories, diagnostics }` with a sane diagnostics shape.
+
+Phase H results:
+- Stage 7 Dot Connector & Review Mode is implemented in `C:\CodeLens-v2\codelens-rn` under `src\features\learning\dot-connector\` and `src\features\learning\review\`.
+- Added migration 008 with `review_events`, `idx_review_events_concept`, and `idx_review_events_created`.
+- Dot Connector now owns settings, typing-time retrieval, send-time injection, per-turn toggling, post-budget memory counting, preview/removal, and stable outbound-only memory delimiters.
+- Chat send preserves the raw user message in visible history while passing the memory-augmented outbound prompt to the LLM.
+- Review Mode now owns settings, weak-concept browsing, single-concept review sessions, neutral self-rating, `applyReviewRating`, review event codecs/repo/hooks, and audit logging.
+- Familiarity updates are locked to explicit self-ratings only: strong `+0.10`, partial `+0.05`, weak `-0.05`, skip no-op. `importance_score` is not modified.
+- Learning Hub exposes explicit Review Mode browsing and Concept Full `Start Review`; Settings exposes Dot Connector/Review controls and opt-in recall note persistence.
+- Automated verification passed on 2026-04-27: `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit`; `npm.cmd test` = 25 files, 114 tests.
+- Device migration 008 smoke test passed on Samsung SM_A165F:
+  - copied DB reported `schema_version: 8`
+  - `review_events` exists with the locked audit columns
+  - `idx_review_events_concept` and `idx_review_events_created` exist
 
 This means future work should be implementation, testing, migration safety, and integration discipline, not reopening product semantics that are already locked.
 

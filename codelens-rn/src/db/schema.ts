@@ -217,3 +217,21 @@ export const promotionDismissals = sqliteTable('promotion_dismissals', {
 }, (t) => [
   index('idx_promotion_dismissals_at').on(t.dismissedAt),
 ]);
+
+export const reviewEvents = sqliteTable('review_events', {
+  id: text('id').primaryKey(),
+  conceptId: text('concept_id')
+    .notNull()
+    .references(() => concepts.id, { onDelete: 'cascade' }),
+  rating: text('rating', { enum: ['strong', 'partial', 'weak'] }).notNull(),
+  delta: real('delta').notNull(),
+  familiarityBefore: real('familiarity_before').notNull(),
+  familiarityAfter: real('familiarity_after').notNull(),
+  userRecallText: text('user_recall_text'),
+  createdAt: integer('created_at').notNull(),
+}, (t) => [
+  index('idx_review_events_concept').on(t.conceptId),
+  index('idx_review_events_created').on(t.createdAt),
+]);
+
+export * from '../features/ai-providers/data/schema';

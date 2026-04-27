@@ -121,3 +121,18 @@ export async function appendConceptSurfaceFeatures(
     })
     .where(eq(concepts.id, id));
 }
+
+export async function updateConceptFamiliarity(
+  id: ConceptId,
+  familiarityScore: number,
+  updatedAt: number,
+  executor: DbOrTx = db,
+): Promise<void> {
+  await executor
+    .update(concepts)
+    .set({
+      familiarityScore,
+      updatedAt: toIso(updatedAt),
+    })
+    .where(eq(concepts.id, id));
+}
