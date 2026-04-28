@@ -149,7 +149,8 @@ describe('Stage 7 Dot Connector contracts', () => {
       retrieve,
     });
     expect(retrieve).not.toHaveBeenCalled();
-    expect(send.outboundText).toBe('closure');
+    expect(send.memories).toEqual([]);
+    expect(send.injection).toBeNull();
   });
 
   it('send reuses a fresh identical typing result', async () => {
@@ -173,8 +174,10 @@ describe('Stage 7 Dot Connector contracts', () => {
     expect(retrieve).not.toHaveBeenCalled();
     expect(bumpLastAccessed).toHaveBeenCalledWith([{ kind: 'concept', id: conceptId }]);
     expect(send.reusedTypingResult).toBe(true);
-    expect(send.outboundText).toContain('<codelens_memory_context>');
-    expect(send.outboundText).toContain('Closure');
+    expect(send.memories).toHaveLength(1);
+    expect(send.memories[0]?.kind).toBe('concept');
+    expect(send.injection?.text).toContain('Closure');
+    expect(send.diagnostics?.status).toBe('ok');
   });
 
   it('removing a memory excludes it from this turn without deleting source data', async () => {

@@ -9,13 +9,11 @@ import type { SendInjectionInput, SendInjectionResult } from '../types/dotConnec
 
 export const SEND_RETRIEVAL_FRESHNESS_MS = 5_000;
 export const SEND_RETRIEVAL_TIMEOUT_MS = 1_500;
-export const MEMORY_BLOCK_START = '<codelens_memory_context>';
-export const MEMORY_BLOCK_END = '</codelens_memory_context>';
 
 export async function runSendInjection(input: SendInjectionInput): Promise<SendInjectionResult> {
   const query = input.query.trim();
   if (!input.settings.enableDotConnector || !input.perTurnEnabled || query.length === 0) {
-    return { outboundText: input.query, injection: null, diagnostics: null, reusedTypingResult: false };
+    return { memories: [], injection: null, diagnostics: null, reusedTypingResult: false };
   }
 
   const now = input.now ?? Date.now;
@@ -61,19 +59,17 @@ export async function runSendInjection(input: SendInjectionInput): Promise<SendI
       tokenBudget: config.tokenBudget,
       maxItems: config.limit,
     });
-    const outboundText = injection.text
-      ? `${MEMORY_BLOCK_START}\n${injection.text}\n${MEMORY_BLOCK_END}\n\n${input.query}`
-      : input.query;
+    const includedIds = new Set(injection.includedIds.map((item) => item.id));
 
     return {
-      outboundText,
+      memories: memories.filter((memory) => includedIds.has(String(memory.id))),
       injection,
       diagnostics: result.diagnostics,
       reusedTypingResult: Boolean(fresh),
     };
   } catch (error) {
     return {
-      outboundText: input.query,
+      memories: [],
       injection: null,
       diagnostics: unavailableDiagnostics(error),
       reusedTypingResult: false,

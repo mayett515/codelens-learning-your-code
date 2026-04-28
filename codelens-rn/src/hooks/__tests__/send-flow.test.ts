@@ -54,4 +54,20 @@ describe('executeSendFlow', () => {
     expect(onInserted).toHaveBeenCalledTimes(1);
     expect(deps.insertMessage).toHaveBeenCalledTimes(2);
   });
+
+  it('sends the user message verbatim to the LLM', async () => {
+    const deps = makeDeps({ text: 'plain user text' });
+
+    await executeSendFlow(deps);
+
+    expect(deps.enqueue).toHaveBeenCalledWith(
+      'general',
+      [
+        { role: 'system', content: 'system prompt' },
+        { role: 'user', content: 'plain user text' },
+      ],
+      undefined,
+      { routingOverride: undefined },
+    );
+  });
 });

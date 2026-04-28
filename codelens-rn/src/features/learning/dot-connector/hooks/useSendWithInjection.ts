@@ -11,7 +11,7 @@ export function useSendWithInjection(settings: DotConnectorSettings) {
       perTurnEnabled: boolean;
       typingSnapshot?: TypingRetrievalSnapshot | null;
       removedMemoryIds?: string[];
-    }) => {
+    }): Promise<SendInjectionResult> => {
       const result = await runSendInjection({
         query: input.query,
         settings,

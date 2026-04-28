@@ -10,8 +10,6 @@ export {
   withoutRemoved,
 } from './runTypingRetrieval';
 export {
-  MEMORY_BLOCK_END,
-  MEMORY_BLOCK_START,
   runSendInjection,
   SEND_RETRIEVAL_FRESHNESS_MS,
   SEND_RETRIEVAL_TIMEOUT_MS,

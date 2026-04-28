@@ -19,9 +19,14 @@ import {
 } from '../../features/learning/dot-connector';
 import { formatMemoriesForInjection } from '../../features/learning/retrieval';
 import type { DotConnectorIndicatorStatus } from '../../features/learning/dot-connector';
+import type { RetrievedMemory } from '../../features/learning/retrieval/types/retrieval';
+
+export interface ChatInputSendContext {
+  memories: RetrievedMemory[];
+}
 
 interface Props {
-  onSend: (text: string, opts?: { outboundText?: string }) => void;
+  onSend: (text: string, context?: ChatInputSendContext) => void;
   disabled?: boolean | undefined;
 }
 
@@ -71,7 +76,7 @@ export function ChatInput({ onSend, disabled }: Props) {
       typingSnapshot: retrieval.snapshot,
       removedMemoryIds,
     });
-    onSend(trimmed, { outboundText: sendResult.outboundText });
+    onSend(trimmed, { memories: sendResult.memories });
     setText('');
     setRemovedMemoryIds([]);
     setPerTurnEnabled(settings.enableDotConnector && settings.dotConnectorPerTurnDefault === 'on');

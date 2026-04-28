@@ -8,7 +8,6 @@ export interface SendFlowDeps {
   scope: ChatScope;
   routingOverride?: ChatModelOverride | undefined;
   buildSystemPrompt: () => string;
-  prepareUserContent?: ((text: string) => Promise<string>) | undefined;
   messages: ChatMessage[];
   insertMessage: (chatId: ChatId, msg: ChatMessage) => Promise<void>;
   enqueue: (
@@ -31,15 +30,12 @@ export async function executeSendFlow(deps: SendFlowDeps): Promise<void> {
   deps.onUserMessageInserted?.();
 
   const systemPrompt = deps.buildSystemPrompt();
-  const outboundUserContent = deps.prepareUserContent
-    ? await deps.prepareUserContent(deps.text)
-    : deps.text;
   const aiMessages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }> = [
     { role: 'system', content: systemPrompt },
     ...deps.messages
       .filter((m) => m.role !== 'system')
       .map((m) => ({ role: m.role, content: m.content })),
-    { role: 'user', content: outboundUserContent },
+    { role: 'user', content: deps.text },
   ];
 
   const response = await deps.enqueue(deps.scope, aiMessages, undefined, {

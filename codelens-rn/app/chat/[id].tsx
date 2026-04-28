@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,15 +16,22 @@ import { colors, fontSize, spacing } from '@/src/ui/theme';
 import { chatKeys, fileKeys } from '@/src/hooks/query-keys';
 import { getChatById, deleteMessage, updateChatModelOverride } from '@/src/db/queries/chats';
 import { getFileById } from '@/src/db/queries/files';
-import { buildSectionSystemPrompt } from '@/src/domain/prompts';
 import { getScopeConfig } from '@/src/ai/scopes';
 import { useSendMessage } from '@/src/hooks/use-send-message';
 import { ChatBubble } from '@/src/ui/components/ChatBubble';
 import { ChatInput } from '@/src/ui/components/ChatInput';
 import { BubbleMenu } from '@/src/ui/components/BubbleMenu';
 import { ChatModelPickerModal } from '@/src/ui/components/ChatModelPickerModal';
+import {
+  ChatModelPickerSheet,
+  chatModelOptionToOverride,
+  useChatModelOverride,
+  useChatPromptContext,
+} from '@/src/features/chat';
 import { SaveAsLearningModal, useSaveLearningStore } from '@/src/features/learning';
+import { ChatPersonaPickerSheet, useChatPersona } from '@/src/features/personas';
 import type { ChatId, ChatMessage, ChatModelOverride } from '@/src/domain/types';
+import type { RetrievedMemory } from '@/src/features/learning/retrieval/types/retrieval';
 
 export default function SectionChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -32,7 +39,12 @@ export default function SectionChatScreen() {
   const queryClient = useQueryClient();
   const openLearning = useSaveLearningStore((s) => s.open);
   const [menuMessage, setMenuMessage] = useState<ChatMessage | null>(null);
+  const [legacyModelPickerVisible, setLegacyModelPickerVisible] = useState(false);
   const [modelPickerVisible, setModelPickerVisible] = useState(false);
+  const [personaPickerVisible, setPersonaPickerVisible] = useState(false);
+  const [personaHint, setPersonaHint] = useState('');
+  const personaHintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const memoriesRef = useRef<RetrievedMemory[]>([]);
   const scopeConfig = getScopeConfig('section');
 
   const { data: chat } = useQuery({
@@ -48,25 +60,44 @@ export default function SectionChatScreen() {
 
   const messages = chat?.messages ?? [];
   const reversedMessages = useMemo(() => [...messages].reverse(), [messages]);
+  const personaQuery = useChatPersona(chatId);
+  const modelOverrideQuery = useChatModelOverride(chatId);
 
-  const buildPrompt = useCallback(() => {
-    if (file && chat?.startLine != null && chat?.endLine != null) {
-      return buildSectionSystemPrompt(
-        file.path,
-        file.content.split('\n').slice(chat.startLine - 1, chat.endLine).join('\n'),
-        chat.startLine, chat.endLine, file.marks, file.ranges,
-      );
+  const codePromptContext = useMemo(() => {
+    if (!file || chat?.startLine == null || chat?.endLine == null) {
+      return null;
     }
-    return 'You are a helpful coding assistant. Be concise.';
+    return {
+      kind: 'selected_code' as const,
+      text: file.content.split('\n').slice(chat.startLine - 1, chat.endLine).join('\n'),
+      filePath: file.path,
+      startLine: chat.startLine,
+      endLine: chat.endLine,
+    };
   }, [file, chat]);
+  const buildPrompt = useChatPromptContext({
+    persona: personaQuery.data ?? null,
+    memoriesRef,
+    codeContext: codePromptContext,
+  });
+  const routingOverride = useMemo(
+    () => modelOverrideQuery.data
+      ? chatModelOptionToOverride(modelOverrideQuery.data)
+      : chat?.modelOverride,
+    [chat?.modelOverride, modelOverrideQuery.data],
+  );
 
   const { send, sending, error, clearError } = useSendMessage(
     chatId,
     'section',
     buildPrompt,
     messages,
-    chat?.modelOverride,
+    routingOverride,
   );
+
+  useEffect(() => () => {
+    if (personaHintTimer.current) clearTimeout(personaHintTimer.current);
+  }, []);
 
   const handleDeleteMessage = useCallback(
     async (msg: ChatMessage) => {
@@ -103,6 +134,27 @@ export default function SectionChatScreen() {
     file && chat?.startLine != null && chat?.endLine != null
       ? `${file.path}:${chat.startLine}-${chat.endLine}`
       : null;
+  const personaLabel = personaQuery.data?.name ?? 'Default';
+  const modelLabel = modelOverrideQuery.data?.displayName
+    ?? (chat?.modelOverrideId ? 'Model unavailable' : 'Default');
+
+  const handleSend = useCallback(
+    (text: string, context?: { memories: RetrievedMemory[] }) => {
+      memoriesRef.current = context?.memories ?? [];
+      void send(text);
+    },
+    [send],
+  );
+
+  const handlePersonaPicked = useCallback((persona: typeof personaQuery.data | null) => {
+    setPersonaHint(
+      persona
+        ? `Responses will now follow ${persona.name}.`
+        : 'Responses will use the default assistant style.',
+    );
+    if (personaHintTimer.current) clearTimeout(personaHintTimer.current);
+    personaHintTimer.current = setTimeout(() => setPersonaHint(''), 3_000);
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -123,15 +175,35 @@ export default function SectionChatScreen() {
             ) : null}
           </View>
           <Pressable
-            style={[styles.modelBtn, chat?.modelOverride && styles.modelBtnActive]}
+            style={[styles.modelBtn, personaQuery.data && styles.modelBtnActive]}
+            onPress={() => setPersonaPickerVisible(true)}
+          >
+            <Text
+              style={[styles.modelBtnText, personaQuery.data && styles.modelBtnTextActive]}
+              numberOfLines={1}
+            >
+              {personaLabel}
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.modelBtn, chat?.modelOverrideId && styles.modelBtnActive]}
             onPress={() => setModelPickerVisible(true)}
           >
             <Text
-              style={[styles.modelBtnText, chat?.modelOverride && styles.modelBtnTextActive]}
+              style={[styles.modelBtnText, chat?.modelOverrideId && styles.modelBtnTextActive]}
+              numberOfLines={1}
             >
-              {chat?.modelOverride ? 'Model*' : 'Model'}
+              {modelLabel}
             </Text>
           </Pressable>
+          {chat?.modelOverride ? (
+            <Pressable
+              style={[styles.modelBtn, styles.modelBtnActive]}
+              onPress={() => setLegacyModelPickerVisible(true)}
+            >
+              <Text style={[styles.modelBtnText, styles.modelBtnTextActive]}>Legacy</Text>
+            </Pressable>
+          ) : null}
         </View>
 
         <FlatList
@@ -160,7 +232,13 @@ export default function SectionChatScreen() {
           </View>
         ) : null}
 
-        <ChatInput onSend={send} disabled={sending} />
+        {personaHint ? (
+          <View style={styles.hintBar}>
+            <Text style={styles.hintText}>{personaHint}</Text>
+          </View>
+        ) : null}
+
+        <ChatInput onSend={handleSend} disabled={sending} />
       </KeyboardAvoidingView>
 
       <BubbleMenu
@@ -172,12 +250,29 @@ export default function SectionChatScreen() {
       />
       <SaveAsLearningModal />
       {chat ? (
-        <ChatModelPickerModal
+        <ChatModelPickerSheet
           visible={modelPickerVisible}
+          chatId={chatId}
+          currentModelId={chat.modelOverrideId}
+          onClose={() => setModelPickerVisible(false)}
+        />
+      ) : null}
+      {chat ? (
+        <ChatPersonaPickerSheet
+          visible={personaPickerVisible}
+          chatId={chatId}
+          currentPersona={personaQuery.data ?? null}
+          onPicked={handlePersonaPicked}
+          onClose={() => setPersonaPickerVisible(false)}
+        />
+      ) : null}
+      {chat?.modelOverride ? (
+        <ChatModelPickerModal
+          visible={legacyModelPickerVisible}
           scope="section"
           scopeConfig={scopeConfig}
           currentOverride={chat.modelOverride}
-          onClose={() => setModelPickerVisible(false)}
+          onClose={() => setLegacyModelPickerVisible(false)}
           onSave={handleSaveModelOverride}
           onClear={handleClearModelOverride}
         />
@@ -206,6 +301,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs + 1,
     borderWidth: 1,
     borderColor: colors.border,
+    maxWidth: 112,
   },
   modelBtnActive: {
     borderColor: colors.primary,
@@ -222,4 +318,12 @@ const styles = StyleSheet.create({
   },
   errorText: { color: colors.red, fontSize: fontSize.sm, flex: 1 },
   errorDismiss: { color: colors.red, fontSize: fontSize.md, fontWeight: '600', paddingLeft: spacing.md },
+  hintBar: {
+    backgroundColor: 'rgba(96, 139, 219, 0.14)',
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.xs,
+  },
+  hintText: { color: colors.primary, fontSize: fontSize.sm, fontWeight: '600' },
 });

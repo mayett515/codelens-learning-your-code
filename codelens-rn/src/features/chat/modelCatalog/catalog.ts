@@ -2,7 +2,7 @@ import {
   OPENROUTER_DEFAULT_MODEL,
   SILICONFLOW_DEFAULT_MODEL,
 } from '../../../ai/fallback';
-import type { Provider } from '../../../domain/types';
+import type { ChatModelOverride, Provider } from '../../../domain/types';
 
 export type ChatModelId = string & { readonly __brand: 'ChatModelId' };
 
@@ -52,4 +52,11 @@ export function getAvailableChatModels(): ChatModelOption[] {
 export function getChatModelById(id: ChatModelId | string | null | undefined): ChatModelOption | null {
   if (!id) return null;
   return CHAT_MODEL_CATALOG.find((row) => row.id === id) ?? null;
+}
+
+export function chatModelOptionToOverride(option: ChatModelOption): ChatModelOverride {
+  return {
+    provider: option.provider,
+    model: option.model,
+  };
 }

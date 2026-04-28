@@ -34,7 +34,7 @@ export interface SendInjectionInput {
 }
 
 export interface SendInjectionResult {
-  outboundText: string;
+  memories: RetrievedMemory[];
   injection: InjectionResult | null;
   diagnostics: RetrieveDiagnostics | null;
   reusedTypingResult: boolean;

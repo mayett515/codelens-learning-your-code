@@ -2,6 +2,7 @@ import type { ChatId, FileId, ProjectId } from '../domain/types';
 
 export const chatKeys = {
   detail: (id: ChatId) => ['chat', id] as const,
+  modelOverride: (id: ChatId | null | undefined) => ['chat', id ?? 'none', 'modelOverride'] as const,
   recent: ['recentChats'] as const,
 } as const;
 

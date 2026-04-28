@@ -79,6 +79,8 @@ export interface Chat {
   endLine?: number | undefined;
   folderId?: FolderId | undefined;
   conceptId?: ConceptId | undefined;
+  personaId?: string | undefined;
+  modelOverrideId?: string | undefined;
   modelOverride?: ChatModelOverride | undefined;
   title: string;
   createdAt: string;
