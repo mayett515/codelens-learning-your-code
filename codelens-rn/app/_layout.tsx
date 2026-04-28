@@ -99,6 +99,7 @@ export default function RootLayout() {
           <Stack.Screen name="recent-chats" />
           <Stack.Screen name="settings" />
           <Stack.Screen name="dev" />
+          <Stack.Screen name="sandboxtexttesting" />
         </Stack>
         <StatusBar style="light" />
       </QueryClientProvider>

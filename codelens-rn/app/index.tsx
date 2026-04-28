@@ -129,6 +129,12 @@ export default function HomeScreen() {
             <Text style={styles.devButtonText}>Dev</Text>
           </Pressable>
           <Pressable
+            style={styles.sandboxButton}
+            onPress={() => router.push('/sandboxtexttesting')}
+          >
+            <Text style={styles.sandboxButtonText}>Sandbox</Text>
+          </Pressable>
+          <Pressable
             style={styles.settingsButton}
             onPress={() => router.push('/settings')}
           >
@@ -261,6 +267,17 @@ const styles = StyleSheet.create({
   },
   devButtonText: {
     color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+  },
+  sandboxButton: {
+    backgroundColor: 'rgba(152, 195, 121, 0.18)',
+    paddingVertical: spacing.xs + 2,
+    paddingHorizontal: spacing.md,
+    borderRadius: 6,
+  },
+  sandboxButtonText: {
+    color: colors.green,
     fontSize: fontSize.sm,
     fontWeight: '600',
   },
