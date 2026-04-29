@@ -8,6 +8,7 @@ import { migration006 } from './006-promotion-system';
 import { migration007 } from './007-retrieval-engine';
 import { migration008 } from './008-review-events';
 import { migration009 } from './009-stage8-personas-chat-foundation';
+import { migration010 } from './010-stage8-reader-bookmarks';
 
 export interface Migration {
   version: number;
@@ -33,6 +34,7 @@ const MIGRATIONS: Migration[] = [
   { ...migration007, nonTransactional: true },
   migration008,
   migration009,
+  migration010,
 ];
 
 /*

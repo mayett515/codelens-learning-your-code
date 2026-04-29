@@ -44,6 +44,19 @@ import { chatId as makeChatId, messageId as makeMessageId } from '@/src/domain/t
 import { uid } from '@/src/lib/uid';
 import { chatKeys, fileKeys, projectKeys } from '@/src/hooks/query-keys';
 import { SaveAsLearningModal, useSaveLearningStore } from '@/src/features/learning';
+import {
+  BookmarkSheet,
+  DEFAULT_PALETTE,
+  FALLBACK_BOOKMARK_COLOR,
+  useBookmarkPalette,
+  useBookmarksByFile,
+  useCreateBookmark,
+  useDeleteBookmark,
+  useUpdateBookmark,
+  type Bookmark,
+  type BookmarkId,
+  type BookmarkUpsertInput,
+} from '@/src/features/bookmarks';
 import type {
   ChatMessage,
   ProjectId,
@@ -79,6 +92,12 @@ export default function ProjectViewerScreen() {
   } | null>(null);
   const [actionLine, setActionLine] = useState<number | null>(null);
   const [miniChatLineRef, setMiniChatLineRef] = useState<ReturnType<typeof buildLineRef> | null>(null);
+  const [bookmarkTarget, setBookmarkTarget] = useState<{
+    line: number;
+    bookmark: Bookmark | null;
+  } | null>(null);
+  const [lastBookmarkColorKey, setLastBookmarkColorKey] = useState<string | null>(null);
+  const [lastBookmarkError, setLastBookmarkError] = useState<string | null>(null);
 
   const [localMarks, setLocalMarks] = useState<LineMark[]>([]);
   const [localRanges, setLocalRanges] = useState<RangeMark[]>([]);
@@ -99,6 +118,42 @@ export default function ProjectViewerScreen() {
     queryFn: () => (currentFileId ? getFileById(currentFileId) : null),
     enabled: !!currentFileId,
   });
+  const { data: fileBookmarks = [] } = useBookmarksByFile(project?.id ?? null, currentFile?.path ?? null);
+  const { data: bookmarkPalette = DEFAULT_PALETTE } = useBookmarkPalette(project?.id ?? null);
+  const createBookmarkMutation = useCreateBookmark();
+  const updateBookmarkMutation = useUpdateBookmark();
+  const deleteBookmarkMutation = useDeleteBookmark();
+
+  const bookmarkColorByKey = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const color of bookmarkPalette) map.set(color.key, color.hex);
+    return map;
+  }, [bookmarkPalette]);
+
+  const bookmarksByLine = useMemo(() => {
+    const map = new Map<number, Bookmark>();
+    // Slice 4 only renders single-line bookmark dots; range bookmarks are stored but visualization lands in a later slice.
+    for (const bookmark of fileBookmarks) {
+      if (bookmark.startLine !== bookmark.endLine) continue;
+      const existing = map.get(bookmark.startLine);
+      if (!existing || bookmark.createdAt >= existing.createdAt) {
+        map.set(bookmark.startLine, bookmark);
+      }
+    }
+    return map;
+  }, [fileBookmarks]);
+
+  const bookmarkIndicators = useMemo(
+    () => [...bookmarksByLine.entries()].map(([line, bookmark]) => ({
+      line,
+      colorHex: bookmarkColorByKey.get(bookmark.colorKey) ?? FALLBACK_BOOKMARK_COLOR,
+    })),
+    [bookmarkColorByKey, bookmarksByLine],
+  );
+  const actionBookmark = actionLine == null ? null : bookmarksByLine.get(actionLine) ?? null;
+  const actionBookmarkColorHex = actionBookmark
+    ? bookmarkColorByKey.get(actionBookmark.colorKey) ?? FALLBACK_BOOKMARK_COLOR
+    : null;
 
   useEffect(() => {
     if (currentFile) {
@@ -152,7 +207,12 @@ export default function ProjectViewerScreen() {
 
   useEffect(() => {
     setActionLine(null);
+    setBookmarkTarget(null);
   }, [currentFileId, mode]);
+
+  useEffect(() => {
+    setLastBookmarkError(null);
+  }, [bookmarkTarget?.line]);
 
   const handleLinePress = useCallback(
     (line: number) => {
@@ -254,15 +314,89 @@ export default function ProjectViewerScreen() {
     setActionLine(null);
   }, [actionLine, currentFile]);
 
-  const handleBookmarkLine = useCallback(() => {
-    setActionLine(null);
+  const closeMiniChat = useCallback(() => {
+    setMiniChatLineRef(null);
   }, []);
+
+  const closeBookmarkSheet = useCallback(() => {
+    setBookmarkTarget(null);
+    setLastBookmarkError(null);
+  }, []);
+
+  const handleBookmarkLine = useCallback(() => {
+    if (!currentFile || actionLine == null) return;
+    closeMiniChat();
+    setBookmarkTarget({
+      line: actionLine,
+      bookmark: bookmarksByLine.get(actionLine) ?? null,
+    });
+    setActionLine(null);
+  }, [actionLine, bookmarksByLine, closeMiniChat, currentFile]);
+
+  const handleSaveBookmark = useCallback(
+    async (data: BookmarkUpsertInput) => {
+      setLastBookmarkColorKey(data.colorKey);
+      setLastBookmarkError(null);
+      try {
+        if (bookmarkTarget?.bookmark) {
+          await updateBookmarkMutation.mutateAsync({
+            id: bookmarkTarget.bookmark.id,
+            data,
+          });
+        } else {
+          await createBookmarkMutation.mutateAsync(data);
+        }
+        setBookmarkTarget(null);
+      } catch (err) {
+        setLastBookmarkError(errorMessageFrom(err));
+        console.warn('[bookmarks] save failed', err);
+      }
+    },
+    [bookmarkTarget?.bookmark, createBookmarkMutation, updateBookmarkMutation],
+  );
+
+  const handleDeleteBookmark = useCallback(
+    async (id: BookmarkId) => {
+      if (!currentFile) return;
+      setLastBookmarkError(null);
+      try {
+        await deleteBookmarkMutation.mutateAsync({
+          id,
+          projectId,
+          filePath: currentFile.path,
+        });
+        setBookmarkTarget(null);
+      } catch (err) {
+        setLastBookmarkError(errorMessageFrom(err));
+        console.warn('[bookmarks] delete failed', err);
+      }
+    },
+    [currentFile, deleteBookmarkMutation, projectId],
+  );
+
+  // TODO(stage8-followup): persist bookmark provenance on captures.
+  const handleSaveBookmarkCapture = useCallback(() => {
+    setLastBookmarkError(null);
+    if (!currentFile || !bookmarkTarget?.bookmark) return;
+    const bookmark = bookmarkTarget.bookmark;
+    const selectedText = currentFile.content.split('\n')[bookmark.startLine - 1]?.trim();
+    if (!selectedText) return;
+    setBookmarkTarget(null);
+    openSaveFromSource({
+      selectedText,
+      snippetLang: inferLanguageFromPath(currentFile.path),
+      snippetSourcePath: currentFile.path,
+      snippetStartLine: bookmark.startLine,
+      snippetEndLine: bookmark.endLine,
+      sessionId: bookmark.sessionId,
+    });
+  }, [bookmarkTarget?.bookmark, currentFile, openSaveFromSource]);
 
   const handleSaveMiniChatCapture = useCallback(
     (context: MiniChatSaveContext) => {
       const selected = context.history.find((message) => message.id === context.selectedMessageId);
       if (!selected) return;
-      setMiniChatLineRef(null);
+      closeMiniChat();
       openSaveFromSource({
         selectedText: context.lineRef.text,
         snippetLang: context.lineRef.language,
@@ -273,7 +407,7 @@ export default function ProjectViewerScreen() {
         sessionId: null,
       });
     },
-    [openSaveFromSource],
+    [closeMiniChat, openSaveFromSource],
   );
 
   const handleExpandMiniChat = useCallback(
@@ -304,11 +438,11 @@ export default function ProjectViewerScreen() {
       }));
       await insertMessages(newChatId, seededMessages);
       setMiniChatExpansionContext(newChatId, toExpandedMiniChatContext(lineRef));
-      setMiniChatLineRef(null);
+      closeMiniChat();
       queryClient.invalidateQueries({ queryKey: chatKeys.recent });
       router.push(`/chat/${newChatId}`);
     },
-    [currentFile, project, projectId, queryClient],
+    [closeMiniChat, currentFile, project, projectId, queryClient],
   );
 
   return (
@@ -403,6 +537,7 @@ export default function ProjectViewerScreen() {
           onLineLongPress={handleLineLongPress}
           language={inferLanguageFromPath(currentFile.path)}
           selectionStartLine={isRangeSelectMode ? startLine : null}
+          bookmarkIndicators={bookmarkIndicators}
         />
       ) : (
         <View style={styles.emptyViewer}>
@@ -419,6 +554,7 @@ export default function ProjectViewerScreen() {
       {actionLine !== null ? (
         <GutterActionChip
           line={actionLine}
+          bookmarkColorHex={actionBookmarkColorHex}
           onAsk={handleAskLine}
           onBookmark={handleBookmarkLine}
           onDismiss={() => setActionLine(null)}
@@ -430,8 +566,32 @@ export default function ProjectViewerScreen() {
         lineRef={miniChatLineRef}
         onExpandToChat={handleExpandMiniChat}
         onSaveCapture={handleSaveMiniChatCapture}
-        onClose={() => setMiniChatLineRef(null)}
+        onClose={closeMiniChat}
       />
+
+      {bookmarkTarget && currentFile ? (
+        <BookmarkSheet
+          mode={bookmarkTarget.bookmark ? 'edit' : 'create'}
+          bookmark={bookmarkTarget.bookmark ?? undefined}
+          projectId={projectId}
+          filePath={currentFile.path}
+          startLine={bookmarkTarget.line}
+          endLine={bookmarkTarget.line}
+          palette={bookmarkPalette}
+          initialColorKey={lastBookmarkColorKey}
+          isSaving={createBookmarkMutation.isPending || updateBookmarkMutation.isPending}
+          isDeleting={deleteBookmarkMutation.isPending}
+          errorMessage={lastBookmarkError}
+          onSave={(data) => {
+            void handleSaveBookmark(data);
+          }}
+          onDelete={(bookmarkId) => {
+            void handleDeleteBookmark(bookmarkId);
+          }}
+          onSaveCapture={bookmarkTarget.bookmark ? handleSaveBookmarkCapture : undefined}
+          onClose={closeBookmarkSheet}
+        />
+      ) : null}
 
       <SaveAsLearningModal />
 
@@ -572,3 +732,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
   },
 });
+
+function errorMessageFrom(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}

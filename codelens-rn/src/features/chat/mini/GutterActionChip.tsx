@@ -3,20 +3,33 @@ import { colors, fontSize, spacing } from '../../../ui/theme';
 
 interface Props {
   line: number;
+  bookmarkColorHex?: string | null | undefined;
   onAsk: () => void;
   onBookmark: () => void;
   onDismiss: () => void;
 }
 
-export function GutterActionChip({ line, onAsk, onBookmark, onDismiss }: Props) {
+export function GutterActionChip({
+  line,
+  bookmarkColorHex,
+  onAsk,
+  onBookmark,
+  onDismiss,
+}: Props) {
+  const isBookmarked = Boolean(bookmarkColorHex);
   return (
     <View style={styles.container}>
       <Text style={styles.lineText}>Line {line}</Text>
+      {bookmarkColorHex ? (
+        <View style={[styles.bookmarkDot, { backgroundColor: bookmarkColorHex }]} />
+      ) : null}
       <Pressable style={styles.primaryBtn} onPress={onAsk} accessibilityRole="button">
         <Text style={styles.primaryText}>Ask about this line</Text>
       </Pressable>
       <Pressable style={styles.secondaryBtn} onPress={onBookmark} accessibilityRole="button">
-        <Text style={styles.secondaryText}>Bookmark this line</Text>
+        <Text style={styles.secondaryText}>
+          {isBookmarked ? 'Edit bookmark' : 'Bookmark this line'}
+        </Text>
       </Pressable>
       <Pressable style={styles.closeBtn} onPress={onDismiss} accessibilityRole="button">
         <Text style={styles.closeText}>x</Text>
@@ -46,6 +59,11 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: fontSize.sm,
     fontWeight: '700',
+  },
+  bookmarkDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
   },
   primaryBtn: {
     flex: 1,

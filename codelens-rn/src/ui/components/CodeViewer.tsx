@@ -13,6 +13,7 @@ import { colors, fontSize, spacing } from '../theme';
 import { highlightLine, type HighlightedToken } from '../../features/codeReader/highlighting/highlightLine';
 import { PLAIN_TOKEN_COLOR } from '../../features/codeReader/highlighting/vscodeDarkPlusPalette';
 import { SelectionStartIndicator } from '../../features/codeReader/ui/SelectionStartIndicator';
+import { GutterBookmarkDot } from '../../features/bookmarks/ui/GutterBookmarkDot';
 import type { LineMarkInfo } from '@/src/domain/marker';
 import type {
   LineMark,
@@ -57,12 +58,22 @@ interface CodeLineProps {
   text: string;
   language: string | null;
   markInfo: LineMarkInfo | null;
+  bookmarkColorHex: string | null;
   isSelectionStart: boolean;
   onPress: (lineNum: number) => void;
   onLongPress: (lineNum: number) => void;
 }
 
-const CodeLine = memo(({ lineNum, text, language, markInfo, isSelectionStart, onPress, onLongPress }: CodeLineProps) => {
+const CodeLine = memo(({
+  lineNum,
+  text,
+  language,
+  markInfo,
+  bookmarkColorHex,
+  isSelectionStart,
+  onPress,
+  onLongPress,
+}: CodeLineProps) => {
   const bgStyle = markInfo
     ? { backgroundColor: markBgColor(markInfo) }
     : undefined;
@@ -82,6 +93,7 @@ const CodeLine = memo(({ lineNum, text, language, markInfo, isSelectionStart, on
       style={[styles.line, bgStyle]}
     >
       <SelectionStartIndicator visible={isSelectionStart} />
+      {bookmarkColorHex ? <GutterBookmarkDot colorHex={bookmarkColorHex} /> : null}
       <Text style={styles.lineNumber}>{lineNum}</Text>
       {tokens ? (
         <Text style={styles.lineText} selectable>
@@ -110,6 +122,7 @@ interface Props {
   onLineLongPress: (line: number) => void;
   language?: string | null | undefined;
   selectionStartLine?: number | null | undefined;
+  bookmarkIndicators?: Array<{ line: number; colorHex: string | null }> | undefined;
 }
 
 export function CodeViewer({
@@ -121,6 +134,7 @@ export function CodeViewer({
   onLineLongPress,
   language,
   selectionStartLine,
+  bookmarkIndicators = [],
 }: Props) {
   const lines = useMemo(() => content.split('\n'), [content]);
   const resolvedLanguage = language ?? null;
@@ -184,6 +198,14 @@ export function CodeViewer({
     return map;
   }, [marks, ranges]);
 
+  const bookmarkMap = useMemo(() => {
+    const map = new Map<number, string | null>();
+    for (const indicator of bookmarkIndicators) {
+      map.set(indicator.line, indicator.colorHex);
+    }
+    return map;
+  }, [bookmarkIndicators]);
+
   const renderItem = useCallback(
     ({ item, index }: ListRenderItemInfo<string>) => {
       const lineNum = index + 1;
@@ -193,13 +215,14 @@ export function CodeViewer({
           text={item}
           language={resolvedLanguage}
           markInfo={markMap.get(lineNum) || null}
+          bookmarkColorHex={bookmarkMap.get(lineNum) ?? null}
           isSelectionStart={selectionStartLine === lineNum}
           onPress={onLinePress}
           onLongPress={onLineLongPress}
         />
       );
     },
-    [markMap, onLinePress, onLineLongPress, resolvedLanguage, selectionStartLine],
+    [bookmarkMap, markMap, onLinePress, onLineLongPress, resolvedLanguage, selectionStartLine],
   );
 
   return (

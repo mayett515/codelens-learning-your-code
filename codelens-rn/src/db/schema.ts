@@ -188,6 +188,37 @@ export const learningCaptures = sqliteTable('learning_captures', {
   index('idx_captures_last_accessed').on(t.lastAccessedAt),
 ]);
 
+export const bookmarks = sqliteTable('bookmarks', {
+  id: text('id').primaryKey(),
+  projectId: text('project_id')
+    .notNull()
+    .references(() => projects.id, { onDelete: 'cascade' }),
+  filePath: text('file_path').notNull(),
+  startLine: integer('start_line').notNull(),
+  endLine: integer('end_line').notNull(),
+  colorKey: text('color_key').notNull(),
+  note: text('note'),
+  linkedCaptureId: text('linked_capture_id').references(() => learningCaptures.id, { onDelete: 'set null' }),
+  sessionId: text('session_id'),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+}, (t) => [
+  uniqueIndex('idx_bookmarks_location').on(t.projectId, t.filePath, t.startLine, t.endLine),
+  // Migration creates this with DESC ordering; Drizzle's index() doesn't model that.
+  index('idx_bookmarks_created').on(t.createdAt),
+  index('idx_bookmarks_session').on(t.sessionId),
+  index('idx_bookmarks_project_file').on(t.projectId, t.filePath, t.startLine),
+  index('idx_bookmarks_color').on(t.projectId, t.colorKey),
+]);
+
+export const bookmarkPalettes = sqliteTable('bookmark_palettes', {
+  projectId: text('project_id')
+    .primaryKey()
+    .references(() => projects.id, { onDelete: 'cascade' }),
+  paletteJson: text('palette_json').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+});
+
 export const conceptLinks = sqliteTable('concept_links', {
   fromId: text('from_id').notNull(),
   toId: text('to_id').notNull(),
