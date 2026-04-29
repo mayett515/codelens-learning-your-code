@@ -1,26 +1,32 @@
 import { useEffect, useState } from 'react';
-import { BackHandler, Pressable, Text, View } from 'react-native';
-import { Stack } from 'expo-router';
+import { BackHandler, Platform, Pressable, Text, View } from 'react-native';
+import { Stack, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import 'react-native-reanimated';
 
-// Force early initialization of Dependency Injection container
-import '@/src/composition';
-
 import { handleHardwareBack } from '@/src/lib/back-handler';
-import { initDatabase } from '@/src/db/client';
 
 const queryClient = new QueryClient();
 
 export default function RootLayout() {
   const [dbReady, setDbReady] = useState(false);
   const [dbError, setDbError] = useState<string | null>(null);
+  const pathname = usePathname();
+  const isWebSandbox = Platform.OS === 'web' && pathname === '/sandboxtexttesting';
 
-  const handleRetry = () => {
+  const handleRetry = async () => {
+    if (isWebSandbox) {
+      setDbError(null);
+      setDbReady(true);
+      return;
+    }
+
     try {
       setDbError(null);
+      await import('@/src/composition');
+      const { initDatabase } = await import('@/src/db/client');
       initDatabase();
       setDbReady(true);
     } catch (e) {
@@ -30,8 +36,9 @@ export default function RootLayout() {
   };
 
   useEffect(() => {
-    handleRetry();
-  }, []);
+    setDbReady(false);
+    void handleRetry();
+  }, [isWebSandbox]);
 
   useEffect(() => {
     const sub = BackHandler.addEventListener(
