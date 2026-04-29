@@ -99,7 +99,7 @@ async function executeWithFallbacks(item: QueueItem): Promise<string> {
     let attemptError: Error | null = null;
 
     for (let retry = 0; retry < MAX_RETRIES_PER_ATTEMPT; retry++) {
-      await waitForProviderCooldown(attempt.provider);
+      await waitForProviderCooldown(attempt.provider, item.signal);
       if (item.signal?.aborted) throw new Error('Aborted');
 
       try {
@@ -115,7 +115,7 @@ async function executeWithFallbacks(item: QueueItem): Promise<string> {
 
         if (isRetriableCompletionError(attemptError) && retry < MAX_RETRIES_PER_ATTEMPT - 1) {
           const backoff = Math.min(1000 * Math.pow(2, retry), 5000);
-          await sleep(backoff);
+          await sleep(backoff, item.signal);
           continue;
         }
 
@@ -134,16 +134,36 @@ async function executeWithFallbacks(item: QueueItem): Promise<string> {
   throw lastError ?? new Error('Chat completion failed');
 }
 
-async function waitForProviderCooldown(provider: Provider): Promise<void> {
+async function waitForProviderCooldown(provider: Provider, signal?: AbortSignal): Promise<void> {
   const cooldown = COOLDOWNS[provider];
   const elapsed = Date.now() - lastCallTime[provider];
   if (elapsed < cooldown) {
-    await sleep(cooldown - elapsed);
+    await sleep(cooldown - elapsed, signal);
   }
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  if (ms <= 0) return Promise.resolve();
+  if (signal?.aborted) return Promise.reject(new Error('Aborted'));
+
+  return new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      cleanup();
+      resolve();
+    }, ms);
+
+    const onAbort = () => {
+      clearTimeout(timeout);
+      cleanup();
+      reject(new Error('Aborted'));
+    };
+
+    const cleanup = () => {
+      signal?.removeEventListener('abort', onAbort);
+    };
+
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
 }
 
 export function getQueueLength(): number {

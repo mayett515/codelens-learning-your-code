@@ -25,7 +25,7 @@ export function PersonaRowItem({
       disabled={disabled}
     >
       <View style={styles.iconBox}>
-        <Text style={styles.iconText}>{iconEmoji ?? title.slice(0, 1)}</Text>
+        <Text style={styles.iconText}>{iconEmoji ?? title.slice(0, 1).toUpperCase()}</Text>
       </View>
       <View style={styles.copy}>
         <Text style={[styles.title, active && styles.titleActive]} numberOfLines={1}>

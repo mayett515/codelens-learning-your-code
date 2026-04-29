@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   TextInput,
@@ -18,6 +18,7 @@ import {
   withoutRemoved,
 } from '../../features/learning/dot-connector';
 import { formatMemoriesForInjection } from '../../features/learning/retrieval';
+import { StopGeneratingButton } from '../../features/chat/ui/StopGeneratingButton';
 import type { DotConnectorIndicatorStatus } from '../../features/learning/dot-connector';
 import type { RetrievedMemory } from '../../features/learning/retrieval/types/retrieval';
 
@@ -28,9 +29,18 @@ export interface ChatInputSendContext {
 interface Props {
   onSend: (text: string, context?: ChatInputSendContext) => void;
   disabled?: boolean | undefined;
+  isGenerationInFlight?: boolean | undefined;
+  onStop?: (() => void) | undefined;
+  onUserTyping?: (() => void) | undefined;
 }
 
-export function ChatInput({ onSend, disabled }: Props) {
+export function ChatInput({
+  onSend,
+  disabled,
+  isGenerationInFlight,
+  onStop,
+  onUserTyping,
+}: Props) {
   const [text, setText] = useState('');
   const settings = useDotConnectorSettings();
   const [perTurnEnabled, setPerTurnEnabled] = useState(
@@ -38,6 +48,7 @@ export function ChatInput({ onSend, disabled }: Props) {
   );
   const [previewVisible, setPreviewVisible] = useState(false);
   const [removedMemoryIds, setRemovedMemoryIds] = useState<string[]>([]);
+  const sendInFlightRef = useRef(false);
   const retrieval = useDotConnectorRetrieve(text, settings, perTurnEnabled);
   const { prepareSend } = useSendWithInjection(settings);
   const config = getInjectionModeConfig(settings.injectionMode);
@@ -67,19 +78,30 @@ export function ChatInput({ onSend, disabled }: Props) {
     setPerTurnEnabled(settings.enableDotConnector && settings.dotConnectorPerTurnDefault === 'on');
   }, [settings.enableDotConnector, settings.dotConnectorPerTurnDefault]);
 
+  function handleTextChange(next: string) {
+    setText(next);
+    onUserTyping?.();
+  }
+
   async function handleSend() {
     const trimmed = text.trim();
-    if (!trimmed || disabled) return;
-    const sendResult = await prepareSend({
-      query: trimmed,
-      perTurnEnabled,
-      typingSnapshot: retrieval.snapshot,
-      removedMemoryIds,
-    });
-    onSend(trimmed, { memories: sendResult.memories });
-    setText('');
-    setRemovedMemoryIds([]);
-    setPerTurnEnabled(settings.enableDotConnector && settings.dotConnectorPerTurnDefault === 'on');
+    if (!trimmed || disabled || sendInFlightRef.current) return;
+    sendInFlightRef.current = true;
+    try {
+      onUserTyping?.();
+      const sendResult = await prepareSend({
+        query: trimmed,
+        perTurnEnabled,
+        typingSnapshot: retrieval.snapshot,
+        removedMemoryIds,
+      });
+      onSend(trimmed, { memories: sendResult.memories });
+      setText('');
+      setRemovedMemoryIds([]);
+      setPerTurnEnabled(settings.enableDotConnector && settings.dotConnectorPerTurnDefault === 'on');
+    } finally {
+      sendInFlightRef.current = false;
+    }
   }
 
   const previewState = retrieval.snapshot
@@ -98,12 +120,12 @@ export function ChatInput({ onSend, disabled }: Props) {
           <TextInput
             style={styles.input}
             value={text}
-            onChangeText={setText}
+            onChangeText={handleTextChange}
             placeholder="Type a message..."
             placeholderTextColor={colors.textSecondary}
             multiline
             maxLength={4000}
-            editable={!disabled}
+            editable={!disabled && !isGenerationInFlight}
           />
           <DotConnectorIndicator
             status={indicatorStatus}
@@ -120,13 +142,17 @@ export function ChatInput({ onSend, disabled }: Props) {
             <Text style={styles.diagnosticsNotice} numberOfLines={2}>{retrieval.partialNotice}</Text>
           ) : null}
         </View>
-        <Pressable
-          style={[styles.sendBtn, disabled && styles.sendBtnDisabled]}
-          onPress={handleSend}
-          disabled={disabled}
-        >
-          <Text style={styles.sendBtnText}>Send</Text>
-        </Pressable>
+        {isGenerationInFlight ? (
+          <StopGeneratingButton onPress={() => onStop?.()} />
+        ) : (
+          <Pressable
+            style={[styles.sendBtn, disabled && styles.sendBtnDisabled]}
+            onPress={handleSend}
+            disabled={disabled}
+          >
+            <Text style={styles.sendBtnText}>Send</Text>
+          </Pressable>
+        )}
       </View>
       {previewState ? (
         <MemoryPreviewSheet

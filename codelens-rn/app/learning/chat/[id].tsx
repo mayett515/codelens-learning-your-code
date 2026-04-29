@@ -70,7 +70,14 @@ export default function LearningChatScreen() {
     [chat?.modelOverride, modelOverrideQuery.data],
   );
 
-  const { send, sending, error, clearError } = useSendMessage(
+  const {
+    send,
+    sending,
+    isGenerationInFlight,
+    stopGenerating,
+    error,
+    clearError,
+  } = useSendMessage(
     chatId,
     'learning',
     buildPrompt,
@@ -136,6 +143,14 @@ export default function LearningChatScreen() {
     );
     if (personaHintTimer.current) clearTimeout(personaHintTimer.current);
     personaHintTimer.current = setTimeout(() => setPersonaHint(''), 3_000);
+  }, []);
+
+  const handleUserTyping = useCallback(() => {
+    if (personaHintTimer.current) {
+      clearTimeout(personaHintTimer.current);
+      personaHintTimer.current = null;
+    }
+    setPersonaHint('');
   }, []);
 
   if (!concept) {
@@ -230,7 +245,7 @@ export default function LearningChatScreen() {
           contentContainerStyle={styles.messageList}
         />
 
-        {sending ? (
+        {sending && isGenerationInFlight ? (
           <View style={styles.typingBar}>
             <ActivityIndicator size="small" color={colors.primary} />
             <Text style={styles.typingText}>Thinking...</Text>
@@ -252,7 +267,13 @@ export default function LearningChatScreen() {
           </View>
         ) : null}
 
-        <ChatInput onSend={handleSend} disabled={sending || !chatId} />
+        <ChatInput
+          onSend={handleSend}
+          disabled={sending || !chatId}
+          isGenerationInFlight={isGenerationInFlight}
+          onStop={stopGenerating}
+          onUserTyping={handleUserTyping}
+        />
       </KeyboardAvoidingView>
 
       <BubbleMenu

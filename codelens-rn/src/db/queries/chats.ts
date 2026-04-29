@@ -156,6 +156,21 @@ export async function updateChatModelOverride(
     .where(eq(chats.id, chatId));
 }
 
+export async function updateChatRange(
+  chatId: ChatId,
+  startLine: number,
+  endLine: number,
+): Promise<void> {
+  await db
+    .update(chats)
+    .set({
+      startLine,
+      endLine,
+      updatedAt: new Date().toISOString(),
+    })
+    .where(eq(chats.id, chatId));
+}
+
 export async function deleteChat(id: ChatId): Promise<void> {
   await db.delete(chats).where(eq(chats.id, id));
 }

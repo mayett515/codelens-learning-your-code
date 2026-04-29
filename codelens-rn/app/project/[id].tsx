@@ -27,6 +27,7 @@ import {
   getLineMarkInfo,
 } from '@/src/domain/marker';
 import { CodeViewer } from '@/src/ui/components/CodeViewer';
+import { inferLanguageFromPath } from '@/src/features/chat';
 import { ColorPicker } from '@/src/ui/components/ColorPicker';
 import { FilePickerModal } from '@/src/ui/components/FilePickerModal';
 import { EraseConfirmBar } from '@/src/ui/components/EraseConfirmBar';
@@ -335,7 +336,7 @@ export default function ProjectViewerScreen() {
       {isRangeSelectMode && (
         <View style={styles.rangeBar}>
           <Text style={styles.rangeBarText}>
-            Range select: {startLine !== null ? `from line ${startLine} — tap end line` : 'tap start line'}
+            Range select: {startLine !== null ? `from line ${startLine} - tap end line` : 'tap start line'}
           </Text>
           <Pressable
             style={styles.rangeCancelBtn}
@@ -354,6 +355,8 @@ export default function ProjectViewerScreen() {
           mode={mode}
           onLinePress={handleLinePress}
           onLineLongPress={handleLineLongPress}
+          language={inferLanguageFromPath(currentFile.path)}
+          selectionStartLine={isRangeSelectMode ? startLine : null}
         />
       ) : (
         <View style={styles.emptyViewer}>

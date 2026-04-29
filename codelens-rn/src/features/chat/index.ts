@@ -1,5 +1,6 @@
 export * from './modelCatalog/catalog';
 export * from './modelCatalog/chatModelRepo';
+export * from './hooks/useCancelGeneration';
 export * from './hooks/useChatModelOverride';
 export * from './hooks/useChatPromptContext';
 export * from './hooks/useSetChatModelOverride';
@@ -7,4 +8,9 @@ export * from './promptComposition/buildChatSystemPrompt';
 export * from './promptComposition/buildCodeContextLayer';
 export * from './promptComposition/constants';
 export * from './promptComposition/types';
+export * from './services/sliceCodeContext';
+export * from './types/messageStatus';
 export * from './ui/ChatModelPickerSheet';
+export * from './ui/SelectedCodeAdjuster';
+export * from './ui/SelectedCodePreview';
+export * from './ui/StopGeneratingButton';

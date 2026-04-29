@@ -10,6 +10,9 @@ import {
   ListRenderItemInfo,
 } from 'react-native';
 import { colors, fontSize, spacing } from '../theme';
+import { highlightLine, type HighlightedToken } from '../../features/codeReader/highlighting/highlightLine';
+import { PLAIN_TOKEN_COLOR } from '../../features/codeReader/highlighting/vscodeDarkPlusPalette';
+import { SelectionStartIndicator } from '../../features/codeReader/ui/SelectionStartIndicator';
 import type { LineMarkInfo } from '@/src/domain/marker';
 import type {
   LineMark,
@@ -52,15 +55,25 @@ function markBgColor(info: LineMarkInfo): string {
 interface CodeLineProps {
   lineNum: number;
   text: string;
+  language: string | null;
   markInfo: LineMarkInfo | null;
+  isSelectionStart: boolean;
   onPress: (lineNum: number) => void;
   onLongPress: (lineNum: number) => void;
 }
 
-const CodeLine = memo(({ lineNum, text, markInfo, onPress, onLongPress }: CodeLineProps) => {
+const CodeLine = memo(({ lineNum, text, language, markInfo, isSelectionStart, onPress, onLongPress }: CodeLineProps) => {
   const bgStyle = markInfo
     ? { backgroundColor: markBgColor(markInfo) }
     : undefined;
+
+  const tokens: HighlightedToken[] | null = useMemo(() => {
+    if (!language) return null;
+    const result = highlightLine(text, language);
+    if (result.length === 0) return null;
+    if (result.length === 1 && result[0]?.color === PLAIN_TOKEN_COLOR) return null;
+    return result;
+  }, [text, language]);
 
   return (
     <Pressable
@@ -68,8 +81,17 @@ const CodeLine = memo(({ lineNum, text, markInfo, onPress, onLongPress }: CodeLi
       onLongPress={() => onLongPress(lineNum)}
       style={[styles.line, bgStyle]}
     >
+      <SelectionStartIndicator visible={isSelectionStart} />
       <Text style={styles.lineNumber}>{lineNum}</Text>
-      <Text style={styles.lineText}>{text || ' '}</Text>
+      {tokens ? (
+        <Text style={styles.lineText} selectable>
+          {tokens.map((token, idx) => (
+            <Text key={idx} style={{ color: token.color }}>{token.text}</Text>
+          ))}
+        </Text>
+      ) : (
+        <Text style={styles.lineText} selectable>{text || ' '}</Text>
+      )}
       {markInfo && markInfo.isDirectMark && markInfo.isOverlap ? (
         <View style={[styles.chatIndicator, { backgroundColor: MARK_COLORS[markInfo.color] }]} />
       ) : markInfo && markInfo.depth > 0 ? (
@@ -86,6 +108,8 @@ interface Props {
   mode: CodeInteractionMode;
   onLinePress: (line: number) => void;
   onLineLongPress: (line: number) => void;
+  language?: string | null | undefined;
+  selectionStartLine?: number | null | undefined;
 }
 
 export function CodeViewer({
@@ -95,8 +119,11 @@ export function CodeViewer({
   mode,
   onLinePress,
   onLineLongPress,
+  language,
+  selectionStartLine,
 }: Props) {
   const lines = useMemo(() => content.split('\n'), [content]);
+  const resolvedLanguage = language ?? null;
 
   const markMap = useMemo(() => {
     const map = new Map<number, LineMarkInfo>();
@@ -164,13 +191,15 @@ export function CodeViewer({
         <CodeLine
           lineNum={lineNum}
           text={item}
+          language={resolvedLanguage}
           markInfo={markMap.get(lineNum) || null}
+          isSelectionStart={selectionStartLine === lineNum}
           onPress={onLinePress}
           onLongPress={onLineLongPress}
         />
       );
     },
-    [markMap, onLinePress, onLineLongPress],
+    [markMap, onLinePress, onLineLongPress, resolvedLanguage, selectionStartLine],
   );
 
   return (

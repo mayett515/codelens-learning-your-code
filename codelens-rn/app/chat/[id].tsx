@@ -14,7 +14,12 @@ import { useLocalSearchParams, router } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { colors, fontSize, spacing } from '@/src/ui/theme';
 import { chatKeys, fileKeys } from '@/src/hooks/query-keys';
-import { getChatById, deleteMessage, updateChatModelOverride } from '@/src/db/queries/chats';
+import {
+  getChatById,
+  deleteMessage,
+  updateChatModelOverride,
+  updateChatRange,
+} from '@/src/db/queries/chats';
 import { getFileById } from '@/src/db/queries/files';
 import { getScopeConfig } from '@/src/ai/scopes';
 import { useSendMessage } from '@/src/hooks/use-send-message';
@@ -24,14 +29,24 @@ import { BubbleMenu } from '@/src/ui/components/BubbleMenu';
 import { ChatModelPickerModal } from '@/src/ui/components/ChatModelPickerModal';
 import {
   ChatModelPickerSheet,
+  SelectedCodeAdjuster,
+  SelectedCodePreview,
   chatModelOptionToOverride,
+  inferLanguageFromPath,
+  sliceCodeFromLines,
   useChatModelOverride,
   useChatPromptContext,
 } from '@/src/features/chat';
 import { SaveAsLearningModal, useSaveLearningStore } from '@/src/features/learning';
 import { ChatPersonaPickerSheet, useChatPersona } from '@/src/features/personas';
+import type { ChatCodeContext } from '@/src/features/chat';
 import type { ChatId, ChatMessage, ChatModelOverride } from '@/src/domain/types';
 import type { RetrievedMemory } from '@/src/features/learning/retrieval/types/retrieval';
+
+interface CodeContextOverride {
+  value: ChatCodeContext | null;
+  truncated: boolean;
+}
 
 export default function SectionChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -43,6 +58,8 @@ export default function SectionChatScreen() {
   const [modelPickerVisible, setModelPickerVisible] = useState(false);
   const [personaPickerVisible, setPersonaPickerVisible] = useState(false);
   const [personaHint, setPersonaHint] = useState('');
+  const [contextOverride, setContextOverride] = useState<CodeContextOverride | null>(null);
+  const [adjustVisible, setAdjustVisible] = useState(false);
   const personaHintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const memoriesRef = useRef<RetrievedMemory[]>([]);
   const scopeConfig = getScopeConfig('section');
@@ -63,22 +80,41 @@ export default function SectionChatScreen() {
   const personaQuery = useChatPersona(chatId);
   const modelOverrideQuery = useChatModelOverride(chatId);
 
-  const codePromptContext = useMemo(() => {
-    if (!file || chat?.startLine == null || chat?.endLine == null) {
-      return null;
-    }
-    return {
-      kind: 'selected_code' as const,
-      text: file.content.split('\n').slice(chat.startLine - 1, chat.endLine).join('\n'),
-      filePath: file.path,
+  const fileLines = useMemo(() => file?.content?.split('\n') ?? [], [file?.content]);
+
+  const initialCodeContext = useMemo<{ value: ChatCodeContext; truncated: boolean } | null>(() => {
+    if (!file || chat?.startLine == null || chat?.endLine == null) return null;
+    const slice = sliceCodeFromLines({
+      fileLines: file.content.split('\n'),
       startLine: chat.startLine,
       endLine: chat.endLine,
+    });
+    return {
+      value: {
+        kind: 'selected_code',
+        text: slice.text,
+        filePath: file.path,
+        language: inferLanguageFromPath(file.path),
+        startLine: slice.startLine,
+        endLine: slice.endLine,
+      },
+      truncated: slice.truncated,
     };
-  }, [file, chat]);
+  }, [file, chat?.startLine, chat?.endLine]);
+
+  const codeContext = useMemo<ChatCodeContext | null>(
+    () => (contextOverride ? contextOverride.value : initialCodeContext?.value ?? null),
+    [contextOverride, initialCodeContext],
+  );
+
+  const codeContextTruncated = contextOverride
+    ? contextOverride.truncated
+    : Boolean(initialCodeContext?.truncated);
+
   const buildPrompt = useChatPromptContext({
     persona: personaQuery.data ?? null,
     memoriesRef,
-    codeContext: codePromptContext,
+    codeContext,
   });
   const routingOverride = useMemo(
     () => modelOverrideQuery.data
@@ -87,7 +123,14 @@ export default function SectionChatScreen() {
     [chat?.modelOverride, modelOverrideQuery.data],
   );
 
-  const { send, sending, error, clearError } = useSendMessage(
+  const {
+    send,
+    sending,
+    isGenerationInFlight,
+    stopGenerating,
+    error,
+    clearError,
+  } = useSendMessage(
     chatId,
     'section',
     buildPrompt,
@@ -130,7 +173,7 @@ export default function SectionChatScreen() {
     [chatId, queryClient],
   );
 
-  const codeContext =
+  const headerContext =
     file && chat?.startLine != null && chat?.endLine != null
       ? `${file.path}:${chat.startLine}-${chat.endLine}`
       : null;
@@ -156,6 +199,52 @@ export default function SectionChatScreen() {
     personaHintTimer.current = setTimeout(() => setPersonaHint(''), 3_000);
   }, []);
 
+  const handleUserTyping = useCallback(() => {
+    if (personaHintTimer.current) {
+      clearTimeout(personaHintTimer.current);
+      personaHintTimer.current = null;
+    }
+    setPersonaHint('');
+  }, []);
+
+  const handleRemoveCodeContext = useCallback(() => {
+    setContextOverride({ value: null, truncated: false });
+    setAdjustVisible(false);
+  }, []);
+
+  const handleAdjustOpen = useCallback(() => {
+    if (codeContext) setAdjustVisible(true);
+  }, [codeContext]);
+
+  const handleAdjustCancel = useCallback(() => {
+    setAdjustVisible(false);
+  }, []);
+
+  const handleAdjustConfirm = useCallback(
+    async (next: { startLine: number; endLine: number; text: string; truncated: boolean }) => {
+      if (!codeContext) {
+        setAdjustVisible(false);
+        return;
+      }
+      const updated: ChatCodeContext = {
+        ...codeContext,
+        text: next.text,
+        startLine: next.startLine,
+        endLine: next.endLine,
+      };
+      setContextOverride({ value: updated, truncated: next.truncated });
+      setAdjustVisible(false);
+      try {
+        await updateChatRange(chatId, next.startLine, next.endLine);
+      } catch {
+        // Persistence failure leaves the in-memory adjust intact for the next send.
+      } finally {
+        queryClient.invalidateQueries({ queryKey: chatKeys.detail(chatId) });
+      }
+    },
+    [chatId, codeContext, queryClient],
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
@@ -170,8 +259,8 @@ export default function SectionChatScreen() {
             <Text style={styles.title} numberOfLines={1}>
               {chat?.title ?? 'Chat'}
             </Text>
-            {codeContext ? (
-              <Text style={styles.context} numberOfLines={1}>{codeContext}</Text>
+            {headerContext ? (
+              <Text style={styles.context} numberOfLines={1}>{headerContext}</Text>
             ) : null}
           </View>
           <Pressable
@@ -216,7 +305,7 @@ export default function SectionChatScreen() {
           contentContainerStyle={styles.messageList}
         />
 
-        {sending ? (
+        {sending && isGenerationInFlight ? (
           <View style={styles.typingBar}>
             <ActivityIndicator size="small" color={colors.primary} />
             <Text style={styles.typingText}>Thinking...</Text>
@@ -238,7 +327,30 @@ export default function SectionChatScreen() {
           </View>
         ) : null}
 
-        <ChatInput onSend={handleSend} disabled={sending} />
+        {adjustVisible && codeContext && fileLines.length > 0 ? (
+          <SelectedCodeAdjuster
+            fileLines={fileLines}
+            startLine={codeContext.startLine ?? 1}
+            endLine={codeContext.endLine ?? 1}
+            onConfirm={handleAdjustConfirm}
+            onCancel={handleAdjustCancel}
+          />
+        ) : codeContext ? (
+          <SelectedCodePreview
+            codeContext={codeContext}
+            truncated={codeContextTruncated}
+            onAdjust={handleAdjustOpen}
+            onRemove={handleRemoveCodeContext}
+          />
+        ) : null}
+
+        <ChatInput
+          onSend={handleSend}
+          disabled={sending}
+          isGenerationInFlight={isGenerationInFlight}
+          onStop={stopGenerating}
+          onUserTyping={handleUserTyping}
+        />
       </KeyboardAvoidingView>
 
       <BubbleMenu

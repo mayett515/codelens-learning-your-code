@@ -69,6 +69,12 @@ export interface SourceFile {
 // ===== Chat =====
 
 export type ChatScope = 'section' | 'general' | 'learning';
+export type ChatMessageStatus =
+  | 'sending'
+  | 'streaming'
+  | 'done'
+  | 'failed'
+  | 'stopped';
 
 export interface Chat {
   id: ChatId;
@@ -93,6 +99,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
   createdAt: string;
+  status?: ChatMessageStatus | undefined;
 }
 
 // ===== Provider config =====
