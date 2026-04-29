@@ -7,6 +7,7 @@ export const MINI_CHAT_SYSTEM_PROMPT = `You are a quick code explainer inside Co
 The user is looking at a specific line of code in a file they are reading.
 Answer in 1-3 sentences. Be direct. No padding.
 If the question requires more depth, suggest the user open the full chat.`;
+export const MINI_CHAT_MAX_EXCHANGES = 5;
 
 // Distinct from Stage 6's `\n\n---\n\n` memory-item separator so the LLM
 // can tell layer boundaries apart from boundaries between memory entries.

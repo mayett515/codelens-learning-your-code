@@ -139,6 +139,28 @@ export async function insertMessage(
     .where(eq(chats.id, chatId));
 }
 
+export async function insertMessages(
+  chatId: ChatId,
+  messages: ChatMessage[],
+): Promise<void> {
+  if (messages.length === 0) return;
+  await db.transaction(async (tx) => {
+    await tx.insert(chatMessages).values(
+      messages.map((message) => ({
+        id: message.id,
+        chatId,
+        role: message.role,
+        content: message.content,
+        createdAt: message.createdAt,
+      })),
+    );
+    await tx
+      .update(chats)
+      .set({ updatedAt: new Date().toISOString() })
+      .where(eq(chats.id, chatId));
+  });
+}
+
 export async function deleteMessage(id: MessageId): Promise<void> {
   await db.delete(chatMessages).where(eq(chatMessages.id, id));
 }

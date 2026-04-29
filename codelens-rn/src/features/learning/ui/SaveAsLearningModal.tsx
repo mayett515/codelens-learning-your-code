@@ -37,7 +37,7 @@ export function SaveAsLearningModal() {
       try {
         const state = useSaveLearningStore.getState();
         const candidates = await prepareSaveCandidates(
-          {
+          state.source ?? {
             selectedText: state.snippet,
             chatMessageId: state.sourceMessageId,
             sessionId: state.sourceChatId,

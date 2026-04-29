@@ -32,6 +32,7 @@ import {
   SelectedCodeAdjuster,
   SelectedCodePreview,
   chatModelOptionToOverride,
+  consumeMiniChatExpansionContext,
   inferLanguageFromPath,
   sliceCodeFromLines,
   useChatModelOverride,
@@ -59,6 +60,11 @@ export default function SectionChatScreen() {
   const [personaPickerVisible, setPersonaPickerVisible] = useState(false);
   const [personaHint, setPersonaHint] = useState('');
   const [contextOverride, setContextOverride] = useState<CodeContextOverride | null>(null);
+  // Expanded mini-chat framing is an in-memory handoff for the just-opened full chat.
+  // Reopening later falls back to the persisted section range, which is enough to keep context.
+  const [expandedMiniContext] = useState<ChatCodeContext | null>(() =>
+    consumeMiniChatExpansionContext(chatId),
+  );
   const [adjustVisible, setAdjustVisible] = useState(false);
   const personaHintTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const memoriesRef = useRef<RetrievedMemory[]>([]);
@@ -103,8 +109,10 @@ export default function SectionChatScreen() {
   }, [file, chat?.startLine, chat?.endLine]);
 
   const codeContext = useMemo<ChatCodeContext | null>(
-    () => (contextOverride ? contextOverride.value : initialCodeContext?.value ?? null),
-    [contextOverride, initialCodeContext],
+    () => (contextOverride
+      ? contextOverride.value
+      : expandedMiniContext ?? initialCodeContext?.value ?? null),
+    [contextOverride, expandedMiniContext, initialCodeContext],
   );
 
   const codeContextTruncated = contextOverride

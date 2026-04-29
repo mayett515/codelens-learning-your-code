@@ -24,18 +24,28 @@ import {
   eraseMark,
   applyRangeMark,
   getLineMarkColor,
-  getLineMarkInfo,
 } from '@/src/domain/marker';
 import { CodeViewer } from '@/src/ui/components/CodeViewer';
-import { inferLanguageFromPath } from '@/src/features/chat';
+import {
+  GutterActionChip,
+  LineMiniChat,
+  buildLineRef,
+  inferLanguageFromPath,
+  setMiniChatExpansionContext,
+  toExpandedMiniChatContext,
+  type MiniChatMessage,
+  type MiniChatSaveContext,
+} from '@/src/features/chat';
 import { ColorPicker } from '@/src/ui/components/ColorPicker';
 import { FilePickerModal } from '@/src/ui/components/FilePickerModal';
 import { EraseConfirmBar } from '@/src/ui/components/EraseConfirmBar';
-import { insertChat } from '@/src/db/queries/chats';
-import { chatId as makeChatId } from '@/src/domain/types';
+import { insertChat, insertMessages } from '@/src/db/queries/chats';
+import { chatId as makeChatId, messageId as makeMessageId } from '@/src/domain/types';
 import { uid } from '@/src/lib/uid';
 import { chatKeys, fileKeys, projectKeys } from '@/src/hooks/query-keys';
+import { SaveAsLearningModal, useSaveLearningStore } from '@/src/features/learning';
 import type {
+  ChatMessage,
   ProjectId,
   FileId,
   SourceFile,
@@ -47,6 +57,7 @@ export default function ProjectViewerScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const projectId = id as ProjectId;
   const queryClient = useQueryClient();
+  const openSaveFromSource = useSaveLearningStore((s) => s.openFromSource);
 
   const mode = useInteractionModeStore((s) => s.mode);
   const toggleMode = useInteractionModeStore((s) => s.toggleMode);
@@ -66,6 +77,8 @@ export default function ProjectViewerScreen() {
   const [eraseConfirm, setEraseConfirm] = useState<{
     line: number;
   } | null>(null);
+  const [actionLine, setActionLine] = useState<number | null>(null);
+  const [miniChatLineRef, setMiniChatLineRef] = useState<ReturnType<typeof buildLineRef> | null>(null);
 
   const [localMarks, setLocalMarks] = useState<LineMark[]>([]);
   const [localRanges, setLocalRanges] = useState<RangeMark[]>([]);
@@ -137,56 +150,22 @@ export default function ProjectViewerScreen() {
     [project, projectId, queryClient, resetSelection, currentFileId, localMarks, localRanges],
   );
 
-  const openSectionChat = useCallback(
-    async (line: number) => {
-      if (!currentFile) return;
-      const info = getLineMarkInfo(localMarks, localRanges, line);
-      if (!info) return;
-
-      let chatStartLine = line;
-      let chatEndLine = line;
-
-      if (!info.isDirectMark) {
-        const range = localRanges.find(
-          (r) => line >= r.startLine && line <= r.endLine && r.color === info.color,
-        );
-        if (range) {
-          chatStartLine = range.startLine;
-          chatEndLine = range.endLine;
-        }
-      }
-
-      const now = new Date().toISOString();
-      const newChatId = makeChatId(uid());
-      const title = `${currentFile.path.split('/').pop()}:${chatStartLine}-${chatEndLine}`;
-
-      await insertChat({
-        id: newChatId,
-        scope: 'section',
-        projectId,
-        fileId: currentFile.id,
-        startLine: chatStartLine,
-        endLine: chatEndLine,
-        title,
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      queryClient.invalidateQueries({ queryKey: chatKeys.recent });
-      router.push(`/chat/${newChatId}`);
-    },
-    [currentFile, localMarks, localRanges, projectId, queryClient],
-  );
+  useEffect(() => {
+    setActionLine(null);
+  }, [currentFileId, mode]);
 
   const handleLinePress = useCallback(
     (line: number) => {
       if (!currentFile) return;
 
       if (mode === 'view') {
-        const info = getLineMarkInfo(localMarks, localRanges, line);
-        if (info) {
-          openSectionChat(line);
+        // Stage 8 widens this from marked lines to any tapped non-empty line.
+        const lineText = currentFile.content.split('\n')[line - 1]?.trim();
+        if (!lineText) {
+          setActionLine(null);
+          return;
         }
+        setActionLine(line);
         return;
       }
 
@@ -222,7 +201,6 @@ export default function ProjectViewerScreen() {
       debounceSave,
       resetSelection,
       setStartLine,
-      openSectionChat,
     ],
   );
 
@@ -264,6 +242,74 @@ export default function ProjectViewerScreen() {
   const handleEraseCancel = useCallback(() => {
     setEraseConfirm(null);
   }, []);
+
+  const handleAskLine = useCallback(() => {
+    if (!currentFile || actionLine == null) return;
+    setMiniChatLineRef(buildLineRef({
+      content: currentFile.content,
+      filePath: currentFile.path,
+      lineNumber: actionLine,
+      language: inferLanguageFromPath(currentFile.path),
+    }));
+    setActionLine(null);
+  }, [actionLine, currentFile]);
+
+  const handleBookmarkLine = useCallback(() => {
+    setActionLine(null);
+  }, []);
+
+  const handleSaveMiniChatCapture = useCallback(
+    (context: MiniChatSaveContext) => {
+      const selected = context.history.find((message) => message.id === context.selectedMessageId);
+      if (!selected) return;
+      setMiniChatLineRef(null);
+      openSaveFromSource({
+        selectedText: context.lineRef.text,
+        snippetLang: context.lineRef.language,
+        snippetSourcePath: context.lineRef.filePath,
+        snippetStartLine: context.lineRef.startLine,
+        snippetEndLine: context.lineRef.endLine,
+        chatMessageId: context.selectedMessageId,
+        sessionId: null,
+      });
+    },
+    [openSaveFromSource],
+  );
+
+  const handleExpandMiniChat = useCallback(
+    async (history: MiniChatMessage[], lineRef: ReturnType<typeof buildLineRef>) => {
+      if (!currentFile || !project) return;
+      const now = new Date().toISOString();
+      const newChatId = makeChatId(uid());
+      const basename = currentFile.path.split('/').pop() ?? currentFile.path;
+      const title = `${basename}:${lineRef.startLine ?? 1} mini chat`;
+
+      await insertChat({
+        id: newChatId,
+        scope: 'section',
+        projectId,
+        fileId: currentFile.id,
+        startLine: lineRef.startLine ?? undefined,
+        endLine: lineRef.endLine ?? undefined,
+        title,
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const seededMessages: ChatMessage[] = history.map((message) => ({
+        id: makeMessageId(uid()),
+        role: message.role,
+        content: message.content,
+        createdAt: new Date(message.createdAt).toISOString(),
+      }));
+      await insertMessages(newChatId, seededMessages);
+      setMiniChatExpansionContext(newChatId, toExpandedMiniChatContext(lineRef));
+      setMiniChatLineRef(null);
+      queryClient.invalidateQueries({ queryKey: chatKeys.recent });
+      router.push(`/chat/${newChatId}`);
+    },
+    [currentFile, project, projectId, queryClient],
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -369,6 +415,25 @@ export default function ProjectViewerScreen() {
       )}
 
       {mode === 'mark' && <ColorPicker active={activeColor} onSelect={setColor} />}
+
+      {actionLine !== null ? (
+        <GutterActionChip
+          line={actionLine}
+          onAsk={handleAskLine}
+          onBookmark={handleBookmarkLine}
+          onDismiss={() => setActionLine(null)}
+        />
+      ) : null}
+
+      <LineMiniChat
+        visible={!!miniChatLineRef}
+        lineRef={miniChatLineRef}
+        onExpandToChat={handleExpandMiniChat}
+        onSaveCapture={handleSaveMiniChatCapture}
+        onClose={() => setMiniChatLineRef(null)}
+      />
+
+      <SaveAsLearningModal />
 
       <EraseConfirmBar
         visible={!!eraseConfirm}

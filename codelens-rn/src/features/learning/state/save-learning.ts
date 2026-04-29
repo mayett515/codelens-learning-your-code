@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { ChatId, ChatMessage } from '../../../domain/types';
 import type { LearningCaptureId } from '../types/ids';
 import type { SaveModalCandidateData, CandidateSaveState } from '../types/saveModal';
+import type { SaveCandidateSource } from '../services/prepareSaveCandidates';
 
 type Phase = 'idle' | 'extracting' | 'reviewing' | 'error';
 
@@ -16,6 +17,7 @@ interface SaveLearningStore {
   snippet: string;
   sourceChatId: ChatId | null;
   sourceMessageId: string | null;
+  source: SaveCandidateSource | null;
   phase: Phase;
   candidates: SaveModalCandidateData[];
   saveStates: Record<string, CandidateSaveStatus>;
@@ -23,6 +25,7 @@ interface SaveLearningStore {
   error: string | null;
 
   open: (message: ChatMessage, chatId: ChatId) => void;
+  openFromSource: (source: SaveCandidateSource) => void;
   close: () => void;
   setPhase: (phase: Phase) => void;
   setCandidates: (candidates: SaveModalCandidateData[]) => void;
@@ -42,6 +45,7 @@ function freshState() {
     snippet: '',
     sourceChatId: null as ChatId | null,
     sourceMessageId: null as string | null,
+    source: null as SaveCandidateSource | null,
     phase: 'idle' as Phase,
     candidates: [] as SaveModalCandidateData[],
     saveStates: {} as Record<string, CandidateSaveStatus>,
@@ -63,6 +67,25 @@ export const useSaveLearningStore = create<SaveLearningStore>((set) => ({
       snippet: message.content,
       sourceChatId: chatId,
       sourceMessageId: message.id,
+      source: {
+        selectedText: message.content,
+        chatMessageId: message.id,
+        sessionId: chatId,
+      },
+      phase: 'extracting',
+      candidates: [],
+      saveStates: {},
+      inspectingCandidateId: null,
+      error: null,
+    }),
+
+  openFromSource: (source) =>
+    set({
+      visible: true,
+      snippet: source.selectedText,
+      sourceChatId: null,
+      sourceMessageId: source.chatMessageId ?? null,
+      source,
       phase: 'extracting',
       candidates: [],
       saveStates: {},

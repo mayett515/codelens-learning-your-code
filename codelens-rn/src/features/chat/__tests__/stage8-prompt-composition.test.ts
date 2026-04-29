@@ -8,9 +8,9 @@ import {
 } from '../promptComposition/constants';
 import {
   buildChatSystemPrompt,
-  buildMiniChatSystemPrompt,
 } from '../promptComposition/buildChatSystemPrompt';
 import { buildCodeContextLayer } from '../promptComposition/buildCodeContextLayer';
+import { buildMiniChatSystemPrompt } from '../mini/buildMiniChatSystemPrompt';
 import { getAvailableChatModels } from '../modelCatalog/catalog';
 import type { Persona } from '../../personas/types/persona';
 import type { LearningCaptureId } from '../../learning/types/ids';
