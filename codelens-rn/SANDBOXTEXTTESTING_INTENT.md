@@ -73,4 +73,17 @@ Then open:
 
 ## Next Session Starting Point
 
-Continue from the sandbox engine. The next useful step is to replace the sample data with a real model/API adapter that can request the `codelens-chat-engine` contract from a model, then render the response through the existing parser and inspector UI.
+The sandbox now has an interactive composer with two modes:
+
+- `Local`: generates a deterministic `codelens-chat-engine` contract without a provider, so UI work can continue without API keys or network.
+- `Model`: sends the sandbox prompt through the existing configured general-chat model queue and asks the provider to return the same contract.
+
+The next useful step is to harden model compliance: add stricter contract validation, show malformed provider output in the inspector, and add a retry/repair prompt when the model returns prose without a valid `codelens-chat-engine` block.
+
+## Review Engine Direction
+
+The default sandbox sample now uses a realistic code-review flow instead of a "build me something" prompt. The starter artifact is an MCP schema-compressor-style `skeleton.js` snippet with review layers for cache identity, external schema fetching, lossy compression, and returned review surfaces.
+
+This better matches CodeLens as a code review and code-understanding app: the engine should inspect existing code, cite line ranges, explain runtime risk, and expose clickable review concepts like `schema cache`, `token budget`, and malformed schemas.
+
+Model mode now layers the sandbox renderer contract on top of the real CodeLens chat prompt composition. It uses the existing base CodeLens assistant prompt plus a selected-code context layer for `skeleton.js`, then asks the provider to emit the `codelens-chat-engine` block. This keeps sandbox model behavior closer to the main chat while still isolating all edits in this worktree.

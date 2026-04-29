@@ -1,79 +1,139 @@
 import { parseSandboxModelOutput } from './engine';
 import type { SandboxChatMessage } from './types';
 
+export const reviewSnippet = [
+  'const schemaCache = new Map();',
+  '',
+  'export async function getCompressedToolSchema(client, toolName) {',
+  '  if (schemaCache.has(toolName)) return schemaCache.get(toolName);',
+  '',
+  "  const schema = await client.callTool('get_tool_schema', { toolName });",
+  '  const compressed = {',
+  '    name: schema.name,',
+  '    description: schema.description?.slice(0, 180),',
+  '    required: schema.inputSchema?.required ?? [],',
+  '  };',
+  '',
+  '  schemaCache.set(toolName, compressed);',
+  '  return compressed;',
+  '}',
+].join('\n');
+
 const assistantRaw = `
-The chat renderer can treat model output as a contract: prose stays readable, while code, terms, and calculations become clickable surfaces.
+This review focuses on correctness and runtime risk in the MCP-style schema compressor. Click a code line to inspect the layer, or click terms like schema cache and token budget for review context.
 
 \`\`\`codelens-chat-engine
 {
-  "prose": "Here is a tiny React Native chat brick renderer. Click a code line to move under the abstraction layer, or click terms like model output and prompt contract to open focused explanations.",
+  "prose": "This MCP-style compressor is useful for shrinking tool context, but the schema cache needs a stronger cache key. Otherwise stale data, malformed schemas, and the wrong tool schema can leak into later tool calls.",
   "codeArtifacts": [
     {
-      "id": "chat-brick-renderer",
-      "title": "ChatBrickRenderer.tsx",
-      "language": "tsx",
-      "code": "import { Pressable, Text, View } from 'react-native';\\n\\ntype Brick = { label: string; detail: string };\\n\\nexport function ChatBrickRenderer({ bricks }: { bricks: Brick[] }) {\\n  return (\\n    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>\\n      {bricks.map((brick) => (\\n        <Pressable key={brick.label} onPress={() => inspect(brick)}>\\n          <Text>{brick.label}</Text>\\n        </Pressable>\\n      ))}\\n    </View>\\n  );\\n}",
+      "id": "mcp-schema-compressor",
+      "title": "skeleton.js",
+      "language": "js",
+      "code": ${JSON.stringify(reviewSnippet)},
       "layers": [
         {
-          "id": "imports",
-          "kind": "imports",
-          "title": "Imports",
-          "summary": "The renderer only needs platform-safe React Native primitives.",
-          "detail": "Pressable gives the click target, Text keeps inline copy accessible, and View owns the flex-wrap layout that makes bricks work on desktop and mobile widths.",
-          "lineStart": 1,
-          "lineEnd": 1
-        },
-        {
-          "id": "data-shape",
+          "id": "cache-layer",
           "kind": "state",
-          "title": "Brick Data Shape",
-          "summary": "Each highlighted word is data first, UI second.",
-          "detail": "The model should emit stable ids, labels, summaries, and prompt hooks. The visual layer should not infer meaning from raw prose when the model can provide a structured contract.",
-          "lineStart": 3,
-          "lineEnd": 3
+          "title": "Cache Identity",
+          "summary": "The cache key only uses toolName.",
+          "detail": "If multiple MCP servers expose the same tool name, this cache can return the wrong schema. Include a server id, version, or namespace in the key before sharing cached compressed schemas.",
+          "lineStart": 1,
+          "lineEnd": 4
         },
         {
-          "id": "render-loop",
-          "kind": "render",
-          "title": "Render Loop",
-          "summary": "The map call turns semantic terms into clickable visual bricks.",
-          "detail": "This is where the chat message becomes inspectable. In the full engine this target opens a dynamic window with the term explanation, related code layer, or calculation trace.",
+          "id": "api-layer",
+          "kind": "api",
+          "title": "Schema Fetch",
+          "summary": "The external MCP call is the main failure boundary.",
+          "detail": "The code assumes get_tool_schema always returns a valid object. A review should ask what happens on missing tools, transport errors, and schema versions that do not match this shape.",
+          "lineStart": 6,
+          "lineEnd": 6
+        },
+        {
+          "id": "compression-layer",
+          "kind": "calculation",
+          "title": "Compression Tradeoff",
+          "summary": "The compressor saves tokens by dropping most schema details.",
+          "detail": "Keeping name, a shortened description, and required fields may be too lossy for safe tool invocation. The engine should surface which fields were removed and whether the call still has enough information to build valid tool input.",
           "lineStart": 7,
-          "lineEnd": 12
+          "lineEnd": 11
+        },
+        {
+          "id": "return-layer",
+          "kind": "render",
+          "title": "Returned Review Surface",
+          "summary": "The returned object becomes the inspectable review artifact.",
+          "detail": "This is the right place for CodeLens to attach review findings, line references, and prompt hooks so a model can explain exactly why a compression choice is risky.",
+          "lineStart": 13,
+          "lineEnd": 14
         }
       ]
     }
   ],
   "terms": [
     {
-      "id": "model-output",
-      "label": "model output",
-      "summary": "The raw assistant response before the UI renders it.",
-      "detail": "For this sandbox, model output can include a fenced JSON block that describes code artifacts, abstraction layers, important terms, and calculations.",
-      "promptHook": "Emit prose plus one codelens-chat-engine JSON block whenever code should become inspectable."
+      "id": "schema-cache",
+      "label": "schema cache",
+      "category": "risk",
+      "summary": "A memory cache for fetched and compressed tool schemas.",
+      "detail": "The cache improves repeated lookups, but it needs a key that distinguishes servers and schema versions. Otherwise a correct-looking review can be based on stale or wrong schema data.",
+      "promptHook": "When reviewing cache logic, ask the model to identify cache key inputs and invalidation triggers.",
+      "relatedTermIds": ["malformed-schema"]
     },
     {
-      "id": "prompt-contract",
-      "label": "prompt contract",
-      "summary": "The exact structure the assistant is asked to produce.",
-      "detail": "A strict prompt contract lets us line up AI output with deterministic UI behavior instead of guessing what a markdown response means.",
-      "promptHook": "Require stable ids, code lines, term labels, and calculation results in the assistant output."
+      "id": "cache-key",
+      "label": "cache key",
+      "category": "risk",
+      "summary": "The identity used to decide whether cached data can be reused.",
+      "detail": "A cache key based only on toolName is too weak when different MCP servers or schema versions can return different schemas for the same name.",
+      "promptHook": "Ask which inputs define schema identity: server id, tool name, version, and schema hash.",
+      "relatedTermIds": ["schema-cache", "stale-data"]
     },
     {
-      "id": "abstraction-layer",
-      "label": "abstraction layer",
-      "summary": "A named view under the visible code.",
-      "detail": "Examples are imports, state, API calls, render flow, and calculations. Clicking a line should select the layer that explains what that line does.",
-      "promptHook": "For every code artifact, include layers with lineStart and lineEnd ranges."
+      "id": "stale-data",
+      "label": "stale data",
+      "category": "data",
+      "summary": "Cached information that no longer matches server state.",
+      "detail": "The function has no invalidation path, so a server-side schema update can leave the compressed schema outdated forever.",
+      "promptHook": "Ask what invalidation trigger or TTL should exist for this cache.",
+      "relatedTermIds": ["schema-cache", "cache-key"]
+    },
+    {
+      "id": "tool-schema",
+      "label": "tool schema",
+      "category": "api",
+      "summary": "The MCP server contract for how a tool can be called.",
+      "detail": "If the wrong tool schema is reused, the model may build arguments for the wrong server or an old version of a tool.",
+      "promptHook": "Ask which schema fields must survive compression to keep invocation safe.",
+      "relatedTermIds": ["malformed-schema", "cache-key"]
+    },
+    {
+      "id": "token-budget",
+      "label": "token budget",
+      "category": "performance",
+      "summary": "The context cost saved by compressing MCP tool descriptions.",
+      "detail": "Compression is useful only if the remaining schema is still enough for safe invocation. The review engine should compare saved tokens with lost validation detail.",
+      "promptHook": "Ask for both the token-saving intent and the correctness risk introduced by removed fields.",
+      "relatedTermIds": ["malformed-schema"]
+    },
+    {
+      "id": "malformed-schema",
+      "label": "malformed schemas",
+      "category": "data",
+      "summary": "Provider or server responses that do not match the expected shape.",
+      "detail": "A realistic code review should flag unchecked optional chains, missing object guards, and places where a bad schema could produce misleading compressed output.",
+      "promptHook": "Require findings to cite the exact line and explain the runtime consequence.",
+      "relatedTermIds": ["schema-cache", "token-budget"]
     }
   ],
   "calculations": [
     {
-      "id": "line-coverage",
-      "label": "Layer coverage",
-      "expression": "1 import line + 1 type line + 6 render lines",
-      "result": "8 explained lines",
-      "explanation": "The sample does not explain every blank line. It explains the lines that carry behavior so the inspector stays focused."
+      "id": "description-truncation",
+      "label": "Description truncation",
+      "expression": "full description length - 180 kept chars",
+      "result": "possible loss of argument semantics",
+      "explanation": "Truncating descriptions can remove constraints or examples that a model needs to call the tool correctly. The engine should make that tradeoff visible."
     }
   ]
 }
@@ -85,7 +145,7 @@ export const sandboxMessages: SandboxChatMessage[] = [
     id: 'u-1',
     role: 'user',
     content:
-      'Build me a desktop-testable chat engine where code output turns into visual layers and important terms become clickable bricks.',
+      'Review this MCP schema-compressor skeleton. I care about bugs, runtime risks, and whether the compression still leaves enough information for safe tool calls.',
   },
   {
     id: 'a-1',

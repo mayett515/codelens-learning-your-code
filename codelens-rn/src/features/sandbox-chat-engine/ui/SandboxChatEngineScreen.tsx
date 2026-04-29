@@ -4,6 +4,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -12,6 +13,9 @@ import {
   buildSandboxPromptContract,
   findLayerForLine,
   getPrimaryInspectorTarget,
+  makeSandboxAssistantMessage,
+  makeSandboxUserMessage,
+  requestSandboxModelOutput,
   resolveInspectorTarget,
   sandboxMessages,
 } from '@/src/features/sandbox-chat-engine';
@@ -20,18 +24,32 @@ import type {
   SandboxCodeArtifact,
   SandboxInspectorTarget,
   SandboxModelOutput,
+  SandboxRequestMode,
   SandboxTerm,
 } from '@/src/features/sandbox-chat-engine';
 
 export function SandboxChatEngineScreen() {
   const assistantOutput = sandboxMessages.find((message) => message.parsed)
     ?.parsed;
-  const [selectedOutput] = useState<SandboxModelOutput | null>(
+  const assistantMessageId = sandboxMessages.find((message) => message.parsed)
+    ?.id;
+  const [messages, setMessages] = useState<SandboxChatMessage[]>(sandboxMessages);
+  const [selectedOutput, setSelectedOutput] = useState<SandboxModelOutput | null>(
     assistantOutput ?? null,
+  );
+  const [selectedMessageId, setSelectedMessageId] = useState<string | null>(
+    assistantMessageId ?? null,
   );
   const [target, setTarget] = useState<SandboxInspectorTarget | null>(
     assistantOutput ? getPrimaryInspectorTarget(assistantOutput) : null,
   );
+  const [prompt, setPrompt] = useState(
+    'Review this MCP schema-compressor skeleton for runtime bugs, cache risks, and lossy compression problems.',
+  );
+  const [mode, setMode] = useState<SandboxRequestMode>('local-contract');
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState('');
+  const [visualizeKeywords, setVisualizeKeywords] = useState(true);
 
   const inspector = useMemo(() => {
     if (!selectedOutput || !target) {
@@ -39,6 +57,33 @@ export function SandboxChatEngineScreen() {
     }
     return resolveInspectorTarget(selectedOutput, target);
   }, [selectedOutput, target]);
+
+  async function handleSend() {
+    const trimmed = prompt.trim();
+    if (!trimmed || sending) {
+      return;
+    }
+
+    setSending(true);
+    setError('');
+
+    const userMessage = makeSandboxUserMessage(trimmed);
+    setMessages((current) => [...current, userMessage]);
+
+    try {
+      const response = await requestSandboxModelOutput({ prompt: trimmed, mode });
+      const assistantMessage = makeSandboxAssistantMessage(response);
+      setMessages((current) => [...current, assistantMessage]);
+      setSelectedOutput(response.parsed);
+      setSelectedMessageId(assistantMessage.id);
+      setTarget(getPrimaryInspectorTarget(response.parsed));
+      setPrompt('');
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Sandbox request failed');
+    } finally {
+      setSending(false);
+    }
+  }
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -54,14 +99,75 @@ export function SandboxChatEngineScreen() {
 
       <View style={styles.shell}>
         <ScrollView style={styles.chatPane} contentContainerStyle={styles.paneContent}>
-          <SectionTitle label="Chat" />
-          {sandboxMessages.map((message) => (
+          <View style={styles.sectionHeaderRow}>
+            <SectionTitle label="Chat" />
+            <Pressable
+              style={[
+                styles.keywordToggle,
+                visualizeKeywords && styles.keywordToggleActive,
+              ]}
+              onPress={() => setVisualizeKeywords((value) => !value)}
+            >
+              <Text
+                style={[
+                  styles.keywordToggleText,
+                  visualizeKeywords && styles.activeText,
+                ]}
+              >
+                Visualize keywords
+              </Text>
+            </Pressable>
+          </View>
+          {messages.map((message) => (
             <ChatMessageBubble
               key={message.id}
               message={message}
-              onTermPress={(id) => setTarget({ type: 'term', id })}
+              selected={selectedMessageId === message.id}
+              visualizeKeywords={visualizeKeywords}
+              onOpenOutput={(output) => {
+                setSelectedOutput(output);
+                setSelectedMessageId(message.id);
+                setTarget(getPrimaryInspectorTarget(output));
+              }}
+              onTermPress={(id, output) => {
+                setSelectedOutput(output);
+                setSelectedMessageId(message.id);
+                setTarget({ type: 'term', id });
+              }}
             />
           ))}
+          <View style={styles.composer}>
+            <View style={styles.modeRow}>
+              <ModeButton
+                active={mode === 'local-contract'}
+                label="Local"
+                onPress={() => setMode('local-contract')}
+              />
+              <ModeButton
+                active={mode === 'configured-model'}
+                label="Model"
+                onPress={() => setMode('configured-model')}
+              />
+            </View>
+            <TextInput
+              value={prompt}
+              onChangeText={setPrompt}
+              multiline
+              placeholder="Ask the sandbox chat engine to generate inspectable output..."
+              placeholderTextColor={colors.textSecondary}
+              style={styles.promptInput}
+            />
+            {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            <Pressable
+              style={[styles.sendButton, sending && styles.disabledButton]}
+              onPress={handleSend}
+              disabled={sending}
+            >
+              <Text style={styles.sendButtonText}>
+                {sending ? 'Sending...' : 'Send'}
+              </Text>
+            </Pressable>
+          </View>
         </ScrollView>
 
         <ScrollView style={styles.codePane} contentContainerStyle={styles.paneContent}>
@@ -106,6 +212,34 @@ export function SandboxChatEngineScreen() {
           <SectionTitle label="Inspector" />
           <InspectorContent value={inspector} />
 
+          {selectedOutput && selectedOutput.diagnostics.length > 0 ? (
+            <>
+              <SectionTitle label="Contract Diagnostics" />
+              <View style={styles.diagnosticList}>
+                {selectedOutput.diagnostics.map((item) => (
+                  <View
+                    key={item.id}
+                    style={[
+                      styles.diagnosticCard,
+                      item.level === 'error' && styles.errorDiagnosticCard,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.diagnosticLevel,
+                        item.level === 'error' && styles.errorText,
+                      ]}
+                    >
+                      {item.level}
+                    </Text>
+                    <Text style={styles.diagnosticTitle}>{item.title}</Text>
+                    <Text style={styles.diagnosticDetail}>{item.detail}</Text>
+                  </View>
+                ))}
+              </View>
+            </>
+          ) : null}
+
           <SectionTitle label="Prompt Contract" />
           <Text style={styles.contractText}>{buildSandboxPromptContract()}</Text>
         </ScrollView>
@@ -116,10 +250,16 @@ export function SandboxChatEngineScreen() {
 
 function ChatMessageBubble({
   message,
+  selected,
+  visualizeKeywords,
+  onOpenOutput,
   onTermPress,
 }: {
   message: SandboxChatMessage;
-  onTermPress: (id: string) => void;
+  selected: boolean;
+  visualizeKeywords: boolean;
+  onOpenOutput: (output: SandboxModelOutput) => void;
+  onTermPress: (id: string, output: SandboxModelOutput) => void;
 }) {
   const output = message.parsed;
   const isAssistant = message.role === 'assistant';
@@ -129,24 +269,43 @@ function ChatMessageBubble({
       style={[
         styles.message,
         isAssistant ? styles.assistantMessage : styles.userMessage,
+        selected && styles.selectedMessage,
       ]}
     >
-      <Text style={styles.messageRole}>
-        {isAssistant ? 'Assistant' : 'You'}
-      </Text>
-      <Text style={styles.messageText}>
-        {output
-          ? renderTextWithTerms(output.prose, output.terms, onTermPress)
-          : message.content}
-      </Text>
-      {output && output.terms.length > 0 && (
+      <View style={styles.messageHeaderRow}>
+        <Text style={styles.messageRole}>
+          {isAssistant ? 'Assistant' : 'You'}
+        </Text>
+        {output ? (
+          <Pressable
+            style={[styles.openReviewButton, selected && styles.openReviewButtonActive]}
+            onPress={() => onOpenOutput(output)}
+          >
+            <Text style={styles.openReviewButtonText}>
+              {selected ? 'Active review' : 'Open review'}
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
+      <MessageContent
+        text={output ? output.prose : message.content}
+        terms={visualizeKeywords && output ? output.terms : []}
+        onTermPress={(id) => {
+          if (output) {
+            onTermPress(id, output);
+          }
+        }}
+      />
+      {message.timing ? <TimingBadge timing={message.timing} /> : null}
+      {visualizeKeywords && output && output.terms.length > 0 && (
         <View style={styles.termRow}>
           {output.terms.map((term) => (
             <Pressable
               key={term.id}
               style={styles.termBrick}
-              onPress={() => onTermPress(term.id)}
+              onPress={() => onTermPress(term.id, output)}
             >
+              <Text style={styles.termCategoryText}>{term.category}</Text>
               <Text style={styles.termBrickText}>{term.label}</Text>
             </Pressable>
           ))}
@@ -239,11 +398,16 @@ function InspectorContent({
 
   if ('promptHook' in value) {
     return (
-      <View style={styles.inspectorCard}>
-        <Text style={styles.inspectorMeta}>Term</Text>
+          <View style={styles.inspectorCard}>
+        <Text style={styles.inspectorMeta}>Term / {value.category}</Text>
         <Text style={styles.inspectorTitle}>{value.label}</Text>
         <Text style={styles.inspectorSummary}>{value.summary}</Text>
         <Text style={styles.inspectorBody}>{value.detail}</Text>
+        {value.relatedTermIds.length > 0 ? (
+          <Text style={styles.relatedTerms}>
+            related: {value.relatedTermIds.join(', ')}
+          </Text>
+        ) : null}
         <Text style={styles.promptHook}>{value.promptHook}</Text>
       </View>
     );
@@ -276,6 +440,122 @@ function InspectorContent({
 
 function SectionTitle({ label }: { label: string }) {
   return <Text style={styles.sectionTitle}>{label}</Text>;
+}
+
+function TimingBadge({
+  timing,
+}: {
+  timing: NonNullable<SandboxChatMessage['timing']>;
+}) {
+  const parts = [
+    `${formatMs(timing.totalMs)} total`,
+    timing.firstCallMs != null ? `${formatMs(timing.firstCallMs)} first` : null,
+    timing.repairCallMs != null ? `${formatMs(timing.repairCallMs)} repair` : null,
+    timing.repaired ? 'repaired' : null,
+  ].filter(Boolean);
+
+  return (
+    <Text style={styles.timingBadge}>
+      {parts.join(' / ')}
+    </Text>
+  );
+}
+
+function formatMs(ms: number): string {
+  if (ms >= 1000) {
+    return `${(ms / 1000).toFixed(1)}s`;
+  }
+
+  return `${ms}ms`;
+}
+
+function MessageContent({
+  text,
+  terms,
+  onTermPress,
+}: {
+  text: string;
+  terms: SandboxTerm[];
+  onTermPress: (id: string) => void;
+}) {
+  const segments = splitCodeFences(text);
+
+  return (
+    <View style={styles.messageContent}>
+      {segments.map((segment, index) => {
+        if (segment.kind === 'code') {
+          return (
+            <View key={`code-${index}`} style={styles.inlineCodeBlock}>
+              {segment.language ? (
+                <Text style={styles.inlineCodeLanguage}>{segment.language}</Text>
+              ) : null}
+              <Text style={styles.inlineCodeText}>{segment.value}</Text>
+            </View>
+          );
+        }
+
+        return (
+          <Text key={`text-${index}`} style={styles.messageText}>
+            {renderTextWithTerms(segment.value, terms, onTermPress)}
+          </Text>
+        );
+      })}
+    </View>
+  );
+}
+
+function splitCodeFences(
+  text: string,
+): Array<
+  | { kind: 'text'; value: string }
+  | { kind: 'code'; language: string; value: string }
+> {
+  const segments: Array<
+    | { kind: 'text'; value: string }
+    | { kind: 'code'; language: string; value: string }
+  > = [];
+  const fence = /```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g;
+  let cursor = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = fence.exec(text)) !== null) {
+    if (match.index > cursor) {
+      segments.push({ kind: 'text', value: text.slice(cursor, match.index) });
+    }
+    segments.push({
+      kind: 'code',
+      language: match[1] ?? '',
+      value: (match[2] ?? '').trimEnd(),
+    });
+    cursor = match.index + match[0].length;
+  }
+
+  if (cursor < text.length) {
+    segments.push({ kind: 'text', value: text.slice(cursor) });
+  }
+
+  return segments.length > 0 ? segments : [{ kind: 'text', value: text }];
+}
+
+function ModeButton({
+  active,
+  label,
+  onPress,
+}: {
+  active: boolean;
+  label: string;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      style={[styles.modeButton, active && styles.activeModeButton]}
+      onPress={onPress}
+    >
+      <Text style={[styles.modeButtonText, active && styles.activeText]}>
+        {label}
+      </Text>
+    </Pressable>
+  );
 }
 
 function renderTextWithTerms(
@@ -385,6 +665,31 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textTransform: 'uppercase',
   },
+  sectionHeaderRow: {
+    minHeight: 34,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  keywordToggle: {
+    minHeight: 32,
+    justifyContent: 'center',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.sm,
+    backgroundColor: colors.surface,
+  },
+  keywordToggleActive: {
+    borderColor: 'rgba(229, 192, 123, 0.45)',
+    backgroundColor: 'rgba(229, 192, 123, 0.1)',
+  },
+  keywordToggleText: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+  },
   message: {
     borderRadius: 8,
     padding: spacing.md,
@@ -398,16 +703,131 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderColor: colors.border,
   },
+  selectedMessage: {
+    borderColor: colors.primary,
+  },
+  messageHeaderRow: {
+    minHeight: 32,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
   messageRole: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,
     fontWeight: '700',
-    marginBottom: spacing.xs,
+  },
+  openReviewButton: {
+    minHeight: 28,
+    justifyContent: 'center',
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: spacing.sm,
+    backgroundColor: colors.surfaceLight,
+  },
+  openReviewButtonActive: {
+    borderColor: colors.primary,
+    backgroundColor: '#20395f',
+  },
+  openReviewButtonText: {
+    color: colors.text,
+    fontSize: fontSize.sm,
+    fontWeight: '700',
   },
   messageText: {
     color: colors.text,
     fontSize: fontSize.md,
     lineHeight: 21,
+  },
+  messageContent: {
+    gap: spacing.sm,
+  },
+  inlineCodeBlock: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#30384a',
+    backgroundColor: '#080b12',
+    padding: spacing.md,
+  },
+  inlineCodeLanguage: {
+    color: colors.blue,
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+    marginBottom: spacing.sm,
+    textTransform: 'uppercase',
+  },
+  inlineCodeText: {
+    color: colors.text,
+    fontSize: fontSize.sm,
+    lineHeight: 19,
+    fontFamily: 'monospace',
+  },
+  timingBadge: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    lineHeight: 18,
+    marginTop: spacing.sm,
+  },
+  composer: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  modeRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  modeButton: {
+    minHeight: 32,
+    justifyContent: 'center',
+    borderRadius: 6,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.surfaceLight,
+  },
+  activeModeButton: {
+    backgroundColor: '#20395f',
+  },
+  modeButtonText: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+  },
+  promptInput: {
+    minHeight: 92,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+    color: colors.text,
+    fontSize: fontSize.md,
+    lineHeight: 21,
+    padding: spacing.sm,
+    textAlignVertical: 'top',
+  },
+  sendButton: {
+    minHeight: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 6,
+    backgroundColor: colors.primary,
+  },
+  disabledButton: {
+    opacity: 0.6,
+  },
+  sendButtonText: {
+    color: colors.text,
+    fontSize: fontSize.md,
+    fontWeight: '700',
+  },
+  errorText: {
+    color: colors.red,
+    fontSize: fontSize.sm,
+    lineHeight: 18,
   },
   inlineTerm: {
     color: colors.yellow,
@@ -421,13 +841,20 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   termBrick: {
-    minHeight: 32,
+    minHeight: 42,
     justifyContent: 'center',
     borderRadius: 6,
     paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
     backgroundColor: 'rgba(229, 192, 123, 0.12)',
     borderWidth: 1,
     borderColor: 'rgba(229, 192, 123, 0.35)',
+  },
+  termCategoryText: {
+    color: colors.textSecondary,
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
   },
   termBrickText: {
     color: colors.yellow,
@@ -584,11 +1011,49 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     backgroundColor: 'rgba(229, 192, 123, 0.1)',
   },
+  relatedTerms: {
+    color: colors.blue,
+    fontSize: fontSize.sm,
+    lineHeight: 18,
+    marginTop: spacing.md,
+  },
   lineRange: {
     color: colors.blue,
     fontSize: fontSize.sm,
     fontWeight: '700',
     marginTop: spacing.md,
+  },
+  diagnosticList: {
+    gap: spacing.sm,
+  },
+  diagnosticCard: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(229, 192, 123, 0.35)',
+    backgroundColor: 'rgba(229, 192, 123, 0.08)',
+    padding: spacing.md,
+  },
+  errorDiagnosticCard: {
+    borderColor: 'rgba(224, 108, 117, 0.45)',
+    backgroundColor: 'rgba(224, 108, 117, 0.08)',
+  },
+  diagnosticLevel: {
+    color: colors.yellow,
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  diagnosticTitle: {
+    color: colors.text,
+    fontSize: fontSize.md,
+    fontWeight: '700',
+    marginTop: spacing.xs,
+  },
+  diagnosticDetail: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    lineHeight: 18,
+    marginTop: spacing.xs,
   },
   contractText: {
     color: colors.textSecondary,

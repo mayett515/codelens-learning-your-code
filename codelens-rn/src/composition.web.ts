@@ -1,0 +1,56 @@
+import { makeExpoSecureStore } from './adapters/secure-store-expo';
+import { makeMmkvStore } from './adapters/kv-mmkv';
+import { makeOpenRouterClient } from './adapters/openrouter-client';
+import { makeSiliconflowClient } from './adapters/siliconflow-client';
+import { setCompleteImpl } from './ai/queue';
+import { setEmbedImpl } from './ai/embed';
+import type { AiClientPort, AiCompleteInput, AiEmbedInput } from './ports/ai-client';
+import type { KvStorePort } from './ports/kv-store';
+import type { SecureStorePort } from './ports/secure-store';
+import type { VectorStorePort } from './ports/vector-store';
+
+export const secureStore: SecureStorePort = makeExpoSecureStore();
+export const kv: KvStorePort = makeMmkvStore();
+
+export const vectorStore: VectorStorePort = {
+  upsert: async () => {
+    throw new Error('Vector storage is not available in Expo web');
+  },
+  topMatches: async () => {
+    throw new Error('Vector storage is not available in Expo web');
+  },
+  delete: async () => {
+    throw new Error('Vector storage is not available in Expo web');
+  },
+  deleteAll: async () => {
+    throw new Error('Vector storage is not available in Expo web');
+  },
+};
+
+export const openRouterClient: AiClientPort = makeOpenRouterClient(
+  () => secureStore.getApiKey('openrouter'),
+);
+export const siliconFlowClient: AiClientPort = makeSiliconflowClient(
+  () => secureStore.getApiKey('siliconflow'),
+);
+
+const clients: Record<string, AiClientPort> = {
+  openrouter: openRouterClient,
+  siliconflow: siliconFlowClient,
+};
+
+function routedComplete(input: AiCompleteInput): Promise<string> {
+  const client = clients[input.provider];
+  if (!client) throw new Error(`Unknown provider: ${input.provider}`);
+  return client.complete(input);
+}
+
+setCompleteImpl(routedComplete);
+
+function routedEmbed(input: AiEmbedInput): Promise<Float32Array> {
+  const client = clients[input.api];
+  if (!client) throw new Error(`Unknown provider: ${input.api}`);
+  return client.embed(input);
+}
+
+setEmbedImpl(routedEmbed);

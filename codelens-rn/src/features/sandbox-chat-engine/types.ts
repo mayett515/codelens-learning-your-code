@@ -29,10 +29,20 @@ export type SandboxCodeArtifact = {
 export type SandboxTerm = {
   id: string;
   label: string;
+  category: SandboxTermCategory;
   summary: string;
   detail: string;
   promptHook: string;
+  relatedTermIds: string[];
 };
+
+export type SandboxTermCategory =
+  | 'risk'
+  | 'concept'
+  | 'api'
+  | 'data'
+  | 'performance'
+  | 'test';
 
 export type SandboxCalculation = {
   id: string;
@@ -42,11 +52,29 @@ export type SandboxCalculation = {
   explanation: string;
 };
 
+export type SandboxContractDiagnosticLevel = 'info' | 'warning' | 'error';
+
+export type SandboxContractDiagnostic = {
+  id: string;
+  level: SandboxContractDiagnosticLevel;
+  title: string;
+  detail: string;
+};
+
 export type SandboxModelOutput = {
   prose: string;
   codeArtifacts: SandboxCodeArtifact[];
   terms: SandboxTerm[];
   calculations: SandboxCalculation[];
+  diagnostics: SandboxContractDiagnostic[];
+};
+
+export type SandboxModelTiming = {
+  mode: 'local-contract' | 'configured-model';
+  totalMs: number;
+  firstCallMs?: number | undefined;
+  repairCallMs?: number | undefined;
+  repaired: boolean;
 };
 
 export type SandboxChatMessage = {
@@ -54,6 +82,7 @@ export type SandboxChatMessage = {
   role: SandboxRole;
   content: string;
   parsed?: SandboxModelOutput;
+  timing?: SandboxModelTiming;
 };
 
 export type SandboxInspectorTarget =
