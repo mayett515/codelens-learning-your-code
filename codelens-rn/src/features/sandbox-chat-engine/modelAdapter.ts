@@ -11,6 +11,7 @@ import type {
   SandboxModelOutput,
   SandboxModelTiming,
   SandboxProseSpan,
+  SandboxTermCategory,
 } from './types';
 
 export type SandboxRequestMode = 'local-contract' | 'configured-model';
@@ -18,6 +19,7 @@ export type SandboxRequestMode = 'local-contract' | 'configured-model';
 export interface SandboxModelRequest {
   prompt: string;
   mode: SandboxRequestMode;
+  signal?: AbortSignal | undefined;
   enqueueCompletion?: typeof enqueue | undefined;
 }
 
@@ -40,6 +42,7 @@ export async function requestSandboxModelOutput(
     ? await requestConfiguredModelWithRepair(
         trimmed,
         request.enqueueCompletion ?? enqueue,
+        request.signal,
       )
     : {
         raw: buildLocalContractResponse(trimmed),
@@ -125,7 +128,22 @@ export function buildSandboxSystemPrompt(): string {
     'Good code-review terms include cache key, stale data, malformed schema, token budget, invalidation, error boundary, and tool schema.',
     'Each term must include spans: an array of { proseOffset, length } objects that anchor the label exactly in the prose text. Use JavaScript-style string indexing.',
     'Each term label must appear in the prose exactly at the listed offsets, so the UI can highlight it deterministically.',
-    'Do not create only one generic term. Produce 4-6 distinct terms with different labels when the answer mentions more than one concept.',
+    'Each term may include an optional subcategory for finer routing:',
+    '  risk subcategories: auth, data-loss, stale, malformed',
+    '  concept subcategories: pattern, deprecation, versioning',
+    '  api subcategories: endpoint, contract, lifecycle',
+    '  data subcategories: schema, payload, cache-state',
+    '  performance subcategories: latency, quota, tokens',
+    '  test subcategories: unit, integration, regression',
+    'Or use x-{name} for a custom subcategory.',
+    'Each term may include an optional depth: surface, moderate, or deep.',
+    '  surface = quick concept.',
+    '  moderate = normal explanation.',
+    '  deep = important or subtle topic worth closer inspection.',
+    '  Default to moderate if unsure.',
+    'The UI displays category, optional subcategory, optional depth, promptHook, and relatedTermIds in the inspector.',
+    'The parser may infer missing subcategory/depth values from the term label, but explicit accurate values are preferred.',
+    'Prefer 3-6 distinct terms with different labels when the answer mentions more than one concept.',
     'Do not use category names like "risk" as term labels. The label should be the concrete phrase, for example "schema cache" or "cache key".',
     'When the user asks about multiple servers with the same tool name, include separate terms for schema cache, cache key, tool schema, and stale data.',
     'Use findings for concrete review issues with severity (critical, high, medium, low, info) and category (bug, security, reliability, performance, maintainability, accessibility, design).',
@@ -158,12 +176,17 @@ export function makeSandboxAssistantMessage(
 async function requestConfiguredModel(
   prompt: string,
   enqueueCompletion: typeof enqueue,
+  signal?: AbortSignal,
 ): Promise<string> {
   console.info('[sandbox-chat-engine] model request started', {
     promptLength: prompt.length,
   });
   const start = Date.now();
-  const result = await enqueueCompletion('general', buildSandboxAiMessages(prompt));
+  const result = await enqueueCompletion(
+    'general',
+    buildSandboxAiMessages(prompt),
+    signal,
+  );
   console.info('[sandbox-chat-engine] model request finished', {
     ms: Date.now() - start,
   });
@@ -173,9 +196,10 @@ async function requestConfiguredModel(
 async function requestConfiguredModelWithRepair(
   prompt: string,
   enqueueCompletion: typeof enqueue,
+  signal?: AbortSignal,
 ): Promise<{ raw: string; timing: SandboxModelTiming }> {
   const firstStart = Date.now();
-  const first = await requestConfiguredModel(prompt, enqueueCompletion);
+  const first = await requestConfiguredModel(prompt, enqueueCompletion, signal);
   const firstCallMs = Date.now() - firstStart;
   const parsed = parseSandboxModelOutput(first);
   if (!hasBlockingContractDiagnostics(parsed)) {
@@ -194,6 +218,7 @@ async function requestConfiguredModelWithRepair(
   const repaired = await enqueueCompletion(
     'general',
     buildSandboxRepairMessages(prompt, first),
+    signal,
   );
   const repairCallMs = Date.now() - repairStart;
 
@@ -259,6 +284,8 @@ function buildSandboxRepairMessages(
         '      "id": "schema-cache",',
         '      "label": "schema cache",',
         '      "category": "risk",',
+        '      "subcategory": "stale",',
+        '      "depth": "deep",',
         '      "spans": [{ "proseOffset": 0, "length": 12 }],',
         '      "summary": "One sentence.",',
         '      "detail": "Detailed explanation.",',
@@ -345,18 +372,22 @@ function buildLocalContractResponse(prompt: string): string {
         id: 'schema-cache',
         label: 'schema cache',
         category: 'risk',
+        subcategory: 'stale' as const,
+        depth: 'deep' as const,
         spans: spanFor('schema cache'),
         summary: 'A memory cache for fetched and compressed tool schemas.',
         detail:
           'The cache improves speed, but it needs a complete identity. Tool name alone is not enough when multiple MCP servers can expose the same tool.',
         promptHook:
           'Ask the model to identify cache key inputs, invalidation rules, and stale-data risks.',
-        relatedTermIds: ['token-budget'],
+        relatedTermIds: ['cache-key', 'malformed-schemas'],
       },
       {
         id: 'cache-key',
         label: 'cache key',
         category: 'risk',
+        subcategory: 'stale' as const,
+        depth: 'deep' as const,
         spans: spanFor('cache key'),
         summary:
           'The identity used to decide whether a cached schema can be reused.',
@@ -364,12 +395,14 @@ function buildLocalContractResponse(prompt: string): string {
           'A cache key based only on toolName is too weak when schemas can come from different MCP servers or versions.',
         promptHook:
           'Ask whether every input that changes the returned schema is represented in the cache key.',
-        relatedTermIds: ['schema-cache', 'tool-schema'],
+        relatedTermIds: ['schema-cache', 'stale-data'],
       },
       {
         id: 'tool-schema',
         label: 'tool schema',
         category: 'api',
+        subcategory: 'contract' as const,
+        depth: 'moderate' as const,
         spans: spanFor('tool schema'),
         summary:
           'The API contract returned by the MCP server for a callable tool.',
@@ -383,6 +416,8 @@ function buildLocalContractResponse(prompt: string): string {
         id: 'stale-data',
         label: 'stale data',
         category: 'data',
+        subcategory: 'cache-state' as const,
+        depth: 'moderate' as const,
         spans: spanFor('stale data'),
         summary: 'Cached information that no longer matches the server state.',
         detail:
@@ -395,6 +430,8 @@ function buildLocalContractResponse(prompt: string): string {
         id: 'token-budget',
         label: 'token budget',
         category: 'performance',
+        subcategory: 'tokens' as const,
+        depth: 'surface' as const,
         spans: spanFor('token budget'),
         summary:
           'The context cost saved by compressing MCP tool descriptions.',

@@ -11,7 +11,10 @@ import type {
   SandboxProseSpan,
   SandboxTerm,
   SandboxTermCategory,
+  SandboxTermDepth,
+  SandboxTermSubcategory,
 } from './types';
+import { suggestCategorization } from './categorizationEngine';
 
 const CONTRACT_FENCE = 'codelens-chat-engine';
 const LAYER_KINDS: SandboxCodeLayerKind[] = [
@@ -35,6 +38,17 @@ const TERM_CATEGORIES: SandboxTermCategory[] = [
   'performance',
   'test',
 ];
+
+const TERM_SUBCATEGORIES: string[] = [
+  'auth', 'data-loss', 'stale', 'malformed',
+  'pattern', 'deprecation', 'versioning',
+  'endpoint', 'contract', 'lifecycle',
+  'schema', 'payload', 'cache-state',
+  'latency', 'quota', 'tokens',
+  'unit', 'integration', 'regression',
+];
+
+const TERM_DEPTHS: SandboxTermDepth[] = ['surface', 'moderate', 'deep'];
 const FINDING_SEVERITIES = ['critical', 'high', 'medium', 'low', 'info'] as const;
 const FINDING_CATEGORIES = [
   'bug',
@@ -110,7 +124,6 @@ export function hasBlockingContractDiagnostics(output: SandboxModelOutput): bool
     (item) =>
       item.level === 'error' ||
       item.id === 'missing-contract' ||
-      item.id === 'bare-json-contract' ||
       item.id === 'empty-contract',
   );
 }
@@ -481,6 +494,39 @@ function normalizeTerm(
     ));
   }
 
+  const suggestion = suggestCategorization(term.label, { prose });
+  const rawSubcategory = term.subcategory;
+  const subcategory: SandboxTermSubcategory | undefined =
+    typeof rawSubcategory === 'string'
+      ? (TERM_SUBCATEGORIES.includes(rawSubcategory) || rawSubcategory.startsWith('x-'))
+      ? (rawSubcategory as SandboxTermSubcategory)
+      : undefined
+      : suggestion.subcategory;
+  if (rawSubcategory != null && subcategory == null) {
+    diagnostics.push(diagnostic(
+      `term-subcategory-${term.id}`,
+      'warning',
+      'Term subcategory dropped',
+      `Term "${term.id}" had invalid subcategory "${rawSubcategory}". Valid values: ${TERM_SUBCATEGORIES.join(', ')}, or x-{name}.`,
+    ));
+  }
+
+  const rawDepth = term.depth;
+  const depth: SandboxTermDepth | undefined =
+    rawDepth != null
+      ? TERM_DEPTHS.includes(rawDepth as SandboxTermDepth)
+        ? (rawDepth as SandboxTermDepth)
+        : undefined
+      : suggestion.depth;
+  if (rawDepth != null && depth == null) {
+    diagnostics.push(diagnostic(
+      `term-depth-${term.id}`,
+      'warning',
+      'Term depth dropped',
+      `Term "${term.id}" had invalid depth "${rawDepth}". Valid values: surface, moderate, deep.`,
+    ));
+  }
+
   const spans = Array.isArray(term.spans)
     ? term.spans.filter((s): s is SandboxProseSpan =>
         s
@@ -508,6 +554,8 @@ function normalizeTerm(
     id: term.id,
     label: term.label,
     category,
+    ...(subcategory != null ? { subcategory } : {}),
+    ...(depth != null ? { depth } : {}),
     spans,
     summary: term.summary,
     detail: term.detail,

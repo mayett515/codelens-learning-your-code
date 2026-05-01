@@ -40,6 +40,17 @@ export type SandboxTermCategory =
   | 'performance'
   | 'test';
 
+export type SandboxTermSubcategory =
+  | 'auth' | 'data-loss' | 'stale' | 'malformed'
+  | 'pattern' | 'deprecation' | 'versioning'
+  | 'endpoint' | 'contract' | 'lifecycle'
+  | 'schema' | 'payload' | 'cache-state'
+  | 'latency' | 'quota' | 'tokens'
+  | 'unit' | 'integration' | 'regression'
+  | `x-${string}`;
+
+export type SandboxTermDepth = 'surface' | 'moderate' | 'deep';
+
 export type SandboxProseSpan = {
   proseOffset: number;
   length: number;
@@ -49,6 +60,8 @@ export type SandboxTerm = {
   id: string;
   label: string;
   category: SandboxTermCategory;
+  subcategory?: SandboxTermSubcategory;
+  depth?: SandboxTermDepth;
   spans: SandboxProseSpan[];
   summary: string;
   detail: string;

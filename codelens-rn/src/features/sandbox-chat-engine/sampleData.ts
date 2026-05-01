@@ -80,18 +80,22 @@ const contract = {
       id: 'schema-cache',
       label: 'schema cache',
       category: 'risk',
+      subcategory: 'stale' as const,
+      depth: 'deep' as const,
       spans: [{ proseOffset: 72, length: 12 }],
       summary: 'A memory cache for fetched and compressed tool schemas.',
       detail:
         'The cache improves repeated lookups, but it needs a key that distinguishes servers and schema versions. Otherwise a correct-looking review can be based on stale or wrong schema data.',
       promptHook:
         'When reviewing cache logic, ask the model to identify cache key inputs and invalidation triggers.',
-      relatedTermIds: ['malformed-schema'],
+      relatedTermIds: ['cache-key', 'malformed-schemas'],
     },
     {
       id: 'cache-key',
       label: 'cache key',
       category: 'risk',
+      subcategory: 'stale' as const,
+      depth: 'deep' as const,
       spans: [{ proseOffset: 102, length: 9 }],
       summary: 'The identity used to decide whether cached data can be reused.',
       detail:
@@ -104,30 +108,36 @@ const contract = {
       id: 'stale-data',
       label: 'stale data',
       category: 'data',
+      subcategory: 'cache-state' as const,
+      depth: 'moderate' as const,
       spans: [{ proseOffset: 123, length: 10 }],
       summary: 'Cached information that no longer matches server state.',
       detail:
         'The function has no invalidation path, so a server-side schema update can leave the compressed schema outdated forever.',
       promptHook:
         'Ask what invalidation trigger or TTL should exist for this cache.',
-      relatedTermIds: ['schema-cache', 'cache-key'],
+      relatedTermIds: ['schema-cache'],
     },
     {
       id: 'tool-schema',
       label: 'tool schema',
       category: 'api',
+      subcategory: 'contract' as const,
+      depth: 'moderate' as const,
       spans: [{ proseOffset: 168, length: 11 }],
       summary: 'The MCP server contract for how a tool can be called.',
       detail:
         'If the wrong tool schema is reused, the model may build arguments for the wrong server or an old version of a tool.',
       promptHook:
         'Ask which schema fields must survive compression to keep invocation safe.',
-      relatedTermIds: ['malformed-schema', 'cache-key'],
+      relatedTermIds: ['cache-key', 'stale-data'],
     },
     {
       id: 'token-budget',
       label: 'token budget',
       category: 'performance',
+      subcategory: 'tokens' as const,
+      depth: 'surface' as const,
       spans: [{ proseOffset: 222, length: 12 }],
       summary:
         'The context cost saved by compressing MCP tool descriptions.',
@@ -135,12 +145,14 @@ const contract = {
         'Compression is useful only if the remaining schema is still enough for safe invocation. The review engine should compare saved tokens with lost validation detail.',
       promptHook:
         'Ask for both the token-saving intent and the correctness risk introduced by removed fields.',
-      relatedTermIds: ['malformed-schema'],
+      relatedTermIds: ['schema-cache'],
     },
     {
-      id: 'malformed-schema',
+      id: 'malformed-schemas',
       label: 'malformed schemas',
       category: 'data',
+      subcategory: 'malformed' as const,
+      depth: 'deep' as const,
       spans: [{ proseOffset: 135, length: 17 }],
       summary:
         'Provider or server responses that do not match the expected shape.',
@@ -148,7 +160,7 @@ const contract = {
         'A realistic code review should flag unchecked optional chains, missing object guards, and places where a bad schema could produce misleading compressed output.',
       promptHook:
         'Require findings to cite the exact line and explain the runtime consequence.',
-      relatedTermIds: ['schema-cache', 'token-budget'],
+      relatedTermIds: ['tool-schema', 'token-budget'],
     },
   ],
   calculations: [
