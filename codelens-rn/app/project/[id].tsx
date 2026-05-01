@@ -452,6 +452,14 @@ export default function ProjectViewerScreen() {
           {project?.name ?? 'Project'}
         </Text>
         <Pressable
+          style={styles.bookmarksBtn}
+          onPress={() => router.push({ pathname: '/bookmarks', params: { projectId } })}
+          accessibilityRole="button"
+          accessibilityLabel="Open bookmarks list"
+        >
+          <Text style={styles.bookmarksBtnText}>Bookmarks</Text>
+        </Pressable>
+        <Pressable
           style={[styles.modeToggle, mode === 'mark' && styles.modeToggleMark]}
           onPress={toggleMode}
         >
@@ -653,6 +661,19 @@ const styles = StyleSheet.create({
   },
   modeToggleTextMark: {
     color: colors.primary,
+  },
+  bookmarksBtn: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: 6,
+    backgroundColor: colors.surfaceLight,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  bookmarksBtnText: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    fontWeight: '600',
   },
   recentBar: {
     maxHeight: 44,

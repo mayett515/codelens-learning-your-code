@@ -13,5 +13,6 @@ export * from './hooks/useUpdateBookmark';
 export * from './hooks/useUpdateBookmarkPalette';
 export * from './types/bookmark';
 export * from './types/ids';
+export * from './ui/BookmarkListScreen';
 export * from './ui/BookmarkSheet';
 export * from './ui/GutterBookmarkDot';
