@@ -6,7 +6,13 @@ export type SandboxCodeLayerKind =
   | 'state'
   | 'api'
   | 'render'
-  | 'calculation';
+  | 'calculation'
+  | 'expansion'
+  | 'callflow'
+  | 'closure'
+  | 'runtime-order'
+  | 'abstraction'
+  | `x-${string}`;
 
 export type SandboxCodeLayer = {
   id: string;
@@ -26,16 +32,6 @@ export type SandboxCodeArtifact = {
   layers: SandboxCodeLayer[];
 };
 
-export type SandboxTerm = {
-  id: string;
-  label: string;
-  category: SandboxTermCategory;
-  summary: string;
-  detail: string;
-  promptHook: string;
-  relatedTermIds: string[];
-};
-
 export type SandboxTermCategory =
   | 'risk'
   | 'concept'
@@ -44,12 +40,66 @@ export type SandboxTermCategory =
   | 'performance'
   | 'test';
 
-export type SandboxCalculation = {
+export type SandboxProseSpan = {
+  proseOffset: number;
+  length: number;
+};
+
+export type SandboxTerm = {
   id: string;
   label: string;
-  expression: string;
-  result: string;
-  explanation: string;
+  category: SandboxTermCategory;
+  spans: SandboxProseSpan[];
+  summary: string;
+  detail: string;
+  promptHook?: string;
+  relatedTermIds: string[];
+};
+
+export type SandboxCalcStep = {
+  label: string;
+  value: number;
+  unit: string;
+  note?: string;
+};
+
+export type SandboxCalculationKind = 'reasoning' | 'tradeoff' | 'risk-trace';
+
+export type SandboxCalculation = {
+  id: string;
+  title: string;
+  kind: SandboxCalculationKind;
+  steps: SandboxCalcStep[];
+  conclusion: string;
+};
+
+export type SandboxFindingSeverity =
+  | 'critical'
+  | 'high'
+  | 'medium'
+  | 'low'
+  | 'info';
+
+export type SandboxFindingCategory =
+  | 'bug'
+  | 'security'
+  | 'reliability'
+  | 'performance'
+  | 'maintainability'
+  | 'accessibility'
+  | 'design';
+
+export type SandboxFinding = {
+  id: string;
+  severity: SandboxFindingSeverity;
+  category: SandboxFindingCategory;
+  termId?: string;
+  title: string;
+  description: string;
+  artifactId?: string;
+  lineStart?: number;
+  lineEnd?: number;
+  suggestedFix?: string;
 };
 
 export type SandboxContractDiagnosticLevel = 'info' | 'warning' | 'error';
@@ -62,10 +112,12 @@ export type SandboxContractDiagnostic = {
 };
 
 export type SandboxModelOutput = {
+  version: number;
   prose: string;
   codeArtifacts: SandboxCodeArtifact[];
   terms: SandboxTerm[];
   calculations: SandboxCalculation[];
+  findings: SandboxFinding[];
   diagnostics: SandboxContractDiagnostic[];
 };
 
@@ -88,4 +140,5 @@ export type SandboxChatMessage = {
 export type SandboxInspectorTarget =
   | { type: 'term'; id: string }
   | { type: 'layer'; artifactId: string; layerId: string }
-  | { type: 'calculation'; id: string };
+  | { type: 'calculation'; id: string }
+  | { type: 'finding'; id: string };

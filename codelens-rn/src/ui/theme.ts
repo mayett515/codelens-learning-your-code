@@ -12,6 +12,8 @@ export const colors = {
   yellow: '#e5c07b',
   blue: '#61afef',
   purple: '#c678dd',
+  orange: '#d19a66',
+  teal: '#56b6c2',
 } as const;
 
 export const spacing = {

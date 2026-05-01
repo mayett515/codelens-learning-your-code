@@ -22,10 +22,14 @@ import {
 import type {
   SandboxChatMessage,
   SandboxCodeArtifact,
+  SandboxCodeLayer,
   SandboxInspectorTarget,
   SandboxModelOutput,
   SandboxRequestMode,
   SandboxTerm,
+  SandboxTermCategory,
+  SandboxCalculation,
+  SandboxFinding,
 } from '@/src/features/sandbox-chat-engine';
 
 export function SandboxChatEngineScreen() {
@@ -198,11 +202,53 @@ export function SandboxChatEngineScreen() {
                   setTarget({ type: 'calculation', id: calculation.id })
                 }
               >
-                <Text style={styles.calcLabel}>{calculation.label}</Text>
+                <Text style={styles.calcKindBadge}>{calculation.kind}</Text>
+                <Text style={styles.calcLabel}>{calculation.title}</Text>
                 <Text style={styles.calcExpression}>
-                  {calculation.expression}
+                  {calculation.steps.length} steps
                 </Text>
-                <Text style={styles.calcResult}>{calculation.result}</Text>
+                <Text style={styles.calcResult} numberOfLines={2}>
+                  {calculation.conclusion}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          <SectionTitle label="Findings" />
+          <View style={styles.findingList}>
+            {selectedOutput?.findings.map((finding) => (
+              <Pressable
+                key={finding.id}
+                style={[
+                  styles.findingCard,
+                  target?.type === 'finding' &&
+                    target.id === finding.id &&
+                    styles.activeCard,
+                ]}
+                onPress={() =>
+                  setTarget({ type: 'finding', id: finding.id })
+                }
+              >
+                <View style={styles.findingHeaderRow}>
+                  <Text
+                    style={[
+                      styles.findingSeverity,
+                      { color: severityColor(finding.severity) },
+                    ]}
+                  >
+                    {finding.severity}
+                  </Text>
+                  <Text style={styles.findingCategory}>{finding.category}</Text>
+                </View>
+                <Text style={styles.findingTitle}>{finding.title}</Text>
+                <Text style={styles.findingDescription} numberOfLines={3}>
+                  {finding.description}
+                </Text>
+                {finding.lineStart != null && finding.lineEnd != null ? (
+                  <Text style={styles.findingLineRange}>
+                    lines {finding.lineStart}-{finding.lineEnd}
+                  </Text>
+                ) : null}
               </Pressable>
             ))}
           </View>
@@ -302,11 +348,18 @@ function ChatMessageBubble({
           {output.terms.map((term) => (
             <Pressable
               key={term.id}
-              style={styles.termBrick}
+              style={[
+                styles.termBrick,
+                { borderColor: termCategoryColor(term.category, 0.35), backgroundColor: termCategoryColor(term.category, 0.12) },
+              ]}
               onPress={() => onTermPress(term.id, output)}
             >
-              <Text style={styles.termCategoryText}>{term.category}</Text>
-              <Text style={styles.termBrickText}>{term.label}</Text>
+              <Text style={[styles.termCategoryText, { color: termCategoryColor(term.category, 1) }]}>
+                {term.category}
+              </Text>
+              <Text style={[styles.termBrickText, { color: termCategoryColor(term.category, 1) }]}>
+                {term.label}
+              </Text>
             </Pressable>
           ))}
         </View>
@@ -396,9 +449,9 @@ function InspectorContent({
     );
   }
 
-  if ('promptHook' in value) {
+  if (isTerm(value)) {
     return (
-          <View style={styles.inspectorCard}>
+      <View style={styles.inspectorCard}>
         <Text style={styles.inspectorMeta}>Term / {value.category}</Text>
         <Text style={styles.inspectorTitle}>{value.label}</Text>
         <Text style={styles.inspectorSummary}>{value.summary}</Text>
@@ -408,32 +461,74 @@ function InspectorContent({
             related: {value.relatedTermIds.join(', ')}
           </Text>
         ) : null}
-        <Text style={styles.promptHook}>{value.promptHook}</Text>
+        {'promptHook' in value && value.promptHook ? (
+          <Text style={styles.promptHook}>{value.promptHook}</Text>
+        ) : null}
       </View>
     );
   }
 
-  if ('expression' in value) {
+  if (isCalculation(value)) {
     return (
       <View style={styles.inspectorCard}>
-        <Text style={styles.inspectorMeta}>Calculation</Text>
-        <Text style={styles.inspectorTitle}>{value.label}</Text>
-        <Text style={styles.inspectorSummary}>{value.expression}</Text>
-        <Text style={styles.calcResult}>{value.result}</Text>
-        <Text style={styles.inspectorBody}>{value.explanation}</Text>
+        <Text style={styles.inspectorMeta}>Calculation / {value.kind}</Text>
+        <Text style={styles.inspectorTitle}>{value.title}</Text>
+        <View style={styles.stepList}>
+          {value.steps.map((step, idx) => (
+            <View key={idx} style={styles.stepRow}>
+              <Text style={styles.stepLabel}>{step.label}</Text>
+              <Text style={styles.stepValue}>
+                {step.value} {step.unit}
+              </Text>
+              {step.note ? <Text style={styles.stepNote}>{step.note}</Text> : null}
+            </View>
+          ))}
+        </View>
+        <Text style={styles.inspectorBody}>{value.conclusion}</Text>
+      </View>
+    );
+  }
+
+  if (isFinding(value)) {
+    return (
+      <View style={styles.inspectorCard}>
+        <View style={styles.findingBadgeRow}>
+          <Text style={[styles.findingSeverityBadge, { color: severityColor(value.severity) }]}>
+            {value.severity}
+          </Text>
+          <Text style={styles.findingCategoryBadge}>{value.category}</Text>
+        </View>
+        <Text style={styles.inspectorTitle}>{value.title}</Text>
+        <Text style={styles.inspectorBody}>{value.description}</Text>
+        {value.lineStart != null && value.lineEnd != null ? (
+          <Text style={styles.lineRange}>
+            lines {value.lineStart}-{value.lineEnd}
+          </Text>
+        ) : null}
+        {value.suggestedFix ? (
+          <Text style={styles.suggestedFix}>Fix: {value.suggestedFix}</Text>
+        ) : null}
+      </View>
+    );
+  }
+
+  if (isLayer(value)) {
+    return (
+      <View style={styles.inspectorCard}>
+        <Text style={styles.inspectorMeta}>{value.kind}</Text>
+        <Text style={styles.inspectorTitle}>{value.title}</Text>
+        <Text style={styles.inspectorSummary}>{value.summary}</Text>
+        <Text style={styles.inspectorBody}>{value.detail}</Text>
+        <Text style={styles.lineRange}>
+          lines {value.lineStart}-{value.lineEnd}
+        </Text>
       </View>
     );
   }
 
   return (
     <View style={styles.inspectorCard}>
-      <Text style={styles.inspectorMeta}>{value.kind}</Text>
-      <Text style={styles.inspectorTitle}>{value.title}</Text>
-      <Text style={styles.inspectorSummary}>{value.summary}</Text>
-      <Text style={styles.inspectorBody}>{value.detail}</Text>
-      <Text style={styles.lineRange}>
-        lines {value.lineStart}-{value.lineEnd}
-      </Text>
+      <Text style={styles.inspectorTitle}>Unknown inspector target</Text>
     </View>
   );
 }
@@ -478,7 +573,7 @@ function MessageContent({
   terms: SandboxTerm[];
   onTermPress: (id: string) => void;
 }) {
-  const segments = splitCodeFences(text);
+  const segments = useMemo(() => splitCodeFences(text), [text]);
 
   return (
     <View style={styles.messageContent}>
@@ -496,7 +591,7 @@ function MessageContent({
 
         return (
           <Text key={`text-${index}`} style={styles.messageText}>
-            {renderTextWithTerms(segment.value, terms, onTermPress)}
+            {renderTextWithTerms(segment.value, segment.textStart, terms, onTermPress)}
           </Text>
         );
       })}
@@ -504,23 +599,23 @@ function MessageContent({
   );
 }
 
-function splitCodeFences(
-  text: string,
-): Array<
-  | { kind: 'text'; value: string }
-  | { kind: 'code'; language: string; value: string }
-> {
-  const segments: Array<
-    | { kind: 'text'; value: string }
-    | { kind: 'code'; language: string; value: string }
-  > = [];
+type CodeFenceSegment =
+  | { kind: 'text'; value: string; textStart: number }
+  | { kind: 'code'; language: string; value: string };
+
+function splitCodeFences(text: string): CodeFenceSegment[] {
+  const segments: CodeFenceSegment[] = [];
   const fence = /```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g;
   let cursor = 0;
   let match: RegExpExecArray | null;
 
   while ((match = fence.exec(text)) !== null) {
     if (match.index > cursor) {
-      segments.push({ kind: 'text', value: text.slice(cursor, match.index) });
+      segments.push({
+        kind: 'text',
+        value: text.slice(cursor, match.index),
+        textStart: cursor,
+      });
     }
     segments.push({
       kind: 'code',
@@ -531,10 +626,14 @@ function splitCodeFences(
   }
 
   if (cursor < text.length) {
-    segments.push({ kind: 'text', value: text.slice(cursor) });
+    segments.push({
+      kind: 'text',
+      value: text.slice(cursor),
+      textStart: cursor,
+    });
   }
 
-  return segments.length > 0 ? segments : [{ kind: 'text', value: text }];
+  return segments.length > 0 ? segments : [{ kind: 'text', value: text, textStart: 0 }];
 }
 
 function ModeButton({
@@ -560,6 +659,7 @@ function ModeButton({
 
 function renderTextWithTerms(
   text: string,
+  textStart: number,
   terms: SandboxTerm[],
   onTermPress: (id: string) => void,
 ) {
@@ -567,34 +667,143 @@ function renderTextWithTerms(
     return text;
   }
 
-  const labels = terms
-    .map((term) => term.label)
-    .sort((a, b) => b.length - a.length)
-    .map(escapeRegExp);
-  const splitter = new RegExp(`(${labels.join('|')})`, 'gi');
+  const segmentEnd = textStart + text.length;
 
-  return text.split(splitter).map((part, index) => {
-    const term = terms.find(
-      (item) => item.label.toLowerCase() === part.toLowerCase(),
-    );
-    if (!term) {
-      return part;
+  // Collect spans that overlap this text segment, clip to segment bounds
+  const relevantSpans = terms
+    .flatMap((term) =>
+      term.spans
+        .filter((span) => {
+          const spanStart = span.proseOffset;
+          const spanEnd = span.proseOffset + span.length;
+          return (
+            Number.isFinite(span.proseOffset) &&
+            span.proseOffset >= 0 &&
+            Number.isFinite(span.length) &&
+            span.length > 0 &&
+            spanStart < segmentEnd &&
+            spanEnd > textStart
+          );
+        })
+        .map((span) => {
+          const clippedStart = Math.max(span.proseOffset, textStart);
+          const clippedEnd = Math.min(span.proseOffset + span.length, segmentEnd);
+          return {
+            start: clippedStart - textStart,
+            end: clippedEnd - textStart,
+            term,
+          };
+        }),
+    )
+    .sort((a, b) => a.start - b.start);
+
+  // Remove overlaps: keep the first span when two overlap
+  const filteredSpans: typeof relevantSpans = [];
+  let lastEnd = -1;
+  for (const span of relevantSpans) {
+    if (span.start >= lastEnd) {
+      filteredSpans.push(span);
+      lastEnd = span.end;
     }
+  }
 
-    return (
+  if (filteredSpans.length === 0) {
+    return text;
+  }
+
+  const result: React.ReactNode[] = [];
+  let cursor = 0;
+  for (const span of filteredSpans) {
+    if (span.start > cursor) {
+      result.push(text.slice(cursor, span.start));
+    }
+    result.push(
       <Text
-        key={`${term.id}-${index}`}
-        style={styles.inlineTerm}
-        onPress={() => onTermPress(term.id)}
+        key={`${span.term.id}-${span.start}`}
+        style={{
+          color: termCategoryColor(span.term.category, 1),
+          fontWeight: '700',
+          backgroundColor: termCategoryColor(span.term.category, 0.12),
+        }}
+        onPress={() => onTermPress(span.term.id)}
       >
-        {part}
-      </Text>
+        {text.slice(span.start, span.end)}
+      </Text>,
     );
-  });
+    cursor = span.end;
+  }
+  if (cursor < text.length) {
+    result.push(text.slice(cursor));
+  }
+
+  return result;
 }
 
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// Type guards for inspector content
+function isTerm(value: unknown): value is SandboxTerm {
+  return (
+    value != null &&
+    typeof (value as SandboxTerm).label === 'string' &&
+    Array.isArray((value as SandboxTerm).spans)
+  );
+}
+
+function isCalculation(value: unknown): value is SandboxCalculation {
+  return (
+    value != null &&
+    Array.isArray((value as SandboxCalculation).steps)
+  );
+}
+
+function isFinding(value: unknown): value is SandboxFinding {
+  return (
+    value != null &&
+    typeof (value as SandboxFinding).severity === 'string'
+  );
+}
+
+function isLayer(value: unknown): value is SandboxCodeLayer {
+  return (
+    value != null &&
+    typeof (value as SandboxCodeLayer).lineStart === 'number' &&
+    typeof (value as SandboxCodeLayer).lineEnd === 'number' &&
+    !isFinding(value)
+  );
+}
+
+function termCategoryColor(category: SandboxTermCategory, alpha: number): string {
+  const base: Record<SandboxTermCategory, string> = {
+    risk: colors.red,
+    concept: colors.blue,
+    api: colors.green,
+    data: colors.purple,
+    performance: colors.orange,
+    test: colors.teal,
+  };
+  const hex = base[category] ?? colors.yellow;
+  if (alpha >= 1) return hex;
+  // Convert hex to rgba
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function severityColor(severity: SandboxFinding['severity']): string {
+  switch (severity) {
+    case 'critical':
+      return colors.red;
+    case 'high':
+      return colors.red;
+    case 'medium':
+      return colors.orange;
+    case 'low':
+      return colors.yellow;
+    case 'info':
+      return colors.blue;
+    default:
+      return colors.textSecondary;
+  }
 }
 
 const styles = StyleSheet.create({
@@ -846,18 +1055,14 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
-    backgroundColor: 'rgba(229, 192, 123, 0.12)',
     borderWidth: 1,
-    borderColor: 'rgba(229, 192, 123, 0.35)',
   },
   termCategoryText: {
-    color: colors.textSecondary,
     fontSize: 10,
     fontWeight: '700',
     textTransform: 'uppercase',
   },
   termBrickText: {
-    color: colors.yellow,
     fontSize: fontSize.sm,
     fontWeight: '700',
   },
@@ -955,6 +1160,13 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
     backgroundColor: '#182237',
   },
+  calcKindBadge: {
+    color: colors.primaryLight,
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    marginBottom: spacing.xs,
+  },
   calcLabel: {
     color: colors.text,
     fontSize: fontSize.md,
@@ -970,6 +1182,51 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     fontWeight: '700',
     marginTop: spacing.xs,
+  },
+  findingList: {
+    gap: spacing.sm,
+  },
+  findingCard: {
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+  },
+  findingHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  findingSeverity: {
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  findingCategory: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  findingTitle: {
+    color: colors.text,
+    fontSize: fontSize.md,
+    fontWeight: '700',
+    marginTop: spacing.xs,
+  },
+  findingDescription: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    lineHeight: 18,
+    marginTop: spacing.xs,
+  },
+  findingLineRange: {
+    color: colors.blue,
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+    marginTop: spacing.sm,
   },
   inspectorCard: {
     borderRadius: 8,
@@ -1022,6 +1279,57 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontWeight: '700',
     marginTop: spacing.md,
+  },
+  stepList: {
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  stepRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  stepLabel: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+  },
+  stepValue: {
+    color: colors.text,
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+  },
+  stepNote: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    fontStyle: 'italic',
+  },
+  findingBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.xs,
+  },
+  findingSeverityBadge: {
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  findingCategoryBadge: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  suggestedFix: {
+    color: colors.green,
+    fontSize: fontSize.sm,
+    lineHeight: 18,
+    marginTop: spacing.md,
+    padding: spacing.sm,
+    borderRadius: 6,
+    backgroundColor: 'rgba(152, 195, 121, 0.1)',
   },
   diagnosticList: {
     gap: spacing.sm,

@@ -10,6 +10,7 @@ import type {
   SandboxChatMessage,
   SandboxModelOutput,
   SandboxModelTiming,
+  SandboxProseSpan,
 } from './types';
 
 export type SandboxRequestMode = 'local-contract' | 'configured-model';
@@ -116,17 +117,21 @@ export function buildSandboxSystemPrompt(): string {
     'The user is reviewing existing code, not asking you to build an app from scratch.',
     'Prioritize concrete code-review findings, runtime risks, and line-referenced explanations.',
     'Respond with concise prose plus exactly one fenced codelens-chat-engine JSON block.',
-    'The UI will parse the block and render code artifacts, code layers, terms, and calculations.',
+    'The UI will parse the block and render code artifacts, code layers, terms, calculations, and findings.',
     buildSandboxPromptContract(),
     'Hidden keyword categorization rule:',
     'Terms are the words that become light clickable blocks in chat. Pick terms that a developer would naturally click for deeper meaning.',
     'Classify each term as risk, concept, api, data, performance, or test.',
     'Good code-review terms include cache key, stale data, malformed schema, token budget, invalidation, error boundary, and tool schema.',
-    'Each term label must appear in the prose exactly, so the UI can highlight it.',
+    'Each term must include spans: an array of { proseOffset, length } objects that anchor the label exactly in the prose text. Use JavaScript-style string indexing.',
+    'Each term label must appear in the prose exactly at the listed offsets, so the UI can highlight it deterministically.',
     'Do not create only one generic term. Produce 4-6 distinct terms with different labels when the answer mentions more than one concept.',
     'Do not use category names like "risk" as term labels. The label should be the concrete phrase, for example "schema cache" or "cache key".',
     'When the user asks about multiple servers with the same tool name, include separate terms for schema cache, cache key, tool schema, and stale data.',
+    'Use findings for concrete review issues with severity (critical, high, medium, low, info) and category (bug, security, reliability, performance, maintainability, accessibility, design).',
+    'Link findings to terms and artifacts when possible, and include suggestedFix when you have a concrete recommendation.',
     'Use stable ids. Include the reviewed code as a codeArtifact with line ranges that match the selected-code context.',
+    'Set version to 1.',
   ].join('\n\n=====\n\n');
 }
 
@@ -228,6 +233,7 @@ function buildSandboxRepairMessages(
         'Return the same review idea, but the final answer must include exactly one fenced block using this fence label:',
         '```codelens-chat-engine',
         '{',
+        '  "version": 1,',
         '  "prose": "short visible answer",',
         '  "codeArtifacts": [',
         '    {',
@@ -253,13 +259,26 @@ function buildSandboxRepairMessages(
         '      "id": "schema-cache",',
         '      "label": "schema cache",',
         '      "category": "risk",',
+        '      "spans": [{ "proseOffset": 0, "length": 12 }],',
         '      "summary": "One sentence.",',
         '      "detail": "Detailed explanation.",',
         '      "promptHook": "How this term should guide a follow-up prompt.",',
         '      "relatedTermIds": []',
         '    }',
         '  ],',
-        '  "calculations": []',
+        '  "calculations": [',
+        '    {',
+        '      "id": "example-calc",',
+        '      "title": "Example Calculation",',
+        '      "kind": "reasoning",',
+        '      "steps": [',
+        '        { "label": "Step one", "value": 1, "unit": "item" },',
+        '        { "label": "Step two", "value": 2, "unit": "items" }',
+        '      ],',
+        '      "conclusion": "This is the conclusion."',
+        '    }',
+        '  ],',
+        '  "findings": []',
         '}',
         '```',
         'Do not put a bare JSON object outside the fence. Do not use markdown code fences for the reviewed source code inside the JSON.',
@@ -270,6 +289,14 @@ function buildSandboxRepairMessages(
 
 function buildLocalContractResponse(prompt: string): string {
   const topic = summarizePrompt(prompt);
+  const prose =
+    `Local code-review sandbox response for "${topic}". The schema cache is risky because the cache key only uses toolName, which can return a stale data result or the wrong tool schema when multiple MCP servers expose the same name. The token budget benefit is real, but it must not hide correctness risk.`;
+
+  function spanFor(label: string): SandboxProseSpan[] {
+    const offset = prose.indexOf(label);
+    return offset >= 0 ? [{ proseOffset: offset, length: label.length }] : [];
+  }
+
   const artifact = {
     id: 'local-mcp-schema-compressor-review',
     title: 'skeleton.js',
@@ -310,14 +337,15 @@ function buildLocalContractResponse(prompt: string): string {
   };
 
   const contract = {
-    prose:
-      `Local code-review sandbox response for "${topic}". The schema cache is risky because the cache key only uses toolName, which can return a stale data result or the wrong tool schema when multiple MCP servers expose the same name. The token budget benefit is real, but it must not hide correctness risk.`,
+    version: 1,
+    prose,
     codeArtifacts: [artifact],
     terms: [
       {
         id: 'schema-cache',
         label: 'schema cache',
         category: 'risk',
+        spans: spanFor('schema cache'),
         summary: 'A memory cache for fetched and compressed tool schemas.',
         detail:
           'The cache improves speed, but it needs a complete identity. Tool name alone is not enough when multiple MCP servers can expose the same tool.',
@@ -329,7 +357,9 @@ function buildLocalContractResponse(prompt: string): string {
         id: 'cache-key',
         label: 'cache key',
         category: 'risk',
-        summary: 'The identity used to decide whether a cached schema can be reused.',
+        spans: spanFor('cache key'),
+        summary:
+          'The identity used to decide whether a cached schema can be reused.',
         detail:
           'A cache key based only on toolName is too weak when schemas can come from different MCP servers or versions.',
         promptHook:
@@ -340,7 +370,9 @@ function buildLocalContractResponse(prompt: string): string {
         id: 'tool-schema',
         label: 'tool schema',
         category: 'api',
-        summary: 'The API contract returned by the MCP server for a callable tool.',
+        spans: spanFor('tool schema'),
+        summary:
+          'The API contract returned by the MCP server for a callable tool.',
         detail:
           'If the wrong tool schema is reused, later model calls may construct invalid arguments or call the wrong behavior.',
         promptHook:
@@ -351,6 +383,7 @@ function buildLocalContractResponse(prompt: string): string {
         id: 'stale-data',
         label: 'stale data',
         category: 'data',
+        spans: spanFor('stale data'),
         summary: 'Cached information that no longer matches the server state.',
         detail:
           'Without invalidation, a schema change on the server can leave the local compressed schema permanently outdated.',
@@ -362,7 +395,9 @@ function buildLocalContractResponse(prompt: string): string {
         id: 'token-budget',
         label: 'token budget',
         category: 'performance',
-        summary: 'The context cost saved by compressing MCP tool descriptions.',
+        spans: spanFor('token budget'),
+        summary:
+          'The context cost saved by compressing MCP tool descriptions.',
         detail:
           'The review should balance saved tokens against correctness. If compression drops validation detail, the model may call tools incorrectly.',
         promptHook:
@@ -373,11 +408,45 @@ function buildLocalContractResponse(prompt: string): string {
     calculations: [
       {
         id: 'review-coverage',
-        label: 'Review coverage',
-        expression: 'cache risk + API risk + compression risk',
-        result: '3 primary findings',
-        explanation:
+        title: 'Review Coverage',
+        kind: 'reasoning' as const,
+        steps: [
+          { label: 'Cache risk', value: 1, unit: 'finding' },
+          { label: 'API risk', value: 1, unit: 'finding' },
+          { label: 'Compression risk', value: 1, unit: 'finding' },
+        ],
+        conclusion:
           'The local response gives the engine enough structure to test line-click review findings, term explanations, and risk calculations from one realistic code snippet.',
+      },
+    ],
+    findings: [
+      {
+        id: 'local-cache-eviction-gap',
+        severity: 'high' as const,
+        category: 'reliability' as const,
+        termId: 'schema-cache',
+        title: 'No cache eviction or invalidation path',
+        description:
+          'schemaCache is a plain Map with no TTL, version check, or deletion logic. A server-side schema update will never be reflected.',
+        artifactId: artifact.id,
+        lineStart: 1,
+        lineEnd: 4,
+        suggestedFix:
+          'Add a version or content-hash segment to the cache key, and provide an invalidation API or TTL.',
+      },
+      {
+        id: 'local-unchecked-fetch',
+        severity: 'medium' as const,
+        category: 'reliability' as const,
+        termId: 'tool-schema',
+        title: 'Unchecked external schema fetch',
+        description:
+          'client.callTool can throw or return an unexpected shape. The code does not guard against missing fields before compression.',
+        artifactId: artifact.id,
+        lineStart: 6,
+        lineEnd: 6,
+        suggestedFix:
+          'Validate the schema response shape and wrap the call in a retryable error boundary.',
       },
     ],
   };
@@ -397,25 +466,37 @@ function buildModelFallbackContractResponse(
 ): string {
   const raw = buildLocalContractResponse(prompt);
   const parsed = parseSandboxModelOutput(raw);
+  const fallbackProse =
+    'The configured model returned a malformed renderer contract, so the sandbox is showing a stable fallback review. The important concepts are schema cache, cache key, stale data, tool schema, and token budget.';
+
+  function spanFor(label: string): SandboxProseSpan[] {
+    const offset = fallbackProse.indexOf(label);
+    return offset >= 0 ? [{ proseOffset: offset, length: label.length }] : [];
+  }
+
   const contract = {
-    prose:
-      'The configured model returned a malformed renderer contract, so the sandbox is showing a stable fallback review. The important concepts are schema cache, cache key, stale data, tool schema, and token budget.',
+    version: 1,
+    prose: fallbackProse,
     codeArtifacts: parsed.codeArtifacts,
     terms: [
-      ...parsed.terms,
+      ...parsed.terms.map((term) => ({
+        ...term,
+        spans: spanFor(term.label),
+      })),
       {
         id: 'model-contract-failure',
         label: 'model contract failure',
-        category: 'risk',
+        category: 'risk' as const,
+        spans: spanFor('model contract failure'),
         summary: 'The provider did not follow the renderer schema.',
-        detail:
-          `The raw model response could not be trusted as UI data. Excerpt: ${compactFailedOutput(failedOutput)}`,
+        detail: `The raw model response could not be trusted as UI data. Excerpt: ${compactFailedOutput(failedOutput)}`,
         promptHook:
           'Ask the model for exactly one fenced codelens-chat-engine JSON block and no malformed source-code JSON.',
         relatedTermIds: ['schema-cache', 'cache-key'],
       },
     ],
     calculations: parsed.calculations,
+    findings: parsed.findings,
   };
 
   return [
