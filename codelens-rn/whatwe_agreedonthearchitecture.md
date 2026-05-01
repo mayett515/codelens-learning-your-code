@@ -122,7 +122,7 @@ THEN stop and ask for explicit decision before implementing.
 - Tests cover regression path
 
 ## Notes
-This contract is intentionally strict to avoid drift from the agreed hybrid architecture:
+This contract is intentionally strict to avoid drift from the agreed feature-first clean architecture:
 - Feature-based organization (BlueSky-style co-location and public API surface)
 - Clean architecture boundaries (domain/application/data/ui)
 - TypeScript safety-first at all boundaries

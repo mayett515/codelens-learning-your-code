@@ -47,9 +47,7 @@ export function BookmarkSheet({
   onSaveCapture,
   onClose,
 }: Props) {
-  const fallbackColorKey = initialColorKey && palette.some((color) => color.key === initialColorKey)
-    ? initialColorKey
-    : palette[0]?.key ?? 'yellow';
+  const fallbackColorKey = resolveFallbackColorKey(initialColorKey, palette);
   const [colorKey, setColorKey] = useState(bookmark?.colorKey ?? fallbackColorKey);
   const [note, setNote] = useState(bookmark?.note ?? '');
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -58,7 +56,16 @@ export function BookmarkSheet({
     setColorKey(bookmark?.colorKey ?? fallbackColorKey);
     setNote(bookmark?.note ?? '');
     setConfirmDelete(false);
-  }, [bookmark?.id, bookmark?.colorKey, bookmark?.note, fallbackColorKey]);
+  }, [
+    bookmark?.colorKey,
+    bookmark?.id,
+    bookmark?.note,
+    endLine,
+    fallbackColorKey,
+    filePath,
+    projectId,
+    startLine,
+  ]);
 
   useEffect(() => {
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -184,6 +191,15 @@ export function BookmarkSheet({
       </View>
     </KeyboardAvoidingView>
   );
+}
+
+function resolveFallbackColorKey(
+  initialColorKey: string | null | undefined,
+  palette: MarkColor[],
+): string {
+  return initialColorKey && palette.some((color) => color.key === initialColorKey)
+    ? initialColorKey
+    : palette[0]?.key ?? 'yellow';
 }
 
 const styles = StyleSheet.create({

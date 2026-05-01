@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, type SQL } from 'drizzle-orm';
 import { db, type DbOrTx } from '../../../db/client';
 import { bookmarks } from './schema';
-import { ensureBookmarkPalette } from './paletteRepo';
+import { ensureBookmarkPalette, getBookmarkPalette } from './paletteRepo';
 import { validateBookmarkRow, validateBookmarkUpsert } from '../codecs/bookmark';
 import { newBookmarkId } from '../types/ids';
 import type { Bookmark, BookmarkFilter, BookmarkId, BookmarkUpsertInput } from '../types/bookmark';
@@ -79,22 +79,37 @@ export async function updateBookmark(
   id: BookmarkId,
   input: BookmarkUpsertInput,
   now: number = Date.now(),
-  executor: DbOrTx = db,
+  executor?: DbOrTx,
 ): Promise<void> {
   const valid = validateBookmarkUpsert(input);
-  await executor
-    .update(bookmarks)
-    .set({
-      projectId: valid.projectId,
-      filePath: valid.filePath,
-      startLine: valid.startLine,
-      endLine: valid.endLine,
-      colorKey: valid.colorKey,
-      note: valid.note,
-      sessionId: valid.sessionId,
-      updatedAt: now,
-    })
-    .where(eq(bookmarks.id, id));
+
+  const run = async (runner: DbOrTx) => {
+    const palette = await getBookmarkPalette(valid.projectId, runner);
+    if (!palette.some((color) => color.key === valid.colorKey)) {
+      throw new Error(`Palette color is not available: ${valid.colorKey}`);
+    }
+
+    await runner
+      .update(bookmarks)
+      .set({
+        projectId: valid.projectId,
+        filePath: valid.filePath,
+        startLine: valid.startLine,
+        endLine: valid.endLine,
+        colorKey: valid.colorKey,
+        note: valid.note,
+        sessionId: valid.sessionId,
+        updatedAt: now,
+      })
+      .where(eq(bookmarks.id, id));
+  };
+
+  if (executor) {
+    await run(executor);
+    return;
+  }
+
+  await db.transaction(run);
 }
 
 export async function deleteBookmark(

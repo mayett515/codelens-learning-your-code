@@ -135,10 +135,7 @@ export default function ProjectViewerScreen() {
     // Slice 4 only renders single-line bookmark dots; range bookmarks are stored but visualization lands in a later slice.
     for (const bookmark of fileBookmarks) {
       if (bookmark.startLine !== bookmark.endLine) continue;
-      const existing = map.get(bookmark.startLine);
-      if (!existing || bookmark.createdAt >= existing.createdAt) {
-        map.set(bookmark.startLine, bookmark);
-      }
+      map.set(bookmark.startLine, bookmark);
     }
     return map;
   }, [fileBookmarks]);
@@ -585,8 +582,8 @@ export default function ProjectViewerScreen() {
           onSave={(data) => {
             void handleSaveBookmark(data);
           }}
-          onDelete={(bookmarkId) => {
-            void handleDeleteBookmark(bookmarkId);
+          onDelete={(id) => {
+            void handleDeleteBookmark(id);
           }}
           onSaveCapture={bookmarkTarget.bookmark ? handleSaveBookmarkCapture : undefined}
           onClose={closeBookmarkSheet}

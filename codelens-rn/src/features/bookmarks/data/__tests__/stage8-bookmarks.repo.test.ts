@@ -13,7 +13,7 @@ vi.mock('../../../../db/client', () => ({
   db: mockDb,
 }));
 
-import { createBookmark, deleteBookmark } from '../bookmarkRepo';
+import { createBookmark, deleteBookmark, updateBookmark } from '../bookmarkRepo';
 import { updateBookmarkPalette } from '../paletteRepo';
 import type { BookmarkId } from '../../types/bookmark';
 
@@ -196,6 +196,48 @@ describe('bookmark repository behavior', () => {
 
     expect(allowed.state.paletteRows[0]?.updatedAt).toBe(3);
     expect(allowed.state.paletteRows[0]?.paletteJson).not.toContain('"purple"');
+  });
+
+  it('updateBookmark rejects colors outside the project palette', async () => {
+    const { executor, state } = makeExecutor({
+      bookmarkRows: [makeBookmarkRow()],
+      paletteRows: [makePaletteRow()],
+    });
+
+    await expect(updateBookmark(
+      'bm_aaaaaaaaaaaaaaaaaaaaa' as BookmarkId,
+      {
+        projectId: 'project-1',
+        filePath: 'src/example.ts',
+        startLine: 7,
+        endLine: 7,
+        colorKey: 'missing',
+        note: null,
+        sessionId: null,
+      },
+      4,
+      executor,
+    )).rejects.toThrow(/Palette color is not available/);
+
+    expect(state.bookmarkRows[0]?.colorKey).toBe('yellow');
+  });
+
+  it('updateBookmarkPalette runs validation and write in a transaction by default', async () => {
+    const { executor, state } = makeExecutor({
+      bookmarkRows: [makeBookmarkRow({ colorKey: 'yellow' })],
+      paletteRows: [makePaletteRow()],
+    });
+    mockDb.transaction.mockImplementation((fn: (tx: DbOrTx) => Promise<unknown>) => fn(executor));
+
+    await updateBookmarkPalette(
+      'project-1',
+      DEFAULT_PALETTE.filter((color) => color.key !== 'purple'),
+      5,
+    );
+
+    expect(mockDb.transaction).toHaveBeenCalledTimes(1);
+    expect(state.paletteRows[0]?.updatedAt).toBe(5);
+    expect(state.paletteRows[0]?.paletteJson).not.toContain('"purple"');
   });
 
   it('deleteBookmark removes the bookmark row without deleting the linked capture row', async () => {

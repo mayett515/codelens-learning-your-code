@@ -40,35 +40,45 @@ export async function updateBookmarkPalette(
   projectId: string,
   palette: MarkColor[],
   now: number = Date.now(),
-  executor: DbOrTx = db,
+  executor?: DbOrTx,
 ): Promise<void> {
   const validPalette = validatePalette(palette);
-  const nextKeys = new Set(validPalette.map((color) => color.key));
-  const usage = await getBookmarkColorUsage(projectId, executor);
-  const removedUsed = usage.filter((item) => !nextKeys.has(item.colorKey));
-  if (removedUsed.length > 0) {
-    const count = removedUsed.reduce((sum, item) => sum + item.count, 0);
-    throw new Error(`${count} bookmark(s) use removed palette color(s) - reassign them first.`);
-  }
 
-  const existing = await executor
-    .select({ projectId: bookmarkPalettes.projectId })
-    .from(bookmarkPalettes)
-    .where(eq(bookmarkPalettes.projectId, projectId));
+  const run = async (runner: DbOrTx) => {
+    const nextKeys = new Set(validPalette.map((color) => color.key));
+    const usage = await getBookmarkColorUsage(projectId, runner);
+    const removedUsed = usage.filter((item) => !nextKeys.has(item.colorKey));
+    if (removedUsed.length > 0) {
+      const count = removedUsed.reduce((sum, item) => sum + item.count, 0);
+      throw new Error(`${count} bookmark(s) use removed palette color(s) - reassign them first.`);
+    }
 
-  if (existing[0]) {
-    await executor
-      .update(bookmarkPalettes)
-      .set({ paletteJson: stringifyPalette(validPalette), updatedAt: now })
+    const existing = await runner
+      .select({ projectId: bookmarkPalettes.projectId })
+      .from(bookmarkPalettes)
       .where(eq(bookmarkPalettes.projectId, projectId));
+
+    if (existing[0]) {
+      await runner
+        .update(bookmarkPalettes)
+        .set({ paletteJson: stringifyPalette(validPalette), updatedAt: now })
+        .where(eq(bookmarkPalettes.projectId, projectId));
+      return;
+    }
+
+    await runner.insert(bookmarkPalettes).values({
+      projectId,
+      paletteJson: stringifyPalette(validPalette),
+      updatedAt: now,
+    });
+  };
+
+  if (executor) {
+    await run(executor);
     return;
   }
 
-  await executor.insert(bookmarkPalettes).values({
-    projectId,
-    paletteJson: stringifyPalette(validPalette),
-    updatedAt: now,
-  });
+  await db.transaction(run);
 }
 
 export async function getBookmarkColorUsage(
