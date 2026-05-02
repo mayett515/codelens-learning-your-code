@@ -1,18 +1,24 @@
-# CodeLens RN Rewrite — Start Here
+# CodeLens RN Rewrite - Start Here
 
-You are about to rewrite a Capacitor Android app (vanilla JS + WebView + Java bridges) as a React Native + Expo + TypeScript app. The current app exists at `c:/CodeLens-v2/codelens-full/` — read it for behavior reference, do not port files line-by-line.
+You are about to rewrite a Capacitor Android app (vanilla JS + WebView + Java bridges) as a React Native + Expo + TypeScript app. The current app exists at `c:/CodeLens-v2/codelens-full/` - read it for behavior reference, do not port files line-by-line.
 
 ## Read Order
 
-1. `01-INTENT.md` — what this app is and why it exists. Read first; everything else is in service of this.
-2. `02-STACK.md` — chosen stack and the rationale for each choice. Do not substitute libraries.
-3. `03-ARCHITECTURE.md` — hexagonal layout, folder structure, ports/adapters.
-4. `04-STATE-MODEL.md` — TypeScript types for the entire domain.
-5. `05-SCREENS.md` — every screen, its route, what state it touches, what actions it dispatches.
-6. `06-RAG-PIPELINE.md` — vector store contract, embedding lifecycle, sqlite-vec schema.
-7. `07-PRESERVE-THESE-BEHAVIORS.md` — the non-obvious behaviors that must survive the rewrite. These are hard-won; do not lose them.
-8. `08-NON-GOALS.md` — explicit list of features to NOT port. Respect this.
-9. `09-BUILD-PHASES.md` — implementation order. Build phase 1 fully before phase 2.
+1. `01-INTENT.md` - what this app is and why it exists. Read first; everything else is in service of this.
+2. `02-STACK.md` - chosen stack and the rationale for each choice. Do not substitute libraries.
+3. `03-ARCHITECTURE.md` - hexagonal layout, folder structure, ports/adapters.
+4. `04-STATE-MODEL.md` - TypeScript types for the entire domain.
+5. `05-SCREENS.md` - every screen, its route, what state it touches, what actions it dispatches.
+6. `06-RAG-PIPELINE.md` - vector store contract, embedding lifecycle, sqlite-vec schema.
+7. `07-PRESERVE-THESE-BEHAVIORS.md` - the non-obvious behaviors that must survive the rewrite. These are hard-won; do not lose them.
+8. `08-NON-GOALS.md` - explicit list of features to NOT port. Respect this.
+9. `09-BUILD-PHASES.md` - implementation order. Build phase 1 fully before phase 2.
+10. `10-NEUANORDNUNG-ENGINE.md` - raw Neuanordnung product/UX idea.
+11. `11-NEUANORDNUNG-MAIN.md` - strict Neuanordnung contract and typed standard intents.
+12. `12-NEUANORDNUNG-ARCHITECTURE.md` - feature architecture, parser strategy, planner actions, and UI boundaries.
+13. `13-NEUANORDNUNG-ANTI-REGRESSION.md` - regression guardrails for validation, execution, and UI performance.
+14. `14-NEUANORDNUNG-PHASES.md` - implementation phases for the visual engine.
+15. `neuanordnung-slices/README.md` - cheap-model slice index for phase-by-phase implementation.
 
 ## Output Location
 
@@ -20,10 +26,10 @@ New project root: `c:/CodeLens-v2/codelens-rn/` (sibling to `codelens-full/`). D
 
 ## Operating Principles for This Rewrite
 
-- **Intent over parity.** If the old app does X awkwardly because vanilla JS forced it, do X cleanly the React way. The goal is the *experience*, not the implementation.
+- **Intent over parity.** If the old app does X awkwardly because vanilla JS forced it, do X cleanly the React way. The goal is the experience, not the implementation.
 - **TypeScript strict mode from day one.** No `any` escapes. Domain types live in `src/domain/types.ts` and are imported everywhere.
 - **One source of truth per concept.** No duplicate caches. The previous app had a JS metadata map + JS vector cache + native vector store, and they drifted (see `07-PRESERVE-THESE-BEHAVIORS.md`). The new app has SQLite as the only vector store.
-- **No magic.** Reactive auto-updating ORMs (Realm, Watermelon) are explicitly *not* the chosen stack. The reactivity layer is TanStack Query + Zustand — boring, predictable, type-safe.
+- **No magic.** Reactive auto-updating ORMs (Realm, Watermelon) are explicitly not the chosen stack. The reactivity layer is TanStack Query + Zustand - boring, predictable, type-safe.
 - **No Java, no Kotlin.** The whole point of the rewrite. If a feature seems to require native code, find an existing JSI library or defer the feature.
 - **Offline-first.** No CDNs. No network round-trips for UI. All vendor libs (Cytoscape) are bundled.
 - **Ship phase by phase.** Phase 1 must be runnable and useful before phase 2 begins. No half-finished features at any phase boundary.
