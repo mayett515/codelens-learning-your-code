@@ -42,7 +42,7 @@ import { SaveAsLearningModal, useSaveLearningStore } from '@/src/features/learni
 import { ChatPersonaPickerSheet, useChatPersona } from '@/src/features/personas';
 import type { ChatCodeContext } from '@/src/features/chat';
 import type { ChatId, ChatMessage, ChatModelOverride } from '@/src/domain/types';
-import type { RetrievedMemory } from '@/src/features/learning/retrieval/types/retrieval';
+import type { RetrievedMemory } from '@/src/features/learning';
 
 interface CodeContextOverride {
   value: ChatCodeContext | null;

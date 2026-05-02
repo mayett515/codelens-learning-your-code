@@ -11,6 +11,7 @@ import { colors, fontSize, spacing } from '@/src/ui/theme';
 import { initDatabase } from '@/src/db/client';
 import { vectorStore } from '@/src/composition';
 import * as projectQueries from '@/src/db/queries/projects';
+// Barrel bypass: namespace import for smoke-test cleanup calls (see ARCHITECTURE.md §Exception)
 import * as conceptQueries from '@/src/features/learning/data/concepts';
 import {
   projectId,

@@ -30,7 +30,7 @@ import { ChatInput } from '@/src/ui/components/ChatInput';
 import { BubbleMenu } from '@/src/ui/components/BubbleMenu';
 import { ChatModelPickerModal } from '@/src/ui/components/ChatModelPickerModal';
 import type { ChatMessage, ChatModelOverride, ConceptId } from '@/src/domain/types';
-import type { RetrievedMemory } from '@/src/features/learning/retrieval/types/retrieval';
+import type { RetrievedMemory } from '@/src/features/learning';
 
 export default function LearningChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();

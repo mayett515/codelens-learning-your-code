@@ -125,18 +125,20 @@ export async function insertMessage(
   chatId: ChatId,
   message: ChatMessage,
 ): Promise<void> {
-  await db.insert(chatMessages).values({
-    id: message.id,
-    chatId,
-    role: message.role,
-    content: message.content,
-    createdAt: message.createdAt,
-  });
+  await db.transaction(async (tx) => {
+    await tx.insert(chatMessages).values({
+      id: message.id,
+      chatId,
+      role: message.role,
+      content: message.content,
+      createdAt: message.createdAt,
+    });
 
-  await db
-    .update(chats)
-    .set({ updatedAt: new Date().toISOString() })
-    .where(eq(chats.id, chatId));
+    await tx
+      .update(chats)
+      .set({ updatedAt: new Date().toISOString() })
+      .where(eq(chats.id, chatId));
+  });
 }
 
 export async function insertMessages(

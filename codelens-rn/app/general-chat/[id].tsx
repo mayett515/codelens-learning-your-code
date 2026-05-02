@@ -30,7 +30,7 @@ import {
 import { SaveAsLearningModal, useSaveLearningStore } from '@/src/features/learning';
 import { ChatPersonaPickerSheet, useChatPersona } from '@/src/features/personas';
 import type { ChatId, ChatMessage, ChatModelOverride } from '@/src/domain/types';
-import type { RetrievedMemory } from '@/src/features/learning/retrieval/types/retrieval';
+import type { RetrievedMemory } from '@/src/features/learning';
 
 export default function GeneralChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
