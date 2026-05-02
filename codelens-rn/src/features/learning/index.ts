@@ -20,13 +20,18 @@ export {
   getLearningConceptList,
   getKnowledgeHealthConcepts,
 } from './data/conceptRepo';
-export { newLearningCaptureId, newConceptId, isLearningCaptureId, isConceptId } from './types/ids';
+export {
+  newLearningCaptureId,
+  newConceptId,
+  isLearningCaptureId,
+  isConceptId,
+} from './types/ids';
 export {
   newReviewEventId,
   isReviewEventId,
   unsafeReviewEventId,
 } from './types/ids';
-export type { LearningCaptureId, ConceptId as LearningConceptId, ReviewEventId } from './types/ids';
+export type { LearningCaptureId, ConceptId, ConceptId as LearningConceptId, ReviewEventId } from './types/ids';
 export type { LearningCapture, LearningConcept, ConceptType, CaptureState, EmbeddingStatus, ConceptHint } from './types/learning';
 export type { SaveModalCandidateData, CandidateSaveState } from './types/saveModal';
 export { computeStrength } from './strength/computeStrength';

@@ -76,6 +76,7 @@ export interface LearningConcept {
   representativeCaptureIds: LearningCaptureId[];
   familiarityScore: number;
   importanceScore: number;
+  lastAccessedAt?: number | null;
   createdAt: number;
   updatedAt: number;
 }

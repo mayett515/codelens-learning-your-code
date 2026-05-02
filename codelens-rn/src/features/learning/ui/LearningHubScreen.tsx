@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
+import type { Href } from 'expo-router';
 import { colors, fontSize, spacing } from '../../../ui/theme';
 import { syncPendingEmbeddings } from '../application/sync';
 import { maybeRecomputeSuggestions } from '../promotion/services/maybeRecomputeSuggestions';
@@ -74,6 +75,10 @@ export function LearningHubScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
+        <Pressable style={styles.graphEntry} onPress={() => router.push('/graph' as Href)}>
+          <Text style={styles.graphEntryTitle}>Knowledge Graph</Text>
+          <Text style={styles.graphEntryText}>Explore your promoted concepts by structure, recency, and strength.</Text>
+        </Pressable>
         <RecentCapturesSection
           captures={captures}
           conceptsById={conceptsById}
@@ -133,7 +138,7 @@ export function LearningHubScreen() {
             onStartReview={() => {
               if (reviewSettings.enableReviewMode) setDetail({ type: 'reviewSession', id: selectedConcept.id });
             }}
-            onViewGraph={() => undefined}
+            onViewGraph={() => router.push(graphHref(selectedConcept.id))}
             onOpenConcept={(id) => setDetail({ type: 'concept', id })}
             onOpenCapture={(id) => setDetail({ type: 'capture', id })}
             onJumpToSession={(id) => setDetail({ type: 'session', id })}
@@ -257,6 +262,10 @@ function formatDate(ms: number): string {
   return new Date(ms).toLocaleDateString();
 }
 
+function graphHref(conceptId: ConceptId): Href {
+  return `/graph?conceptId=${encodeURIComponent(conceptId)}` as Href;
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -319,6 +328,25 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   reviewEntryText: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    marginTop: spacing.xs,
+  },
+  graphEntry: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    padding: spacing.md,
+    backgroundColor: colors.surface,
+  },
+  graphEntryTitle: {
+    color: colors.text,
+    fontSize: fontSize.lg,
+    fontWeight: '800',
+  },
+  graphEntryText: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,
     marginTop: spacing.xs,

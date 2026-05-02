@@ -637,6 +637,118 @@ Next locked step after Stage 7: Phase I / Stage 8 Personas & Chat UX. Read `STAG
   - Verified `review_events` exists with columns `id`, `concept_id`, `rating`, `delta`, `familiarity_before`, `familiarity_after`, `user_recall_text`, `created_at`.
   - Verified `idx_review_events_concept` and `idx_review_events_created` exist.
 
+### Phase I - Stage 8 Personas & Chat UX - COMPLETE / Stage 8.5A COMPLETE (Checkpoint)
+
+- Stage 8 and Stage 8.5A are treated as complete for Stage 9 kickoff.
+- Latest local history before Stage 9A starts from:
+  - `ec92872 Add the Stage 8.5A project-level bookmark list screen.`
+  - `267579d docs(stage8): add stage 8.5 follow-up plan`
+  - `f97db0c chore(stage8): tighten bookmark slice after review`
+  - `d6438bf feat(stage8): add reader bookmarks for code lines`
+- Stage 9 work must not rewrite Stage 8 history or make bookmarks, personas, retrieval memories, or captures into graph nodes.
+
+### Phase J - Stage 9 Native Graph Rewrite - Slice 9A DATA/ENGINE FOUNDATION COMPLETE (2026-05-01)
+
+- Read Stage 9 native graph spec plus the architecture and guard docs before implementation.
+- Added `STAGE_9_PLAN.md` with explicit slice boundaries:
+  - 9A data and pure engine foundation
+  - 9B layout foundation
+  - 9C native render core
+  - 9D screen and navigation wiring
+  - 9E interaction polish
+- Added feature-owned graph foundation under `src/features/graph/`:
+  - `types.ts` for graph node/edge/data/visual contracts and `GraphFocalNotFoundError`
+  - `data/graphKeys.ts` query key factory
+  - `data/graphQueries.ts` read-only full graph and ego graph data builders
+  - `engine/edgeBuilder.ts` prerequisite direction, related/contrast dedupe, renderable index mapping
+  - `engine/visualEncoding.ts` Structure/Recency/Strength node and edge visual encoding
+- Graph queries use the learning feature public barrel and existing `computeStrength`; they do not query captures, bookmarks, retrieval/vector tables, or write any DB state.
+- Added optional `lastAccessedAt` to `LearningConcept` domain mapping so Stage 9 can read Stage 6 recency metadata without mutating it.
+- Added Stage 9A tests:
+  - edge direction/dedupe/renderable-index behavior
+  - visual mode encoding and unknown-type fallback
+  - full graph sorting/capping and ego graph focal/neighbor behavior
+- Verification:
+  - `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit` passes.
+  - `npm.cmd test -- src/features/graph/__tests__/edgeBuilder.test.ts src/features/graph/__tests__/visualEncoding.test.ts src/features/graph/__tests__/graphQueries.test.ts` passes: 3 files, 18 tests.
+  - `npm.cmd test -- --run` passes: 40 files, 205 tests.
+  - `git diff --check` passes with CRLF warnings only.
+  - Guard scans found no hardcoded `queryKey: [` arrays, no `as any`, no `@ts-expect-error`, and no forbidden graph backend references under `src/features/graph`.
+
+### Phase J - Stage 9 Native Graph Rewrite - Slice 9B LAYOUT FOUNDATION COMPLETE (2026-05-01)
+
+- Added the only Stage 9B dependencies:
+  - runtime `d3-force`
+  - dev `@types/d3-force`
+- Added `src/features/graph/engine/layout.ts`:
+  - `adaptiveTicks`
+  - `buildPositionBuffer`
+  - `buildNodeIndexMap`
+  - `runForceLayout`
+- Layout follows the Stage 9 contract:
+  - synchronous `forceSimulation(...).stop().tick(N)`
+  - no RAF/tick callback loop
+  - cloned D3 nodes so cached `GraphData.nodes` are not mutated
+  - focal concept pinning for ego graph layout
+  - `Float32Array` position buffer
+  - renderable edges with source/target buffer indices
+  - slow-layout warnings for the locked 80-node/300-node budgets
+- Added `src/features/graph/__tests__/layout.test.ts` for:
+  - adaptive tick tiers
+  - position buffer layout
+  - node index map
+  - finite positioned nodes
+  - focal node center pinning
+  - no mutation of original graph nodes
+- Verification:
+  - `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit` passes.
+  - Focused graph tests pass: 4 files, 24 tests.
+  - `npm.cmd test -- --run` passes: 41 files, 211 tests.
+  - `git diff --check` passes with CRLF warnings only.
+  - Guard scans found no hardcoded `queryKey: [` arrays, no `as any`, no `@ts-expect-error`, no forbidden graph backend references, no graph references to captures/bookmarks/personas/vector tables, no graph DB writes, and no D3 `.on('tick')`/`.on("tick")` loop.
+
+### Phase J - Stage 9 Native Graph Rewrite - Slices 9C/9D/9E CODE COMPLETE (2026-05-01)
+
+- Added Expo SDK 54-compatible `@shopify/react-native-skia` via `npx expo install`.
+- Added `src/features/graph/ui/graphPaints.ts`:
+  - pre-allocated edge paints by kind
+  - arrow, node fill, node stroke, and label paints
+  - shared color setter for per-node visual changes
+- Added `src/features/graph/engine/drawEdgesBatched.ts`:
+  - one batched Skia path per edge kind
+  - manual dashed paths for related and contrast edges
+  - a single filled path for prerequisite arrowheads
+  - node drawing by looping over the position buffer
+  - label drawing by looping over the position buffer
+  - invalid-coordinate warnings instead of drawing NaN positions
+- Added native screen/render/interaction components:
+  - `GraphCanvas` records a Skia picture from the synchronous layout output.
+  - `GraphScreen` owns query state, mode state, layout scheduling, loading/error/empty/cap states, and tooltip state.
+  - `GraphModeBar`, `GraphLegend`, and `NodePreviewTooltip` provide the native graph controls.
+  - Manual hit testing powers tap focus, double-tap ego navigation, long-press tooltip, pan, and pinch.
+- Added graph navigation wiring while keeping route screens thin:
+  - `app/graph.tsx` parses `conceptId` and delegates to feature-owned `GraphScreen`.
+  - `app/_layout.tsx` registers the graph route.
+  - Learning Hub exposes a top-level Knowledge Graph entry.
+  - `ConceptCardFull.onViewGraph` opens the focused graph for the selected concept.
+- Added `src/features/graph/hooks/useGraphData.ts` and graph public barrel exports. Query keys remain factory-owned through `graphKeys`.
+- Stage 9 graph remains read-only and concept-only:
+  - no graph references to captures, bookmarks, personas, sessions, retrieval memories, or vector tables
+  - no graph writes to `last_accessed_at`, scores, embeddings, tiers, relationships, or concepts
+  - no WebView, Cytoscape, or react-native-svg graph backend
+- Verification:
+  - `node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit` passes.
+  - Focused graph tests pass: 4 files, 24 tests.
+  - `npm.cmd test -- --run` passes: 41 files, 211 tests.
+  - `git diff --check` passes with CRLF warnings only.
+  - Guard scans found no hardcoded `queryKey: [` arrays, no `as any`, no `@ts-expect-error`, no forbidden graph backend references, no graph references to captures/bookmarks/personas/vector tables, no graph DB writes, and no D3 tick callback loop.
+
+Remaining Stage 9 QA:
+- Device smoke the native Skia graph route on Android.
+- Verify gesture feel and canvas framing with real concept data.
+- Consider focus-opacity polish so connected and non-connected edges are dimmed independently.
+- No Skia pixel/screenshot verification has been run yet.
+
 ## What's NOT Done Yet (Remaining Phases)
 
 ### Deferred post-Stage-9 QA

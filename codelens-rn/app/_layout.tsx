@@ -94,6 +94,7 @@ export default function RootLayout() {
           <Stack.Screen name="project/[id]" />
           <Stack.Screen name="chat/[id]" />
           <Stack.Screen name="general-chat/[id]" />
+          <Stack.Screen name="graph" />
           <Stack.Screen name="learning/index" />
           <Stack.Screen name="learning/chat/[id]" />
           <Stack.Screen name="recent-chats" />

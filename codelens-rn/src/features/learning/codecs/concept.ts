@@ -50,6 +50,7 @@ export function conceptRowToDomain(row: ConceptRow): LearningConcept {
     representativeCaptureIds: parseCaptureIds(row.representativeCaptureIds),
     familiarityScore: z.number().min(0).max(1).parse(row.familiarityScore),
     importanceScore: z.number().min(0).max(1).parse(row.importanceScore),
+    lastAccessedAt: row.lastAccessedAt ?? null,
     createdAt: Date.parse(row.createdAt),
     updatedAt: Date.parse(row.updatedAt),
   };
