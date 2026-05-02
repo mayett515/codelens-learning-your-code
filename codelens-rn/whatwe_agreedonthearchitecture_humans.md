@@ -11,6 +11,7 @@ For detailed implementation docs, read:
 - [ARCHITECTURE.md](ARCHITECTURE.md)
 - [current_state.md](current_state.md)
 - [PERSISTENCE.md](PERSISTENCE.md)
+- [ONTOLOGY_PROFILE_REFACTOR/README.md](ONTOLOGY_PROFILE_REFACTOR/README.md) for the planned profile/ontology refactor.
 
 ## The architecture in one sentence
 We use a feature-based folder layout with clean architecture boundaries, so product logic is testable, screens stay thin, and data/AI/storage changes do not leak everywhere.
@@ -54,6 +55,18 @@ We use a feature-based folder layout with clean architecture boundaries, so prod
 - We fail loudly on critical paths.
 - No fake-success fallbacks that silently corrupt data quality.
 
+9. Profile/ontology direction
+- The current app remains coding-first.
+- Coding taxonomy, prompts, labels, metadata fields, and graph visual encoding should become part of a default coding profile over time.
+- Future profiles should be able to define their own ontology without rewriting the app engine.
+- Model-suggested ontology changes must be reviewed by the user/profile owner before becoming durable.
+
+10. Documentation end state
+- It is okay to have extra planning docs during a major refactor.
+- It is not okay for those planning docs to become many competing sources of truth forever.
+- When the profile/ontology refactor stabilizes, durable rules should move back into the small canonical doc set.
+- Temporary handoff/planning docs should then be archived, marked superseded, or deleted.
+
 ## Embedding decision
 Product direction is local-first and intended local-only for embeddings.
 That means we do not want silent fallback to remote embedding providers unless we explicitly decide to change that behavior.
@@ -65,12 +78,14 @@ Do:
 - Keep screens mostly declarative.
 - Add or update focused tests when changing behavior.
 - Use query key factories and feature barrels.
+- For taxonomy/profile work, read `ONTOLOGY_PROFILE_REFACTOR/` and move domain-specific meaning into profile-owned definitions where practical.
 
 Do not:
 - Put heavy business logic directly in route files.
 - Add hardcoded query key arrays.
 - Add `as any` in feature data code.
 - Swallow errors in critical flows.
+- Add new hardcoded coding ontology assumptions in random UI, prompt, retrieval, promotion, or graph files.
 
 ## What this buys us
 - Faster refactors with less breakage.
@@ -80,3 +95,20 @@ Do not:
 
 ## If we ever change direction
 If we want a different architecture (for example hybrid remote embedding fallback), that is fine, but it should be an explicit product decision and documented update, not an accidental side effect of one patch.
+
+The profile/ontology refactor is the current documented direction for forkability. If that direction changes, update `ONTOLOGY_PROFILE_REFACTOR/` and this guide together.
+
+## Final Documentation Shape
+
+The desired end state is not "more and more Markdown files."
+
+The desired end state is:
+
+- `MAIN.md` as the doc map.
+- `ARCHITECTURE.md` as the current architecture.
+- `whatwe_agreedonthearchitecture.md` as the strict agent contract.
+- `whatwe_agreedonthearchitecture_humans.md` as the plain-English guide.
+- `PERSISTENCE.md` as the storage reference.
+- `current_state.md` as the status tracker.
+
+During a large refactor, an extra folder like `ONTOLOGY_PROFILE_REFACTOR/` is useful. After the refactor is stable, the important decisions should be promoted into the canonical docs and the temporary folder should stop being required reading.

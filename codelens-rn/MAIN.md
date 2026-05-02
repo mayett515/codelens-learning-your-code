@@ -30,6 +30,14 @@ Master map of docs for the React Native rewrite. If another agent (Claude / Code
    - Purpose: Curated external inspiration links we agreed to learn from.
    - Include when: architecture discussion, TS/RN best-practice reviews, or refactor planning.
 
+4. [ONTOLOGY_PROFILE_REFACTOR/README.md](ONTOLOGY_PROFILE_REFACTOR/README.md)
+   - Purpose: Strategic plan for moving hardcoded coding-learning assumptions into a dynamic profile/ontology layer while preserving the current coding app.
+   - Include when: touching learning taxonomy, concept/capture schema, extractor prompts, cards, promotion, retrieval formatting, graph visual encoding, or forkability/product-profile planning.
+
+5. [ONTOLOGY_PROFILE_REFACTOR/05_ANTI_REGRESSION_RULES.md](ONTOLOGY_PROFILE_REFACTOR/05_ANTI_REGRESSION_RULES.md)
+   - Purpose: Hard anti-regression rules for the profile/ontology refactor.
+   - Include when: implementing any part of the ontology/profile refactor.
+
 ## Session Notes (Not Canonical)
 
 Dated handoff notes from specific work sessions. Useful for context, not for architecture.
@@ -61,7 +69,18 @@ Minimal doc bundles per task type, to keep prompts small:
    - `rewrite-spec/06-RAG-PIPELINE.md`
    - `rewrite-spec/04-STATE-MODEL.md`
 
-4. **UI / screens work**
+4. **Ontology/profile refactor work**
+   - `MAIN.md`
+   - `whatwe_agreedonthearchitecture.md`
+   - `whatwe_agreedonthearchitecture_humans.md`
+   - `ARCHITECTURE.md`
+   - `PERSISTENCE.md`
+   - `ONTOLOGY_PROFILE_REFACTOR/README.md`
+   - `ONTOLOGY_PROFILE_REFACTOR/humanreadable.md`
+   - `ONTOLOGY_PROFILE_REFACTOR/04_REFACTOR_WITHOUT_BREAKING_APP.md`
+   - `ONTOLOGY_PROFILE_REFACTOR/05_ANTI_REGRESSION_RULES.md`
+
+5. **UI / screens work**
    - `MAIN.md`
    - `rewrite-spec/05-SCREENS.md`
    - `rewrite-spec/07-PRESERVE-THESE-BEHAVIORS.md`
@@ -69,6 +88,7 @@ Minimal doc bundles per task type, to keep prompts small:
 ## Maintenance Rules
 
 - When an architectural decision changes, update the relevant canonical doc (`PERSISTENCE.md`, or the spec file). Don't let session notes become the source of truth — promote first, then reference.
+- When profile/ontology architecture changes, update the relevant file under `ONTOLOGY_PROFILE_REFACTOR/` and add a short pointer in the root canonical doc if the change affects repo-wide rules.
 - After each phase checkpoint, update [current_state.md](current_state.md).
 - Session notes accumulate. That's fine — list them here with dates so agents know they're frozen in time.
 

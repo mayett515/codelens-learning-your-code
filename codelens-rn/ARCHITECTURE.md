@@ -4,6 +4,8 @@
 
 CodeLens is a mobile-first code learning app built with Expo SDK 54, React Native 0.81.5, and TypeScript 5.9.2 (strict + `exactOptionalPropertyTypes`). It runs on-device AI chat, code marking/highlighting, and a knowledge graph backed by local RAG (sqlite-vec + op-sqlite).
 
+Planned direction: keep the coding product first-class while moving hardcoded coding-learning assumptions into a profile/ontology layer. The strategic docs live under [ONTOLOGY_PROFILE_REFACTOR/](ONTOLOGY_PROFILE_REFACTOR/README.md). Until that refactor lands, this file describes the current learning-first implementation.
+
 ## Directory Structure
 
 ```
@@ -122,6 +124,20 @@ Learning-specific code lives in `src/features/learning/` with a barrel `index.ts
 **Exception**: `app/dev.tsx` uses a direct import for namespace import (`* as conceptQueries`).
 
 Core infrastructure (db, ai, domain, ports/adapters, shared UI) stays in `src/` — it IS the core layer, not a feature.
+
+### Planned profile/ontology layer
+
+The next strategic refactor should introduce profile-owned definitions for domain-specific meaning:
+
+- concept/capture labels
+- concept type taxonomy and descriptions
+- metadata field definitions
+- extractor prompt category guidance
+- retrieval memory formatting
+- promotion classification rules
+- graph visual encoding
+
+The default coding profile should preserve the current coding behavior. Future profiles should be able to define different ontologies without rewriting the core capture, retrieval, review, promotion, and graph engine. See [ONTOLOGY_PROFILE_REFACTOR/04_REFACTOR_WITHOUT_BREAKING_APP.md](ONTOLOGY_PROFILE_REFACTOR/04_REFACTOR_WITHOUT_BREAKING_APP.md).
 
 ### Thin route screens
 
