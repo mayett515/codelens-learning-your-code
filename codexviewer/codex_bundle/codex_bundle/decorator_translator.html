@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Decorator Codex — Three Tongues, One Idea</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;800&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #1a1410;
+    --parchment: #f4ead5;
+    --parchment-dark: #e8dcc0;
+    --sepia: #8b6f47;
+    --gold: #b8860b;
+    --crimson: #8b1a1a;
+    --moss: #4a5d3a;
+    --indigo: #2c3e5c;
+    --rust: #a0522d;
+
+    /* concept highlight colors */
+    --c-fn:    #8b1a1a;  /* the wrapped function — crimson */
+    --c-deco:  #b8860b;  /* the decorator — gold */
+    --c-args:  #4a5d3a;  /* arguments — moss */
+    --c-call:  #2c3e5c;  /* the inner call — indigo */
+    --c-ret:   #a0522d;  /* return / result — rust */
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: radial-gradient(ellipse at top, #f4ead5 0%, #e8dcc0 60%, #d4c4a0 100%);
+    color: var(--ink);
+    font-family: 'Cormorant Garamond', serif;
+    min-height: 100vh;
+    padding: 50px 20px 80px;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.35'/%3E%3C/svg%3E");
+    opacity: 0.4;
+    mix-blend-mode: multiply;
+    z-index: 1;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(60, 40, 20, 0.35) 100%);
+    z-index: 2;
+  }
+
+  .codex {
+    max-width: 1300px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 3;
+  }
+
+  /* TITLE */
+  .title-block {
+    text-align: center;
+    margin-bottom: 50px;
+    padding: 30px 20px;
+    border-top: 3px double var(--ink);
+    border-bottom: 3px double var(--ink);
+    position: relative;
+  }
+
+  .title-block::before,
+  .title-block::after {
+    content: '✦';
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.3rem;
+    color: var(--gold);
+    background: var(--parchment);
+    padding: 0 18px;
+  }
+  .title-block::before { top: -13px; }
+  .title-block::after  { bottom: -13px; }
+
+  .eyebrow {
+    font-family: 'Cinzel', serif;
+    font-size: 0.78rem;
+    letter-spacing: 0.5em;
+    color: var(--sepia);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  h1 {
+    font-family: 'Cinzel', serif;
+    font-size: clamp(2rem, 4.5vw, 3.4rem);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: 0.02em;
+    color: var(--ink);
+    margin-bottom: 12px;
+  }
+
+  .subtitle {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-size: 1.15rem;
+    color: var(--sepia);
+  }
+
+  /* INSTRUCTIONS */
+  .instructions {
+    background: rgba(255, 250, 230, 0.55);
+    border-left: 3px solid var(--crimson);
+    padding: 18px 24px;
+    margin-bottom: 36px;
+    font-size: 1.05rem;
+    line-height: 1.5;
+    color: #2a201a;
+  }
+  .instructions strong { color: var(--crimson); font-weight: 600; }
+
+  /* THREE COLUMN PANELS */
+  .panels {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 40px;
+  }
+  @media (max-width: 1000px) {
+    .panels { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: rgba(255, 250, 230, 0.6);
+    border: 1px solid var(--sepia);
+    padding: 26px 24px;
+    box-shadow:
+      0 2px 0 rgba(139, 111, 71, 0.2),
+      0 4px 20px rgba(60, 40, 20, 0.15),
+      inset 0 0 60px rgba(184, 134, 11, 0.05);
+    position: relative;
+  }
+
+  .panel::before {
+    content: '';
+    position: absolute;
+    top: 6px; left: 6px; right: 6px; bottom: 6px;
+    border: 1px solid rgba(139, 111, 71, 0.35);
+    pointer-events: none;
+  }
+
+  .panel-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(139, 111, 71, 0.4);
+  }
+
+  .panel-title {
+    font-family: 'Cinzel', serif;
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: 0.05em;
+  }
+
+  .panel-lineage {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--sepia);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+  }
+
+  .code {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.88rem;
+    line-height: 1.65;
+    white-space: pre;
+    color: var(--ink);
+    overflow-x: auto;
+    padding: 4px 0;
+  }
+
+  /* highlightable concept tokens */
+  .tok {
+    cursor: pointer;
+    padding: 1px 3px;
+    border-radius: 2px;
+    transition: background 0.15s, box-shadow 0.15s;
+    border-bottom: 1px dotted transparent;
+  }
+  .tok:hover {
+    background: rgba(139, 111, 71, 0.18);
+    border-bottom-color: var(--sepia);
+  }
+
+  /* concept color classes — applied when active */
+  .tok.active.concept-fn    { background: rgba(139, 26, 26, 0.20); box-shadow: 0 0 0 1px var(--c-fn); color: var(--c-fn); font-weight: 700; }
+  .tok.active.concept-deco  { background: rgba(184, 134, 11, 0.25); box-shadow: 0 0 0 1px var(--c-deco); color: #6b4f00; font-weight: 700; }
+  .tok.active.concept-args  { background: rgba(74, 93, 58, 0.20); box-shadow: 0 0 0 1px var(--moss); color: var(--moss); font-weight: 700; }
+  .tok.active.concept-call  { background: rgba(44, 62, 92, 0.20); box-shadow: 0 0 0 1px var(--indigo); color: var(--indigo); font-weight: 700; }
+  .tok.active.concept-ret   { background: rgba(160, 82, 45, 0.22); box-shadow: 0 0 0 1px var(--rust); color: #6b3613; font-weight: 700; }
+
+  /* CONCEPT MAP */
+  .concept-map {
+    background: rgba(255, 250, 230, 0.6);
+    border: 1px solid var(--sepia);
+    padding: 28px 32px;
+    margin-bottom: 40px;
+    position: relative;
+    box-shadow:
+      0 2px 0 rgba(139, 111, 71, 0.2),
+      0 4px 20px rgba(60, 40, 20, 0.15);
+  }
+
+  .concept-map::before {
+    content: '';
+    position: absolute;
+    top: 6px; left: 6px; right: 6px; bottom: 6px;
+    border: 1px solid rgba(139, 111, 71, 0.35);
+    pointer-events: none;
+  }
+
+  .concept-map-title {
+    font-family: 'Cinzel', serif;
+    font-size: 1.1rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--sepia);
+    margin-bottom: 18px;
+    text-align: center;
+  }
+
+  .concept-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+  }
+  @media (max-width: 800px) {
+    .concept-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  .concept-btn {
+    font-family: 'Cinzel', serif;
+    font-size: 0.78rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 12px 8px;
+    background: transparent;
+    border: 1px solid var(--sepia);
+    color: var(--ink);
+    cursor: pointer;
+    transition: all 0.18s;
+    text-align: center;
+  }
+  .concept-btn:hover {
+    background: rgba(139, 111, 71, 0.12);
+  }
+  .concept-btn.active {
+    color: white;
+    font-weight: 700;
+  }
+  .concept-btn[data-concept="fn"].active   { background: var(--c-fn);   border-color: var(--c-fn); }
+  .concept-btn[data-concept="deco"].active { background: var(--c-deco); border-color: var(--c-deco); }
+  .concept-btn[data-concept="args"].active { background: var(--c-args); border-color: var(--c-args); }
+  .concept-btn[data-concept="call"].active { background: var(--c-call); border-color: var(--c-call); }
+  .concept-btn[data-concept="ret"].active  { background: var(--c-ret);  border-color: var(--c-ret); }
+
+  /* EXPLANATION */
+  .explanation {
+    background: rgba(255, 250, 230, 0.55);
+    border-left: 3px solid var(--gold);
+    padding: 20px 28px;
+    margin-bottom: 40px;
+    min-height: 90px;
+    font-size: 1.08rem;
+    line-height: 1.6;
+    color: #2a201a;
+  }
+
+  .explanation-label {
+    font-family: 'Cinzel', serif;
+    font-size: 0.72rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--sepia);
+    margin-bottom: 8px;
+  }
+
+  .explanation-body em {
+    color: var(--crimson);
+    font-weight: 500;
+  }
+
+  /* ABSTRACTION LADDER */
+  .ladder {
+    background: rgba(255, 250, 230, 0.6);
+    border: 1px solid var(--sepia);
+    padding: 28px 32px;
+    margin-bottom: 40px;
+    position: relative;
+    box-shadow:
+      0 2px 0 rgba(139, 111, 71, 0.2),
+      0 4px 20px rgba(60, 40, 20, 0.15);
+  }
+  .ladder::before {
+    content: '';
+    position: absolute;
+    top: 6px; left: 6px; right: 6px; bottom: 6px;
+    border: 1px solid rgba(139, 111, 71, 0.35);
+    pointer-events: none;
+  }
+
+  .ladder-title {
+    font-family: 'Cinzel', serif;
+    font-size: 1.1rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--sepia);
+    margin-bottom: 18px;
+    text-align: center;
+  }
+
+  .ladder pre {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    line-height: 1.55;
+    color: var(--ink);
+    overflow-x: auto;
+  }
+
+  /* FOOTER */
+  .codex-end {
+    text-align: center;
+    margin-top: 50px;
+    padding-top: 30px;
+    border-top: 1px solid var(--sepia);
+    color: var(--sepia);
+    font-style: italic;
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+
+</style>
+</head>
+<body>
+
+<main class="codex">
+
+  <!-- TITLE -->
+  <div class="title-block">
+    <div class="eyebrow">A Working Demonstration</div>
+    <h1>The Decorator, in Three Tongues</h1>
+    <div class="subtitle">one idea, three languages, the same shape underneath</div>
+  </div>
+
+  <div class="instructions">
+    Click any <strong>concept</strong> below — or click highlighted parts of the code directly. The same idea will illuminate across all three languages, revealing the structural correspondence beneath the surface. <em>Python's decorator</em>, <em>Clojure's higher-order function</em>, and <em>F#'s function composition</em> are different syntactic costumes for the same semantic creature.
+  </div>
+
+  <!-- CONCEPT BUTTONS -->
+  <div class="concept-map">
+    <div class="concept-map-title">— The Five Concepts —</div>
+    <div class="concept-grid">
+      <button class="concept-btn" data-concept="deco">The Decorator</button>
+      <button class="concept-btn" data-concept="fn">The Wrapped Fn</button>
+      <button class="concept-btn" data-concept="args">The Arguments</button>
+      <button class="concept-btn" data-concept="call">The Inner Call</button>
+      <button class="concept-btn" data-concept="ret">The Return</button>
+    </div>
+  </div>
+
+  <!-- EXPLANATION PANEL -->
+  <div class="explanation">
+    <div class="explanation-label">— Glyph of Meaning —</div>
+    <div class="explanation-body" id="explanation">
+      Choose a concept above to see how each language expresses it. The decorator pattern is, at heart, a function that takes a function and returns a new function — a higher-order transformation that wraps behavior around behavior.
+    </div>
+  </div>
+
+  <!-- THREE PANELS -->
+  <div class="panels">
+
+    <!-- PYTHON -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">Python</div>
+        <div class="panel-lineage">imperative · 1991</div>
+      </div>
+<div class="code" id="code-python"><span class="tok concept-deco">def timed</span>(<span class="tok concept-fn">fn</span>):
+    <span class="tok concept-deco">def wrapper</span>(*<span class="tok concept-args">args</span>, **<span class="tok concept-args">kw</span>):
+        start = time.time()
+        <span class="tok concept-ret">result</span> = <span class="tok concept-call">fn(*args, **kw)</span>
+        print(time.time() - start)
+        return <span class="tok concept-ret">result</span>
+    return <span class="tok concept-deco">wrapper</span>
+
+@<span class="tok concept-deco">timed</span>
+<span class="tok concept-fn">def greet</span>(<span class="tok concept-args">name</span>):
+    return f"hello {<span class="tok concept-args">name</span>}"
+</div>
+    </div>
+
+    <!-- CLOJURE -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">Clojure</div>
+        <div class="panel-lineage">lisp · 2007</div>
+      </div>
+<div class="code" id="code-clojure">(defn <span class="tok concept-deco">timed</span> [<span class="tok concept-fn">fn</span>]
+  (<span class="tok concept-deco">fn</span> [& <span class="tok concept-args">args</span>]
+    (let [start (System/currentTimeMillis)
+          <span class="tok concept-ret">result</span> (<span class="tok concept-call">apply fn args</span>)]
+      (println (- (System/currentTimeMillis) start))
+      <span class="tok concept-ret">result</span>)))
+
+(def <span class="tok concept-fn">greet</span>
+  (<span class="tok concept-deco">timed</span>
+    (<span class="tok concept-deco">fn</span> [<span class="tok concept-args">name</span>]
+      (str "hello " <span class="tok concept-args">name</span>))))
+</div>
+    </div>
+
+    <!-- F# -->
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">F#</div>
+        <div class="panel-lineage">ml-family · 2005</div>
+      </div>
+<div class="code" id="code-fsharp">let <span class="tok concept-deco">timed</span> <span class="tok concept-fn">fn</span> =
+    fun <span class="tok concept-args">args</span> ->
+        let sw = Stopwatch.StartNew()
+        let <span class="tok concept-ret">result</span> = <span class="tok concept-call">fn args</span>
+        printfn "%d" sw.ElapsedMilliseconds
+        <span class="tok concept-ret">result</span>
+
+let <span class="tok concept-fn">greet</span> =
+    <span class="tok concept-deco">timed</span> (fun <span class="tok concept-args">name</span> ->
+        sprintf "hello %s" <span class="tok concept-args">name</span>)
+</div>
+    </div>
+
+  </div>
+
+  <!-- ABSTRACTION LADDER -->
+  <div class="ladder">
+    <div class="ladder-title">— The Ladder of Abstraction —</div>
+<pre>
+  highest      ┃   category theory:    a natural transformation between functors
+               ┃                       ( "wrap behavior around behavior" )
+               ┃
+               ┃   type theory:        timed : (a → b) → (a → b)
+               ┃                       ( a function that returns a function of the same shape )
+               ┃
+               ┃   functional idiom:   higher-order function / decorator / combinator
+               ┃                       ( all three languages express this directly )
+               ┃
+               ┃   syntactic sugar:    @decorator     |  (def x (deco f))  |  let x = deco f
+               ┃                       Python's @     |  Clojure's nesting  |  F#'s binding
+               ┃
+  lowest       ┃   machine code:       allocate closure, capture fn pointer, jump to wrapper
+               ┃                       ( all three compile to roughly this )
+</pre>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="codex-end">
+    <p>Three syntaxes. One shape.<br>This is what your tool would do — at scale, across patterns, across paradigms.</p>
+  </footer>
+
+</main>
+
+<script>
+  const explanations = {
+    deco: {
+      label: "The Decorator",
+      text: "The <em>higher-order function</em> itself — the thing that takes a function and returns a new function. Python wraps it in <em>@-syntax sugar</em>; Clojure passes it explicitly as a function-of-functions; F# binds it with <em>let</em>. All three are the same beast: <strong>(a → b) → (a → b)</strong>. In category theory this is an endofunctor on the category of functions."
+    },
+    fn: {
+      label: "The Wrapped Function",
+      text: "The <em>inner function</em> being decorated — the actual work being done. Python's <code>greet</code>, Clojure's anonymous fn passed to <code>timed</code>, F#'s lambda. Notice that in Clojure and F#, the wrapping is <em>explicit</em> — you literally pass the function as data. Python hides this with <strong>@</strong>, but it's doing the same thing."
+    },
+    args: {
+      label: "The Arguments",
+      text: "The values flowing <em>into</em> the wrapped function. Python uses <code>*args, **kw</code> for full generality. Clojure uses <code>& args</code> for variadic capture. F# uses curried application — every argument is itself a function call. The shape is the same: <strong>capture the inputs, hold them, hand them to the inner function</strong>."
+    },
+    call: {
+      label: "The Inner Call",
+      text: "The moment the wrapped function actually <em>runs</em>. This is where decoration becomes real — before this line, you've only been preparing; after it, you've only been cleaning up. Python's <code>fn(*args, **kw)</code>, Clojure's <code>apply</code>, F#'s direct application. <em>The same act of unleashing</em>."
+    },
+    ret: {
+      label: "The Return Value",
+      text: "What flows <em>out</em>. The decorator must preserve this — it captures the result, perhaps does something alongside (logging, timing, caching), and then returns it unchanged. <strong>Preserving the return is what makes a decorator transparent</strong>. Break this and you've broken the contract: callers expect <em>(a → b)</em>, not <em>(a → ())</em>."
+    }
+  };
+
+  let activeConcept = null;
+
+  function setActive(concept) {
+    // toggle off if clicking the same one
+    if (activeConcept === concept) {
+      activeConcept = null;
+    } else {
+      activeConcept = concept;
+    }
+
+    // update buttons
+    document.querySelectorAll('.concept-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.concept === activeConcept);
+    });
+
+    // update tokens
+    document.querySelectorAll('.tok').forEach(tok => {
+      const isMatch = tok.classList.contains('concept-' + activeConcept);
+      tok.classList.toggle('active', isMatch);
+    });
+
+    // update explanation
+    const expl = document.getElementById('explanation');
+    if (activeConcept && explanations[activeConcept]) {
+      const e = explanations[activeConcept];
+      expl.innerHTML = `<strong>${e.label}.</strong> ${e.text}`;
+    } else {
+      expl.innerHTML = `Choose a concept above to see how each language expresses it. The decorator pattern is, at heart, a function that takes a function and returns a new function — a higher-order transformation that wraps behavior around behavior.`;
+    }
+  }
+
+  // wire up concept buttons
+  document.querySelectorAll('.concept-btn').forEach(btn => {
+    btn.addEventListener('click', () => setActive(btn.dataset.concept));
+  });
+
+  // wire up tokens — clicking any token activates its concept
+  document.querySelectorAll('.tok').forEach(tok => {
+    tok.addEventListener('click', () => {
+      // find which concept- class it has
+      const concept = Array.from(tok.classList)
+        .find(c => c.startsWith('concept-'))
+        ?.replace('concept-', '');
+      if (concept) setActive(concept);
+    });
+  });
+</script>
+
+</body>
+</html>
