@@ -82,7 +82,7 @@ describe('Stage 5 promotion services', () => {
       {
         fingerprint: null,
         name: 'Closure',
-        conceptType: 'mechanism',
+        typeNodeId: 'mechanism',
         includedCaptureIds: [captureId1],
         source: 'cluster',
       },
@@ -105,7 +105,7 @@ describe('Stage 5 promotion services', () => {
       {
         fingerprint: null,
         name: 'Closure',
-        conceptType: 'mechanism',
+        typeNodeId: 'mechanism',
         includedCaptureIds: [captureId1],
         source: 'cluster',
       },
@@ -125,7 +125,7 @@ describe('Stage 5 promotion services', () => {
       {
         fingerprint: 'fp',
         name: 'Closure',
-        conceptType: 'mechanism',
+        typeNodeId: 'mechanism',
         includedCaptureIds: [captureId1],
         source: 'cluster',
       },
@@ -153,7 +153,7 @@ describe('Stage 5 promotion services', () => {
     await expect(promoteToConcept({
       fingerprint: null,
       name: 'Closure',
-      conceptType: 'mechanism',
+      typeNodeId: 'mechanism',
       includedCaptureIds: [],
       source: 'cluster',
     })).rejects.toBeInstanceOf(EmptyPromotionError);

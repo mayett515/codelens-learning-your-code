@@ -29,7 +29,7 @@ export const RetrievedCapturePayloadCodec = z.object({
 export const RetrievedConceptPayloadCodec = z.object({
   id: ConceptIdCodec,
   name: z.string(),
-  conceptType: ConceptTypeEnum,
+  typeNodeId: ConceptTypeEnum,
   canonicalSummary: z.string().nullable(),
   coreConcept: z.string().nullable(),
   languageOrRuntime: LanguageOrRuntimeCodec,

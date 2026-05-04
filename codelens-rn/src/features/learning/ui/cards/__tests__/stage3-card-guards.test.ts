@@ -47,4 +47,67 @@ describe('Stage 3 card component guards', () => {
     expect(modal).not.toMatch(/commitLearningSession|extractConcepts|findMergeCandidates/);
     expect(modal).not.toMatch(/Save All/);
   });
+
+  describe('TypeNodeChip / ConceptTypeChip compatibility shim', () => {
+    const primitivesDir = path.join(repoRoot, 'src', 'features', 'learning', 'ui', 'primitives');
+
+    it('TypeNodeChip.tsx exists and exports TypeNodeChip', () => {
+      const src = read('src/features/learning/ui/primitives/TypeNodeChip.tsx');
+      expect(src).toMatch(/export function TypeNodeChip/);
+    });
+
+    it('TypeNodeChipProps uses typeNodeId not type', () => {
+      const src = read('src/features/learning/ui/primitives/TypeNodeChip.tsx');
+      expect(src).toMatch(/export interface TypeNodeChipProps/);
+      // Match typeNodeId inside the props interface body (before the closing brace)
+      expect(src).toMatch(/export interface TypeNodeChipProps\s*\{[\s\S]*?typeNodeId/);
+      // The property name inside the interface body must not be bare `type:`
+      const ifaceBody = src.match(/export interface TypeNodeChipProps\s*\{([^}]*)\}/);
+      expect(ifaceBody).toBeTruthy();
+      expect(ifaceBody![1]).not.toMatch(/\btype\s*:/);
+    });
+
+    it('TypeNodeChip renders with getOntologyNodeLabel using typeNodeId', () => {
+      const src = read('src/features/learning/ui/primitives/TypeNodeChip.tsx');
+      expect(src).toMatch(/getOntologyNodeLabel\(typeNodeId\)/);
+    });
+
+    it('ConceptTypeChip.tsx exists as a deprecated compatibility wrapper', () => {
+      const src = read('src/features/learning/ui/primitives/ConceptTypeChip.tsx');
+      expect(src).toMatch(/@deprecated/);
+      expect(src).toMatch(/export function ConceptTypeChip/);
+    });
+
+    it('ConceptTypeChipProps still accepts old prop type', () => {
+      const src = read('src/features/learning/ui/primitives/ConceptTypeChip.tsx');
+      expect(src).toMatch(/export interface ConceptTypeChipProps/);
+      // The old prop must be `type`, not `typeNodeId`
+      expect(src).toMatch(/type:\s*ConceptType/);
+    });
+
+    it('ConceptTypeChip maps type into TypeNodeChip as typeNodeId', () => {
+      const src = read('src/features/learning/ui/primitives/ConceptTypeChip.tsx');
+      // Must render TypeNodeChip with typeNodeId={type}
+      expect(src).toMatch(/typeNodeId=\{type\}/);
+    });
+
+    it('ConceptTypeChip.tsx is a real wrapper (not a bare re-export shim)', () => {
+      const src = read('src/features/learning/ui/primitives/ConceptTypeChip.tsx');
+      // Must import TypeNodeChip and define its own component function
+      expect(src).toMatch(/import.*TypeNodeChip.*from/);
+      expect(src).toMatch(/export function ConceptTypeChip/);
+      // Must not be a single-line re-export like: export { TypeNodeChip as ConceptTypeChip };
+      expect(src).toMatch(/typeNodeId=\{type\}/);
+    });
+
+    it('card components import TypeNodeChip not ConceptTypeChip', () => {
+      const cards = ['ConceptCardCompact', 'ConceptCardFull', 'CaptureCardFull', 'CandidateCaptureCard'];
+      for (const card of cards) {
+        const cardSrc = read(`src/features/learning/ui/cards/${card}.tsx`);
+        // Import must reference the TypeNodeChip module, not the deprecated ConceptTypeChip module
+        expect(cardSrc).toContain("'../primitives/TypeNodeChip'");
+        expect(cardSrc).not.toContain("'../primitives/ConceptTypeChip'");
+      }
+    });
+  });
 });

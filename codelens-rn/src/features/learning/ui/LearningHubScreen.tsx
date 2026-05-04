@@ -26,6 +26,7 @@ import { PromotionReviewScreen } from '../promotion/ui/PromotionReviewScreen';
 import { ReviewSessionScreen } from '../review/ui/ReviewSessionScreen';
 import { ReviewThresholdScreen } from '../review/ui/ReviewThresholdScreen';
 import { useReviewSettings } from '../review/hooks/useReviewSettings';
+import { getActiveDomainProfile } from '../../ontology';
 import type { ConceptId, LearningCaptureId } from '../types/ids';
 import type { LearningCapture, LearningConcept } from '../types/learning';
 
@@ -40,6 +41,7 @@ type Detail =
   | null;
 
 export function LearningHubScreen() {
+  const profile = getActiveDomainProfile();
   useEffect(() => {
     syncPendingEmbeddings().catch(() => undefined);
     maybeRecomputeSuggestions('hub_open').catch(() => undefined);
@@ -69,7 +71,7 @@ export function LearningHubScreen() {
           <Text style={styles.backBtn}>{'<'}</Text>
         </Pressable>
         <View>
-          <Text style={styles.title}>Learning Hub</Text>
+          <Text style={styles.title}>{profile.labels.hubTitle}</Text>
           <Text style={styles.subtitle}>Navigation and awareness</Text>
         </View>
       </View>
@@ -90,7 +92,7 @@ export function LearningHubScreen() {
         <KnowledgeHealthEntry concepts={healthConcepts} onOpen={() => setDetail({ type: 'health' })} />
         {reviewSettings.enableReviewMode ? (
           <Pressable style={styles.reviewEntry} onPress={() => setDetail({ type: 'reviewThreshold' })}>
-            <Text style={styles.reviewEntryTitle}>Review Mode</Text>
+            <Text style={styles.reviewEntryTitle}>{profile.labels.reviewModeTitle}</Text>
             <Text style={styles.reviewEntryText}>Browse concepts to revisit in your own time.</Text>
           </Pressable>
         ) : null}

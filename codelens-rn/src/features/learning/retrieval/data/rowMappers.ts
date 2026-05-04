@@ -1,5 +1,6 @@
 import { computeStrength } from '../../strength/computeStrength';
 import { unsafeConceptId, unsafeLearningCaptureId } from '../../types/ids';
+import { parseMetadataJson } from '../../codecs/concept';
 import { parseRetrievedCapturePayload, parseRetrievedConceptPayload } from '../codecs/retrievedMemory';
 import type { RetrievedCapturePayload, RetrievedConceptPayload } from '../types/retrieval';
 
@@ -52,12 +53,22 @@ export function captureRowToRetrievedPayload(row: Record<string, unknown>): Retr
 export function conceptRowToRetrievedPayload(row: Record<string, unknown>): RetrievedConceptPayload {
   const familiarityScore = Number(row.familiarity_score);
   const importanceScore = Number(row.importance_score);
+
+  // Dual-read: prefer type_node_id (new) over concept_type (legacy) when non-empty.
+  const typeNodeId = typeof row.type_node_id === 'string' ? row.type_node_id : '';
+  const resolvedConceptType = typeNodeId !== '' ? typeNodeId : row.concept_type;
+
+  // Dual-read: prefer metadata_json.coreConcept (new) over core_concept column (legacy).
+  const metadata = parseMetadataJson(row.metadata_json);
+  const legacyCoreConcept = row.core_concept == null ? null : String(row.core_concept);
+  const resolvedCoreConcept = metadata.coreConcept !== undefined ? metadata.coreConcept : legacyCoreConcept;
+
   return parseRetrievedConceptPayload({
     id: unsafeConceptId(String(row.id)),
     name: String(row.name),
-    conceptType: row.concept_type,
+    typeNodeId: resolvedConceptType,
     canonicalSummary: row.canonical_summary === null ? null : String(row.canonical_summary),
-    coreConcept: row.core_concept === null ? null : String(row.core_concept),
+    coreConcept: resolvedCoreConcept,
     languageOrRuntime: parseJsonArray(row.language_or_runtime_json, 'language_or_runtime_json'),
     surfaceFeatures: parseJsonArray(row.surface_features_json, 'surface_features_json'),
     familiarityScore,

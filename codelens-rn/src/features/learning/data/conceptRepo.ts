@@ -15,6 +15,12 @@ export async function insertLearningConcept(
   executor: DbOrTx = db,
 ): Promise<void> {
   const validConcept = validateConceptForWrite(concept);
+
+  const metadataEntries: Record<string, string> = {};
+  if (validConcept.coreConcept != null) metadataEntries.coreConcept = validConcept.coreConcept;
+  if (validConcept.architecturalPattern != null) metadataEntries.architecturalPattern = validConcept.architecturalPattern;
+  if (validConcept.programmingParadigm != null) metadataEntries.programmingParadigm = validConcept.programmingParadigm;
+
   await executor.insert(concepts).values({
     id: validConcept.id,
     name: validConcept.name,
@@ -33,6 +39,9 @@ export async function insertLearningConcept(
     representativeCaptureIds: validConcept.representativeCaptureIds,
     familiarityScore: validConcept.familiarityScore,
     importanceScore: validConcept.importanceScore,
+    profileId: 'coding',
+    typeNodeId: validConcept.conceptType,
+    metadataJson: metadataEntries,
     createdAt: toIso(validConcept.createdAt),
     updatedAt: toIso(validConcept.updatedAt),
   });

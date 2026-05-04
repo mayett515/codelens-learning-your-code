@@ -1,6 +1,6 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, fontSize, spacing } from '../../../../ui/theme';
-import { ConceptTypeChip } from '../primitives/ConceptTypeChip';
+import { TypeNodeChip } from '../primitives/TypeNodeChip';
 import type { ConceptType } from '../../types/learning';
 import type { CandidateSaveState } from '../../types/saveModal';
 
@@ -42,7 +42,7 @@ export function CandidateCaptureCard({
     <View style={styles.card}>
       <View style={styles.headerRow}>
         <Text style={styles.title} numberOfLines={1}>{title}</Text>
-        {conceptType ? <ConceptTypeChip type={conceptType} /> : null}
+        {conceptType ? <TypeNodeChip typeNodeId={conceptType} /> : null}
       </View>
       <Text style={styles.clicked} numberOfLines={1}>{whatClicked}</Text>
       <Text style={styles.snippet} numberOfLines={3}>{rawSnippet}</Text>

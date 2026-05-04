@@ -27,7 +27,7 @@ export interface RetrievedCapturePayload {
 export interface RetrievedConceptPayload {
   id: ConceptId;
   name: string;
-  conceptType: ConceptType;
+  typeNodeId: ConceptType;
   canonicalSummary: string | null;
   coreConcept: string | null;
   languageOrRuntime: string[];
@@ -70,6 +70,9 @@ export interface RetrievedConceptMemory {
 
 export interface RetrieveFilters {
   states?: CaptureState[];
+  /** Preferred: filter by ontology type node IDs. */
+  typeNodeIds?: ConceptType[];
+  /** Legacy compatibility alias for `typeNodeIds`. */
   conceptTypes?: ConceptType[];
   sessionIds?: string[];
   languages?: string[];

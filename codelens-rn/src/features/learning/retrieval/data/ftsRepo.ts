@@ -110,7 +110,11 @@ export function matchesFilters(
   }
 
   const payload = hit.payload;
-  if (filters.conceptTypes && !filters.conceptTypes.includes(payload.conceptType)) return false;
+  const allowedTypes = new Set([
+    ...(filters.typeNodeIds ?? []),
+    ...(filters.conceptTypes ?? []),
+  ]);
+  if (allowedTypes.size > 0 && !allowedTypes.has(payload.typeNodeId)) return false;
   if (filters.languages) {
     const conceptLanguages = new Set(payload.languageOrRuntime.map((value) => value.toLowerCase()));
     if (!filters.languages.some((lang) => conceptLanguages.has(lang.toLowerCase()))) return false;

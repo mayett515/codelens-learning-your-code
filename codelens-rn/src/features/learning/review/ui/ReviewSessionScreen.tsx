@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { colors, fontSize, spacing } from '../../../../ui/theme';
-import { ConceptTypeChip } from '../../ui/primitives/ConceptTypeChip';
+import { TypeNodeChip } from '../../ui/primitives/TypeNodeChip';
 import { ReflectionInput } from './ReflectionInput';
 import { ShowSavedReveal } from './ShowSavedReveal';
 import { SelfRatingPrompt } from './SelfRatingPrompt';
@@ -68,7 +68,7 @@ export function ReviewSessionScreen(props: {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <Text style={styles.title}>{data.concept.name}</Text>
-        <ConceptTypeChip type={data.concept.conceptType} size="md" />
+        <TypeNodeChip typeNodeId={data.concept.conceptType} size="md" />
       </View>
       {phase === 'reflect' ? (
         <>

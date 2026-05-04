@@ -58,6 +58,7 @@ Future domain profile
 - [architecture_guide_for_profile_refactor_humans.md](architecture_guide_for_profile_refactor_humans.md) - adjusted human guide for this refactor.
 - [modules_architecture.md](modules_architecture.md) - draft future module/foldering architecture rules.
 - [modules_architecture_humans.md](modules_architecture_humans.md) - human-readable version of the module/foldering rules.
+- [implementation_handoff.md](implementation_handoff.md) - current branch implementation notes for other LLMs/reviewers while this refactor is active.
 
 ## Non-Goal
 

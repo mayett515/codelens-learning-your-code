@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { getActiveDomainProfile } from '../../../ontology';
 import { getCaptureById } from '../../data/captureRepo';
 import { captureKeys } from '../../data/query-keys';
 import type { LearningCaptureId } from '../../types/ids';
@@ -11,10 +12,11 @@ export function useSingleCapturePromotion(captureId: LearningCaptureId | null) {
       if (!captureId) return null;
       const capture = await getCaptureById(captureId);
       if (!capture) return null;
+      const profile = getActiveDomainProfile();
       return {
         fingerprint: null,
         proposedName: capture.conceptHint?.proposedName ?? capture.title,
-        proposedConceptType: capture.conceptHint?.proposedConceptType ?? 'mental_model',
+        proposedTypeNodeId: capture.conceptHint?.proposedConceptType ?? profile.promotion.defaultTypeNodeId,
         captures: [capture],
         sharedKeywords: capture.keywords,
         source: 'single_capture',

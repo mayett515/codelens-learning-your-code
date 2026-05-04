@@ -1,13 +1,13 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, fontSize, spacing } from '../../../../ui/theme';
-import { ConceptTypeChip } from '../../ui/primitives/ConceptTypeChip';
+import { TypeNodeChip } from '../../ui/primitives/TypeNodeChip';
 import { LanguageChip } from '../../ui/primitives/LanguageChip';
 import type { ConceptType } from '../../types/learning';
 
 interface PromotionSuggestionCardProps {
   fingerprint: string;
   proposedName: string;
-  proposedConceptType: ConceptType;
+  proposedTypeNodeId: ConceptType;
   captureCount: number;
   sessionCount: number;
   sharedKeywords: string[];
@@ -25,7 +25,7 @@ export function PromotionSuggestionCard(props: PromotionSuggestionCardProps) {
     <View style={styles.card}>
       <View style={styles.headerRow}>
         <Text style={styles.title} numberOfLines={1}>{props.proposedName}</Text>
-        <ConceptTypeChip type={props.proposedConceptType} />
+        <TypeNodeChip typeNodeId={props.proposedTypeNodeId} />
       </View>
       <Text style={styles.meta}>
         From {props.captureCount} captures across {props.sessionCount} sessions

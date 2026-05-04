@@ -144,6 +144,9 @@ export const concepts = sqliteTable('concepts', {
     .notNull()
     .$type<string[]>()
     .default([]),
+  profileId: text('profile_id').notNull().default('coding'),
+  typeNodeId: text('type_node_id').notNull().default(''),
+  metadataJson: text('metadata_json', { mode: 'json' }).notNull().$type<Record<string, string>>().default({}),
   strength: real('strength').notNull().default(0.5),
   createdAt: text('created_at').notNull(),
   updatedAt: text('updated_at').notNull(),
@@ -176,6 +179,8 @@ export const learningCaptures = sqliteTable('learning_captures', {
   embeddingTier: text('embedding_tier', { enum: ['hot', 'cold'] }).notNull().default('cold'),
   lastAccessedAt: integer('last_accessed_at'),
   conceptHint: text('concept_hint_json', { mode: 'json' }).$type<unknown | null>(),
+  profileId: text('profile_id').notNull().default('coding'),
+  classificationJson: text('classification_json', { mode: 'json' }).$type<unknown | null>(),
   keywords: text('keywords_json', { mode: 'json' }).notNull().$type<string[]>().default([]),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),

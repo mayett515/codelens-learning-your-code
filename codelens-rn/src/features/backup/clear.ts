@@ -26,6 +26,7 @@ export async function clearAllData(options?: ClearOptions): Promise<void> {
   await db.transaction(async (tx) => {
     await tx.delete(schema.chatMessages);
     await tx.delete(schema.chats);
+    await tx.delete(schema.learningCaptures);
     await tx.delete(schema.conceptLinks);
     await tx.delete(schema.concepts);
     await tx.delete(schema.learningSessions);

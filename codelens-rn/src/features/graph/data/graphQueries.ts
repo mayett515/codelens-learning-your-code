@@ -19,7 +19,7 @@ function toGraphNode(concept: LearningConcept): GraphNode {
   return {
     id: concept.id,
     name: concept.name,
-    conceptType: concept.conceptType,
+    typeNodeId: concept.conceptType,
     familiarityScore: concept.familiarityScore,
     importanceScore: concept.importanceScore,
     lastAccessedAt: concept.lastAccessedAt ?? null,

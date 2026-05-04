@@ -69,6 +69,8 @@ function makeCaptureRow(): CaptureRow {
     embeddingRetryCount: 0,
     embeddingTier: 'hot',
     lastAccessedAt: null,
+    profileId: 'coding',
+    classificationJson: null,
     conceptHint: null,
     keywords: [],
     createdAt: 1,

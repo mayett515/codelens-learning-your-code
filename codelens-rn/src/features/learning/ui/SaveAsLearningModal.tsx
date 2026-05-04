@@ -19,10 +19,12 @@ import { saveCapture } from '../services/saveCapture';
 import { PromotionReviewScreen } from '../promotion/ui/PromotionReviewScreen';
 import { CandidateCaptureCard } from './cards/CandidateCaptureCard';
 import { CaptureCardFull } from './cards/CaptureCardFull';
+import { getActiveDomainProfile } from '../../ontology';
 import { colors, fontSize, spacing } from '../../../ui/theme';
 import type { ConceptType } from '../types/learning';
 
 export function SaveAsLearningModal() {
+  const profile = getActiveDomainProfile();
   const store = useSaveLearningStore();
   const queryClient = useQueryClient();
   const [promotionCaptureId, setPromotionCaptureId] = useState<import('../types/ids').LearningCaptureId | null>(null);
@@ -133,7 +135,7 @@ export function SaveAsLearningModal() {
         <Pressable style={styles.backdrop} onPress={store.close} />
         <View style={styles.container}>
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>Save Capture</Text>
+            <Text style={styles.headerTitle}>{profile.labels.saveAction}</Text>
             <Pressable onPress={store.close} hitSlop={8}>
               <Text style={styles.closeBtn}>X</Text>
             </Pressable>

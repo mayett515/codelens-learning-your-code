@@ -25,7 +25,7 @@ export function suggestionRowToDomain(row: SuggestionRow): PromotionSuggestion {
     ) as LearningCaptureId[],
     proposedName: row.proposedName,
     proposedNormalizedKey: row.proposedNormalizedKey,
-    proposedConceptType: ConceptTypeEnum.parse(row.proposedConceptType),
+    proposedTypeNodeId: ConceptTypeEnum.parse(row.proposedConceptType),
     sharedKeywords: SharedKeywordsCodec.parse(parseJson(row.sharedKeywords, 'shared_keywords_json')),
     sessionCount: row.sessionCount,
     meanSimilarity: row.meanSimilarity,
@@ -52,6 +52,6 @@ export function dismissalRowToDomain(row: DismissalRow): PromotionDismissal {
 export function validateSuggestionForWrite(suggestion: PromotionSuggestion): PromotionSuggestion {
   ClusterCaptureIdsCodec.parse(suggestion.captureIds);
   SharedKeywordsCodec.parse(suggestion.sharedKeywords);
-  ConceptTypeEnum.parse(suggestion.proposedConceptType);
+  ConceptTypeEnum.parse(suggestion.proposedTypeNodeId);
   return suggestion;
 }

@@ -1,20 +1,8 @@
+import { getActiveDomainProfile } from '@/src/features/ontology';
 import type { ConceptType } from '@/src/features/learning';
 import type { EdgeKind, EdgeVisual, GraphMode, GraphNode, NodeVisual } from '../types';
 
-export const CONCEPT_TYPE_COLORS: Record<ConceptType, string> = {
-  mechanism: '#6366F1',
-  mental_model: '#A855F7',
-  pattern: '#EC4899',
-  architecture_principle: '#F43F5E',
-  language_feature: '#F59E0B',
-  api_idiom: '#10B981',
-  data_structure: '#14B8A6',
-  algorithmic_idea: '#3B82F6',
-  performance_principle: '#F97316',
-  debugging_heuristic: '#EAB308',
-  failure_mode: '#EF4444',
-  testing_principle: '#22C55E',
-};
+export const CONCEPT_TYPE_COLORS = getActiveDomainProfile().graph.nodeColors;
 
 export const STRUCTURE_RADIUS = 14;
 export const STRENGTH_RADIUS_MIN = 8;
@@ -26,11 +14,11 @@ function clamp01(value: number): number {
   return Math.min(1, Math.max(0, value));
 }
 
-function conceptTypeColor(conceptType: ConceptType): string {
-  if (Object.prototype.hasOwnProperty.call(CONCEPT_TYPE_COLORS, conceptType)) {
-    return CONCEPT_TYPE_COLORS[conceptType];
+function typeNodeColor(typeNodeId: ConceptType): string {
+  if (Object.prototype.hasOwnProperty.call(CONCEPT_TYPE_COLORS, typeNodeId)) {
+    return CONCEPT_TYPE_COLORS[typeNodeId];
   }
-  console.warn(`[Graph] Unknown concept type for visual encoding: ${String(conceptType)}`);
+  console.warn(`[Graph] Unknown ontology type node for visual encoding: ${String(typeNodeId)}`);
   return CONCEPT_TYPE_COLORS[FALLBACK_CONCEPT_TYPE];
 }
 
@@ -98,7 +86,7 @@ export function computeNodeVisual(
   }
 
   return {
-    fill: conceptTypeColor(node.conceptType),
+    fill: typeNodeColor(node.typeNodeId),
     radius: STRUCTURE_RADIUS,
     strokeColor: '#FFFFFF',
     strokeWidth: 1.5,

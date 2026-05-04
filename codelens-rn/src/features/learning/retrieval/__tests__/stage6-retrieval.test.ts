@@ -33,6 +33,7 @@ import { matchesFilters } from '../data/ftsRepo';
 import { runHotColdGc } from '../services/runHotColdGc';
 import { ensureEmbedded } from '../services/ensureEmbedded';
 import { getCaptureById } from '../../data/captureRepo';
+import { codingProfile } from '../../../ontology';
 import type {
   RankedSearchHit,
   RetrievedCaptureMemory,
@@ -90,7 +91,7 @@ function conceptMemory(overrides: Partial<RetrievedConceptMemory> = {}): Retriev
     payload: {
       id: conceptId,
       name: 'Closure',
-      conceptType: 'mechanism',
+      typeNodeId: 'mechanism',
       canonicalSummary: 'A function can retain access to variables from its creation scope.',
       coreConcept: 'lexical scope',
       languageOrRuntime: ['typescript'],
@@ -217,6 +218,19 @@ describe('Stage 6 retrieval contracts', () => {
     expect(first.text).not.toContain('familiarity');
     expect(first.text).not.toContain('importance');
     expect(first.text).not.toContain('0.46');
+  });
+
+  it('formats injection with profile-owned retrieval labels', () => {
+    const result = formatMemoriesForInjection([conceptMemory(), captureMemory()], {
+      tokenBudget: 1500,
+      maxItems: 8,
+      profile: codingProfile,
+    });
+
+    expect(result.text).toContain(codingProfile.retrieval.defaultHeader);
+    expect(result.text).toContain(`${codingProfile.retrieval.itemLabel}: Closure`);
+    expect(result.text).toContain(`${codingProfile.labels.bodyFieldLabel}: The inner function keeps access`);
+    expect(result.text).toContain(`${codingProfile.labels.sourceFieldLabel} (typescript):`);
   });
 
   it('drops oversize injection items instead of truncating snippets', () => {
@@ -392,9 +406,17 @@ describe('Stage 6 retrieval contracts', () => {
     expect(matchesFilters(cap, { states: ['unresolved'] })).toBe(true);
     expect(matchesFilters(cap, { states: ['linked'] })).toBe(false);
     
-    // conceptTypes
+    // typeNodeIds (preferred)
+    expect(matchesFilters(con, { typeNodeIds: ['mechanism'] })).toBe(true);
+    expect(matchesFilters(con, { typeNodeIds: ['pattern'] })).toBe(false);
+
+    // conceptTypes (legacy compatibility alias)
     expect(matchesFilters(con, { conceptTypes: ['mechanism'] })).toBe(true);
     expect(matchesFilters(con, { conceptTypes: ['pattern'] })).toBe(false);
+
+    // both present: treated as union
+    expect(matchesFilters(con, { typeNodeIds: ['pattern'], conceptTypes: ['mechanism'] })).toBe(true);
+    expect(matchesFilters(con, { typeNodeIds: ['pattern'], conceptTypes: ['api_idiom'] })).toBe(false);
     
     // sessionIds
     expect(matchesFilters(cap, { sessionIds: ['session-a'] })).toBe(true);

@@ -1,21 +1,9 @@
+import { getActiveDomainProfile } from '../../../ontology';
 import { normalizeConceptKey } from '../../codecs/concept';
 import { pickRepresentativeCaptureIds } from './representativeCaptureIds';
 import type { ConceptId } from '../../types/ids';
 import type { LearningCapture, LearningConcept } from '../../types/learning';
 import type { PromotionConfirmInput } from '../types/promotion';
-
-const LANGUAGE_OR_RUNTIME_TOKENS = new Set([
-  'javascript',
-  'typescript',
-  'java',
-  'kotlin',
-  'swift',
-  'python',
-  'react',
-  'react native',
-  'sql',
-  'sqlite',
-]);
 
 export function buildConceptFromCluster(
   input: PromotionConfirmInput,
@@ -23,12 +11,13 @@ export function buildConceptFromCluster(
   captures: LearningCapture[],
   now: number,
 ): LearningConcept {
+  const contextOnlyKeywords = new Set<string>(getActiveDomainProfile().promotion.contextOnlyKeywords);
   return {
     id: conceptId,
     name: input.name.trim(),
     normalizedKey: normalizeConceptKey(input.name),
     canonicalSummary: input.canonicalSummary ?? null,
-    conceptType: input.conceptType,
+    conceptType: input.typeNodeId,
     coreConcept: input.coreConcept ?? null,
     architecturalPattern: input.architecturalPattern ?? null,
     programmingParadigm: input.programmingParadigm ?? null,
@@ -37,7 +26,7 @@ export function buildConceptFromCluster(
       captures
         .flatMap((capture) => capture.keywords)
         .map((keyword) => keyword.trim().toLowerCase())
-        .filter((keyword) => !!keyword && !LANGUAGE_OR_RUNTIME_TOKENS.has(keyword)),
+        .filter((keyword) => !!keyword && !contextOnlyKeywords.has(keyword)),
     ),
     prerequisites: [],
     relatedConcepts: [],

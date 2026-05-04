@@ -247,10 +247,14 @@ concepts.type_node_id
 concepts.metadata_json
 learning_captures.profile_id
 learning_captures.classification_json
-learning_captures.metadata_json
 ontology_nodes
 ontology_edges
 ontology_patch_suggestions
 ontology_corrections
 ```
 
+No capture-level metadata JSON column is part of the current compatibility migration. Captures use `classification_json`
+as the profile-aware companion to `concept_hint_json`; concept metadata lives on `concepts`.
+
+`language_or_runtime_json` and `surface_features_json` also stay as first-class concept columns for this stage because
+retrieval, embedding, and mutation helpers still read and update them directly.

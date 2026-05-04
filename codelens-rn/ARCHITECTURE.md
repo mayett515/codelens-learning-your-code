@@ -214,22 +214,23 @@ Writes that must be atomic (e.g. `commitLearningSession`) use Drizzle's `db.tran
 Backup and restore live in `src/features/backup/` and power the Export / Import / Clear-all-data buttons in Settings.
 
 **Archive format** — `.codelens` (a Zip with known entries):
-- `metadata.json` — `ARCHIVE_MAGIC = 'codelens-backup'`, `FORMAT_VERSION = 1`, `SCHEMA_VERSION = 2`, `APP_VERSION = '1.0.0'`, `createdAt`, per-table row counts.
-- `projects.ndjson`, `files.ndjson`, `chats.ndjson`, `chat_messages.ndjson`, `learning_sessions.ndjson`, `concept_links.ndjson` — one JSON row per line.
+- `metadata.json` — `ARCHIVE_MAGIC = 'codelens-backup'`, `FORMAT_VERSION = 1`, `SCHEMA_VERSION = 11`, `APP_VERSION = '1.0.0'`, `createdAt`, per-table row counts.
+- `projects.ndjson`, `files.ndjson`, `chats.ndjson`, `chat_messages.ndjson`, `learning_sessions.ndjson`, `learning_captures.ndjson`, `concept_links.ndjson` — one JSON row per line.
 - `concepts.ndjson` — each row is enriched with an `embedding: { vectorBase64, model, api, signature, updatedAt }` field when a vector is known for that concept. The vector is a Base64-encoded `Float32Array` (RFC 4648, hand-rolled — Hermes lacks `Buffer` and `btoa/atob` are not binary-safe; see `src/features/backup/codecs.ts`).
 - `preferences.json` — MMKV dumps of `chat_config` + `embed_config`.
 - `secure_keys.json` — provider **IDs only** (e.g. `['openrouter', 'siliconflow']`). Actual keys never leave the device.
 
 **Restore strategy** — wipe-then-restore:
 1. Read + validate the archive fully (reject on bad magic, or `formatVersion > FORMAT_VERSION`) before touching any on-device data — if the file is corrupt, the current DB is left intact.
-2. `clearAllData()` runs (see below) to zero the DB + MMKV.
-3. Rows are inserted inside a Drizzle transaction in FK-safe order. Batches are capped at 100 rows to stay under op-sqlite's SQL-size ceiling.
-4. **Vectors are applied POST-transaction.** sqlite-vec virtual-table rollback is unreliable inside nested transactions, so each vector is upserted through `vectorStore.upsert()` after the row-data commit. Per-vector failures do not abort restore (tracked in `vecFailed` counter).
-5. **FTS5 self-heal**: after restore, `SELECT COUNT(*) FROM concepts_fts` is compared against the number of inserted concepts. If they diverge (trigger misfire on bulk inserts), the FTS index is rebuilt from scratch.
+2. Map raw backup rows from snake_case DB column names to Drizzle camelCase insert keys, and decode backup JSON columns before wiping data. Malformed JSON aborts import before current data is cleared.
+3. `clearAllData()` runs (see below) to zero the DB + MMKV.
+4. Rows are inserted inside a Drizzle transaction in FK-safe order. Batches are capped at 100 rows to stay under op-sqlite's SQL-size ceiling.
+5. **Vectors are applied POST-transaction.** sqlite-vec virtual-table rollback is unreliable inside nested transactions, so each vector is upserted through `vectorStore.upsert()` after the row-data commit. Per-vector failures do not abort restore (tracked in `vecFailed` counter).
+6. **FTS5 self-heal**: after restore, `SELECT COUNT(*) FROM concepts_fts` is compared against the number of inserted concepts. If they diverge (trigger misfire on bulk inserts), the FTS index is rebuilt from scratch.
 
 **Clear-all-data** (`clearAllData`):
 1. `vectorStore.deleteAll()` (clears both the vec0 table and `embeddings_meta`).
-2. Drizzle transaction deleting `chat_messages`, `chats`, `concept_links`, `concepts`, `learning_sessions`, `files`, `projects` in FK-safe order.
+2. Drizzle transaction deleting `chat_messages`, `chats`, `learning_captures`, `concept_links`, `concepts`, `learning_sessions`, `files`, `projects` in FK-safe order.
 3. `DELETE FROM concepts_fts` in a try/catch — guard against trigger misfire on bulk deletes.
 4. `kv.delete('chat_config')` + `kv.delete('embed_config')`.
 5. If `includeApiKeys` is true (opt-in red checkbox in the confirm modal — default OFF), `secureStore.deleteApiKey()` is called per provider. API keys survive by default because re-entering them on mobile is high-friction; the nuke option is reserved for the "sell my phone" case.

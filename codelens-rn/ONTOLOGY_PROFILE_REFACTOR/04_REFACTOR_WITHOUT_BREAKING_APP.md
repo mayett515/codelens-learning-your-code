@@ -68,20 +68,20 @@ Add flexible columns:
 concepts.metadata_json
 concepts.profile_id
 concepts.type_node_id
-learning_captures.metadata_json
 learning_captures.profile_id
 learning_captures.classification_json
 ```
 
-Backfill existing fields:
+Backfill existing concept fields:
 
 ```text
-language_or_runtime_json -> metadata.languageOrRuntime
 architectural_pattern -> metadata.architecturalPattern
 programming_paradigm -> metadata.programmingParadigm
-surface_features_json -> metadata.surfaceFeatures
+core_concept -> metadata.coreConcept
 concept_type -> type_node_id
 ```
+
+Keep `language_or_runtime_json` and `surface_features_json` as first-class concept columns for this compatibility step. They are still used directly by retrieval, embedding, and mutation helpers.
 
 Keep old columns readable during transition.
 
@@ -261,4 +261,3 @@ Clean these after profile seam work starts:
 Do not split files only for aesthetics.
 Split when profile-aware behavior creates real responsibility boundaries.
 </nesting_rule>
-

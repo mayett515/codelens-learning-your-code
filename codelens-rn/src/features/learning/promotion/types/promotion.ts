@@ -10,7 +10,7 @@ export interface ClusterCandidate {
   avgExtractionConfidence: number;
   proposedName: string;
   proposedNormalizedKey: string;
-  proposedConceptType: ConceptType;
+  proposedTypeNodeId: ConceptType;
   clusterScore: number;
   maxCreatedAt: number;
 }
@@ -36,7 +36,7 @@ export interface PromotionDismissal {
 export interface PromotionConfirmInput {
   fingerprint: string | null;
   name: string;
-  conceptType: ConceptType;
+  typeNodeId: ConceptType;
   includedCaptureIds: LearningCaptureId[];
   canonicalSummary?: string | null;
   coreConcept?: string | null;
@@ -55,7 +55,7 @@ export interface LinkExistingInput {
 export interface PromotionReviewModel {
   fingerprint: string | null;
   proposedName: string;
-  proposedConceptType: ConceptType;
+  proposedTypeNodeId: ConceptType;
   captures: LearningCapture[];
   sharedKeywords: string[];
   source: 'cluster' | 'single_capture';

@@ -1,16 +1,22 @@
+import { getActiveDomainProfile, getOntologyNodeLabel, type DomainProfile } from '../../../ontology';
 import type { InjectionResult, RetrievedMemory } from '../types/retrieval';
 
-const DEFAULT_HEADER = 'Relevant context from your saved learning';
 const DEFAULT_TOKEN_BUDGET = 1500;
 const DEFAULT_MAX_ITEMS = 8;
 
 export function formatMemoriesForInjection(
   memories: RetrievedMemory[],
-  opts: { tokenBudget?: number; maxItems?: number; header?: string } = {},
+  opts: {
+    tokenBudget?: number;
+    maxItems?: number;
+    header?: string;
+    profile?: DomainProfile | undefined;
+  } = {},
 ): InjectionResult {
+  const profile = opts.profile ?? getActiveDomainProfile();
   const tokenBudget = opts.tokenBudget ?? DEFAULT_TOKEN_BUDGET;
   const maxItems = opts.maxItems ?? DEFAULT_MAX_ITEMS;
-  const header = opts.header ?? DEFAULT_HEADER;
+  const header = opts.header ?? profile.retrieval.defaultHeader;
   const included: string[] = [];
   const includedIds: InjectionResult['includedIds'] = [];
   let totalTokensApprox = approximateTokens(header);
@@ -21,7 +27,7 @@ export function formatMemoriesForInjection(
       droppedCount += 1;
       continue;
     }
-    const itemText = renderMemory(memory);
+    const itemText = renderMemory(memory, profile);
     const cost = approximateTokens(itemText);
     if (totalTokensApprox + cost > tokenBudget) {
       droppedCount += 1;
@@ -48,15 +54,16 @@ export function formatMemoriesForInjection(
   };
 }
 
-function renderMemory(memory: RetrievedMemory): string {
+function renderMemory(memory: RetrievedMemory, profile: DomainProfile): string {
   if (memory.kind === 'concept') {
     const payload = memory.payload;
     const summary = payload.canonicalSummary ?? payload.coreConcept ?? '';
     const languages = payload.languageOrRuntime.length > 0 ? payload.languageOrRuntime.join(', ') : 'none';
+    const typeLabel = getOntologyNodeLabel(payload.typeNodeId, profile);
     return [
-      `Concept: ${payload.name} (${payload.conceptType})`,
-      `Summary: ${summary}`,
-      `Languages: ${languages}`,
+      `${profile.retrieval.itemLabel}: ${payload.name} (${typeLabel})`,
+      `${profile.retrieval.summaryLabel}: ${summary}`,
+      `${profile.retrieval.languageOrRuntimeLabel}: ${languages}`,
     ].join('\n');
   }
 
@@ -66,13 +73,13 @@ function renderMemory(memory: RetrievedMemory): string {
     : 'chat';
   const lang = payload.snippetLang ?? 'text';
   return [
-    `Capture: ${payload.title}`,
-    `What clicked: ${payload.whatClicked}`,
-    `Snippet (${lang}):`,
+    `${profile.retrieval.captureLabel}: ${payload.title}`,
+    `${profile.labels.bodyFieldLabel}: ${payload.whatClicked}`,
+    `${profile.labels.sourceFieldLabel} (${lang}):`,
     `\`\`\`${lang}`,
     payload.rawSnippet,
     '```',
-    `Source: ${source}`,
+    `${profile.retrieval.sourceLabel}: ${source}`,
   ].join('\n');
 }
 

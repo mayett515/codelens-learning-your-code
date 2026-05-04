@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, fontSize, spacing } from '@/src/ui/theme';
+import { getOntologyNodeLabel } from '@/src/features/ontology';
 import type { ConceptId } from '@/src/features/learning';
 import type { GraphMode, GraphNode } from '../types';
 
@@ -26,7 +27,7 @@ export function NodePreviewTooltip({
     <Pressable style={StyleSheet.absoluteFill} onPress={onDismiss}>
       <View style={[styles.container, { left: clamp(screenX, 12, 180), top: Math.max(12, screenY - 88) }]}>
         <Text style={styles.name} numberOfLines={2}>{node.name}</Text>
-        <Text style={styles.meta}>{node.conceptType.replace(/_/g, ' ')}</Text>
+        <Text style={styles.meta}>{getOntologyNodeLabel(node.typeNodeId)}</Text>
         <Text style={styles.text}>{descriptionForMode(node, mode, nowMs)}</Text>
         <Pressable style={styles.action} onPress={() => onOpenDetail(node.id)}>
           <Text style={styles.actionText}>View detail</Text>

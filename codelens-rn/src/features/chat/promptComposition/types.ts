@@ -1,4 +1,5 @@
 import type { Persona } from '../../personas';
+import type { DomainProfile } from '../../ontology';
 import type { RetrievedMemory } from '../../learning/retrieval/types/retrieval';
 
 export type CodeContextKind = 'selected_code' | 'line_anchor' | 'expanded_mini_chat';
@@ -21,6 +22,7 @@ export interface BuildChatSystemPromptInput {
     tokenBudget?: number;
     maxItems?: number;
     header?: string;
+    profile?: DomainProfile | undefined;
   } | undefined;
   codeContext?: ChatCodeContext | null | undefined;
 }

@@ -59,4 +59,40 @@ describe('Stage 4 Learning Hub guards', () => {
     expect(flashback).not.toMatch(/TextInput|onSubmitEditing|sendMessage|updateConcept|familiarityScore\s*=/);
     expect(`${health}\n${entry}`).not.toMatch(/quiz|streak|due/i);
   });
+
+  describe('TypeNodeChip adoption', () => {
+    it('PromotionSuggestionCard uses TypeNodeChip with typeNodeId prop', () => {
+      const src = read('src/features/learning/promotion/ui/PromotionSuggestionCard.tsx');
+      // Imports TypeNodeChip, not ConceptTypeChip
+      expect(src).toContain("TypeNodeChip");
+      expect(src).not.toContain("ConceptTypeChip");
+      // Uses the new prop
+      expect(src).toMatch(/typeNodeId=\{/);
+    });
+
+    it('ReviewSessionScreen uses TypeNodeChip with typeNodeId prop', () => {
+      const src = read('src/features/learning/review/ui/ReviewSessionScreen.tsx');
+      expect(src).toMatch(/TypeNodeChip/);
+      expect(src).not.toMatch(/ConceptTypeChip/);
+      expect(src).toMatch(/typeNodeId=\{/);
+    });
+  });
+
+  describe('useConceptList filter API naming', () => {
+    it('exposes preferred typeNodeIds and keeps legacy conceptType', () => {
+      const src = read('src/features/learning/hooks/useConceptList.ts');
+      // Preferred filter field must exist
+      expect(src).toMatch(/typeNodeIds\?:\s*ConceptType\[\]/);
+      // Legacy alias must still exist
+      expect(src).toMatch(/conceptType\?:\s*ConceptType/);
+    });
+
+    it('treats typeNodeIds and conceptType as a union, not mutually exclusive', () => {
+      const src = read('src/features/learning/hooks/useConceptList.ts');
+      // Must build a set/union from both fields
+      expect(src).toMatch(/new Set<ConceptType>/);
+      // Must not have an else-if that picks only one field
+      expect(src).not.toMatch(/else if.*conceptType/);
+    });
+  });
 });

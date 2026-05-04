@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { db, type DbOrTx } from '../../../db/client';
 import { learningCaptures } from './schema';
-import { captureRowToDomain, validateCaptureForWrite } from '../codecs/capture';
+import { buildCaptureClassificationJson, captureRowToDomain, validateCaptureForWrite } from '../codecs/capture';
 import type { LearningCapture } from '../types/learning';
 import type { ConceptId, LearningCaptureId } from '../types/ids';
 
@@ -30,6 +30,10 @@ export async function insertCapture(
     embeddingStatus: validCapture.embeddingStatus,
     embeddingRetryCount: validCapture.embeddingRetryCount,
     conceptHint: validCapture.conceptHint,
+    profileId: 'coding',
+    classificationJson: validCapture.conceptHint !== null
+      ? buildCaptureClassificationJson(validCapture.conceptHint)
+      : null,
     keywords: validCapture.keywords,
     createdAt: validCapture.createdAt,
     updatedAt: validCapture.updatedAt,

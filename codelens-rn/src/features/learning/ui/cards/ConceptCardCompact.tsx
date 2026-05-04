@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, fontSize, spacing } from '../../../../ui/theme';
-import { ConceptTypeChip } from '../primitives/ConceptTypeChip';
+import { TypeNodeChip } from '../primitives/TypeNodeChip';
 import { LanguageChip } from '../primitives/LanguageChip';
 import { StrengthIndicator } from '../primitives/StrengthIndicator';
 import type { ConceptId } from '../../types/ids';
@@ -28,7 +28,7 @@ export function ConceptCardCompact(props: ConceptCardCompactProps) {
         <StrengthIndicator strength={props.strength} />
       </View>
       <View style={styles.metaRow}>
-        <ConceptTypeChip type={props.conceptType} />
+        <TypeNodeChip typeNodeId={props.conceptType} />
         {visibleLanguages.map((language) => <LanguageChip key={language} label={language} />)}
         {hiddenCount > 0 ? <Text style={styles.moreText}>+{hiddenCount}</Text> : null}
       </View>

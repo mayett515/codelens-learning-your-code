@@ -44,7 +44,7 @@ function conceptMemory(score = 0.5): RetrievedConceptMemory {
     payload: {
       id: conceptId,
       name: 'Closure',
-      conceptType: 'mechanism',
+      typeNodeId: 'mechanism',
       canonicalSummary: 'A function keeps access to its creation scope.',
       coreConcept: 'lexical scope',
       languageOrRuntime: ['typescript'],

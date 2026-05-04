@@ -1,6 +1,7 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { getActiveDomainProfile, getMetadataFieldLabel } from '../../../ontology';
 import { colors, fontSize, spacing } from '../../../../ui/theme';
-import { ConceptTypeChip } from '../primitives/ConceptTypeChip';
+import { TypeNodeChip } from '../primitives/TypeNodeChip';
 import { LanguageChip } from '../primitives/LanguageChip';
 import { StrengthIndicator } from '../primitives/StrengthIndicator';
 import type { ConceptId, LearningCaptureId } from '../../types/ids';
@@ -46,14 +47,18 @@ interface ConceptCardFullProps {
 }
 
 export function ConceptCardFull(props: ConceptCardFullProps) {
+  const profile = getActiveDomainProfile();
   const representativeSet = new Set(props.representativeCaptureIds);
+  const coreLabel = getMetadataFieldLabel(profile, 'coreConcept', 'Core');
+  const patternLabel = getMetadataFieldLabel(profile, 'architecturalPattern', 'Pattern');
+  const paradigmLabel = getMetadataFieldLabel(profile, 'programmingParadigm', 'Paradigm');
   return (
     <ScrollView style={styles.card}>
       <View style={styles.headerRow}>
         <Text style={styles.name}>{props.name}</Text>
         <StrengthIndicator strength={props.strength} size="md" />
       </View>
-      <ConceptTypeChip type={props.conceptType} size="md" />
+      <TypeNodeChip typeNodeId={props.conceptType} size="md" />
       {props.canonicalSummary ? <Text style={styles.summary}>{props.canonicalSummary}</Text> : null}
       <View style={styles.actions}>
         <Action label="Start Review" onPress={props.onStartReview} />
@@ -61,9 +66,9 @@ export function ConceptCardFull(props: ConceptCardFullProps) {
       </View>
 
       <Section title="Abstraction">
-        <Meta label="Core" value={props.coreConcept} />
-        <Meta label="Pattern" value={props.architecturalPattern} />
-        <Meta label="Paradigm" value={props.programmingParadigm} />
+        <Meta label={coreLabel} value={props.coreConcept} />
+        <Meta label={patternLabel} value={props.architecturalPattern} />
+        <Meta label={paradigmLabel} value={props.programmingParadigm} />
       </Section>
 
       <Section title="Context">
@@ -73,7 +78,7 @@ export function ConceptCardFull(props: ConceptCardFullProps) {
       </Section>
 
       {props.originSessions.length > 0 ? (
-        <Section title="Where You Learned This">
+        <Section title={profile.labels.originSectionTitle}>
           {props.originSessions.map((session) => (
             <Pressable
               key={session.sessionId}
@@ -82,7 +87,7 @@ export function ConceptCardFull(props: ConceptCardFullProps) {
             >
               <Text style={styles.sessionTitle}>{session.sessionLabel}</Text>
               <Text style={styles.sessionMeta}>
-                {session.captureCount} capture{session.captureCount === 1 ? '' : 's'}
+                {session.captureCount} {session.captureCount === 1 ? profile.labels.captureSingular : profile.labels.capturePlural}
                 {session.projectLabel ? ` · ${session.projectLabel}` : ''}
               </Text>
             </Pressable>
@@ -90,10 +95,10 @@ export function ConceptCardFull(props: ConceptCardFullProps) {
         </Section>
       ) : null}
 
-      <Section title="Learning Structure">
-        <ConceptLinks label="Prerequisites" items={props.prerequisites} onOpenConcept={props.onOpenConcept} />
-        <ConceptLinks label="Related" items={props.relatedConcepts} onOpenConcept={props.onOpenConcept} />
-        <ConceptLinks label="Contrast" items={props.contrastConcepts} onOpenConcept={props.onOpenConcept} />
+      <Section title={profile.labels.relationshipSectionTitle}>
+        <ConceptLinks label={profile.graph.relationshipSectionLabels['prerequisite']} items={props.prerequisites} onOpenConcept={props.onOpenConcept} />
+        <ConceptLinks label={profile.graph.relationshipSectionLabels['related']} items={props.relatedConcepts} onOpenConcept={props.onOpenConcept} />
+        <ConceptLinks label={profile.graph.relationshipSectionLabels['contrast']} items={props.contrastConcepts} onOpenConcept={props.onOpenConcept} />
       </Section>
 
       <Section title="Evidence">

@@ -1,3 +1,4 @@
+import { getActiveDomainProfile } from '../../../ontology';
 import { normalizeConceptKey } from '../../codecs/concept';
 import type { ConceptId, LearningCaptureId } from '../../types/ids';
 import type { ConceptType, LearningCapture } from '../../types/learning';
@@ -6,19 +7,6 @@ import { clusterFingerprint } from './fingerprint';
 
 const EDGE_THRESHOLD = 0.75;
 const MAX_CLUSTER_SIZE = 12;
-const LANGUAGE_OR_RUNTIME_TOKENS = new Set([
-  'javascript',
-  'typescript',
-  'java',
-  'kotlin',
-  'swift',
-  'python',
-  'react',
-  'react native',
-  'sql',
-  'sqlite',
-]);
-
 interface SimilarityEdge {
   left: LearningCaptureId;
   right: LearningCaptureId;
@@ -199,7 +187,7 @@ async function buildClusterCandidate(
     captures.map((capture) => capture.extractionConfidence ?? 0),
   );
   const proposedName = mostCommonName(captures);
-  const proposedConceptType = mostCommonConceptType(captures);
+  const proposedTypeNodeId = mostCommonTypeNodeId(captures);
   const captureIds = captures.map((capture) => capture.id).sort();
   const fingerprint = await clusterFingerprint(captureIds);
   return {
@@ -211,17 +199,18 @@ async function buildClusterCandidate(
     avgExtractionConfidence,
     proposedName,
     proposedNormalizedKey: normalizeConceptKey(proposedName),
-    proposedConceptType,
+    proposedTypeNodeId,
     clusterScore: avgExtractionConfidence * Math.log(1 + captures.length),
     maxCreatedAt: Math.max(...captures.map((capture) => capture.createdAt)),
   };
 }
 
 function getSharedKeywords(captures: LearningCapture[]): string[] {
+  const contextOnlyKeywords = new Set<string>(getActiveDomainProfile().promotion.contextOnlyKeywords);
   const counts = new Map<string, number>();
   captures.flatMap((capture) => capture.keywords).forEach((keyword) => {
     const normalized = keyword.trim().toLowerCase();
-    if (!normalized || LANGUAGE_OR_RUNTIME_TOKENS.has(normalized)) return;
+    if (!normalized || contextOnlyKeywords.has(normalized)) return;
     counts.set(normalized, (counts.get(normalized) ?? 0) + 1);
   });
   return [...counts.entries()]
@@ -263,28 +252,17 @@ function mostCommonName(captures: LearningCapture[]): string {
   return [...scored.entries()].sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))[0]?.[0] ?? 'New Concept';
 }
 
-function mostCommonConceptType(captures: LearningCapture[]): ConceptType {
-  const typeOrder: ConceptType[] = [
-    'mechanism',
-    'mental_model',
-    'pattern',
-    'architecture_principle',
-    'language_feature',
-    'api_idiom',
-    'data_structure',
-    'algorithmic_idea',
-    'performance_principle',
-    'debugging_heuristic',
-    'failure_mode',
-    'testing_principle',
-  ];
+function mostCommonTypeNodeId(captures: LearningCapture[]): ConceptType {
+  const profile = getActiveDomainProfile();
+  const typeOrder = [...profile.ontology.itemTypeNodeIds];
+  const defaultType = profile.promotion.defaultTypeNodeId;
   const scored = new Map<ConceptType, number>();
   captures.forEach((capture) => {
-    const type = capture.conceptHint?.proposedConceptType ?? 'mental_model';
+    const type = capture.conceptHint?.proposedConceptType ?? defaultType;
     scored.set(type, (scored.get(type) ?? 0) + (capture.extractionConfidence ?? 0.1));
   });
   return [...scored.entries()]
-    .sort((left, right) => right[1] - left[1] || typeOrder.indexOf(left[0]) - typeOrder.indexOf(right[0]))[0]?.[0] ?? 'mental_model';
+    .sort((left, right) => right[1] - left[1] || typeOrder.indexOf(left[0]) - typeOrder.indexOf(right[0]))[0]?.[0] ?? defaultType;
 }
 
 function isDismissed(candidate: ClusterCandidate, dismissals: PromotionDismissal[]): boolean {

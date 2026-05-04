@@ -20,7 +20,7 @@ function node(id: ConceptId, overrides: Partial<GraphNode> = {}): GraphNode {
   return {
     id,
     name: id,
-    conceptType: 'mechanism',
+    typeNodeId: 'mechanism',
     familiarityScore: 0.5,
     importanceScore: 0.5,
     lastAccessedAt: null,

@@ -7,6 +7,7 @@ import { kv, vectorStore } from '../../composition';
 import { ARCHIVE_MAGIC, FORMAT_VERSION } from './format';
 import { base64ToFloat32 } from './codecs';
 import { clearAllData } from './clear';
+import { mapBackupRow, TABLE_COLUMN_MAPS, TABLE_JSON_COLUMNS } from './columnMaps';
 import type { ConceptId, Provider } from '../../domain/types';
 
 export interface ImportResult {
@@ -18,7 +19,7 @@ export interface ImportResult {
 /**
  * Restores from a `.codelens` archive. Strategy: wipe-then-restore.
  *
- * Why not merge? See §5 of PHASE_6/phase_6_by_claude.md — conflict resolution
+ * Why not merge? See section 5 of PHASE_6/phase_6_by_claude.md: conflict resolution
  * on concept merges is its own project and 99% of restore flows want a 1:1 clone.
  *
  * If `sourceUri` is omitted, opens the system document picker.
@@ -63,13 +64,14 @@ export async function importBackup(sourceUri?: string): Promise<ImportResult> {
     );
   }
 
-  // --- 4. Read every ndjson payload BEFORE we wipe — if one is corrupt,
+  // --- 4. Read every ndjson payload BEFORE we wipe. If one is corrupt,
   //        we don't want to have already destroyed the current data. ---
   const projects     = await readNdjson<Record<string, unknown>>(zip, 'projects');
   const files        = await readNdjson<Record<string, unknown>>(zip, 'files');
   const chats        = await readNdjson<Record<string, unknown>>(zip, 'chats');
   const messages     = await readNdjson<Record<string, unknown>>(zip, 'chat_messages');
   const sessions     = await readNdjson<Record<string, unknown>>(zip, 'learning_sessions');
+  const captures     = await readNdjson<Record<string, unknown>>(zip, 'learning_captures');
   const concepts     = await readNdjson<ConceptExport>(zip, 'concepts');
   const links        = await readNdjson<Record<string, unknown>>(zip, 'concept_links');
 
@@ -85,32 +87,44 @@ export async function importBackup(sourceUri?: string): Promise<ImportResult> {
     if (keysRaw) missingKeys = (JSON.parse(keysRaw).providers as string[]) ?? [];
   } catch { /* non-fatal */ }
 
-  // --- 5. Wipe current state. Keep API keys by default (user can always
+  // --- 5. Map raw NDJSON rows (snake_case DB columns) to Drizzle
+  //        camelCase JS property names before wiping or inserting. This also
+  //        validates JSON columns while current data is still intact. ---
+  const mappedProjects = projects.map((r) => mapBackupRow(r, TABLE_COLUMN_MAPS['projects']!, TABLE_JSON_COLUMNS['projects']!));
+  const mappedFiles    = files.map((r)    => mapBackupRow(r, TABLE_COLUMN_MAPS['files']!, TABLE_JSON_COLUMNS['files']!));
+  const mappedChats    = chats.map((r)    => mapBackupRow(r, TABLE_COLUMN_MAPS['chats']!, TABLE_JSON_COLUMNS['chats']!));
+  const mappedMessages = messages.map((r) => mapBackupRow(r, TABLE_COLUMN_MAPS['chat_messages']!, TABLE_JSON_COLUMNS['chat_messages']!));
+  const mappedSessions = sessions.map((r) => mapBackupRow(r, TABLE_COLUMN_MAPS['learning_sessions']!, TABLE_JSON_COLUMNS['learning_sessions']!));
+  const mappedLinks    = links.map((r)    => mapBackupRow(r, TABLE_COLUMN_MAPS['concept_links']!, TABLE_JSON_COLUMNS['concept_links']!));
+
+  // Strip the embedding before mapping. Embedding is a synthetic export
+  // field, not a real DB column.
+  const conceptRows = concepts.map((c) => {
+    const { embedding, ...row } = c;
+    void embedding;
+    return mapBackupRow(row, TABLE_COLUMN_MAPS['concepts']!, TABLE_JSON_COLUMNS['concepts']!);
+  });
+  const mappedCaptures = captures.map((r) => mapBackupRow(r, TABLE_COLUMN_MAPS['learning_captures']!, TABLE_JSON_COLUMNS['learning_captures']!));
+
+  // --- 6. Wipe current state. Keep API keys by default (user can always
   //        re-import, and they're a pain to re-enter on mobile). ---
   await clearAllData();
 
   const imported: Record<string, number> = {};
   const skipped: string[] = [];
 
-  // --- 6. Restore row data in a single transaction for atomicity.
+  // --- 7. Restore row data in a single transaction for atomicity.
   //        Vectors go after the tx because sqlite-vec virtual tables
   //        don't always participate cleanly in rollback. ---
   await db.transaction(async (tx) => {
-    if (projects.length) await insertBatch(tx, schema.projects, projects);
-    if (files.length)    await insertBatch(tx, schema.files, files);
-    if (chats.length)    await insertBatch(tx, schema.chats, chats);
-    if (messages.length) await insertBatch(tx, schema.chatMessages, messages);
-    if (sessions.length) await insertBatch(tx, schema.learningSessions, sessions);
-
-    // Strip the embedding before inserting the concept row — it goes into
-    // the vector store separately below.
-    const conceptRows = concepts.map((c) => {
-      const { embedding, ...row } = c;
-      void embedding;
-      return row;
-    });
-    if (conceptRows.length) await insertBatch(tx, schema.concepts, conceptRows);
-    if (links.length)    await insertBatch(tx, schema.conceptLinks, links);
+    if (mappedProjects.length) await insertBatch(tx, schema.projects, mappedProjects);
+    if (mappedFiles.length)    await insertBatch(tx, schema.files, mappedFiles);
+    if (mappedChats.length)    await insertBatch(tx, schema.chats, mappedChats);
+    if (mappedMessages.length) await insertBatch(tx, schema.chatMessages, mappedMessages);
+    if (mappedSessions.length) await insertBatch(tx, schema.learningSessions, mappedSessions);
+    if (conceptRows.length)    await insertBatch(tx, schema.concepts, conceptRows);
+    if (mappedCaptures.length) await insertBatch(tx, schema.learningCaptures, mappedCaptures);
+    if (mappedLinks.length)    await insertBatch(tx, schema.conceptLinks, mappedLinks);
   });
 
   imported['projects']          = projects.length;
@@ -118,10 +132,11 @@ export async function importBackup(sourceUri?: string): Promise<ImportResult> {
   imported['chats']             = chats.length;
   imported['chat_messages']     = messages.length;
   imported['learning_sessions'] = sessions.length;
+  imported['learning_captures'] = captures.length;
   imported['concepts']          = concepts.length;
   imported['concept_links']     = links.length;
 
-  // --- 7. Vectors (post-transaction). Per-concept failures do not abort. ---
+  // --- 8. Vectors (post-transaction). Per-concept failures do not abort. ---
   let vecRestored = 0;
   let vecFailed = 0;
   for (const c of concepts) {
@@ -144,7 +159,7 @@ export async function importBackup(sourceUri?: string): Promise<ImportResult> {
   imported['embeddings'] = vecRestored;
   if (vecFailed > 0) skipped.push(`${vecFailed} embedding(s) failed to restore`);
 
-  // --- 8. Preferences ---
+  // --- 9. Preferences ---
   try {
     if (preferences['chat_config']) kv.set('chat_config', preferences['chat_config']);
     if (preferences['embed_config']) kv.set('embed_config', preferences['embed_config']);
@@ -152,7 +167,7 @@ export async function importBackup(sourceUri?: string): Promise<ImportResult> {
     skipped.push('preferences');
   }
 
-  // --- 9. FTS5 is already in sync via triggers from the concept INSERTs;
+  // --- 10. FTS5 is already in sync via triggers from the concept INSERTs;
   //        as a belt-and-braces step, verify the row count matches so we
   //        catch a trigger misfire early. ---
   try {

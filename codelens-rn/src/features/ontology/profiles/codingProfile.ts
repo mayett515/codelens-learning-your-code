@@ -1,0 +1,311 @@
+import type { DomainProfile, OntologyNode } from '../types';
+
+const PROFILE_SEED_TIMESTAMP = 0;
+
+export const CODING_CONCEPT_TYPE_NODE_IDS = [
+  'mechanism',
+  'mental_model',
+  'pattern',
+  'architecture_principle',
+  'language_feature',
+  'api_idiom',
+  'data_structure',
+  'algorithmic_idea',
+  'performance_principle',
+  'debugging_heuristic',
+  'failure_mode',
+  'testing_principle',
+] as const;
+
+export type CodingConceptTypeNodeId = (typeof CODING_CONCEPT_TYPE_NODE_IDS)[number];
+
+export const CODING_CONCEPT_TYPE_COLORS: Readonly<Record<CodingConceptTypeNodeId, string>> = {
+  mechanism: '#6366F1',
+  mental_model: '#A855F7',
+  pattern: '#EC4899',
+  architecture_principle: '#F43F5E',
+  language_feature: '#F59E0B',
+  api_idiom: '#10B981',
+  data_structure: '#14B8A6',
+  algorithmic_idea: '#3B82F6',
+  performance_principle: '#F97316',
+  debugging_heuristic: '#EAB308',
+  failure_mode: '#EF4444',
+  testing_principle: '#22C55E',
+};
+
+function codingTypeNode(input: {
+  id: CodingConceptTypeNodeId;
+  label: string;
+  meaning: string;
+  useWhen: readonly string[];
+  examples: readonly string[];
+  contrastNodeIds?: readonly CodingConceptTypeNodeId[];
+}): OntologyNode {
+  return {
+    id: input.id,
+    label: input.label,
+    kind: 'category',
+    parentId: null,
+    meaning: input.meaning,
+    useWhen: input.useWhen,
+    doNotUseWhen: [],
+    examples: input.examples,
+    relatedNodeIds: [],
+    contrastNodeIds: input.contrastNodeIds ?? [],
+    status: 'active',
+    createdBy: 'system',
+    createdAt: PROFILE_SEED_TIMESTAMP,
+    updatedAt: PROFILE_SEED_TIMESTAMP,
+  };
+}
+
+export const codingOntologyNodes = [
+  codingTypeNode({
+    id: 'mechanism',
+    label: 'Mechanism',
+    meaning: 'A cause-and-effect explanation of how code, runtime behavior, or a system component works.',
+    useWhen: [
+      'The insight explains what happens internally or why a behavior occurs.',
+      'The user learned an operational rule that transfers across similar code.',
+    ],
+    examples: ['closure captures lexical bindings', 'SQLite trigger updates an FTS table'],
+  }),
+  codingTypeNode({
+    id: 'mental_model',
+    label: 'Mental Model',
+    meaning: 'A durable way to think about a programming idea, API, architecture boundary, or workflow.',
+    useWhen: [
+      'The insight is mainly a framing that helps the user reason better later.',
+      'The idea is broader than one syntax feature or concrete implementation.',
+    ],
+    examples: ['server state vs client state', 'ports describe needs and adapters satisfy them'],
+  }),
+  codingTypeNode({
+    id: 'pattern',
+    label: 'Pattern',
+    meaning: 'A reusable code or design shape that can be recognized and applied in multiple places.',
+    useWhen: [
+      'The selected code shows a repeatable implementation shape.',
+      'The user learned a named or nameable solution structure.',
+    ],
+    examples: ['repository pattern', 'retry with validation feedback'],
+  }),
+  codingTypeNode({
+    id: 'architecture_principle',
+    label: 'Architecture Principle',
+    meaning: 'A rule or tradeoff about module boundaries, dependency direction, persistence, or system structure.',
+    useWhen: [
+      'The insight concerns where responsibilities should live.',
+      'The user is learning a constraint that preserves maintainability.',
+    ],
+    examples: ['route screens stay thin', 'features import through public barrels'],
+  }),
+  codingTypeNode({
+    id: 'language_feature',
+    label: 'Language Feature',
+    meaning: 'A specific language or type-system feature and how it behaves.',
+    useWhen: [
+      'The main insight depends on syntax, semantics, or compiler behavior of a language.',
+      'The user learned what a language construct means.',
+    ],
+    examples: ['TypeScript satisfies operator', 'JavaScript optional chaining'],
+  }),
+  codingTypeNode({
+    id: 'api_idiom',
+    label: 'API Idiom',
+    meaning: 'A conventional or correct way to use a library, framework, platform API, or tool API.',
+    useWhen: [
+      'The insight is about using a specific API correctly.',
+      'The reusable value is the call shape, option choice, or lifecycle of an API.',
+    ],
+    examples: ['TanStack query key factories', 'React Navigation route params'],
+  }),
+  codingTypeNode({
+    id: 'data_structure',
+    label: 'Data Structure',
+    meaning: 'A representation choice for organizing data and supporting efficient operations.',
+    useWhen: [
+      'The insight is about how data is shaped, indexed, grouped, or traversed.',
+      'The chosen structure explains correctness or performance.',
+    ],
+    examples: ['map by id for graph lookup', 'adjacency list for connected components'],
+  }),
+  codingTypeNode({
+    id: 'algorithmic_idea',
+    label: 'Algorithmic Idea',
+    meaning: 'A step-by-step computational strategy, scoring method, search process, or transformation.',
+    useWhen: [
+      'The key insight is the procedure rather than an API or architecture boundary.',
+      'The code demonstrates a general algorithmic technique.',
+    ],
+    examples: ['reciprocal rank fusion', 'connected component clustering'],
+  }),
+  codingTypeNode({
+    id: 'performance_principle',
+    label: 'Performance Principle',
+    meaning: 'A performance, memory, latency, batching, or scaling tradeoff that affects implementation choices.',
+    useWhen: [
+      'The insight explains how to avoid expensive work or bound resource usage.',
+      'The user learned why one implementation scales better than another.',
+    ],
+    examples: ['hot/cold vector tier', 'avoid expensive work in render paths'],
+  }),
+  codingTypeNode({
+    id: 'debugging_heuristic',
+    label: 'Debugging Heuristic',
+    meaning: 'A practical diagnostic rule for finding or narrowing a bug.',
+    useWhen: [
+      'The insight is mainly about how to investigate a failure.',
+      'The user learned a repeatable debugging move.',
+    ],
+    examples: ['check boundary parser output first', 'isolate whether failure is vector or FTS retrieval'],
+  }),
+  codingTypeNode({
+    id: 'failure_mode',
+    label: 'Failure Mode',
+    meaning: 'A known way a system, API, migration, model response, or UI flow can break.',
+    useWhen: [
+      'The selected text shows a risk, pitfall, race, invalid state, or edge-case breakage.',
+      'Remembering the failure helps avoid or recognize it later.',
+    ],
+    examples: ['sqlite-vec rollback fragility', 'stale closure from missing dependency'],
+    contrastNodeIds: ['debugging_heuristic'],
+  }),
+  codingTypeNode({
+    id: 'testing_principle',
+    label: 'Testing Principle',
+    meaning: 'A lesson about test boundaries, guard tests, fixtures, or verification strategy.',
+    useWhen: [
+      'The insight is about how to test behavior or prevent regressions.',
+      'The selected code demonstrates a reusable testing guard.',
+    ],
+    examples: ['architecture guard test', 'migration fixture test'],
+  }),
+] as const;
+
+export const codingProfile = {
+  id: 'coding',
+  version: 1,
+  label: 'Coding',
+  description: 'Default CodeLens profile for personal coding knowledge capture, review, retrieval, promotion, and graphing.',
+  labels: {
+    hubTitle: 'Learning Hub',
+    captureSingular: 'Capture',
+    capturePlural: 'Captures',
+    itemSingular: 'Concept',
+    itemPlural: 'Concepts',
+    saveAction: 'Save Capture',
+    reviewModeTitle: 'Review Mode',
+    strengthLabel: 'Strength',
+    bodyFieldLabel: 'What clicked',
+    contextFieldLabel: 'Why it mattered',
+    sourceFieldLabel: 'Snippet',
+    originSectionTitle: 'Where You Learned This',
+    relationshipSectionTitle: 'Learning Structure',
+  },
+  ontology: {
+    nodes: codingOntologyNodes,
+    itemTypeNodeIds: CODING_CONCEPT_TYPE_NODE_IDS,
+    relationshipTypeNodeIds: ['prerequisite', 'related', 'contrast'],
+  },
+  metadataFields: [
+    {
+      id: 'coreConcept',
+      label: 'Core',
+      placeholder: 'Core concept',
+      appliesTo: ['item'],
+      kind: 'string',
+      required: false,
+      description: 'The abstract coding idea at the center of the concept.',
+      examples: ['lexical scope', 'transaction boundary'],
+    },
+    {
+      id: 'architecturalPattern',
+      label: 'Pattern',
+      placeholder: 'Architectural pattern',
+      appliesTo: ['item'],
+      kind: 'string',
+      required: false,
+      description: 'A named architecture or design pattern involved in the concept.',
+      examples: ['Repository pattern', 'Hexagonal port/adapter boundary'],
+    },
+    {
+      id: 'programmingParadigm',
+      label: 'Paradigm',
+      placeholder: 'Programming paradigm',
+      appliesTo: ['item'],
+      kind: 'string',
+      required: false,
+      description: 'A programming paradigm or style relevant to the concept.',
+      examples: ['functional', 'reactive'],
+    },
+    {
+      id: 'languageOrRuntime',
+      label: 'Language / Runtime',
+      appliesTo: ['capture', 'item'],
+      kind: 'stringList',
+      required: false,
+      description: 'Programming language, runtime, framework, or platform involved in the insight.',
+      examples: ['TypeScript', 'React Native', 'SQLite'],
+    },
+    {
+      id: 'surfaceFeatures',
+      label: 'Surface Features',
+      appliesTo: ['capture', 'item'],
+      kind: 'stringList',
+      required: false,
+      description: 'Visible APIs, syntax, keywords, or code-level cues that helped identify the concept.',
+      examples: ['useEffect', 'transaction', 'FTS5 trigger'],
+    },
+  ],
+  extraction: {
+    assistantRole: 'You are the AI assistant inside CodeLens - a mobile app for learning code by reading real repositories on your phone.',
+    captureInstructions: 'Extract 1 to 3 distinct coding capture candidates from selected code or repository text.',
+    classificationInstructions: 'Classify each capture against the coding ontology. Prefer an existing node when one fits cleanly.',
+  },
+  embedding: {
+    captureTextFields: ['title', 'whatClicked', 'whyItMattered', 'rawSnippet', 'keywords'],
+    itemTextFields: ['name', 'canonicalSummary', 'coreConcept', 'conceptType', 'languageOrRuntime', 'surfaceFeatures'],
+  },
+  retrieval: {
+    defaultHeader: 'Relevant context from your saved learning',
+    captureLabel: 'Capture',
+    itemLabel: 'Concept',
+    summaryLabel: 'Summary',
+    languageOrRuntimeLabel: 'Languages',
+    sourceLabel: 'Source',
+  },
+  promotion: {
+    defaultTypeNodeId: 'mental_model',
+    contextOnlyKeywords: [
+      'javascript',
+      'typescript',
+      'java',
+      'kotlin',
+      'swift',
+      'python',
+      'react',
+      'react native',
+      'sql',
+      'sqlite',
+    ],
+  },
+  review: {
+    enabledLabel: 'Review Mode',
+    weakItemLabel: 'Weak concepts',
+  },
+  graph: {
+    nodeColors: CODING_CONCEPT_TYPE_COLORS,
+    relationshipLabels: {
+      prerequisite: 'Prerequisite',
+      related: 'Related',
+      contrast: 'Contrast',
+    },
+    relationshipSectionLabels: {
+      prerequisite: 'Prerequisites',
+      related: 'Related',
+      contrast: 'Contrast',
+    },
+  },
+} as const satisfies DomainProfile<CodingConceptTypeNodeId>;

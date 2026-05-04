@@ -6,7 +6,7 @@ export type GraphMode = 'structure' | 'recency' | 'strength';
 export interface GraphNode {
   id: ConceptId;
   name: string;
-  conceptType: ConceptType;
+  typeNodeId: ConceptType;
   familiarityScore: number;
   importanceScore: number;
   lastAccessedAt: number | null;

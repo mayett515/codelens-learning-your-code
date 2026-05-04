@@ -26,6 +26,7 @@ const TABLES: TableSpec[] = [
   { name: 'chats',             sql: 'SELECT * FROM chats' },
   { name: 'chat_messages',     sql: 'SELECT * FROM chat_messages' },
   { name: 'learning_sessions', sql: 'SELECT * FROM learning_sessions' },
+  { name: 'learning_captures', sql: 'SELECT * FROM learning_captures' },
   { name: 'concept_links',     sql: 'SELECT * FROM concept_links' },
 ];
 

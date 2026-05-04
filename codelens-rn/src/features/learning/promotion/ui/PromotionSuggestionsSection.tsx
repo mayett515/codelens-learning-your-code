@@ -45,7 +45,7 @@ function SuggestionCardLoader(props: {
     <PromotionSuggestionCard
       fingerprint={suggestion.fingerprint}
       proposedName={suggestion.proposedName}
-      proposedConceptType={suggestion.proposedConceptType}
+      proposedTypeNodeId={suggestion.proposedTypeNodeId}
       captureCount={suggestion.captureIds.length}
       sessionCount={suggestion.sessionCount}
       sharedKeywords={suggestion.sharedKeywords}

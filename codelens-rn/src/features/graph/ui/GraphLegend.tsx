@@ -1,16 +1,17 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useState } from 'react';
 import { colors, fontSize, spacing } from '@/src/ui/theme';
+import { getActiveDomainProfile, getOntologyNodeLabel } from '@/src/features/ontology';
 import { CONCEPT_TYPE_COLORS } from '../engine/visualEncoding';
 import type { ConceptType } from '@/src/features/learning';
 import type { GraphMode } from '../types';
 
 interface GraphLegendProps {
   mode: GraphMode;
-  presentConceptTypes: ConceptType[];
+  presentTypeNodeIds: ConceptType[];
 }
 
-export function GraphLegend({ mode, presentConceptTypes }: GraphLegendProps) {
+export function GraphLegend({ mode, presentTypeNodeIds }: GraphLegendProps) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -19,30 +20,31 @@ export function GraphLegend({ mode, presentConceptTypes }: GraphLegendProps) {
         <Text style={styles.title}>Legend</Text>
         <Text style={styles.toggle}>{expanded ? '-' : '+'}</Text>
       </Pressable>
-      {expanded ? <LegendBody mode={mode} presentConceptTypes={presentConceptTypes} /> : null}
+      {expanded ? <LegendBody mode={mode} presentTypeNodeIds={presentTypeNodeIds} /> : null}
     </View>
   );
 }
 
 function LegendBody({
   mode,
-  presentConceptTypes,
+  presentTypeNodeIds,
 }: {
   mode: GraphMode;
-  presentConceptTypes: ConceptType[];
+  presentTypeNodeIds: ConceptType[];
 }) {
   if (mode === 'structure') {
+    const relLabels = getActiveDomainProfile().graph.relationshipLabels;
     return (
       <View style={styles.body}>
-        {presentConceptTypes.map((type) => (
-          <View key={type} style={styles.row}>
-            <View style={[styles.swatch, { backgroundColor: CONCEPT_TYPE_COLORS[type] }]} />
-            <Text style={styles.text}>{type.replace(/_/g, ' ')}</Text>
+        {presentTypeNodeIds.map((typeNodeId) => (
+          <View key={typeNodeId} style={styles.row}>
+            <View style={[styles.swatch, { backgroundColor: CONCEPT_TYPE_COLORS[typeNodeId] }]} />
+            <Text style={styles.text}>{getOntologyNodeLabel(typeNodeId)}</Text>
           </View>
         ))}
-        <Text style={styles.text}>Solid: prerequisite</Text>
-        <Text style={styles.text}>Dashed: related</Text>
-        <Text style={styles.text}>Dotted: contrast</Text>
+        <Text style={styles.text}>Solid: {relLabels['prerequisite']}</Text>
+        <Text style={styles.text}>Dashed: {relLabels['related']}</Text>
+        <Text style={styles.text}>Dotted: {relLabels['contrast']}</Text>
       </View>
     );
   }

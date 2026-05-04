@@ -8,6 +8,7 @@ import {
   getStrengthRadius,
   lerpColor,
 } from '../engine/visualEncoding';
+import { codingProfile } from '@/src/features/ontology';
 import type { ConceptId } from '@/src/features/learning';
 import type { GraphNode } from '../types';
 
@@ -19,7 +20,7 @@ function node(overrides: Partial<GraphNode> = {}): GraphNode {
   return {
     id: id('c_111111111111111111111'),
     name: 'Closure',
-    conceptType: 'mechanism',
+    typeNodeId: 'mechanism',
     familiarityScore: 0.5,
     importanceScore: 0.5,
     lastAccessedAt: null,
@@ -29,22 +30,26 @@ function node(overrides: Partial<GraphNode> = {}): GraphNode {
 }
 
 describe('Stage 9A visual encoding', () => {
-  it('maps structure mode concept types to locked colors with uniform radius', () => {
-    const visual = computeNodeVisual(node({ conceptType: 'api_idiom' }), 'structure', Date.now());
+  it('sources structure colors from the active domain profile', () => {
+    expect(CONCEPT_TYPE_COLORS).toBe(codingProfile.graph.nodeColors);
+  });
+
+  it('maps structure mode type nodes to locked colors with uniform radius', () => {
+    const visual = computeNodeVisual(node({ typeNodeId: 'api_idiom' }), 'structure', Date.now());
     expect(visual.fill).toBe(CONCEPT_TYPE_COLORS.api_idiom);
     expect(visual.radius).toBe(14);
   });
 
-  it('falls back and warns for unknown concept types', () => {
+  it('falls back and warns for unknown type nodes', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const visual = computeNodeVisual(
-      node({ conceptType: 'unknown_type' as never }),
+      node({ typeNodeId: 'unknown_type' as never }),
       'structure',
       Date.now(),
     );
 
     expect(visual.fill).toBe(CONCEPT_TYPE_COLORS.mechanism);
-    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Unknown concept type'));
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('Unknown ontology type node'));
     warn.mockRestore();
   });
 

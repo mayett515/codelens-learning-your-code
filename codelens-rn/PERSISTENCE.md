@@ -1,16 +1,16 @@
-# Persistence Layer — op-sqlite + Drizzle + sqlite-vec
+# Persistence Layer - op-sqlite + Drizzle + sqlite-vec
 
 Canonical reference for how CodeLens RN stores data on device. Read this before touching anything under `src/db/` or `src/adapters/sqlite-vector-store.ts`.
 
 ## Stack
 
-- **@op-engineering/op-sqlite v15+** — JSI-backed SQLite driver.
-- **sqlite-vec** — statically compiled into op-sqlite via `"op-sqlite": { "sqliteVec": true }` in `package.json`. No dynamic extension file exists on disk.
-- **drizzle-orm v0.45.x** — used for schema + typed CRUD. Driver was written for an older op-sqlite API; we bridge the gap with a Proxy.
+- **@op-engineering/op-sqlite v15+** - JSI-backed SQLite driver.
+- **sqlite-vec** - statically compiled into op-sqlite via `"op-sqlite": { "sqliteVec": true }` in `package.json`. No dynamic extension file exists on disk.
+- **drizzle-orm v0.45.x** - used for schema + typed CRUD. Driver was written for an older op-sqlite API; we bridge the gap with a Proxy.
 
 ## Three decisions that are load-bearing
 
-### 1. sqlite-vec is statically linked — do NOT call `loadExtension`
+### 1. sqlite-vec is statically linked - do NOT call `loadExtension`
 
 Because sqlite-vec is compiled into the binary, there is no `.so`/`.dylib` to load. Calling `opsqlite.loadExtension('vec0')` throws, and any surrounding try/catch that bails early will skip the virtual-table creation and you'll get `no such table: embeddings_vec` at query time.
 
@@ -18,9 +18,9 @@ Because sqlite-vec is compiled into the binary, there is no `.so`/`.dylib` to lo
 
 See [src/db/client.ts](codelens-rn/src/db/client.ts) `initVec0()`.
 
-### 2. vec0 virtual tables have no TEXT primary key — use DELETE+INSERT for upsert
+### 2. vec0 virtual tables have no TEXT primary key - use DELETE+INSERT for upsert
 
-vec0 only treats `rowid` (INTEGER) as a true primary key. A `TEXT` column like `concept_id` is a **metadata column** — you can filter on it but it carries no uniqueness constraint, so `INSERT OR REPLACE` will NOT resolve conflicts on it and you'll end up with duplicate rows per concept.
+vec0 only treats `rowid` (INTEGER) as a true primary key. A `TEXT` column like `concept_id` is a **metadata column** - you can filter on it but it carries no uniqueness constraint, so `INSERT OR REPLACE` will NOT resolve conflicts on it and you'll end up with duplicate rows per concept.
 
 **Rule:**
 - Schema declares `concept_id TEXT` (no `PRIMARY KEY`).
@@ -35,26 +35,46 @@ CREATE VIRTUAL TABLE IF NOT EXISTS embeddings_vec USING vec0(
 
 See [src/adapters/sqlite-vector-store.ts](codelens-rn/src/adapters/sqlite-vector-store.ts) `upsert()`.
 
-### 3. Drizzle's op-sqlite driver targets an older API — we Proxy-wrap the DB
+### 3. Drizzle's op-sqlite driver targets an older API - we Proxy-wrap the DB
 
 The `drizzle-orm/op-sqlite` driver calls:
-- `executeAsync` / `executeRawAsync` — renamed to `execute` / `executeRaw` in v15.
-- Expects `result.rows._array` — v15 returns a plain array on `rows`.
-- Passes raw JS values down — op-sqlite's JSI bridge rejects `undefined` (wants `null`) and plain objects/arrays (wants JSON strings for `mode: 'json'` columns).
+- `executeAsync` / `executeRawAsync` - renamed to `execute` / `executeRaw` in v15.
+- Expects `result.rows._array` - v15 returns a plain array on `rows`.
+- Passes raw JS values down - op-sqlite's JSI bridge rejects `undefined` (wants `null`) and plain objects/arrays (wants JSON strings for `mode: 'json'` columns).
 
 **Rule:** Every Drizzle call goes through `wrapForDrizzle()` in [src/db/client.ts](codelens-rn/src/db/client.ts), which:
-- Renames methods (`executeAsync` → `execute`, `executeRawAsync` → `executeRaw`).
+- Renames methods (`executeAsync` -> `execute`, `executeRawAsync` -> `executeRaw`).
 - Re-attaches `_array` on the rows array.
-- Sanitizes params: `undefined` → `null`; plain objects/arrays → `JSON.stringify` — but leaves `ArrayBuffer` / `Uint8Array` / `Float32Array` alone (those are vector blobs).
+- Sanitizes params: `undefined` -> `null`; plain objects/arrays -> `JSON.stringify` - but leaves `ArrayBuffer` / `Uint8Array` / `Float32Array` alone (those are vector blobs).
 
-If Drizzle ever ships native v15 support, the Proxy can go. The DELETE+INSERT upsert pattern stays regardless — that's a sqlite-vec constraint, not a Drizzle one.
+If Drizzle ever ships native v15 support, the Proxy can go. The DELETE+INSERT upsert pattern stays regardless - that's a sqlite-vec constraint, not a Drizzle one.
+
+## Ontology profile compatibility
+
+Migration 011 adds profile-aware compatibility columns without removing the old coding-specific columns:
+
+- `concepts.profile_id`, default `'coding'`
+- `concepts.type_node_id`, backfilled from `concept_type`
+- `concepts.metadata_json`, backfilled from `core_concept`, `architectural_pattern`, and `programming_paradigm`
+- `learning_captures.profile_id`, default `'coding'`
+- `learning_captures.classification_json`, the profile-aware companion to `concept_hint_json`
+
+The current code dual-reads and dual-writes these fields. `type_node_id` wins over `concept_type` when non-empty, and keys present in `metadata_json` win over the matching legacy concept columns. Legacy columns stay until a later cleanup migration because the current SQLite `concept_type` CHECK constraint cannot be dropped with a simple `ALTER TABLE`.
+
+`language_or_runtime_json` and `surface_features_json` intentionally remain first-class concept columns for this stage. Retrieval, embedding, and mutation helpers still use them directly.
+
+## Backup and restore shape
+
+`.codelens` export uses raw `SELECT *`, so NDJSON rows contain database column names such as `concept_type`, `core_concept`, and `metadata_json`. Drizzle inserts expect schema property names such as `conceptType`, `coreConcept`, and `metadataJson`.
+
+Import must pass every table through `src/features/backup/columnMaps.ts` before `insertBatch()`. That mapper converts raw snake_case backup rows into Drizzle's camelCase insert shape and decodes JSON columns into arrays/objects/null. The import path validates and maps all rows before calling `clearAllData()`, so malformed backup JSON aborts while the current database is still intact.
 
 ## Layout
 
-- [src/db/client.ts](codelens-rn/src/db/client.ts) — `open()`, Proxy wrapper, `initDatabase()`, `initVec0()`, `getRawDb()`.
-- [src/db/schema.ts](codelens-rn/src/db/schema.ts) — Drizzle schema for all tables.
-- [src/db/queries/](codelens-rn/src/db/queries/) — typed CRUD helpers (one file per table).
-- [src/adapters/sqlite-vector-store.ts](codelens-rn/src/adapters/sqlite-vector-store.ts) — `VectorStorePort` impl, uses raw SQL (not Drizzle) because vec0 isn't a normal table.
+- [src/db/client.ts](codelens-rn/src/db/client.ts) - `open()`, Proxy wrapper, `initDatabase()`, `initVec0()`, `getRawDb()`.
+- [src/db/schema.ts](codelens-rn/src/db/schema.ts) - Drizzle schema for all tables.
+- [src/db/queries/](codelens-rn/src/db/queries/) - typed CRUD helpers (one file per table).
+- [src/adapters/sqlite-vector-store.ts](codelens-rn/src/adapters/sqlite-vector-store.ts) - `VectorStorePort` impl, uses raw SQL (not Drizzle) because vec0 isn't a normal table.
 
 ## When this doc needs updating
 
@@ -62,3 +82,4 @@ If Drizzle ever ships native v15 support, the Proxy can go. The DELETE+INSERT up
 - Drizzle ships native v15 driver support (remove the Proxy, keep the vector upsert pattern).
 - Embedding dimension changes (currently `FLOAT[384]`).
 - New vec0 virtual tables added.
+- Profile compatibility columns or backup import/export shape changes.

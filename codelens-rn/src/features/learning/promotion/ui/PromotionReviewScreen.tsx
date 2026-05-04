@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors, fontSize, spacing } from '../../../../ui/theme';
+import { getActiveDomainProfile, getMetadataFieldPlaceholder, getOntologyNodeLabel } from '../../../ontology';
 import { CaptureCardCompact } from '../../ui/cards/CaptureCardCompact';
 import { LanguageChip } from '../../ui/primitives/LanguageChip';
-import { CONCEPT_TYPES, type ConceptType, type LearningConcept } from '../../types/learning';
+import type { ConceptType, LearningConcept } from '../../types/learning';
 import { useLinkClusterToExisting } from '../hooks/useLinkClusterToExisting';
 import { usePromoteConcept } from '../hooks/usePromoteConcept';
 import { usePromotionSuggestion } from '../hooks/usePromotionSuggestion';
@@ -28,10 +29,11 @@ export function PromotionReviewScreen({
 }: PromotionReviewScreenProps) {
   const { data: clusterData } = usePromotionSuggestion(fingerprint);
   const { data: singleData } = useSingleCapturePromotion(singleCaptureId);
+  const activeProfile = getActiveDomainProfile();
   const reviewModel = toReviewModel(clusterData, singleData);
   const captures = reviewModel?.captures ?? [];
   const [name, setName] = useState('');
-  const [conceptType, setConceptType] = useState<ConceptType>('mental_model');
+  const [typeNodeId, setTypeNodeId] = useState<ConceptType>(activeProfile.promotion.defaultTypeNodeId);
   const [includedIds, setIncludedIds] = useState<Set<LearningCaptureId>>(new Set());
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [canonicalSummary, setCanonicalSummary] = useState('');
@@ -46,7 +48,7 @@ export function PromotionReviewScreen({
   useEffect(() => {
     if (!reviewModel) return;
     setName((current) => current || reviewModel.proposedName);
-    setConceptType(reviewModel.proposedConceptType);
+    setTypeNodeId(reviewModel.proposedTypeNodeId);
     setIncludedIds((current) => current.size > 0 ? current : new Set(reviewModel.captures.map((capture) => capture.id)));
   }, [reviewModel]);
 
@@ -60,7 +62,7 @@ export function PromotionReviewScreen({
       const result = await promoteMutation.mutateAsync({
         fingerprint: reviewModel.fingerprint,
         name,
-        conceptType,
+        typeNodeId,
         includedCaptureIds,
         canonicalSummary: canonicalSummary || null,
         coreConcept: coreConcept || null,
@@ -109,17 +111,19 @@ export function PromotionReviewScreen({
         style={styles.input}
         value={name}
         onChangeText={setName}
-        placeholder="Concept name"
+        placeholder={`${activeProfile.labels.itemSingular} name`}
         placeholderTextColor={colors.textSecondary}
       />
       <View style={styles.typeRow}>
-        {CONCEPT_TYPES.map((type) => (
+        {activeProfile.ontology.itemTypeNodeIds.map((type) => (
           <Pressable
             key={type}
-            style={[styles.typeButton, conceptType === type && styles.typeButtonActive]}
-            onPress={() => setConceptType(type)}
+            style={[styles.typeButton, typeNodeId === type && styles.typeButtonActive]}
+            onPress={() => setTypeNodeId(type)}
           >
-            <Text style={[styles.typeText, conceptType === type && styles.typeTextActive]}>{type}</Text>
+            <Text style={[styles.typeText, typeNodeId === type && styles.typeTextActive]}>
+              {getOntologyNodeLabel(type, activeProfile)}
+            </Text>
           </Pressable>
         ))}
       </View>
@@ -166,9 +170,9 @@ export function PromotionReviewScreen({
       {advancedOpen ? (
         <View style={styles.advanced}>
           <TextInput style={styles.input} value={canonicalSummary} onChangeText={setCanonicalSummary} placeholder="Canonical summary" placeholderTextColor={colors.textSecondary} multiline />
-          <TextInput style={styles.input} value={coreConcept} onChangeText={setCoreConcept} placeholder="Core concept" placeholderTextColor={colors.textSecondary} />
-          <TextInput style={styles.input} value={architecturalPattern} onChangeText={setArchitecturalPattern} placeholder="Architectural pattern" placeholderTextColor={colors.textSecondary} />
-          <TextInput style={styles.input} value={programmingParadigm} onChangeText={setProgrammingParadigm} placeholder="Programming paradigm" placeholderTextColor={colors.textSecondary} />
+          <TextInput style={styles.input} value={coreConcept} onChangeText={setCoreConcept} placeholder={getMetadataFieldPlaceholder(activeProfile, 'coreConcept', 'Core concept')} placeholderTextColor={colors.textSecondary} />
+          <TextInput style={styles.input} value={architecturalPattern} onChangeText={setArchitecturalPattern} placeholder={getMetadataFieldPlaceholder(activeProfile, 'architecturalPattern', 'Architectural pattern')} placeholderTextColor={colors.textSecondary} />
+          <TextInput style={styles.input} value={programmingParadigm} onChangeText={setProgrammingParadigm} placeholder={getMetadataFieldPlaceholder(activeProfile, 'programmingParadigm', 'Programming paradigm')} placeholderTextColor={colors.textSecondary} />
         </View>
       ) : null}
       <NormalizedKeyConflictDialog
@@ -187,7 +191,7 @@ export function PromotionReviewScreen({
         onPress={confirm}
         disabled={!canConfirm || promoteMutation.isPending}
       >
-        <Text style={styles.confirmText}>Confirm Concept</Text>
+        <Text style={styles.confirmText}>Confirm {activeProfile.labels.itemSingular}</Text>
       </Pressable>
     </ScrollView>
   );
@@ -202,7 +206,7 @@ function toReviewModel(
   return {
     fingerprint: clusterData.suggestion.fingerprint,
     proposedName: clusterData.suggestion.proposedName,
-    proposedConceptType: clusterData.suggestion.proposedConceptType,
+    proposedTypeNodeId: clusterData.suggestion.proposedTypeNodeId,
     captures: clusterData.captures,
     sharedKeywords: clusterData.suggestion.sharedKeywords,
     source: 'cluster',

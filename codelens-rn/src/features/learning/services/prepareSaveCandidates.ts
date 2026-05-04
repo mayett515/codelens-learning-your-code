@@ -1,3 +1,4 @@
+import { getActiveDomainProfile } from '../../ontology';
 import { unsafeConceptId } from '../types/ids';
 import { buildExtractorSystemPrompt } from '../extractor/extractorPrompt';
 import { runExtractor, type ExtractorComplete } from '../extractor/runExtractor';
@@ -30,7 +31,10 @@ export async function prepareSaveCandidates(
   if (!selectedText) throw new Error('Cannot extract a capture from empty source text');
 
   const relevantConcepts = await (options?.preCheck ?? conceptMatchPreCheck)(selectedText);
-  const prompt = buildExtractorSystemPrompt(relevantConcepts);
+  const prompt = buildExtractorSystemPrompt({
+    profile: getActiveDomainProfile(),
+    relevantConcepts,
+  });
   const output = await runExtractor(prompt, selectedText, {
     signal: options?.signal,
     complete: options?.complete,

@@ -33,7 +33,7 @@ export function MemoryPreviewSheet(props: MemoryPreviewSheetProps) {
                 <ConceptCardCompact
                   conceptId={memory.payload.id}
                   name={memory.payload.name}
-                  conceptType={memory.payload.conceptType}
+                  conceptType={memory.payload.typeNodeId}
                   strength={memory.payload.strength}
                   languageOrRuntime={memory.payload.languageOrRuntime}
                   canonicalSummary={memory.payload.canonicalSummary}

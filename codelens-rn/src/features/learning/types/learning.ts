@@ -1,19 +1,7 @@
 import type { ConceptId, LearningCaptureId } from './ids';
+import { CODING_CONCEPT_TYPE_NODE_IDS } from '../../ontology';
 
-export const CONCEPT_TYPES = [
-  'mechanism',
-  'mental_model',
-  'pattern',
-  'architecture_principle',
-  'language_feature',
-  'api_idiom',
-  'data_structure',
-  'algorithmic_idea',
-  'performance_principle',
-  'debugging_heuristic',
-  'failure_mode',
-  'testing_principle',
-] as const;
+export const CONCEPT_TYPES = CODING_CONCEPT_TYPE_NODE_IDS;
 
 export type ConceptType = (typeof CONCEPT_TYPES)[number];
 export type CaptureState = 'unresolved' | 'linked' | 'proposed_new';

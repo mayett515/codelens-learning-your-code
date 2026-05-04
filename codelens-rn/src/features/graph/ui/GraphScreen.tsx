@@ -56,9 +56,9 @@ export function GraphScreen({ focalConceptId }: GraphScreenProps) {
     setTooltip(null);
   }, [layout]);
 
-  const presentConceptTypes = useMemo(() => {
-    const types = query.data?.nodes.map((node) => node.conceptType) ?? [];
-    return [...new Set(types)].sort();
+  const presentTypeNodeIds = useMemo(() => {
+    const ids = query.data?.nodes.map((node) => node.typeNodeId) ?? [];
+    return [...new Set(ids)].sort();
   }, [query.data]);
 
   return (
@@ -122,7 +122,7 @@ export function GraphScreen({ focalConceptId }: GraphScreenProps) {
             onOpenDetail={(id) => router.push(graphHref(id))}
           />
         ) : null}
-        <GraphLegend mode={mode} presentConceptTypes={presentConceptTypes} />
+        <GraphLegend mode={mode} presentTypeNodeIds={presentTypeNodeIds} />
       </View>
     </SafeAreaView>
   );

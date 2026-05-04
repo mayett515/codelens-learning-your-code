@@ -1,6 +1,7 @@
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { getActiveDomainProfile } from '../../../ontology';
 import { colors, fontSize, spacing } from '../../../../ui/theme';
-import { ConceptTypeChip } from '../primitives/ConceptTypeChip';
+import { TypeNodeChip } from '../primitives/TypeNodeChip';
 import { SourceBreadcrumb } from '../primitives/SourceBreadcrumb';
 import { StateChip } from '../primitives/StateChip';
 import type { ConceptId, LearningCaptureId } from '../../types/ids';
@@ -37,12 +38,13 @@ interface CaptureCardFullProps {
 }
 
 export function CaptureCardFull(props: CaptureCardFullProps) {
+  const profile = getActiveDomainProfile();
   const canEdit = props.editableUntil ? (props.now ?? Date.now()) <= props.editableUntil : false;
   return (
     <View style={styles.card}>
       <View style={styles.headerRow}>
         <Text style={styles.title}>{props.title}</Text>
-        {props.conceptType ? <ConceptTypeChip type={props.conceptType} size="md" /> : null}
+        {props.conceptType ? <TypeNodeChip typeNodeId={props.conceptType} size="md" /> : null}
       </View>
       {props.state ? <StateChip state={props.state} /> : null}
       <SourceBreadcrumb
@@ -52,15 +54,15 @@ export function CaptureCardFull(props: CaptureCardFullProps) {
         relativeTime={props.relativeTime ?? undefined}
         sessionLabel={props.sessionLabel}
       />
-      <Text style={styles.sectionTitle}>What clicked</Text>
+      <Text style={styles.sectionTitle}>{profile.labels.bodyFieldLabel}</Text>
       <Text style={styles.bodyText}>{props.whatClicked}</Text>
       {props.whyItMattered ? (
         <>
-          <Text style={styles.sectionTitle}>Why it mattered</Text>
+          <Text style={styles.sectionTitle}>{profile.labels.contextFieldLabel}</Text>
           <Text style={styles.bodyText}>{props.whyItMattered}</Text>
         </>
       ) : null}
-      <Text style={styles.sectionTitle}>Snippet</Text>
+      <Text style={styles.sectionTitle}>{profile.labels.sourceFieldLabel}</Text>
       <ScrollView style={styles.snippetBox}>
         <Text style={styles.snippet}>{props.rawSnippet}</Text>
       </ScrollView>

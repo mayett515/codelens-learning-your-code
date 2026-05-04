@@ -13,6 +13,7 @@ export const RetrieveOptionsCodec = z.object({
   limit: z.number().int().positive().max(50).optional(),
   filters: z.object({
     states: z.array(CaptureStateEnum).optional(),
+    typeNodeIds: z.array(ConceptTypeEnum).optional(),
     conceptTypes: z.array(ConceptTypeEnum).optional(),
     sessionIds: z.array(z.string()).optional(),
     languages: z.array(z.string()).optional(),
