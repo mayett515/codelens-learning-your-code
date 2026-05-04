@@ -78,6 +78,93 @@ describe('Stage 10 Phase A architecture guards', () => {
   });
 });
 
+describe('Ontology correction evidence guards', () => {
+  // These guards enforce that ontology correction evidence stays in the
+  // ontology feature and remains domain-only at this stage - no persistence,
+  // no automatic profile mutations, no cross-feature imports.
+
+  it('OntologyCorrectionEvidence exists in src/features/ontology/types.ts', () => {
+    const typesSrc = read('src/features/ontology/types.ts');
+    expect(typesSrc).toMatch(/export interface OntologyCorrectionEvidence\s*\{/);
+    expect(typesSrc).toMatch(/id:\s*string/);
+    expect(typesSrc).toMatch(/profileId:\s*string/);
+    expect(typesSrc).toMatch(/subjectKind:\s*OntologyCorrectionSubjectKind/);
+    expect(typesSrc).toMatch(/subjectId:\s*string/);
+    expect(typesSrc).toMatch(/field:\s*OntologyCorrectionField/);
+    expect(typesSrc).toMatch(/previousTypeNodeId:\s*string\s*\|\s*null/);
+    expect(typesSrc).toMatch(/correctedTypeNodeId:\s*string/);
+    expect(typesSrc).toMatch(/reason\?:\s*string\s*\|\s*null/);
+    expect(typesSrc).toMatch(/source:\s*OntologyCorrectionSource/);
+    expect(typesSrc).toMatch(/createdAt:\s*number/);
+  });
+
+  it('OntologyCorrectionField is currently only typeNodeId', () => {
+    const typesSrc = read('src/features/ontology/types.ts');
+    // The type alias must be exactly 'typeNodeId' - no union, no extras
+    const match = typesSrc.match(
+      /export type OntologyCorrectionField\s*=\s*['"]([^'"]+)['"]\s*;/
+    );
+    expect(match).toBeTruthy();
+    expect(match![1]).toBe('typeNodeId');
+    // No union alternatives
+    expect(typesSrc).not.toMatch(
+      /export type OntologyCorrectionField\s*=\s*['"][^'"]+['"]\s*\|/
+    );
+  });
+
+  it('OntologyCorrectionSource is currently only user', () => {
+    const typesSrc = read('src/features/ontology/types.ts');
+    // The type alias must be exactly 'user' - no union, no extras
+    const match = typesSrc.match(
+      /export type OntologyCorrectionSource\s*=\s*['"]([^'"]+)['"]\s*;/
+    );
+    expect(match).toBeTruthy();
+    expect(match![1]).toBe('user');
+    // No union alternatives
+    expect(typesSrc).not.toMatch(
+      /export type OntologyCorrectionSource\s*=\s*['"][^'"]+['"]\s*\|/
+    );
+  });
+
+  it('validateOntologyCorrection is exported from src/features/ontology/index.ts', () => {
+    const indexSrc = read('src/features/ontology/index.ts');
+    expect(indexSrc).toContain("export { validateOntologyCorrection } from './corrections';");
+  });
+
+  it('src/features/ontology/corrections.ts does not import from forbidden layers', () => {
+    const correctionsSrc = read('src/features/ontology/corrections.ts');
+    // Must not import from persistence, backup, learning, or graph layers
+    expect(correctionsSrc).not.toMatch(/from\s+['"][^'"]*(?:\/db|features\/backup|features\/learning|features\/graph)[^'"]*['"]/);
+  });
+
+  it('no ontology_corrections or ontology_patch_suggestions table/string exists under src yet', () => {
+    const offenders = sourceFiles()
+      .filter((filePath) => {
+        const content = read(filePath);
+        return /ontology_corrections|ontology_patch_suggestions/.test(content);
+      })
+      .map(toRepoPath);
+
+    // Only allowed in comment context (test files and design docs),
+    // not in codegen, migration, or schema definitions.
+    const actualOffenders = offenders.filter(
+      (p) => !p.startsWith('ONTOLOGY_PROFILE_REFACTOR/') && !p.endsWith('.test.ts') && !p.endsWith('NEXT_LLM_CONTEXT.md')
+    );
+    expect(actualOffenders).toEqual([]);
+  });
+
+  it('no automatic profile mutation helper exists in src/features/ontology/corrections.ts', () => {
+    const correctionsSrc = read('src/features/ontology/corrections.ts');
+    // Must not contain obvious mutation helpers
+    expect(correctionsSrc).not.toMatch(/\bapplyOntologyCorrection\b/);
+    expect(correctionsSrc).not.toMatch(/\bmutateProfile\b/);
+    expect(correctionsSrc).not.toMatch(/\bapplyProfilePatch\b/);
+    // The file must export only the validation helper
+    const exportCount = (correctionsSrc.match(/^export /gm) || []).length;
+    expect(exportCount).toBe(1);
+  });
+});
+
 describe('Ontology-profile naming boundary guards', () => {
   // These guards enforce that renamed fields stay renamed and legacy compat
   // boundaries stay documented. They do NOT globally ban conceptType — only

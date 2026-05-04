@@ -17,6 +17,10 @@ export type {
   PromotionProfile,
   RetrievalProfile,
   ReviewProfile,
+  OntologyCorrectionEvidence,
+  OntologyCorrectionField,
+  OntologyCorrectionSource,
+  OntologyCorrectionSubjectKind,
 } from './types';
 
 export {
@@ -28,6 +32,7 @@ export {
 export type { CodingConceptTypeNodeId } from './profiles/codingProfile';
 
 export { getMetadataField, getMetadataFieldLabel, getMetadataFieldPlaceholder } from './metadata';
+export { validateOntologyCorrection } from './corrections';
 
 export function getActiveDomainProfile() {
   return codingProfile;

@@ -159,6 +159,23 @@ export interface GraphProfile<TItemTypeNodeId extends string = string> {
   };
 }
 
+export type OntologyCorrectionSubjectKind = 'capture' | 'item';
+export type OntologyCorrectionField = 'typeNodeId';
+export type OntologyCorrectionSource = 'user';
+
+export interface OntologyCorrectionEvidence {
+  id: string;
+  profileId: string;
+  subjectKind: OntologyCorrectionSubjectKind;
+  subjectId: string;
+  field: OntologyCorrectionField;
+  previousTypeNodeId: string | null;
+  correctedTypeNodeId: string;
+  reason?: string | null | undefined;
+  source: OntologyCorrectionSource;
+  createdAt: number;
+}
+
 export interface OntologyProfile<TItemTypeNodeId extends string = string> {
   nodes: readonly OntologyNode[];
   itemTypeNodeIds: readonly TItemTypeNodeId[];

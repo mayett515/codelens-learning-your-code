@@ -43,6 +43,9 @@ Implemented so far:
 - Moved remaining hardcoded learning UI labels into `DomainLabels` and wired them through `getActiveDomainProfile().labels`. `LearningHubScreen` review entry text, `ConceptListSection` title/sort label/empty-state, and `SessionFlashbackScreen` banner/title/metadata/saved-section/empty-state labels now read from the active profile. Grouped flashback labels into a nested `flashback` object under `DomainLabels` to avoid flat-label sprawl. Preserved exact current coding wording in `codingProfile`.
 - Moved remaining graph helper labels into `GraphProfile` and wired them through `getActiveDomainProfile().graph`. `GraphScreen` loading/error/retry/empty-body/cap-banner, `NodePreviewTooltip` never-accessed/last-accessed/score/strength/view-detail/day-pluralization, and `GraphLegend` title/recency/strength helper descriptions now read from the active profile. Grouped into nested `statusLabels`, `tooltipLabels`, and `legendHelperLabels` under `GraphProfile`. Preserved exact current coding wording in `codingProfile`.
 - Moved remaining dynamic/fallback user-facing strings into the active profile. `SessionFlashbackScreen` `Unknown` fallback, concept/capture count templates, lowercase count labels (`concept`/`concepts`/`capture`/`captures`), and `NodePreviewTooltip` day count singular/plural templates now read from the profile. Preserved exact current coding wording and count behavior.
+- Added ontology correction evidence types (`OntologyCorrectionEvidence`, `OntologyCorrectionSubjectKind`, `OntologyCorrectionField`, `OntologyCorrectionSource`) and a pure validation helper (`validateOntologyCorrection`) in `src/features/ontology/corrections.ts`. Validation checks profile id match, valid ontology item type ids for both previous and corrected values, rejects no-op corrections and empty ids, and does not mutate inputs. Domain-only - no persistence, UI, or automatic profile mutation.
+- Added source-level architecture guards in `src/__tests__/stage10-architecture-guards.test.ts` to keep correction evidence domain-only: correction shape/export coverage, `typeNodeId`/`user` unions staying narrow for this stage, no forbidden cross-feature imports, no `ontology_corrections` / `ontology_patch_suggestions` source implementation yet, and no automatic profile mutation helper in `corrections.ts`.
+- Added `06_PROFILE_BRANCHING_AND_MERGE.md` to capture Kortex profile inheritance, branching, overlays, and merge semantics before correction/checker persistence or UI work. The intended model is a stable base profile per lineage with branch/project/learning/personal overlays that can stay independent or merge selected changes back with user approval. The current coding profile is this app lineage's base, not a globally fixed base for every future fork/user.
 
 ## Important Compatibility Choices
 
@@ -58,8 +61,11 @@ Implemented so far:
 src/features/ontology/types.ts
 src/features/ontology/index.ts
 src/features/ontology/metadata.ts
+src/features/ontology/corrections.ts
 src/features/ontology/profiles/codingProfile.ts
 src/features/ontology/__tests__/codingProfile.test.ts
+src/features/ontology/__tests__/corrections.test.ts
+ONTOLOGY_PROFILE_REFACTOR/06_PROFILE_BRANCHING_AND_MERGE.md
 src/features/learning/extractor/__tests__/extractorPrompt.test.ts
 ONTOLOGY_PROFILE_REFACTOR/implementation_handoff.md
 src/features/backup/__tests__/profile-columns.test.ts
@@ -156,14 +162,14 @@ src\features\learning\ui\cards\__tests__\stage3-card-guards.test.ts
 src\__tests__\stage10-architecture-guards.test.ts
 ```
 
-Latest verification after the graph legend title wiring slice:
+Latest verification after the correction evidence architecture guard slice:
 
 ```text
 node node_modules\typescript\bin\tsc -p tsconfig.json --noEmit
-npm test -- --run src/features/ontology/__tests__/codingProfile.test.ts
+npm test -- --run src/__tests__/stage10-architecture-guards.test.ts src/features/ontology/__tests__/corrections.test.ts
 npm test -- --run
 
-Result: TypeScript clean; targeted profile tests 13/13 passed; full suite 336/336 passed across 49 test files.
+Result: TypeScript clean; targeted guard/correction tests 30/30 passed; full suite 356/356 passed across 50 test files.
 ```
 
 ## Persistence Compatibility (migration 011)
@@ -246,7 +252,8 @@ Persistence compatibility and backup round-trip are complete. The remaining majo
 7. ~~Move graph UI screen/mode labels into `GraphProfile` while preserving current coding wording.~~ (done)
 8. ~~Remaining label-profile cleanup candidates: Learning Hub review entry text, concept list section labels, session flashback empty state~~ (done).
 9. ~~Remaining label-profile cleanup candidates: `ConceptListSection` empty-state text and `SessionFlashbackScreen` helper labels~~ (done). ~~Graph tooltip/cap/loading/error labels and graph legend helper descriptions~~ (done). ~~Dynamic count/pluralization and fallback labels (`Unknown`, concept/capture counts, day counts)~~ (done).
-10. Do not remove the old coding-specific columns (`coreConcept`, `architecturalPattern`, `programmingParadigm`, `conceptType`) until a later cleanup migration after compatibility is proven.
+10. Correction evidence domain groundwork and source-level guards are in place; profile branch/overlay semantics are documented. Next code slice should be internal-only profile composition helpers and tests, before correction persistence or UI.
+11. Do not remove the old coding-specific columns (`coreConcept`, `architecturalPattern`, `programmingParadigm`, `conceptType`) until a later cleanup migration after compatibility is proven.
 
 ## Guardrails
 

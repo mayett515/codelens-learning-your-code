@@ -51,6 +51,7 @@ Future domain profile
 - [03_CATEGORIZATION_AND_ONTOLOGY_CHECKER.md](03_CATEGORIZATION_AND_ONTOLOGY_CHECKER.md) - category descriptions, correction flow, and periodic checker.
 - [04_REFACTOR_WITHOUT_BREAKING_APP.md](04_REFACTOR_WITHOUT_BREAKING_APP.md) - staged implementation plan with low-risk sequencing.
 - [05_ANTI_REGRESSION_RULES.md](05_ANTI_REGRESSION_RULES.md) - hard constraints for future agents.
+- [06_PROFILE_BRANCHING_AND_MERGE.md](06_PROFILE_BRANCHING_AND_MERGE.md) - profile inheritance, branching, overlays, and merge semantics.
 - [humanreadable.md](humanreadable.md) - plain-language sequencing: refactor first, build coding product seriously, add demo profiles later.
 - [why_this_exists.md](why_this_exists.md) - human intent and motivation behind the refactor.
 - [00_DOC_SYNC.md](00_DOC_SYNC.md) - how this folder correlates with root architecture docs.
@@ -59,6 +60,7 @@ Future domain profile
 - [modules_architecture.md](modules_architecture.md) - draft future module/foldering architecture rules.
 - [modules_architecture_humans.md](modules_architecture_humans.md) - human-readable version of the module/foldering rules.
 - [implementation_handoff.md](implementation_handoff.md) - current branch implementation notes for other LLMs/reviewers while this refactor is active.
+- [TOMORROW_START.md](TOMORROW_START.md) - short startup prompt and next-slice reminder for the next orchestrator session.
 
 ## Non-Goal
 
