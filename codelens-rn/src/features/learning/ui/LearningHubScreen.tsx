@@ -93,7 +93,7 @@ export function LearningHubScreen() {
         {reviewSettings.enableReviewMode ? (
           <Pressable style={styles.reviewEntry} onPress={() => setDetail({ type: 'reviewThreshold' })}>
             <Text style={styles.reviewEntryTitle}>{profile.labels.reviewModeTitle}</Text>
-            <Text style={styles.reviewEntryText}>Browse concepts to revisit in your own time.</Text>
+            <Text style={styles.reviewEntryText}>{profile.labels.reviewEntryText}</Text>
           </Pressable>
         ) : null}
       </ScrollView>

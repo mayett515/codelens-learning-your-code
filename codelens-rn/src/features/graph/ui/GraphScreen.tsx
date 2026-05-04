@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import type { Href } from 'expo-router';
 import { colors, fontSize, spacing } from '@/src/ui/theme';
+import { getActiveDomainProfile } from '@/src/features/ontology';
 import { runForceLayout } from '../engine/layout';
 import { useGraphForFocal } from '../hooks/useGraphData';
 import { GraphCanvas } from './GraphCanvas';
@@ -61,6 +62,8 @@ export function GraphScreen({ focalConceptId }: GraphScreenProps) {
     return [...new Set(ids)].sort();
   }, [query.data]);
 
+  const profile = getActiveDomainProfile();
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -68,8 +71,8 @@ export function GraphScreen({ focalConceptId }: GraphScreenProps) {
           <Text style={styles.backBtn}>{'<'}</Text>
         </Pressable>
         <View style={styles.headerText}>
-          <Text style={styles.title}>{focalConceptId ? 'Concept Graph' : 'Knowledge Graph'}</Text>
-          <Text style={styles.subtitle}>{query.data?.isEgoView ? 'Focused view' : 'Full graph'}</Text>
+          <Text style={styles.title}>{focalConceptId ? profile.graph.focusedScreenTitle : profile.graph.screenTitle}</Text>
+          <Text style={styles.subtitle}>{query.data?.isEgoView ? profile.graph.focusedViewLabel : profile.graph.fullViewLabel}</Text>
         </View>
       </View>
       <View style={styles.modeRow}>
@@ -82,9 +85,9 @@ export function GraphScreen({ focalConceptId }: GraphScreenProps) {
           setCanvasSize({ width, height });
         }}
       >
-        {query.isPending ? <CenteredText label="Loading graph..." /> : null}
+        {query.isPending ? <CenteredText label={profile.graph.statusLabels.loading} /> : null}
         {query.isError ? (
-          <ErrorState message={query.error instanceof Error ? query.error.message : 'Graph unavailable'} onRetry={() => query.refetch()} />
+          <ErrorState message={query.error instanceof Error ? query.error.message : profile.graph.statusLabels.unavailable} onRetry={() => query.refetch()} />
         ) : null}
         {query.data && query.data.nodes.length === 0 ? (
           <EmptyState />
@@ -108,7 +111,11 @@ export function GraphScreen({ focalConceptId }: GraphScreenProps) {
         ) : null}
         {query.data && query.data.cappedAt ? (
           <View style={styles.capBanner}>
-            <Text style={styles.capText}>Showing {query.data.cappedAt} of {query.data.totalConceptCount} - strongest first</Text>
+            <Text style={styles.capText}>
+              {profile.graph.statusLabels.capBannerTemplate
+                .replace('{shown}', String(query.data.cappedAt))
+                .replace('{total}', String(query.data.totalConceptCount))}
+            </Text>
           </View>
         ) : null}
         {tooltip && layout?.nodes[tooltip.nodeIndex] ? (
@@ -141,22 +148,24 @@ function CenteredText({ label }: { label: string }) {
 }
 
 function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+  const profile = getActiveDomainProfile();
   return (
     <View style={styles.center}>
-      <Text style={styles.centerTitle}>Graph unavailable</Text>
+      <Text style={styles.centerTitle}>{profile.graph.statusLabels.unavailable}</Text>
       <Text style={styles.centerText}>{message}</Text>
       <Pressable style={styles.retryButton} onPress={onRetry}>
-        <Text style={styles.retryText}>Try again</Text>
+        <Text style={styles.retryText}>{profile.graph.statusLabels.retryAction}</Text>
       </Pressable>
     </View>
   );
 }
 
 function EmptyState() {
+  const profile = getActiveDomainProfile();
   return (
     <View style={styles.center}>
-      <Text style={styles.centerTitle}>No concepts yet</Text>
-      <Text style={styles.centerText}>Concepts appear here once you promote captures.</Text>
+      <Text style={styles.centerTitle}>{profile.graph.emptyLabel}</Text>
+      <Text style={styles.centerText}>{profile.graph.statusLabels.emptyBody}</Text>
     </View>
   );
 }

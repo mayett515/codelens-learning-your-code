@@ -1,16 +1,19 @@
 import { StyleSheet, TextInput } from 'react-native';
 import { colors, fontSize, spacing } from '../../../../ui/theme';
+import { getActiveDomainProfile } from '@/src/features/ontology';
 
 export function ReflectionInput(props: {
   value: string;
   onChangeText: (value: string) => void;
 }) {
+  const profile = getActiveDomainProfile();
+
   return (
     <TextInput
       style={styles.input}
       value={props.value}
       onChangeText={props.onChangeText}
-      placeholder="Jot down what you remember, in your own words - or skip and just peek at what you saved."
+      placeholder={profile.review.reflectPlaceholder}
       placeholderTextColor={colors.textSecondary}
       multiline
       maxLength={2000}

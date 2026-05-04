@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, fontSize, spacing } from '../../../../ui/theme';
+import { getActiveDomainProfile } from '@/src/features/ontology';
 import { CaptureCardCompact } from '../../ui/cards/CaptureCardCompact';
 import type { LearningCapture } from '../../types/learning';
 
@@ -12,10 +13,12 @@ export function ReviewResultScreen(props: {
   onOpenCapture?: ((id: LearningCapture['id']) => void) | undefined;
   onContinueInChat?: (() => void) | undefined;
 }) {
+  const profile = getActiveDomainProfile();
+
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{props.conceptName}</Text>
-      <Text style={styles.body}>Review saved.</Text>
+      <Text style={styles.body}>{profile.review.resultSavedLabel}</Text>
       {props.summary ? <Text style={styles.summary}>{props.summary}</Text> : null}
       {(props.captures ?? []).map((capture) => (
         <CaptureCardCompact
@@ -30,15 +33,15 @@ export function ReviewResultScreen(props: {
         />
       ))}
       <Pressable style={styles.primary} onPress={props.onDone}>
-        <Text style={styles.primaryText}>Done</Text>
+        <Text style={styles.primaryText}>{profile.review.resultDoneLabel}</Text>
       </Pressable>
       {props.onContinueInChat ? (
         <Pressable style={styles.secondary} onPress={props.onContinueInChat}>
-          <Text style={styles.secondaryText}>Continue in chat</Text>
+          <Text style={styles.secondaryText}>{profile.review.resultContinueInChatLabel}</Text>
         </Pressable>
       ) : null}
       <Pressable style={styles.secondary} onPress={props.onOpenConcept}>
-        <Text style={styles.secondaryText}>Open this concept</Text>
+        <Text style={styles.secondaryText}>{profile.review.resultOpenItemLabel}</Text>
       </Pressable>
     </View>
   );

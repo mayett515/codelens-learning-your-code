@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { colors, fontSize, spacing } from '../../../../ui/theme';
+import { getActiveDomainProfile } from '@/src/features/ontology';
 import { TypeNodeChip } from '../../ui/primitives/TypeNodeChip';
 import { ReflectionInput } from './ReflectionInput';
 import { ShowSavedReveal } from './ShowSavedReveal';
@@ -26,6 +27,7 @@ export function ReviewSessionScreen(props: {
   const session = useReviewSession(props.conceptId);
   const ratingMutation = useApplyReviewRating();
   const data = session.data;
+  const profile = getActiveDomainProfile();
 
   if (session.isLoading || !data) {
     return (
@@ -72,7 +74,7 @@ export function ReviewSessionScreen(props: {
       </View>
       {phase === 'reflect' ? (
         <>
-          <Text style={styles.prompt}>What still makes sense to you about {data.concept.name}?</Text>
+          <Text style={styles.prompt}>{profile.review.reflectPromptTemplate.replace('{conceptName}', data.concept.name)}</Text>
           <ReflectionInput value={reflection} onChangeText={setReflection} />
           <ShowSavedReveal
             summary={data.concept.canonicalSummary}
@@ -80,7 +82,7 @@ export function ReviewSessionScreen(props: {
             onOpenCapture={props.onOpenCapture}
           />
           <Pressable style={styles.primary} onPress={() => setPhase('rate')}>
-            <Text style={styles.primaryText}>Submit</Text>
+            <Text style={styles.primaryText}>{profile.review.reflectSubmitLabel}</Text>
           </Pressable>
         </>
       ) : (
@@ -88,7 +90,7 @@ export function ReviewSessionScreen(props: {
       )}
       {ratingMutation.error ? (
         <Text style={styles.error}>
-          {ratingMutation.error instanceof Error ? ratingMutation.error.message : 'Could not save review'}
+          {ratingMutation.error instanceof Error ? ratingMutation.error.message : profile.review.reflectErrorLabel}
         </Text>
       ) : null}
     </ScrollView>

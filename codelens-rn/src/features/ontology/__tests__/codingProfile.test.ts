@@ -51,6 +51,49 @@ describe('coding profile', () => {
       sourceFieldLabel: 'Snippet',
       originSectionTitle: 'Where You Learned This',
       relationshipSectionTitle: 'Learning Structure',
+      reviewEntryText: 'Browse concepts to revisit in your own time.',
+      conceptListTitle: 'Concept List',
+      conceptListSortLabel: 'Weakest first',
+      conceptListEmptyLabel: 'Concepts appear after related captures are grouped.',
+      flashback: {
+        bannerPrefix: 'Viewing past session - ',
+        fallbackTitle: 'Past Session',
+        noMetadataLabel: 'No session metadata',
+        savedSectionTitle: 'What was saved here',
+        emptyLabel: 'No captures were saved from this session yet.',
+        unknownDateLabel: 'Unknown',
+        conceptCountTemplate: '{count} {itemLabel}',
+        conceptCountSingularLabel: 'concept',
+        conceptCountPluralLabel: 'concepts',
+        captureCountTemplate: '{count} {captureLabel}',
+        captureCountSingularLabel: 'capture',
+        captureCountPluralLabel: 'captures',
+      },
+    });
+  });
+
+  it('defines review UI labels for all review surfaces', () => {
+    expect(codingProfile.review).toMatchObject({
+      enabledLabel: 'Review Mode',
+      weakItemLabel: 'Weak concepts',
+      thresholdSubtitle: 'Browse concepts below your refresh threshold.',
+      thresholdCloseLabel: 'Close',
+      thresholdEmptyLabel: 'No concepts under your refresh threshold.',
+      reflectPromptTemplate: 'What still makes sense to you about {conceptName}?',
+      reflectSubmitLabel: 'Submit',
+      reflectErrorLabel: 'Could not save review',
+      reflectPlaceholder: 'Jot down what you remember, in your own words - or skip and just peek at what you saved.',
+      resultSavedLabel: 'Review saved.',
+      resultDoneLabel: 'Done',
+      resultContinueInChatLabel: 'Continue in chat',
+      resultOpenItemLabel: 'Open this concept',
+      ratePromptTitle: 'How did this feel?',
+      rateStrongLabel: 'I got it',
+      ratePartialLabel: 'Partial',
+      rateWeakLabel: 'Need to revisit',
+      rateSkipLabel: 'Skip',
+      revealHideLabel: 'Hide what I had saved',
+      revealShowLabel: 'Show what I had saved',
     });
   });
 
@@ -65,6 +108,50 @@ describe('coding profile', () => {
       prerequisite: 'Prerequisite',
       related: 'Related',
       contrast: 'Contrast',
+    });
+  });
+
+  it('defines graph UI labels for screen titles, view labels, empty state, and mode labels', () => {
+    expect(codingProfile.graph).toMatchObject({
+      screenTitle: 'Knowledge Graph',
+      focusedScreenTitle: 'Concept Graph',
+      focusedViewLabel: 'Focused view',
+      fullViewLabel: 'Full graph',
+      emptyLabel: 'No concepts yet',
+      modeLabels: {
+        structure: 'Structure',
+        recency: 'Recency',
+        strength: 'Strength',
+      },
+    });
+  });
+
+  it('defines graph helper labels for status, tooltip, and legend', () => {
+    expect(codingProfile.graph.statusLabels).toMatchObject({
+      loading: 'Loading graph...',
+      unavailable: 'Graph unavailable',
+      retryAction: 'Try again',
+      emptyBody: 'Concepts appear here once you promote captures.',
+      capBannerTemplate: 'Showing {shown} of {total} - strongest first',
+    });
+    expect(codingProfile.graph.tooltipLabels).toMatchObject({
+      neverAccessed: 'Never accessed via Dot Connector',
+      lastAccessedTemplate: 'Last accessed {date}',
+      scoreTemplate: 'Familiarity {familiarity}% - Importance {importance}%',
+      strengthTemplate: 'Strength {strength}%',
+      viewDetailAction: 'View detail',
+      dayAgoTemplate: '{count} {dayLabel} ago',
+      daySingularLabel: 'day',
+      dayPluralLabel: 'days',
+    });
+    expect(codingProfile.graph.legendHelperLabels).toMatchObject({
+      title: 'Legend',
+      recencyRecent: 'Orange: under 1 week',
+      recencyModerate: 'Yellow: 1-4 weeks',
+      recencyOld: 'Blue: 1-3 months',
+      recencyStale: 'Grey: 3+ months or never',
+      strengthGradient: 'Red to green: weaker to stronger',
+      strengthSize: 'Small to large: lower to higher strength',
     });
   });
 

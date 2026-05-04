@@ -41,6 +41,24 @@ export interface DomainLabels {
   sourceFieldLabel: string;
   originSectionTitle: string;
   relationshipSectionTitle: string;
+  reviewEntryText: string;
+  conceptListTitle: string;
+  conceptListSortLabel: string;
+  conceptListEmptyLabel: string;
+  flashback: {
+    bannerPrefix: string;
+    fallbackTitle: string;
+    noMetadataLabel: string;
+    savedSectionTitle: string;
+    emptyLabel: string;
+    unknownDateLabel: string;
+    conceptCountTemplate: string;
+    conceptCountSingularLabel: string;
+    conceptCountPluralLabel: string;
+    captureCountTemplate: string;
+    captureCountSingularLabel: string;
+    captureCountPluralLabel: string;
+  };
 }
 
 export interface MetadataFieldDefinition {
@@ -83,12 +101,62 @@ export interface PromotionProfile<TItemTypeNodeId extends string = string> {
 export interface ReviewProfile {
   enabledLabel: string;
   weakItemLabel: string;
+  thresholdSubtitle: string;
+  thresholdCloseLabel: string;
+  thresholdEmptyLabel: string;
+  reflectPromptTemplate: string;
+  reflectSubmitLabel: string;
+  reflectErrorLabel: string;
+  reflectPlaceholder: string;
+  resultSavedLabel: string;
+  resultDoneLabel: string;
+  resultContinueInChatLabel: string;
+  resultOpenItemLabel: string;
+  ratePromptTitle: string;
+  rateStrongLabel: string;
+  ratePartialLabel: string;
+  rateWeakLabel: string;
+  rateSkipLabel: string;
+  revealHideLabel: string;
+  revealShowLabel: string;
 }
 
 export interface GraphProfile<TItemTypeNodeId extends string = string> {
   nodeColors: Readonly<Record<TItemTypeNodeId, string>>;
   relationshipLabels: Readonly<Record<string, string>>;
   relationshipSectionLabels: Readonly<Record<string, string>>;
+  screenTitle: string;
+  focusedScreenTitle: string;
+  focusedViewLabel: string;
+  fullViewLabel: string;
+  emptyLabel: string;
+  modeLabels: Readonly<Record<string, string>>;
+  statusLabels: {
+    loading: string;
+    unavailable: string;
+    retryAction: string;
+    emptyBody: string;
+    capBannerTemplate: string;
+  };
+  tooltipLabels: {
+    neverAccessed: string;
+    lastAccessedTemplate: string;
+    scoreTemplate: string;
+    strengthTemplate: string;
+    viewDetailAction: string;
+    dayAgoTemplate: string;
+    daySingularLabel: string;
+    dayPluralLabel: string;
+  };
+  legendHelperLabels: {
+    title: string;
+    recencyRecent: string;
+    recencyModerate: string;
+    recencyOld: string;
+    recencyStale: string;
+    strengthGradient: string;
+    strengthSize: string;
+  };
 }
 
 export interface OntologyProfile<TItemTypeNodeId extends string = string> {

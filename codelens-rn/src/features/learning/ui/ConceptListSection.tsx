@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, fontSize, spacing } from '../../../ui/theme';
+import { getActiveDomainProfile } from '@/src/features/ontology';
 import { computeStrength } from '../strength/computeStrength';
 import { ConceptCardCompact } from './cards/ConceptCardCompact';
 import type { ConceptId } from '../types/ids';
@@ -11,18 +12,20 @@ interface ConceptListSectionProps {
 }
 
 export function ConceptListSection({ concepts, onOpenConcept }: ConceptListSectionProps) {
+  const profile = getActiveDomainProfile();
+
   if (concepts.length === 0) {
     return (
       <View style={styles.section}>
-        <SectionHeader title="Concept List" />
-        <Text style={styles.empty}>Concepts appear after related captures are grouped.</Text>
+        <SectionHeader title={profile.labels.conceptListTitle} />
+        <Text style={styles.empty}>{profile.labels.conceptListEmptyLabel}</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.section}>
-      <SectionHeader title="Concept List" meta="Weakest first" />
+      <SectionHeader title={profile.labels.conceptListTitle} meta={profile.labels.conceptListSortLabel} />
       {concepts.map((concept) => (
         <ConceptCardCompact
           key={concept.id}

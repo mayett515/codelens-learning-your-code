@@ -12,12 +12,13 @@ interface GraphLegendProps {
 }
 
 export function GraphLegend({ mode, presentTypeNodeIds }: GraphLegendProps) {
+  const profile = getActiveDomainProfile();
   const [expanded, setExpanded] = useState(false);
 
   return (
     <View style={styles.container}>
       <Pressable onPress={() => setExpanded((value) => !value)} style={styles.header}>
-        <Text style={styles.title}>Legend</Text>
+        <Text style={styles.title}>{profile.graph.legendHelperLabels.title}</Text>
         <Text style={styles.toggle}>{expanded ? '-' : '+'}</Text>
       </Pressable>
       {expanded ? <LegendBody mode={mode} presentTypeNodeIds={presentTypeNodeIds} /> : null}
@@ -32,8 +33,10 @@ function LegendBody({
   mode: GraphMode;
   presentTypeNodeIds: ConceptType[];
 }) {
+  const profile = getActiveDomainProfile();
+
   if (mode === 'structure') {
-    const relLabels = getActiveDomainProfile().graph.relationshipLabels;
+    const relLabels = profile.graph.relationshipLabels;
     return (
       <View style={styles.body}>
         {presentTypeNodeIds.map((typeNodeId) => (
@@ -52,18 +55,18 @@ function LegendBody({
   if (mode === 'recency') {
     return (
       <View style={styles.body}>
-        <Text style={styles.text}>Orange: under 1 week</Text>
-        <Text style={styles.text}>Yellow: 1-4 weeks</Text>
-        <Text style={styles.text}>Blue: 1-3 months</Text>
-        <Text style={styles.text}>Grey: 3+ months or never</Text>
+        <Text style={styles.text}>{profile.graph.legendHelperLabels.recencyRecent}</Text>
+        <Text style={styles.text}>{profile.graph.legendHelperLabels.recencyModerate}</Text>
+        <Text style={styles.text}>{profile.graph.legendHelperLabels.recencyOld}</Text>
+        <Text style={styles.text}>{profile.graph.legendHelperLabels.recencyStale}</Text>
       </View>
     );
   }
 
   return (
     <View style={styles.body}>
-      <Text style={styles.text}>Red to green: weaker to stronger</Text>
-      <Text style={styles.text}>Small to large: lower to higher strength</Text>
+      <Text style={styles.text}>{profile.graph.legendHelperLabels.strengthGradient}</Text>
+      <Text style={styles.text}>{profile.graph.legendHelperLabels.strengthSize}</Text>
     </View>
   );
 }

@@ -38,6 +38,11 @@ Implemented so far:
 - Renamed UI primitive `ConceptTypeChip.tsx` to `TypeNodeChip.tsx`; component `ConceptTypeChip` -> `TypeNodeChip`; prop `type` -> `typeNodeId`. The old `ConceptTypeChip.tsx` is now a deprecated compatibility wrapper (not a re-export shim) that accepts `type` and maps it to `typeNodeId` internally. All card/promotion/review call sites use `TypeNodeChip` with `typeNodeId`. Source-level regression guards added in `stage3-card-guards.test.ts` and `stage4-hub-guards.test.ts` to ensure the shim stays a real wrapper and callers use the new API. Card boundary props (`conceptType` on `ConceptCardCompact`, `ConceptCardFull`, `CaptureCardFull`, `CandidateCaptureCard`) are kept as compatibility mirrors of `LearningConcept.conceptType`.
 - Added architecture/anti-regression guards in `stage10-architecture-guards.test.ts` for ontology-profile naming boundaries (graph `typeNodeId`, promotion `typeNodeId`/`proposedTypeNodeId`, retrieval `typeNodeId`/`typeNodeIds`, UI chip `TypeNodeChip`/deprecated `ConceptTypeChip` wrapper, hook `ConceptListFilters.typeNodeIds`). Updated `05_ANTI_REGRESSION_RULES.md` with naming boundary table documenting allowed legacy names.
 - Renamed `ConceptListFilters` hook-owned filter API: added preferred `typeNodeIds?: ConceptType[]`, kept `conceptType?: ConceptType` as legacy alias. Filtering treats both as a union (same behavior as retrieval `matchesFilters`). Source guards added in `stage4-hub-guards.test.ts` and `stage10-architecture-guards.test.ts`.
+- Moved all hardcoded review UI labels into `ReviewProfile` and wired them through `getActiveDomainProfile().review` (or `profile.labels.reviewModeTitle` where already appropriate). Review screens (`ReviewThresholdScreen`, `ReviewSessionScreen`, `ReviewResultScreen`, `SelfRatingPrompt`, `ShowSavedReveal`, `ReflectionInput`) now read labels from the active profile. Preserved exact current coding wording in `codingProfile`.
+- Moved all hardcoded graph UI labels into `GraphProfile` and wired them through `getActiveDomainProfile().graph` (or `profile.labels` where already appropriate). Graph screen (`GraphScreen`) title/subtitle/empty-state and mode bar (`GraphModeBar`) labels now read from the active profile. Preserved exact current coding wording in `codingProfile`.
+- Moved remaining hardcoded learning UI labels into `DomainLabels` and wired them through `getActiveDomainProfile().labels`. `LearningHubScreen` review entry text, `ConceptListSection` title/sort label/empty-state, and `SessionFlashbackScreen` banner/title/metadata/saved-section/empty-state labels now read from the active profile. Grouped flashback labels into a nested `flashback` object under `DomainLabels` to avoid flat-label sprawl. Preserved exact current coding wording in `codingProfile`.
+- Moved remaining graph helper labels into `GraphProfile` and wired them through `getActiveDomainProfile().graph`. `GraphScreen` loading/error/retry/empty-body/cap-banner, `NodePreviewTooltip` never-accessed/last-accessed/score/strength/view-detail/day-pluralization, and `GraphLegend` title/recency/strength helper descriptions now read from the active profile. Grouped into nested `statusLabels`, `tooltipLabels`, and `legendHelperLabels` under `GraphProfile`. Preserved exact current coding wording in `codingProfile`.
+- Moved remaining dynamic/fallback user-facing strings into the active profile. `SessionFlashbackScreen` `Unknown` fallback, concept/capture count templates, lowercase count labels (`concept`/`concepts`/`capture`/`captures`), and `NodePreviewTooltip` day count singular/plural templates now read from the profile. Preserved exact current coding wording and count behavior.
 
 ## Important Compatibility Choices
 
@@ -97,6 +102,19 @@ src/features/learning/hooks/useConceptList.ts
 src/features/learning/ui/__tests__/stage4-hub-guards.test.ts
 src/__tests__/stage10-architecture-guards.test.ts
 src/features/ontology/__tests__/codingProfile.test.ts
+src/features/learning/review/ui/ReviewThresholdScreen.tsx
+src/features/learning/review/ui/ReviewSessionScreen.tsx
+src/features/learning/review/ui/ReviewResultScreen.tsx
+src/features/learning/review/ui/SelfRatingPrompt.tsx
+src/features/learning/review/ui/ShowSavedReveal.tsx
+src/features/learning/review/ui/ReflectionInput.tsx
+src/features/graph/ui/GraphScreen.tsx
+src/features/graph/ui/GraphModeBar.tsx
+src/features/graph/ui/GraphLegend.tsx
+src/features/graph/ui/NodePreviewTooltip.tsx
+src/features/learning/ui/LearningHubScreen.tsx
+src/features/learning/ui/ConceptListSection.tsx
+src/features/learning/ui/SessionFlashbackScreen.tsx
 src/features/backup/export.ts
 src/features/backup/import.ts
 src/features/backup/clear.ts
@@ -138,14 +156,14 @@ src\features\learning\ui\cards\__tests__\stage3-card-guards.test.ts
 src\__tests__\stage10-architecture-guards.test.ts
 ```
 
-Latest verification after the `ConceptListFilters.typeNodeIds` compatibility slice:
+Latest verification after the graph legend title wiring slice:
 
 ```text
 node node_modules\typescript\bin\tsc -p tsconfig.json --noEmit
-npm test -- --run src/features/learning/ui/__tests__/stage4-hub-guards.test.ts src/__tests__/stage10-architecture-guards.test.ts src/features/ontology/__tests__/codingProfile.test.ts
+npm test -- --run src/features/ontology/__tests__/codingProfile.test.ts
 npm test -- --run
 
-Result: TypeScript clean; targeted tests 28/28 passed; full suite 333/333 passed across 49 test files.
+Result: TypeScript clean; targeted profile tests 13/13 passed; full suite 336/336 passed across 49 test files.
 ```
 
 ## Persistence Compatibility (migration 011)
@@ -224,7 +242,11 @@ Persistence compatibility and backup round-trip are complete. The remaining majo
 3. ~~Rename promotion-owned ontology type fields from `conceptType` / `proposedConceptType` to `typeNodeId` / `proposedTypeNodeId`, while keeping DB/cache/capture compatibility mappings.~~ (done)
 4. ~~Update retrieval/filter naming around `conceptTypes` after deciding the public compatibility shape.~~ (done)
 5. ~~Update `ConceptListFilters` hook naming to prefer `typeNodeIds` while keeping `conceptType` as a legacy alias.~~ (done)
-6. Do not remove the old coding-specific columns (`coreConcept`, `architecturalPattern`, `programmingParadigm`, `conceptType`) until a later cleanup migration after compatibility is proven.
+6. ~~Move review UI labels into `ReviewProfile` while preserving current coding wording.~~ (done)
+7. ~~Move graph UI screen/mode labels into `GraphProfile` while preserving current coding wording.~~ (done)
+8. ~~Remaining label-profile cleanup candidates: Learning Hub review entry text, concept list section labels, session flashback empty state~~ (done).
+9. ~~Remaining label-profile cleanup candidates: `ConceptListSection` empty-state text and `SessionFlashbackScreen` helper labels~~ (done). ~~Graph tooltip/cap/loading/error labels and graph legend helper descriptions~~ (done). ~~Dynamic count/pluralization and fallback labels (`Unknown`, concept/capture counts, day counts)~~ (done).
+10. Do not remove the old coding-specific columns (`coreConcept`, `architecturalPattern`, `programmingParadigm`, `conceptType`) until a later cleanup migration after compatibility is proven.
 
 ## Guardrails
 

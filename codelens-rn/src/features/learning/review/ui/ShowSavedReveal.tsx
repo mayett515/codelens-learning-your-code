@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useState } from 'react';
 import { colors, fontSize, spacing } from '../../../../ui/theme';
+import { getActiveDomainProfile } from '@/src/features/ontology';
 import { CaptureCardCompact } from '../../ui/cards/CaptureCardCompact';
 import type { LearningCapture } from '../../types/learning';
 
@@ -10,10 +11,12 @@ export function ShowSavedReveal(props: {
   onOpenCapture?: ((id: LearningCapture['id']) => void) | undefined;
 }) {
   const [open, setOpen] = useState(false);
+  const profile = getActiveDomainProfile();
+
   return (
     <View style={styles.container}>
       <Pressable style={styles.button} onPress={() => setOpen((value) => !value)}>
-        <Text style={styles.buttonText}>{open ? 'Hide what I had saved' : 'Show what I had saved'}</Text>
+        <Text style={styles.buttonText}>{open ? profile.review.revealHideLabel : profile.review.revealShowLabel}</Text>
       </Pressable>
       {open ? (
         <View style={styles.reveal}>

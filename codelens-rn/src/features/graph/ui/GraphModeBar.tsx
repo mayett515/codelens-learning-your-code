@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, fontSize, spacing } from '@/src/ui/theme';
+import { getActiveDomainProfile } from '@/src/features/ontology';
 import type { GraphMode } from '../types';
 
 const MODES: GraphMode[] = ['structure', 'recency', 'strength'];
@@ -10,6 +11,8 @@ interface GraphModeBarProps {
 }
 
 export function GraphModeBar({ currentMode, onModeChange }: GraphModeBarProps) {
+  const profile = getActiveDomainProfile();
+
   return (
     <View style={styles.container}>
       {MODES.map((mode) => {
@@ -20,18 +23,12 @@ export function GraphModeBar({ currentMode, onModeChange }: GraphModeBarProps) {
             style={[styles.item, active ? styles.itemActive : null]}
             onPress={() => onModeChange(mode)}
           >
-            <Text style={[styles.label, active ? styles.labelActive : null]}>{labelForMode(mode)}</Text>
+            <Text style={[styles.label, active ? styles.labelActive : null]}>{profile.graph.modeLabels[mode]}</Text>
           </Pressable>
         );
       })}
     </View>
   );
-}
-
-function labelForMode(mode: GraphMode): string {
-  if (mode === 'recency') return 'Recency';
-  if (mode === 'strength') return 'Strength';
-  return 'Structure';
 }
 
 const styles = StyleSheet.create({
