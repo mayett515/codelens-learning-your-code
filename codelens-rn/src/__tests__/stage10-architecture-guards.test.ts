@@ -416,4 +416,15 @@ describe('Kortex durable doc future-direction anchor guards', () => {
     expect(antiRegressionRules).toContain('### Overlay Over Existing Systems');
     expect(antiRegressionRules).toContain('### Active-Profile Overlays');
   });
+
+  it('keeps profile branching, layering, and merge anchors in doc 06', () => {
+    const doc06 = readDoc('06_PROFILE_BRANCHING_AND_MERGE.md');
+
+    expect(doc06).toContain('## Architecture Decisions');
+    expect(doc06).toContain('personal corrections win, then active project/learning overlay, then base');
+    expect(doc06).toContain('Active branch rules win for classification inside that branch.');
+    expect(doc06).toContain('Do not rush into persistence for branches.');
+    expect(doc06).toContain('Only then consider storage for branches/patch suggestions.');
+    expect(doc06).toContain('## What A Branch Can Change');
+  });
 });

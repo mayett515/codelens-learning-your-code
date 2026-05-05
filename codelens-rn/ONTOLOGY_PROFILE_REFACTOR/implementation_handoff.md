@@ -45,6 +45,7 @@ Implemented so far:
 - Moved remaining dynamic/fallback user-facing strings into the active profile. `SessionFlashbackScreen` `Unknown` fallback, concept/capture count templates, lowercase count labels (`concept`/`concepts`/`capture`/`captures`), and `NodePreviewTooltip` day count singular/plural templates now read from the profile. Preserved exact current coding wording and count behavior.
 - Added ontology correction evidence types (`OntologyCorrectionEvidence`, `OntologyCorrectionSubjectKind`, `OntologyCorrectionField`, `OntologyCorrectionSource`) and a pure validation helper (`validateOntologyCorrection`) in `src/features/ontology/corrections.ts`. Validation checks profile id match, valid ontology item type ids for both previous and corrected values, rejects no-op corrections and empty ids, and does not mutate inputs. Domain-only - no persistence, UI, or automatic profile mutation.
 - Added source-level architecture guards in `src/__tests__/stage10-architecture-guards.test.ts` to keep correction evidence domain-only: correction shape/export coverage, `typeNodeId`/`user` unions staying narrow for this stage, no forbidden cross-feature imports, no `ontology_corrections` / `ontology_patch_suggestions` source implementation yet, and no automatic profile mutation helper in `corrections.ts`.
+- Added correction validation tests in `src/features/ontology/__tests__/corrections.test.ts` proving overlay-added type ids validate only against an explicitly composed profile and fail against the base coding profile, previousTypeNodeId overlay-only validation, and validation does not mutate either the correction evidence or the composed profile/overlay input.
 - Added `06_PROFILE_BRANCHING_AND_MERGE.md` to capture Kortex profile inheritance, branching, overlays, and merge semantics before correction/checker persistence or UI work. The intended model is a stable base profile per lineage with branch/project/learning/personal overlays that can stay independent or merge selected changes back with user approval. The current coding profile is this app lineage's base, not a globally fixed base for every future fork/user.
 - Added `07_KORTEX_CORE_AND_CHILD_CORES.md` to capture the newer product framing: Kortex Core is the reusable ontology/graph/versioned reasoning system, and CodeLens/coding is the first serious child core/wrapper around it. The doc also records child/subcore endpoints, agent execution ontology, self-building app framework direction, graph projections, relationship maturity, event-driven relationship discovery, and the caution that current `prerequisite`/`related`/`contrast` compatibility should not become the final global relationship taxonomy.
 - Added `08_KORTEX_LANGUAGE_LAYER_AND_ADAPTERS.md` to capture the future language-layer direction: keep TypeScript for current app/core seams, design protocol-first operations, and leave room for a later Racket/Kortex DSL plus adapters. The doc explicitly defines self-updating as validated ontology/graph operations, not hidden source-code rewrites, and preserves future agent/app policy operations such as execution constraints, allowed/forbidden operations, approval gates, app cores, app entities, app workflows, and subagent assignments.
@@ -52,10 +53,12 @@ Implemented so far:
 - Added profile composition helpers: `ProfileOverlayKind` (`project` | `learning` | `personal`) and `ProfileOverlay<TItemTypeNodeId>` in `types.ts`; `composeDomainProfile(base, overlays)` in `src/features/ontology/profileComposition.ts` as a pure, non-mutating composition function. Overlays support adding/overriding ontology nodes, appending itemTypeNodeIds, merging/deduping relationshipTypeNodeIds, partial label overrides (including nested `flashback`), metadataFields merge by id, and partial graph overrides (nodeColors, relationshipLabels, statusLabels, tooltipLabels, legendHelperLabels, modeLabels). Re-exported from `index.ts`.
 - Added `src/features/ontology/__tests__/profileComposition.test.ts` with 11 tests: empty overlays returns equivalent profile, overlay adds ontology node + itemTypeNodeId, overlay overrides existing node meaning/useWhen, label override preserves unspecified base labels, personal overlay wins over project/learning, later overlays of same kind win deterministically, relationshipTypeNodeIds merge/dedup without base mutation, metadataFields merge by id with overlay precedence, full input immutability, overrideOntologyNodes for non-existent id adds the node, partial graph override merges without losing base keys.
 - Added the first explicit runtime overlay activation seam: `getActiveDomainProfile(overlays?)` still returns `codingProfile` by reference when called with no overlays or an empty overlay list, but composes supplied overlays through `composeDomainProfile()` for callers/tests that opt in. No global selector, persistence, UI, or automatic profile mutation was added.
-- Added `src/features/ontology/__tests__/activeProfile.test.ts` with 4 tests for the active-profile overlay seam: default no-arg call returns `codingProfile` by reference, empty overlay list returns `codingProfile` by reference, explicit overlays compose without changing the default active profile, and ontology helpers can consume a composed active profile.
-- Hardened profile composition tests with deep-clone/no-shared-reference coverage for graph nested maps, ontology node arrays, overlay-added nodes, boundary-rule evidence arrays, metadata fields, and enum option objects.
-- Hardened active-profile seam tests with personal-overlay priority, repeated-call/no-cache behavior, graph nested map clone checks, and overlay input immutability.
-- Added source-level stage10 guards that keep future Kortex runtime ideas out of production source for now: no hidden active overlay/profile state, no future agent/app operation names under production `src`, and no profile overlay persistence table/string names.
+- Added `src/features/ontology/__tests__/activeProfile.test.ts` with tests for the active-profile overlay seam: default no-arg call returns `codingProfile` by reference, empty overlay list returns `codingProfile` by reference, explicit overlays compose without changing the default active profile, ontology helpers can consume a composed active profile, personal overlay precedence, repeated-call/no-cache behavior, composed profile does not share mutable graph nested maps with codingProfile, overlay input immutability, singleton no-arg/empty-array reference equivalence, frozen overlay input composition, mixed three-kind seam precedence, same-kind project overlay input order, `getOntologyNode`/`getOntologyNodeLabel` stay profile-parameter driven and do not leak hidden overlay state.
+- Added `ActiveDomainProfileSource<TItemTypeNodeId>` and `resolveActiveDomainProfile(source)` as the first explicit structured active-profile source helper. It accepts a caller-owned `baseProfile` plus optional overlays, returns the base profile by reference when overlays are omitted/null/empty, and composes explicit overlays without cache, global state, persistence, UI, or mutation. `getActiveDomainProfile(overlays?)` now delegates through this resolver while preserving existing no-arg/empty-array reference behavior.
+- Added `src/features/ontology/__tests__/profileActivation.test.ts` with tests for omitted/null/empty overlays, explicit overlay composition, source/base/overlay immutability, no-cache repeated calls, non-default base profiles, and `getActiveDomainProfile` compatibility through the resolver.
+- Hardened profile composition tests with deep-clone/no-shared-reference coverage for graph nested maps, ontology node arrays, overlay-added nodes, boundary-rule evidence arrays, metadata fields, and enum option objects. Added profile composition tests for mixed three-kind precedence across labels/graph/ontology, three same-kind project overlay chain (later-wins determinism), and no-op overlay equivalence to empty overlay list. Added `overrideOntology` composition tests for item/relationship id merge/dedupe without base mutation, node deep cloning with boundary-rule/evidence-id cloning, and additions composing cleanly with typed overlay additions without duplicate ids.
+- Hardened active-profile seam tests with personal-overlay priority, repeated-call/no-cache behavior, graph nested map clone checks, overlay input immutability, singleton no-arg/empty-array reference, frozen overlay input, mixed three-kind seam precedence, same-kind input order, and `getOntologyNode`/`getOntologyNodeLabel` profile-parameter-driven coverage proving no hidden overlay state leak.
+- Added source-level stage10 guards that keep future Kortex runtime ideas out of production source for now: no hidden active overlay/profile state, no future agent/app operation names under production `src`, and no profile overlay persistence table/string names. Added stage10 doc-anchor guards for doc 06 branching/merge durable anchors (architecture decisions, personal-corrections-win precedence, active-branch classification rules, persistence caution, what-a-branch-can-change).
 - Updated `05_ANTI_REGRESSION_RULES.md` with Kortex Core boundary rules, future architecture guardrails, and refactor gates for agent/subagent execution, self-building apps, language/DSL, overlays over existing systems, and explicit-only active profile overlays.
 - Added durable doc-anchor stage10 guards so the agent execution ontology, self-building app framework, future operation anchors, Kortex-over-self-building-apps section, NEXT_LLM_CONTEXT cautions, and anti-regression future boundary sections cannot be accidentally deleted without test failures.
 
@@ -80,6 +83,8 @@ src/features/ontology/__tests__/corrections.test.ts
 src/features/ontology/profileComposition.ts
 src/features/ontology/__tests__/profileComposition.test.ts
 src/features/ontology/__tests__/activeProfile.test.ts
+src/features/ontology/profileActivation.ts
+src/features/ontology/__tests__/profileActivation.test.ts
 ONTOLOGY_PROFILE_REFACTOR/06_PROFILE_BRANCHING_AND_MERGE.md
 ONTOLOGY_PROFILE_REFACTOR/07_KORTEX_CORE_AND_CHILD_CORES.md
 ONTOLOGY_PROFILE_REFACTOR/08_KORTEX_LANGUAGE_LAYER_AND_ADAPTERS.md
@@ -227,6 +232,34 @@ npm test -- --run
 Result: TypeScript clean; focused guard/profile tests 63/63 passed across 3 test files; full suite 402/402 passed across 52 test files.
 ```
 
+Latest verification after Batch 2 (seam guards, three-kind precedence, same-kind order, no-op overlay):
+
+```text
+npm test -- --run src/features/ontology/__tests__/profileComposition.test.ts src/features/ontology/__tests__/activeProfile.test.ts src/__tests__/stage10-architecture-guards.test.ts
+
+Result: focused guard/profile tests 74/74 passed across 3 test files.
+```
+
+Latest verification after Batch 3 (correction overlay validation, overrideOntology composition, ontology helper leakproofing):
+
+```text
+node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit
+npm test -- --run src/features/ontology/__tests__/profileComposition.test.ts src/features/ontology/__tests__/activeProfile.test.ts src/features/ontology/__tests__/corrections.test.ts src/__tests__/stage10-architecture-guards.test.ts
+npm test -- --run
+
+Result: TypeScript clean; focused profile/guard/correction tests 93/93 passed across 4 test files; full suite 419/419 passed across 52 test files.
+```
+
+Latest verification after Batch 4 Slice 1 (explicit active-profile source resolver):
+
+```text
+node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit
+npm test -- --run src/features/ontology/__tests__/profileComposition.test.ts src/features/ontology/__tests__/activeProfile.test.ts src/features/ontology/__tests__/corrections.test.ts src/features/ontology/__tests__/profileActivation.test.ts src/__tests__/stage10-architecture-guards.test.ts
+npm test -- --run
+
+Result: TypeScript clean; focused profile/guard/correction/activation tests 103/103 passed across 5 test files; full suite 429/429 passed across 53 test files.
+```
+
 ## Persistence Compatibility (migration 011)
 
 The following persistence compatibility work is complete on this branch.
@@ -317,8 +350,10 @@ Persistence compatibility and backup round-trip are complete. The remaining majo
 17. Profile composition helpers are implemented and tested.
 18. Agent/subagent execution ontology is documented as a future direction: tags/subtags, `is`, `is not`, and `extends` can later define agent behavior, allowed/forbidden operations, tool/file scope, and approval gates. Do not implement orchestration, permission enforcement, MCP policy tools, or subagent runtime in this branch unless explicitly requested.
 19. Kortex-as-self-building-app-framework is documented as a future direction: user intent can become a project app core, domain entities/workflows/screens/schema/API/UI/test responsibilities can become ontology and child/subagent cores, and user corrections can become evidence/patch suggestions before more code is generated. Do not implement app-builder runtime, code-generation orchestration, generated-app persistence, or source write-back in this branch unless explicitly requested.
-20. The first explicit active-profile overlay seam is implemented and tested. The next decision gate is whether to persist branch/overlay state, add a real UI/runtime activation source, or move to correction persistence/checker first.
-21. Stage10 guard coverage now protects both current source boundaries and durable future-direction docs for the profile overlay, agent/subagent, self-building app, DSL, and overlay-over-existing-systems directions.
+20. The first explicit active-profile overlay seam is implemented and tested.
+21. The explicit active-profile source resolver is implemented and tested. `ActiveDomainProfileSource` and `resolveActiveDomainProfile(source)` let callers provide a base profile plus overlays without hidden state.
+22. The next decision gate is whether to persist branch/overlay state, add a first real caller/runtime source that supplies overlays to the resolver, or move to correction persistence/checker first.
+23. Stage10 guard coverage now protects both current source boundaries and durable future-direction docs for the profile overlay, agent/subagent, self-building app, DSL, and overlay-over-existing-systems directions.
 
 ## Guardrails
 

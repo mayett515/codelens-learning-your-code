@@ -229,6 +229,20 @@ export type GraphProfileOverrides<TItemTypeNodeId extends string = string> = Par
   legendHelperLabels?: Partial<GraphProfile<TItemTypeNodeId>['legendHelperLabels']> | undefined;
 };
 
+// ---------------------------------------------------------------------------
+// Active profile source: an explicit, caller-owned bundle of base + overlays.
+// ---------------------------------------------------------------------------
+
+/**
+ * A structured source for resolving an active domain profile.
+ * Callers pass this to `resolveActiveDomainProfile` to obtain a composed
+ * `DomainProfile` without any persistence, UI, global state, or mutation.
+ */
+export interface ActiveDomainProfileSource<TItemTypeNodeId extends string = string> {
+  baseProfile: DomainProfile<TItemTypeNodeId>;
+  overlays?: readonly ProfileOverlay<TItemTypeNodeId>[] | null | undefined;
+}
+
 /** A partial overlay that contributes additions/overrides to a base DomainProfile. */
 export interface ProfileOverlay<TItemTypeNodeId extends string = string> {
   kind: ProfileOverlayKind;

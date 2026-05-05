@@ -550,4 +550,192 @@ describe('composeDomainProfile', () => {
       expect(resultField!.enumOptions).toEqual(overlayField.enumOptions);
     });
   });
+
+  describe('mixed three-kind overlays apply project then learning then personal precedence per field', () => {
+    it('produces identical results regardless of input order and respects kind precedence', () => {
+      const base = codingProfile as DomainProfile<string>;
+
+      const projectOverlay = makeOverlay<string>('proj-1', 'project', {
+        overrideLabels: { hubTitle: 'P-Hub' },
+        overrideGraph: { nodeColors: { mechanism: '#111111' } },
+        addItemTypeNodeIds: ['proj_only'],
+      });
+
+      const learningOverlay = makeOverlay('learn-1', 'learning', {
+        overrideLabels: { hubTitle: 'L-Hub', itemSingular: 'Idea' },
+      });
+
+      const personalOverlay = makeOverlay('pers-1', 'personal', {
+        overrideLabels: { hubTitle: 'Me-Hub' },
+        overrideGraph: { nodeColors: { mechanism: '#222222' } },
+      });
+
+      const resultA = composeDomainProfile(base, [projectOverlay, learningOverlay, personalOverlay]);
+      const resultB = composeDomainProfile(base, [personalOverlay, learningOverlay, projectOverlay]);
+
+      expect(resultA.labels.hubTitle).toBe('Me-Hub');
+      expect(resultB.labels.hubTitle).toBe('Me-Hub');
+      expect(resultA.labels.itemSingular).toBe('Idea');
+      expect(resultB.labels.itemSingular).toBe('Idea');
+      expect(resultA.graph.nodeColors.mechanism).toBe('#222222');
+      expect(resultB.graph.nodeColors.mechanism).toBe('#222222');
+      expect(resultA.ontology.itemTypeNodeIds).toContain('proj_only');
+      expect(resultB.ontology.itemTypeNodeIds).toContain('proj_only');
+
+      const personalNoHub = makeOverlay('pers-2', 'personal', {
+        overrideGraph: { nodeColors: { mechanism: '#333333' } },
+      });
+      const resultC = composeDomainProfile(base, [projectOverlay, learningOverlay, personalNoHub]);
+      expect(resultC.labels.hubTitle).toBe('L-Hub');
+    });
+  });
+
+  describe('three same-kind project overlays apply later-wins precedence deterministically', () => {
+    it('later input order wins regardless of entry order', () => {
+      const base = codingProfile as DomainProfile<string>;
+
+      const a = makeOverlay('a', 'project', { overrideLabels: { hubTitle: 'A' } });
+      const b = makeOverlay('b', 'project', { overrideLabels: { hubTitle: 'B' } });
+      const c = makeOverlay('c', 'project', { overrideLabels: { hubTitle: 'C' } });
+
+      expect(composeDomainProfile(base, [a, b, c]).labels.hubTitle).toBe('C');
+      expect(composeDomainProfile(base, [c, b, a]).labels.hubTitle).toBe('A');
+      expect(composeDomainProfile(base, [b, c, a]).labels.hubTitle).toBe('A');
+    });
+  });
+
+  describe('no-op overlay (no override fields) is equivalent to empty overlay list for label and ontology', () => {
+    it('does not change labels, ontology, metadata length, or graph colors', () => {
+      const base = codingProfile as DomainProfile<string>;
+
+      const overlay = makeOverlay('noop-1', 'project');
+      const overlaySnapshot = JSON.parse(JSON.stringify(overlay));
+
+      const composedA = composeDomainProfile(base, [overlay]);
+      const composedB = composeDomainProfile(base, []);
+
+      expect(composedA.labels).toEqual(composedB.labels);
+      expect(composedA.ontology.itemTypeNodeIds).toEqual(composedB.ontology.itemTypeNodeIds);
+      expect(composedA.ontology.relationshipTypeNodeIds).toEqual(composedB.ontology.relationshipTypeNodeIds);
+      expect(composedA.metadataFields.length).toBe(composedB.metadataFields.length);
+      expect(composedA.ontology.nodes.length).toBe(composedB.ontology.nodes.length);
+
+      expect(composedA.graph.nodeColors).toEqual(base.graph.nodeColors);
+      expect(composedB.graph.nodeColors).toEqual(base.graph.nodeColors);
+
+      expect(overlay).toEqual(overlaySnapshot);
+    });
+  });
+
+  describe('overrideOntology', () => {
+    it('itemTypeNodeIds and relationshipTypeNodeIds merge with the base, dedupe duplicates, and do not mutate the base', () => {
+      const base = codingProfile as DomainProfile<string>;
+      const baseItemTypes = [...base.ontology.itemTypeNodeIds];
+      const baseRels = [...base.ontology.relationshipTypeNodeIds];
+      const existingItemType = base.ontology.itemTypeNodeIds[0];
+      const existingRelType = base.ontology.relationshipTypeNodeIds[0];
+
+      const overlay: ProfileOverlay<string> = makeOverlay('proj-1', 'project', {
+        overrideOntology: {
+          itemTypeNodeIds: [existingItemType, 'new_item_type'],
+          relationshipTypeNodeIds: [existingRelType, 'new_rel_type', 'new_rel_type'],
+        },
+      });
+
+      const result = composeDomainProfile(base, [overlay]);
+
+      expect(result.ontology.itemTypeNodeIds).toContain(existingItemType);
+      expect(result.ontology.itemTypeNodeIds).toContain('new_item_type');
+      expect(new Set(result.ontology.itemTypeNodeIds).size).toBe(result.ontology.itemTypeNodeIds.length);
+
+      expect(result.ontology.relationshipTypeNodeIds).toContain(existingRelType);
+      expect(result.ontology.relationshipTypeNodeIds).toContain('new_rel_type');
+      expect(new Set(result.ontology.relationshipTypeNodeIds).size).toBe(result.ontology.relationshipTypeNodeIds.length);
+
+      expect(base.ontology.itemTypeNodeIds).toEqual(baseItemTypes);
+      expect(base.ontology.relationshipTypeNodeIds).toEqual(baseRels);
+    });
+
+    it('nodes adds a new ontology node and deep-clones mutable nested node fields', () => {
+      const base = codingProfile as DomainProfile<string>;
+      const overlayBoundaryRule: BoundaryRule = {
+        id: 'rule-1',
+        text: 'do not use in unrelated profile branches',
+        source: 'profile_seed',
+        evidenceIds: ['ev-1', 'ev-2'],
+      };
+
+      const newNode: OntologyNode = makeTestNode('override_new_node', {
+        useWhen: ['condition-a', 'condition-b'],
+        examples: ['ex-1', 'ex-2'],
+        relatedNodeIds: ['rel-a', 'rel-b'],
+        contrastNodeIds: ['contrast-a'],
+        doNotUseWhen: [overlayBoundaryRule],
+      });
+
+      const overlay: ProfileOverlay<string> = makeOverlay('proj-1', 'project', {
+        overrideOntology: {
+          nodes: [newNode],
+        },
+      });
+
+      const result = composeDomainProfile(base, [overlay]);
+
+      const resultNode = result.ontology.nodes.find((n) => n.id === 'override_new_node');
+      expect(resultNode).toBeDefined();
+
+      expect(resultNode).not.toBe(newNode);
+      expect(resultNode!.useWhen).not.toBe(newNode.useWhen);
+      expect(resultNode!.examples).not.toBe(newNode.examples);
+      expect(resultNode!.relatedNodeIds).not.toBe(newNode.relatedNodeIds);
+      expect(resultNode!.contrastNodeIds).not.toBe(newNode.contrastNodeIds);
+      expect(resultNode!.doNotUseWhen).not.toBe(newNode.doNotUseWhen);
+      expect(resultNode!.doNotUseWhen[0]).not.toBe(overlayBoundaryRule);
+      expect(resultNode!.doNotUseWhen[0].evidenceIds).not.toBe(overlayBoundaryRule.evidenceIds);
+
+      expect(resultNode!.useWhen).toEqual(newNode.useWhen);
+      expect(resultNode!.examples).toEqual(newNode.examples);
+      expect(resultNode!.relatedNodeIds).toEqual(newNode.relatedNodeIds);
+      expect(resultNode!.contrastNodeIds).toEqual(newNode.contrastNodeIds);
+      expect(resultNode!.doNotUseWhen).toEqual(newNode.doNotUseWhen);
+
+      expect(base.ontology.nodes.find((n) => n.id === 'override_new_node')).toBeUndefined();
+    });
+
+    it('additions compose cleanly with typed overlay additions without duplicate item/relationship ids', () => {
+      const base = codingProfile as DomainProfile<string>;
+      const nodeFromAdd = makeTestNode('shared_node');
+      const nodeFromOverride = makeTestNode('override_only_node');
+
+      const overlay: ProfileOverlay<string> = makeOverlay('proj-1', 'project', {
+        addOntologyNodes: [nodeFromAdd],
+        addItemTypeNodeIds: ['shared_node', 'add_only_item'],
+        addRelationshipTypeNodeIds: ['rel_from_add', 'shared_rel'],
+        overrideOntology: {
+          nodes: [nodeFromAdd, nodeFromOverride],
+          itemTypeNodeIds: ['shared_node', 'override_only_item', 'shared_node'],
+          relationshipTypeNodeIds: ['rel_from_override', 'shared_rel', 'shared_rel'],
+        },
+      });
+
+      const result = composeDomainProfile(base, [overlay]);
+
+      expect(result.ontology.nodes.find((n) => n.id === 'shared_node')).toBeDefined();
+      expect(result.ontology.nodes.find((n) => n.id === 'override_only_node')).toBeDefined();
+      expect(result.ontology.nodes.filter((n) => n.id === 'shared_node').length).toBe(1);
+
+      expect(result.ontology.itemTypeNodeIds).toContain('shared_node');
+      expect(result.ontology.itemTypeNodeIds).toContain('add_only_item');
+      expect(result.ontology.itemTypeNodeIds).toContain('override_only_item');
+      expect(new Set(result.ontology.itemTypeNodeIds).size).toBe(result.ontology.itemTypeNodeIds.length);
+
+      expect(result.ontology.relationshipTypeNodeIds).toContain('rel_from_add');
+      expect(result.ontology.relationshipTypeNodeIds).toContain('rel_from_override');
+      expect(result.ontology.relationshipTypeNodeIds).toContain('shared_rel');
+      expect(new Set(result.ontology.relationshipTypeNodeIds).size).toBe(result.ontology.relationshipTypeNodeIds.length);
+
+      expect(base.ontology.nodes.find((n) => n.id === 'shared_node')).toBeUndefined();
+      expect(base.ontology.nodes.find((n) => n.id === 'override_only_node')).toBeUndefined();
+    });
+  });
 });

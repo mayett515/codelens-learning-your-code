@@ -21,7 +21,7 @@ Summarize:
 ## Expected Next Slice
 
 ```text
-Decision gate after profile composition helpers and the first active-profile overlay seam: choose branch/overlay persistence, real overlay activation source, or correction/checker persistence.
+Decision gate after profile composition helpers, the first active-profile overlay seam, and the explicit active-profile source resolver: choose branch/overlay persistence, a first real caller/runtime source that supplies overlays to the resolver, or correction/checker persistence.
 ```
 
 Strict boundaries:
@@ -151,12 +151,14 @@ console.log('viewer db valid', db.evaluations.length, db.evaluations.at(-1)?.id,
 
 Do not continue directly into correction UI or persistence.
 
-Core/child/profile branch composition with pure helpers and tests is now proven. The first explicit active-profile overlay seam is also proven: `getActiveDomainProfile(overlays?)` composes supplied overlays while no-arg and empty-list calls still return `codingProfile` directly.
+Core/child/profile branch composition with pure helpers and tests is proven. The first explicit active-profile overlay seam is proven: `getActiveDomainProfile(overlays?)` composes supplied overlays while no-arg and empty-list calls still return `codingProfile` directly. `ActiveDomainProfileSource` and `resolveActiveDomainProfile(source)` now provide a structured caller-owned base+overlays source without global state or persistence. Correction validation is proven: overlay-added type ids validate only against explicitly composed profiles. `overrideOntology` composition is proven: item/relationship id merge/dedupe, node deep cloning, and composition with typed add fields all work without mutating inputs. Ontology helpers (`getOntologyNode`/`getOntologyNodeLabel`) are proven profile-parameter driven and do not leak hidden overlay state.
+
+Latest verification: TypeScript clean, 429/429 tests passing across 53 files.
 
 Keep the next decision focused on one of these paths:
 
 - persist branch/overlay state
-- add a real UI/runtime activation source for overlays
+- add a first real caller/runtime source that supplies overlays to the resolver
 - move to correction/checker persistence
 - write a decision brief for agent/subagent execution ontology before any implementation
 - write a decision brief for Kortex as self-building-app framework before any implementation

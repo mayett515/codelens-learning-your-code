@@ -1,5 +1,5 @@
 import { codingProfile } from './profiles/codingProfile';
-import { composeDomainProfile } from './profileComposition';
+import { resolveActiveDomainProfile } from './profileActivation';
 import type { CodingConceptTypeNodeId } from './profiles/codingProfile';
 import type { DomainProfile, OntologyNode, ProfileOverlay } from './types';
 
@@ -35,6 +35,8 @@ export type { CodingConceptTypeNodeId } from './profiles/codingProfile';
 
 export { composeDomainProfile } from './profileComposition';
 export type { ProfileOverlay, ProfileOverlayKind } from './types';
+export { resolveActiveDomainProfile } from './profileActivation';
+export type { ActiveDomainProfileSource } from './types';
 
 export { getMetadataField, getMetadataFieldLabel, getMetadataFieldPlaceholder } from './metadata';
 export { validateOntologyCorrection } from './corrections';
@@ -44,10 +46,10 @@ export function getActiveDomainProfile(overlays: readonly ProfileOverlay<string>
 export function getActiveDomainProfile(
   overlays?: readonly ProfileOverlay<string>[],
 ): DomainProfile<string> {
-  if (!overlays || overlays.length === 0) {
-    return codingProfile;
-  }
-  return composeDomainProfile(codingProfile as DomainProfile<string>, overlays);
+  return resolveActiveDomainProfile<string>({
+    baseProfile: codingProfile as DomainProfile<string>,
+    overlays,
+  });
 }
 
 export function getOntologyNode(

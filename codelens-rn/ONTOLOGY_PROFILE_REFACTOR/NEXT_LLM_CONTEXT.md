@@ -11,7 +11,7 @@ branch: refactor/ontology-profile
 
 The latest source slice is ontology correction evidence groundwork. The profile-label sweep is already checkpointed in git. Source changes add domain-only correction evidence types, a pure correction validator, and source-level guards that prevent premature persistence, UI, checker, or automatic profile mutation work.
 
-The latest profile/core source slices add pure profile composition helpers and the first explicit active-profile overlay seam. `composeDomainProfile(base, overlays)` composes branch/project/learning/personal overlays without mutating inputs. `getActiveDomainProfile(overlays?)` still returns `codingProfile` by reference with no overlays or an empty list, and composes supplied overlays only when callers explicitly opt in. The latest guard batch added deeper immutability tests, active-profile no-cache/no-hidden-state tests, future runtime source guards, future architecture anti-regression rules, and durable doc-anchor guards.
+The latest profile/core source slices add pure profile composition helpers, the first explicit active-profile overlay seam, and an explicit active-profile source resolver. `composeDomainProfile(base, overlays)` composes branch/project/learning/personal overlays without mutating inputs. `ActiveDomainProfileSource` packages a caller-owned `baseProfile` plus optional overlays, and `resolveActiveDomainProfile(source)` returns the base profile by reference when overlays are omitted/null/empty or composes explicit overlays when supplied. `getActiveDomainProfile(overlays?)` still returns `codingProfile` by reference with no overlays or an empty list, and now delegates through the resolver for explicit overlays. The latest guard batch added deeper immutability tests, active-profile no-cache/no-hidden-state tests, future runtime source guards, future architecture anti-regression rules, and durable doc-anchor guards.
 
 The latest product framing is stronger than "make CodeLens profile-driven": Kortex Core is the reusable ontology/graph/versioned reasoning system, and CodeLens/coding is the first serious child core/wrapper around it. Read `07_KORTEX_CORE_AND_CHILD_CORES.md` before implementing more branch, relationship, graph, or correction semantics.
 
@@ -44,13 +44,19 @@ Read in this order:
 
 ## Current Changed Files
 
-Expected tracked changes in the current post-Pi ontology guard batch:
+Expected tracked changes in the current post-Batch-4 state:
 
 ```text
-ONTOLOGY_PROFILE_REFACTOR/05_ANTI_REGRESSION_RULES.md
+ONTOLOGY_PROFILE_REFACTOR/NEXT_LLM_CONTEXT.md
+ONTOLOGY_PROFILE_REFACTOR/TOMORROW_START.md
 ONTOLOGY_PROFILE_REFACTOR/implementation_handoff.md
+src/features/ontology/types.ts
+src/features/ontology/index.ts
+src/features/ontology/profileActivation.ts
 src/features/ontology/__tests__/profileComposition.test.ts
 src/features/ontology/__tests__/activeProfile.test.ts
+src/features/ontology/__tests__/corrections.test.ts
+src/features/ontology/__tests__/profileActivation.test.ts
 src/__tests__/stage10-architecture-guards.test.ts
 ```
 
@@ -58,10 +64,9 @@ Expected untracked local tool folders:
 
 ```text
 .claude/
-.pi/
 ```
 
-Do not include local tool folders in a product commit unless the user explicitly requests it.
+Pi prompts/logs for the HR workflow live under `C:\pi-stuff`, not in this repo. Do not include local tool folders in a product commit unless the user explicitly requests it.
 
 ## What Was Just Completed
 
@@ -100,6 +105,7 @@ Do not include local tool folders in a product commit unless the user explicitly
   - `getActiveDomainProfile()` returns `codingProfile` directly
   - `getActiveDomainProfile([])` returns `codingProfile` directly
   - `getActiveDomainProfile(overlays)` composes overlays explicitly
+  - `ActiveDomainProfileSource` and `resolveActiveDomainProfile(source)` provide a structured, caller-owned base+overlays source without global state
   - no global selector, persistence, UI, or automatic profile mutation has been added
 - The five-slice ontology guard batch hardened this seam and the future architecture boundaries:
   - profile composition output does not share mutable nested graph, ontology, or metadata references with base profiles or overlays
@@ -108,6 +114,19 @@ Do not include local tool folders in a product commit unless the user explicitly
   - stage10 guards block future agent/app operation names and profile overlay persistence table names from production source
   - `05_ANTI_REGRESSION_RULES.md` now preserves Kortex Core boundary rules and future architecture guardrails
   - stage10 doc-anchor guards preserve agent/subagent and self-building-app architecture sections in durable docs
+- Batch 2 added/accepted:
+  - active-profile seam guards: singleton no-arg/empty-array reference, frozen overlay input, mixed three-kind seam precedence, same-kind input order
+  - stage10 doc-anchor guards for doc 06 branching/merge durable anchors
+  - profile composition tests for mixed three-kind precedence, three same-kind project overlay chain, and no-op overlay equivalence
+- Batch 3 added/accepted:
+  - correction validation tests proving overlay-added type ids validate only against an explicitly composed profile
+  - `overrideOntology` composition tests for item/relationship id merge/dedupe, node deep cloning, and composition with typed add fields
+  - active-profile ontology helper tests proving `getOntologyNode`/`getOntologyNodeLabel` stay profile-parameter driven and do not leak hidden overlay state
+- Batch 4 Slice 1 added/accepted:
+  - `ActiveDomainProfileSource<TItemTypeNodeId>` type
+  - `resolveActiveDomainProfile(source)` pure resolver
+  - `getActiveDomainProfile(overlays?)` now delegates through the resolver without changing no-arg/empty-array reference behavior
+  - `profileActivation.test.ts` covers omitted/null/empty overlays, explicit composition, immutability, no-cache behavior, and non-default base profiles
 
 ## Verification Already Run
 
@@ -115,7 +134,7 @@ Latest verified commands:
 
 ```powershell
 node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit
-npm test -- --run src/features/ontology/__tests__/profileComposition.test.ts src/features/ontology/__tests__/activeProfile.test.ts src/__tests__/stage10-architecture-guards.test.ts
+npm test -- --run src/features/ontology/__tests__/profileComposition.test.ts src/features/ontology/__tests__/activeProfile.test.ts src/features/ontology/__tests__/corrections.test.ts src/features/ontology/__tests__/profileActivation.test.ts src/__tests__/stage10-architecture-guards.test.ts
 npm test -- --run
 ```
 
@@ -123,8 +142,8 @@ Latest result:
 
 ```text
 TypeScript clean
-focused profile/guard tests: 63/63 passed across 3 test files
-full suite: 402/402 passed across 52 test files
+focused profile/guard/correction/activation tests: 103/103 passed across 5 test files
+full suite: 429/429 passed across 53 test files
 ```
 
 ## Important Compatibility Boundaries
@@ -141,7 +160,7 @@ Persistence and backup/import compatibility work is already complete for migrati
 
 ## Next Real Work
 
-The label-profile cleanup is complete. Correction evidence domain groundwork is now in place. The next major product decisions are about where correction happens in the UI and when/how correction evidence is persisted.
+The label-profile cleanup is complete. Correction evidence domain groundwork is now in place. The explicit active-profile source helper is in place. The next major product decisions are whether to persist branch/overlay state, add a first real caller/runtime source that supplies overlays to the resolver, or move to correction/checker persistence.
 
 The user also wants Kortex profile branches: a general coding child should be extendable into project, job, learning, or personal branches that can stay separate or later merge selected changes back. "Core" means immutable within a profile lineage; a fork/user can create a different ground-zero base profile later. Read `06_PROFILE_BRANCHING_AND_MERGE.md` before proposing correction/checker storage or UI.
 
