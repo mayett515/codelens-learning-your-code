@@ -6,7 +6,7 @@ Use this when starting the next orchestrator session.
 
 ```text
 Read ONTOLOGY_PROFILE_REFACTOR/NEXT_LLM_CONTEXT.md first.
-Then read ONTOLOGY_PROFILE_REFACTOR/06_PROFILE_BRANCHING_AND_MERGE.md and ONTOLOGY_PROFILE_REFACTOR/implementation_handoff.md.
+Then read ONTOLOGY_PROFILE_REFACTOR/07_KORTEX_CORE_AND_CHILD_CORES.md, ONTOLOGY_PROFILE_REFACTOR/08_KORTEX_LANGUAGE_LAYER_AND_ADAPTERS.md, ONTOLOGY_PROFILE_REFACTOR/09_KORTEX_OVER_EXISTING_SYSTEMS.md, ONTOLOGY_PROFILE_REFACTOR/06_PROFILE_BRANCHING_AND_MERGE.md, and ONTOLOGY_PROFILE_REFACTOR/implementation_handoff.md.
 
 We are continuing as orchestrator.
 Do not implement until we confirm the next slice.
@@ -21,7 +21,7 @@ Summarize:
 ## Expected Next Slice
 
 ```text
-Internal-only Kortex profile branch composition helpers and tests.
+Decision gate after profile composition helpers and the first active-profile overlay seam: choose branch/overlay persistence, real overlay activation source, or correction/checker persistence.
 ```
 
 Strict boundaries:
@@ -36,13 +36,18 @@ Strict boundaries:
 
 ## Product Direction To Preserve
 
+Kortex Core is the ontology/graph/versioned reasoning system. CodeLens/coding is the first serious
+child core/wrapper around it, not the boundary of the whole system.
+
 Kortex profile branching model:
 
 ```text
-base profile for a lineage
-  -> profile branch
-      -> project / learning / personal overlay
-          -> correction evidence / patch suggestions
+Kortex Core
+  -> coding child core / wrapper
+      -> base profile for this lineage
+          -> profile branch
+              -> project / learning / personal overlay
+                  -> correction evidence / patch suggestions
 ```
 
 Important nuance:
@@ -60,6 +65,51 @@ personal corrections > active project/learning overlay > base profile
 ```
 
 Branches are branch-only by default. Merge back into a parent profile requires explicit user approval.
+
+Relationship-semantics caution:
+
+```text
+Current compatibility shape: prerequisite / related / contrast.
+Newer product direction: is / is not boundary anchors plus dynamic profile/user/LLM-created relationship labels.
+Do not hardcode a global final relationship taxonomy in the next slice.
+```
+
+Language-layer caution:
+
+```text
+TypeScript remains the current implementation path.
+Racket is a plausible future language/DSL layer, not a rewrite target for this branch.
+Design pure helpers as steps toward serializable, validated core operations that adapters can call later.
+```
+
+Overlay caution:
+
+```text
+Kortex can later sit over existing systems through read/write/sync adapters.
+The default is non-destructive: understand first, write back only by explicit approval/policy.
+Do not build adapters, source sync, static analysis, file watchers, MCP, or write-back in the next slice.
+```
+
+Agent/subagent execution-ontology caution:
+
+```text
+Kortex can later wrap agents/subagents with ontology-backed execution policy.
+Tags/subtags can define behavior and Ausfuehrung/execution constraints.
+is / is not can define hard boundaries.
+extends can inherit agent policy from parent cores.
+Allowed/forbidden operations and approval gates should be structured policy, not only prompt text.
+Do not build orchestration, permission enforcement, MCP policy tools, or subagent runtime in the next slice.
+```
+
+Self-building-app framework caution:
+
+```text
+Kortex can later be the ontology/coherence framework behind self-building apps.
+User intent becomes a project app core.
+Domain entities, workflows, screens, schema/API/UI/test responsibilities become ontology and child/subagent cores.
+Generated code should stay tied to correctable graph state.
+Do not build app-builder runtime, code-generation orchestration, generated-app persistence, or source write-back in the next slice.
+```
 
 ## Worker Recommendation
 
@@ -101,10 +151,12 @@ console.log('viewer db valid', db.evaluations.length, db.evaluations.at(-1)?.id,
 
 Do not continue directly into correction UI or persistence.
 
-First prove profile branch composition with pure helpers and tests:
+Core/child/profile branch composition with pure helpers and tests is now proven. The first explicit active-profile overlay seam is also proven: `getActiveDomainProfile(overlays?)` composes supplied overlays while no-arg and empty-list calls still return `codingProfile` directly.
 
-- base + overlay composes into a runtime profile
-- overlay can add an ontology node
-- conflict precedence is deterministic
-- personal layer wins over project/learning overlay
-- base profile object is not mutated
+Keep the next decision focused on one of these paths:
+
+- persist branch/overlay state
+- add a real UI/runtime activation source for overlays
+- move to correction/checker persistence
+- write a decision brief for agent/subagent execution ontology before any implementation
+- write a decision brief for Kortex as self-building-app framework before any implementation

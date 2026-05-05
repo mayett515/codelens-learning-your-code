@@ -23,6 +23,10 @@ This file explains how the root architecture docs and this refactor folder shoul
 - `03_CATEGORIZATION_AND_ONTOLOGY_CHECKER.md` defines categorization, correction, and checker ideas.
 - `04_REFACTOR_WITHOUT_BREAKING_APP.md` defines the staged implementation plan.
 - `05_ANTI_REGRESSION_RULES.md` defines hard rules for profile/ontology work.
+- `06_PROFILE_BRANCHING_AND_MERGE.md` defines profile inheritance, branching, overlays, and merge semantics.
+- `07_KORTEX_CORE_AND_CHILD_CORES.md` defines the updated product boundary: Kortex Core, child cores, agent execution ontology, self-building app framework direction, graph projections, and dynamic relationship semantics direction.
+- `08_KORTEX_LANGUAGE_LAYER_AND_ADAPTERS.md` defines the future Racket/DSL language-layer direction, protocol-first adapters, and self-update boundary.
+- `09_KORTEX_OVER_EXISTING_SYSTEMS.md` defines the non-destructive overlay model for codebases, notes, databases, LLMs, and other existing systems.
 - `architecture_contract_for_profile_refactor.md` is the local adjusted LLM contract for this refactor.
 - `architecture_guide_for_profile_refactor_humans.md` is the local adjusted human guide.
 - `modules_architecture.md` is a draft future module/foldering architecture guide.
@@ -34,6 +38,11 @@ This file explains how the root architecture docs and this refactor folder shoul
 <update_rules>
 - If the general architecture rule changes, update the root `whatwe_agreedonthearchitecture.md` and mirror the relevant profile-specific rule here.
 - If the profile/ontology strategy changes, update this folder first, then add a short pointer in `MAIN.md` or `ARCHITECTURE.md` if it affects repo-wide rules.
+- If the Kortex Core / child-core product boundary changes, update `07_KORTEX_CORE_AND_CHILD_CORES.md` first.
+- If tags/subtags gain agent behavior, permission, execution, or subagent policy meaning, update `07_KORTEX_CORE_AND_CHILD_CORES.md` first and mirror the adapter implications in `09_KORTEX_OVER_EXISTING_SYSTEMS.md`.
+- If Kortex-as-self-building-app-framework changes, update `07_KORTEX_CORE_AND_CHILD_CORES.md` first and mirror the overlay implications in `09_KORTEX_OVER_EXISTING_SYSTEMS.md`.
+- If the Kortex language layer, adapter strategy, or self-update boundary changes, update `08_KORTEX_LANGUAGE_LAYER_AND_ADAPTERS.md` first.
+- If the Kortex-over-existing-systems overlay model, adapter ownership, source sync, or write-back policy changes, update `09_KORTEX_OVER_EXISTING_SYSTEMS.md` first.
 - If persistence schema changes for profiles or ontology, update `PERSISTENCE.md`, `ARCHITECTURE.md`, and `04_REFACTOR_WITHOUT_BREAKING_APP.md`.
 - If a phase completes, update `current_state.md`.
 - Do not let old handoff/session notes become canonical. Promote durable decisions into root docs or this folder.
@@ -97,6 +106,9 @@ whatwe_agreedonthearchitecture_humans.md
 ARCHITECTURE.md
 PERSISTENCE.md
 ONTOLOGY_PROFILE_REFACTOR/README.md
+ONTOLOGY_PROFILE_REFACTOR/07_KORTEX_CORE_AND_CHILD_CORES.md
+ONTOLOGY_PROFILE_REFACTOR/08_KORTEX_LANGUAGE_LAYER_AND_ADAPTERS.md
+ONTOLOGY_PROFILE_REFACTOR/09_KORTEX_OVER_EXISTING_SYSTEMS.md
 ONTOLOGY_PROFILE_REFACTOR/humanreadable.md
 ONTOLOGY_PROFILE_REFACTOR/04_REFACTOR_WITHOUT_BREAKING_APP.md
 ONTOLOGY_PROFILE_REFACTOR/05_ANTI_REGRESSION_RULES.md
@@ -106,6 +118,9 @@ For a smaller planning-only discussion, read:
 
 ```text
 ONTOLOGY_PROFILE_REFACTOR/README.md
+ONTOLOGY_PROFILE_REFACTOR/07_KORTEX_CORE_AND_CHILD_CORES.md
+ONTOLOGY_PROFILE_REFACTOR/08_KORTEX_LANGUAGE_LAYER_AND_ADAPTERS.md
+ONTOLOGY_PROFILE_REFACTOR/09_KORTEX_OVER_EXISTING_SYSTEMS.md
 ONTOLOGY_PROFILE_REFACTOR/humanreadable.md
 ONTOLOGY_PROFILE_REFACTOR/01_BIG_PLAN.md
 ONTOLOGY_PROFILE_REFACTOR/03_CATEGORIZATION_AND_ONTOLOGY_CHECKER.md

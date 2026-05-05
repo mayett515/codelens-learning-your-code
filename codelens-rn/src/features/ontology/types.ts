@@ -197,3 +197,56 @@ export interface DomainProfile<TItemTypeNodeId extends string = string> {
   review: ReviewProfile;
   graph: GraphProfile<TItemTypeNodeId>;
 }
+
+// ---------------------------------------------------------------------------
+// Profile overlay / branch composition types
+// ---------------------------------------------------------------------------
+
+export type ProfileOverlayKind = 'project' | 'learning' | 'personal';
+
+export type DomainLabelOverrides = Partial<Omit<DomainLabels, 'flashback'>> & {
+  flashback?: Partial<DomainLabels['flashback']> | undefined;
+};
+
+export type GraphProfileOverrides<TItemTypeNodeId extends string = string> = Partial<
+  Omit<
+    GraphProfile<TItemTypeNodeId>,
+    | 'nodeColors'
+    | 'relationshipLabels'
+    | 'relationshipSectionLabels'
+    | 'modeLabels'
+    | 'statusLabels'
+    | 'tooltipLabels'
+    | 'legendHelperLabels'
+  >
+> & {
+  nodeColors?: Partial<Record<TItemTypeNodeId, string>> | undefined;
+  relationshipLabels?: Record<string, string> | undefined;
+  relationshipSectionLabels?: Record<string, string> | undefined;
+  modeLabels?: Record<string, string> | undefined;
+  statusLabels?: Partial<GraphProfile<TItemTypeNodeId>['statusLabels']> | undefined;
+  tooltipLabels?: Partial<GraphProfile<TItemTypeNodeId>['tooltipLabels']> | undefined;
+  legendHelperLabels?: Partial<GraphProfile<TItemTypeNodeId>['legendHelperLabels']> | undefined;
+};
+
+/** A partial overlay that contributes additions/overrides to a base DomainProfile. */
+export interface ProfileOverlay<TItemTypeNodeId extends string = string> {
+  kind: ProfileOverlayKind;
+  id: string;
+  /** Ontology nodes to add (ids must not exist in the base). */
+  addOntologyNodes?: readonly OntologyNode[] | undefined;
+  /** Existing ontology nodes to override by id (full replacement). */
+  overrideOntologyNodes?: readonly OntologyNode[] | undefined;
+  /** Additional item type node ids to append. */
+  addItemTypeNodeIds?: readonly TItemTypeNodeId[] | undefined;
+  /** Additional relationship type node ids to append. */
+  addRelationshipTypeNodeIds?: readonly string[] | undefined;
+  /** Partial labels to override; unspecified keys retain base values. */
+  overrideLabels?: DomainLabelOverrides | undefined;
+  /** Metadata fields: overrides by id replace the base definition; new ids are appended. */
+  overrideMetadataFields?: readonly MetadataFieldDefinition[] | undefined;
+  /** Partial graph overrides: nodeColors and relationshipLabels are merged by key. */
+  overrideGraph?: GraphProfileOverrides<TItemTypeNodeId> | undefined;
+  /** Partial ontology profile overrides (e.g., additional nodes beyond the typed fields). */
+  overrideOntology?: Partial<OntologyProfile<TItemTypeNodeId>> | undefined;
+}

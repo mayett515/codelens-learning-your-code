@@ -1,5 +1,7 @@
 import { codingProfile } from './profiles/codingProfile';
-import type { DomainProfile, OntologyNode } from './types';
+import { composeDomainProfile } from './profileComposition';
+import type { CodingConceptTypeNodeId } from './profiles/codingProfile';
+import type { DomainProfile, OntologyNode, ProfileOverlay } from './types';
 
 export type {
   BoundaryRule,
@@ -31,11 +33,21 @@ export {
 } from './profiles/codingProfile';
 export type { CodingConceptTypeNodeId } from './profiles/codingProfile';
 
+export { composeDomainProfile } from './profileComposition';
+export type { ProfileOverlay, ProfileOverlayKind } from './types';
+
 export { getMetadataField, getMetadataFieldLabel, getMetadataFieldPlaceholder } from './metadata';
 export { validateOntologyCorrection } from './corrections';
 
-export function getActiveDomainProfile() {
-  return codingProfile;
+export function getActiveDomainProfile(): DomainProfile<CodingConceptTypeNodeId>;
+export function getActiveDomainProfile(overlays: readonly ProfileOverlay<string>[]): DomainProfile<string>;
+export function getActiveDomainProfile(
+  overlays?: readonly ProfileOverlay<string>[],
+): DomainProfile<string> {
+  if (!overlays || overlays.length === 0) {
+    return codingProfile;
+  }
+  return composeDomainProfile(codingProfile as DomainProfile<string>, overlays);
 }
 
 export function getOntologyNode(
