@@ -165,9 +165,121 @@ describe('Ontology correction evidence guards', () => {
   });
 });
 
+describe('Kortex active-profile overlay state guards', () => {
+  // getActiveDomainProfile is a pure seam. It must not accrete module-level
+  // mutable overlay state or setter functions that would allow premature
+  // runtime profile switching before branch/overlay persistence, UI, and
+  // activation decisions are made.
+
+  const ontologyFilePattern = /^src\/features\/ontology\//;
+
+  it('no setActiveDomainProfile setter in src/features/ontology', () => {
+    const offenders = sourceFiles()
+      .filter((filePath) => ontologyFilePattern.test(toRepoPath(filePath)))
+      .filter((filePath) => /\bsetActiveDomainProfile\b/.test(read(filePath)))
+      .map(toRepoPath);
+    expect(offenders).toEqual([]);
+  });
+
+  it('no setActiveProfile setter in src/features/ontology', () => {
+    const offenders = sourceFiles()
+      .filter((filePath) => ontologyFilePattern.test(toRepoPath(filePath)))
+      .filter((filePath) => /\bsetActiveProfile\b/.test(read(filePath)))
+      .map(toRepoPath);
+    expect(offenders).toEqual([]);
+  });
+
+  it('no activeOverlays module-level mutable collection in src/features/ontology', () => {
+    const offenders = sourceFiles()
+      .filter((filePath) => ontologyFilePattern.test(toRepoPath(filePath)))
+      .filter((filePath) => /\bactiveOverlays\b/.test(read(filePath)))
+      .map(toRepoPath);
+    expect(offenders).toEqual([]);
+  });
+
+  it('no activeProfileStore module-level mutable state in src/features/ontology', () => {
+    const offenders = sourceFiles()
+      .filter((filePath) => ontologyFilePattern.test(toRepoPath(filePath)))
+      .filter((filePath) => /\bactiveProfileStore\b/.test(read(filePath)))
+      .map(toRepoPath);
+    expect(offenders).toEqual([]);
+  });
+});
+
+describe('Kortex future operation name guards', () => {
+  // Future Kortex operation names from the language-layer direction
+  // (08_KORTEX_LANGUAGE_LAYER_AND_ADAPTERS.md) must not appear in src/
+  // production code yet. These names define future protocol operations for
+  // agent execution policy and self-building-app workflows. They belong in
+  // design docs only at this stage.
+
+  const forbiddenOps = [
+    'DefineAgentCore',
+    'SetExecutionConstraint',
+    'GrantOperation',
+    'ForbidOperation',
+    'RequireApproval',
+    'DefineAppCore',
+    'DefineAppEntity',
+    'DefineAppWorkflow',
+    'AssignSubagent',
+  ];
+
+  const isAllowedFile = (p: string) =>
+    p.startsWith('ONTOLOGY_PROFILE_REFACTOR/') ||
+    p.endsWith('.test.ts') ||
+    p.endsWith('.test.tsx') ||
+    p.includes('__tests__/');
+
+  for (const opName of forbiddenOps) {
+    it(`no ${opName} source implementation under src yet`, () => {
+      const offenders = sourceFiles()
+        .filter((filePath) => {
+          const content = read(filePath);
+          return content.includes(opName);
+        })
+        .map(toRepoPath)
+        .filter((p) => !isAllowedFile(p));
+      expect(offenders).toEqual([]);
+    });
+  }
+});
+
+describe('Kortex overlay persistence table guards', () => {
+  // No profile overlay persistence tables or string constants must exist
+  // under src/ production code yet. Branch/overlay state persistence
+  // belongs to a later slice after branch semantics and activation
+  // decisions are settled (06_PROFILE_BRANCHING_AND_MERGE.md).
+
+  const forbiddenTableNames = [
+    'profile_overlays',
+    'profile_branches',
+    'active_profile_overlay',
+  ];
+
+  const isAllowedFile = (p: string) =>
+    p.startsWith('ONTOLOGY_PROFILE_REFACTOR/') ||
+    p.endsWith('.test.ts') ||
+    p.endsWith('.test.tsx') ||
+    p.includes('__tests__/');
+
+  for (const tableName of forbiddenTableNames) {
+    it(`no ${tableName} table/string source implementation under src yet`, () => {
+      const offenders = sourceFiles()
+        .filter((filePath) => {
+          const content = read(filePath);
+          return content.includes(tableName);
+        })
+        .map(toRepoPath)
+        .filter((p) => !isAllowedFile(p));
+      expect(offenders).toEqual([]);
+    });
+  }
+});
+
 describe('Ontology-profile naming boundary guards', () => {
   // These guards enforce that renamed fields stay renamed and legacy compat
-  // boundaries stay documented. They do NOT globally ban conceptType — only
+  // boundaries stay documented. They do NOT globally ban conceptType - only
   // in scopes where it was intentionally renamed to typeNodeId/typeNodeIds.
 
   it('does not reintroduce conceptType on GraphNode (graph-owned)', () => {
@@ -251,5 +363,57 @@ describe('Ontology-profile naming boundary guards', () => {
     expect(hookSrc).toMatch(/filters\.conceptType/);
     // The filtering helper must use a union/Set pattern
     expect(hookSrc).toMatch(/new Set<ConceptType>/);
+  });
+});
+
+describe('Kortex durable doc future-direction anchor guards', () => {
+  const docRoot = path.join(repoRoot, 'ONTOLOGY_PROFILE_REFACTOR');
+
+  function readDoc(filename: string): string {
+    return fs.readFileSync(path.join(docRoot, filename), 'utf8');
+  }
+
+  it('keeps core, agent, and self-building app anchors in doc 07', () => {
+    const doc07 = readDoc('07_KORTEX_CORE_AND_CHILD_CORES.md');
+
+    expect(doc07).toContain('## Agent Execution Ontology');
+    expect(doc07).toContain('<agent_execution_ontology>');
+    expect(doc07).toContain('## Self-Building App Framework Direction');
+    expect(doc07).toContain('<self_building_app_framework>');
+  });
+
+  it('keeps future operation anchors in doc 08', () => {
+    const doc08 = readDoc('08_KORTEX_LANGUAGE_LAYER_AND_ADAPTERS.md');
+
+    expect(doc08).toContain('DefineAgentCore');
+    expect(doc08).toContain('DefineAppCore');
+  });
+
+  it('keeps self-building app overlay anchor in doc 09', () => {
+    const doc09 = readDoc('09_KORTEX_OVER_EXISTING_SYSTEMS.md');
+
+    expect(doc09).toContain('## Kortex Over Self-Building Apps');
+    expect(doc09).toContain('app idea / user intent');
+    expect(doc09).toContain('subagent cores with execution policy');
+  });
+
+  it('keeps agent and self-building app cautions in NEXT_LLM_CONTEXT.md', () => {
+    const nextContext = readDoc('NEXT_LLM_CONTEXT.md');
+
+    expect(nextContext).toContain('Important agent/subagent caution before implementation');
+    expect(nextContext).toContain('ontology-backed execution policy');
+    expect(nextContext).toContain('Important self-building-app caution before implementation');
+    expect(nextContext).toContain('intent -> project ontology -> constrained subagents');
+  });
+
+  it('keeps future boundary guardrails in anti-regression rules', () => {
+    const antiRegressionRules = readDoc('05_ANTI_REGRESSION_RULES.md');
+
+    expect(antiRegressionRules).toContain('## Future Architecture Guardrails');
+    expect(antiRegressionRules).toContain('### Agent/Subagent Execution');
+    expect(antiRegressionRules).toContain('### Self-Building App Framework');
+    expect(antiRegressionRules).toContain('### Language/DSL Direction');
+    expect(antiRegressionRules).toContain('### Overlay Over Existing Systems');
+    expect(antiRegressionRules).toContain('### Active-Profile Overlays');
   });
 });

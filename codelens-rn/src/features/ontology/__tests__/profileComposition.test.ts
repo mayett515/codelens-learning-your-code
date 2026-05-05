@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { composeDomainProfile } from '../profileComposition';
-import type { DomainProfile, OntologyNode, ProfileOverlay } from '../types';
+import type { BoundaryRule, DomainProfile, OntologyNode, ProfileOverlay } from '../types';
 import { codingProfile } from '../profiles/codingProfile';
 
 // ---------------------------------------------------------------------------
@@ -361,6 +361,193 @@ describe('composeDomainProfile', () => {
       expect(result.graph.nodeColors.pattern).toBe(base.graph.nodeColors.pattern);
       expect(result.graph.statusLabels.loading).toBe('Loading custom graph...');
       expect(result.graph.statusLabels.retryAction).toBe(base.graph.statusLabels.retryAction);
+    });
+  });
+
+  describe('deep-clone: empty overlays share no mutable nested references with base', () => {
+    it('graph nested maps are cloned, not shared with base', () => {
+      const base = codingProfile as DomainProfile<string>;
+      const result = composeDomainProfile(base, []);
+
+      // Each top-level graph sub-map must be a distinct object.
+      expect(result.graph.nodeColors).not.toBe(base.graph.nodeColors);
+      expect(result.graph.relationshipLabels).not.toBe(base.graph.relationshipLabels);
+      expect(result.graph.relationshipSectionLabels).not.toBe(
+        base.graph.relationshipSectionLabels,
+      );
+      expect(result.graph.statusLabels).not.toBe(base.graph.statusLabels);
+      expect(result.graph.tooltipLabels).not.toBe(base.graph.tooltipLabels);
+      expect(result.graph.legendHelperLabels).not.toBe(base.graph.legendHelperLabels);
+      expect(result.graph.modeLabels).not.toBe(base.graph.modeLabels);
+
+      // But values are equal.
+      expect(result.graph.nodeColors).toEqual(base.graph.nodeColors);
+      expect(result.graph.relationshipLabels).toEqual(base.graph.relationshipLabels);
+    });
+
+    it('ontology nodes array and individual nodes are cloned, not shared with base', () => {
+      const base = codingProfile as DomainProfile<string>;
+      const result = composeDomainProfile(base, []);
+
+      // The nodes array itself must be a new array.
+      expect(result.ontology.nodes).not.toBe(base.ontology.nodes);
+
+      // Each individual node must be a new object.
+      for (let i = 0; i < result.ontology.nodes.length; i++) {
+        expect(result.ontology.nodes[i]).not.toBe(base.ontology.nodes[i]);
+      }
+
+      // Nested mutable arrays on each node must also be distinct.
+      for (let i = 0; i < result.ontology.nodes.length; i++) {
+        const baseNode = base.ontology.nodes[i];
+        const resultNode = result.ontology.nodes[i];
+        expect(resultNode.useWhen).not.toBe(baseNode.useWhen);
+        expect(resultNode.examples).not.toBe(baseNode.examples);
+        expect(resultNode.relatedNodeIds).not.toBe(baseNode.relatedNodeIds);
+        expect(resultNode.contrastNodeIds).not.toBe(baseNode.contrastNodeIds);
+        expect(resultNode.doNotUseWhen).not.toBe(baseNode.doNotUseWhen);
+      }
+
+      // Values remain equal.
+      expect(result.ontology.nodes).toEqual(base.ontology.nodes);
+    });
+
+    it('itemTypeNodeIds and relationshipTypeNodeIds arrays are cloned', () => {
+      const base = codingProfile as DomainProfile<string>;
+      const result = composeDomainProfile(base, []);
+
+      expect(result.ontology.itemTypeNodeIds).not.toBe(base.ontology.itemTypeNodeIds);
+      expect(result.ontology.relationshipTypeNodeIds).not.toBe(
+        base.ontology.relationshipTypeNodeIds,
+      );
+
+      expect(result.ontology.itemTypeNodeIds).toEqual(base.ontology.itemTypeNodeIds);
+      expect(result.ontology.relationshipTypeNodeIds).toEqual(
+        base.ontology.relationshipTypeNodeIds,
+      );
+    });
+
+    it('metadataFields are cloned: field objects and nested arrays not shared', () => {
+      const base = codingProfile as DomainProfile<string>;
+      const result = composeDomainProfile(base, []);
+
+      expect(result.metadataFields).not.toBe(base.metadataFields);
+
+      for (let i = 0; i < result.metadataFields.length; i++) {
+        expect(result.metadataFields[i]).not.toBe(base.metadataFields[i]);
+        expect(result.metadataFields[i].appliesTo).not.toBe(
+          base.metadataFields[i].appliesTo,
+        );
+        expect(result.metadataFields[i].examples).not.toBe(
+          base.metadataFields[i].examples,
+        );
+      }
+
+      expect(result.metadataFields).toEqual(base.metadataFields);
+    });
+  });
+
+  describe('deep-clone: overlay-added node is fully cloned from overlay input', () => {
+    it('addOntologyNodes node, useWhen, examples, relatedNodeIds, contrastNodeIds are not shared with overlay', () => {
+      const overlayBoundaryRule: BoundaryRule = {
+        id: 'rule-1',
+        text: 'do not use in perf-critical paths',
+        source: 'profile_seed',
+        evidenceIds: ['evidence-1', 'evidence-2'],
+      };
+
+      const overlayNode: OntologyNode = makeTestNode('overlay_added_node', {
+        useWhen: ['condition-a', 'condition-b'],
+        examples: ['example-x', 'example-y'],
+        relatedNodeIds: ['rel-1', 'rel-2'],
+        contrastNodeIds: ['contrast-1'],
+        doNotUseWhen: [overlayBoundaryRule],
+      });
+
+      const overlay: ProfileOverlay<string> = makeOverlay('proj-1', 'project', {
+        addOntologyNodes: [overlayNode],
+        addItemTypeNodeIds: ['overlay_added_node'],
+      });
+
+      const base = codingProfile as DomainProfile<string>;
+      const result = composeDomainProfile(base, [overlay]);
+
+      const resultNode = result.ontology.nodes.find(
+        (n) => n.id === 'overlay_added_node',
+      );
+      expect(resultNode).toBeDefined();
+
+      // The node object itself is not the overlay node.
+      expect(resultNode).not.toBe(overlayNode);
+
+      // All mutable nested arrays are distinct from the overlay's arrays.
+      expect(resultNode!.useWhen).not.toBe(overlayNode.useWhen);
+      expect(resultNode!.examples).not.toBe(overlayNode.examples);
+      expect(resultNode!.relatedNodeIds).not.toBe(overlayNode.relatedNodeIds);
+      expect(resultNode!.contrastNodeIds).not.toBe(overlayNode.contrastNodeIds);
+      expect(resultNode!.doNotUseWhen).not.toBe(overlayNode.doNotUseWhen);
+
+      // doNotUseWhen boundary rule objects are cloned too.
+      expect(resultNode!.doNotUseWhen[0]).not.toBe(overlayBoundaryRule);
+      expect(resultNode!.doNotUseWhen[0].evidenceIds).not.toBe(
+        overlayBoundaryRule.evidenceIds,
+      );
+
+      // Values remain equal.
+      expect(resultNode!.useWhen).toEqual(overlayNode.useWhen);
+      expect(resultNode!.examples).toEqual(overlayNode.examples);
+      expect(resultNode!.relatedNodeIds).toEqual(overlayNode.relatedNodeIds);
+      expect(resultNode!.contrastNodeIds).toEqual(overlayNode.contrastNodeIds);
+      expect(resultNode!.doNotUseWhen).toEqual(overlayNode.doNotUseWhen);
+    });
+  });
+
+  describe('deep-clone: metadata field override with enumOptions is fully cloned', () => {
+    it('output field, appliesTo, examples, enumOptions, and enum option objects are not shared with overlay', () => {
+      const overlayEnumOptions = [
+        { id: 'opt-1', label: 'Option One', description: 'First option' },
+        { id: 'opt-2', label: 'Option Two', description: 'Second option' },
+      ];
+
+      const overlayField = {
+        id: 'severity',
+        label: 'Severity Level',
+        appliesTo: ['capture', 'item'] as const,
+        kind: 'enum' as const,
+        required: true,
+        description: 'Severity classification',
+        examples: ['critical', 'minor'],
+        enumOptions: overlayEnumOptions,
+      };
+
+      const overlay: ProfileOverlay<string> = makeOverlay('pers-1', 'personal', {
+        overrideMetadataFields: [overlayField],
+      });
+
+      const base = codingProfile as DomainProfile<string>;
+      const result = composeDomainProfile(base, [overlay]);
+
+      const resultField = result.metadataFields.find((f) => f.id === 'severity');
+      expect(resultField).toBeDefined();
+
+      // The field object is not the overlay field.
+      expect(resultField).not.toBe(overlayField);
+
+      // Nested arrays are distinct.
+      expect(resultField!.appliesTo).not.toBe(overlayField.appliesTo);
+      expect(resultField!.examples).not.toBe(overlayField.examples);
+      expect(resultField!.enumOptions).not.toBe(overlayField.enumOptions);
+      expect(resultField!.enumOptions).toHaveLength(overlayEnumOptions.length);
+
+      // Each enum option object is cloned.
+      for (let i = 0; i < overlayEnumOptions.length; i++) {
+        expect(resultField!.enumOptions![i]).not.toBe(overlayEnumOptions[i]);
+      }
+
+      // Values remain equal.
+      expect(resultField!.appliesTo).toEqual(overlayField.appliesTo);
+      expect(resultField!.examples).toEqual(overlayField.examples);
+      expect(resultField!.enumOptions).toEqual(overlayField.enumOptions);
     });
   });
 });

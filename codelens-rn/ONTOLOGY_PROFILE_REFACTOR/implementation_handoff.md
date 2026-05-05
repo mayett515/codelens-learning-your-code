@@ -53,6 +53,11 @@ Implemented so far:
 - Added `src/features/ontology/__tests__/profileComposition.test.ts` with 11 tests: empty overlays returns equivalent profile, overlay adds ontology node + itemTypeNodeId, overlay overrides existing node meaning/useWhen, label override preserves unspecified base labels, personal overlay wins over project/learning, later overlays of same kind win deterministically, relationshipTypeNodeIds merge/dedup without base mutation, metadataFields merge by id with overlay precedence, full input immutability, overrideOntologyNodes for non-existent id adds the node, partial graph override merges without losing base keys.
 - Added the first explicit runtime overlay activation seam: `getActiveDomainProfile(overlays?)` still returns `codingProfile` by reference when called with no overlays or an empty overlay list, but composes supplied overlays through `composeDomainProfile()` for callers/tests that opt in. No global selector, persistence, UI, or automatic profile mutation was added.
 - Added `src/features/ontology/__tests__/activeProfile.test.ts` with 4 tests for the active-profile overlay seam: default no-arg call returns `codingProfile` by reference, empty overlay list returns `codingProfile` by reference, explicit overlays compose without changing the default active profile, and ontology helpers can consume a composed active profile.
+- Hardened profile composition tests with deep-clone/no-shared-reference coverage for graph nested maps, ontology node arrays, overlay-added nodes, boundary-rule evidence arrays, metadata fields, and enum option objects.
+- Hardened active-profile seam tests with personal-overlay priority, repeated-call/no-cache behavior, graph nested map clone checks, and overlay input immutability.
+- Added source-level stage10 guards that keep future Kortex runtime ideas out of production source for now: no hidden active overlay/profile state, no future agent/app operation names under production `src`, and no profile overlay persistence table/string names.
+- Updated `05_ANTI_REGRESSION_RULES.md` with Kortex Core boundary rules, future architecture guardrails, and refactor gates for agent/subagent execution, self-building apps, language/DSL, overlays over existing systems, and explicit-only active profile overlays.
+- Added durable doc-anchor stage10 guards so the agent execution ontology, self-building app framework, future operation anchors, Kortex-over-self-building-apps section, NEXT_LLM_CONTEXT cautions, and anti-regression future boundary sections cannot be accidentally deleted without test failures.
 
 ## Important Compatibility Choices
 
@@ -79,6 +84,7 @@ ONTOLOGY_PROFILE_REFACTOR/06_PROFILE_BRANCHING_AND_MERGE.md
 ONTOLOGY_PROFILE_REFACTOR/07_KORTEX_CORE_AND_CHILD_CORES.md
 ONTOLOGY_PROFILE_REFACTOR/08_KORTEX_LANGUAGE_LAYER_AND_ADAPTERS.md
 ONTOLOGY_PROFILE_REFACTOR/09_KORTEX_OVER_EXISTING_SYSTEMS.md
+ONTOLOGY_PROFILE_REFACTOR/05_ANTI_REGRESSION_RULES.md
 src/features/learning/extractor/__tests__/extractorPrompt.test.ts
 ONTOLOGY_PROFILE_REFACTOR/implementation_handoff.md
 src/features/backup/__tests__/profile-columns.test.ts
@@ -211,6 +217,16 @@ npm test -- --run
 Result: TypeScript clean; 28/28 targeted ontology tests passed across 3 test files; full suite 371/371 passed across 52 test files.
 ```
 
+Latest verification after the five-slice ontology guard batch:
+
+```text
+node node_modules\typescript\bin\tsc -p tsconfig.json --noEmit
+npm test -- --run src/features/ontology/__tests__/profileComposition.test.ts src/features/ontology/__tests__/activeProfile.test.ts src/__tests__/stage10-architecture-guards.test.ts
+npm test -- --run
+
+Result: TypeScript clean; focused guard/profile tests 63/63 passed across 3 test files; full suite 402/402 passed across 52 test files.
+```
+
 ## Persistence Compatibility (migration 011)
 
 The following persistence compatibility work is complete on this branch.
@@ -302,6 +318,7 @@ Persistence compatibility and backup round-trip are complete. The remaining majo
 18. Agent/subagent execution ontology is documented as a future direction: tags/subtags, `is`, `is not`, and `extends` can later define agent behavior, allowed/forbidden operations, tool/file scope, and approval gates. Do not implement orchestration, permission enforcement, MCP policy tools, or subagent runtime in this branch unless explicitly requested.
 19. Kortex-as-self-building-app-framework is documented as a future direction: user intent can become a project app core, domain entities/workflows/screens/schema/API/UI/test responsibilities can become ontology and child/subagent cores, and user corrections can become evidence/patch suggestions before more code is generated. Do not implement app-builder runtime, code-generation orchestration, generated-app persistence, or source write-back in this branch unless explicitly requested.
 20. The first explicit active-profile overlay seam is implemented and tested. The next decision gate is whether to persist branch/overlay state, add a real UI/runtime activation source, or move to correction persistence/checker first.
+21. Stage10 guard coverage now protects both current source boundaries and durable future-direction docs for the profile overlay, agent/subagent, self-building app, DSL, and overlay-over-existing-systems directions.
 
 ## Guardrails
 

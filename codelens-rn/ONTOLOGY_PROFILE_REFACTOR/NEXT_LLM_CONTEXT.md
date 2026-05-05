@@ -11,7 +11,7 @@ branch: refactor/ontology-profile
 
 The latest source slice is ontology correction evidence groundwork. The profile-label sweep is already checkpointed in git. Source changes add domain-only correction evidence types, a pure correction validator, and source-level guards that prevent premature persistence, UI, checker, or automatic profile mutation work.
 
-The latest profile/core source slices add pure profile composition helpers and the first explicit active-profile overlay seam. `composeDomainProfile(base, overlays)` composes branch/project/learning/personal overlays without mutating inputs. `getActiveDomainProfile(overlays?)` still returns `codingProfile` by reference with no overlays or an empty list, and composes supplied overlays only when callers explicitly opt in.
+The latest profile/core source slices add pure profile composition helpers and the first explicit active-profile overlay seam. `composeDomainProfile(base, overlays)` composes branch/project/learning/personal overlays without mutating inputs. `getActiveDomainProfile(overlays?)` still returns `codingProfile` by reference with no overlays or an empty list, and composes supplied overlays only when callers explicitly opt in. The latest guard batch added deeper immutability tests, active-profile no-cache/no-hidden-state tests, future runtime source guards, future architecture anti-regression rules, and durable doc-anchor guards.
 
 The latest product framing is stronger than "make CodeLens profile-driven": Kortex Core is the reusable ontology/graph/versioned reasoning system, and CodeLens/coding is the first serious child core/wrapper around it. Read `07_KORTEX_CORE_AND_CHILD_CORES.md` before implementing more branch, relationship, graph, or correction semantics.
 
@@ -44,22 +44,14 @@ Read in this order:
 
 ## Current Changed Files
 
-Expected tracked changes in the current core-framing documentation slice:
+Expected tracked changes in the current post-Pi ontology guard batch:
 
 ```text
-ONTOLOGY_PROFILE_REFACTOR/07_KORTEX_CORE_AND_CHILD_CORES.md
-ONTOLOGY_PROFILE_REFACTOR/08_KORTEX_LANGUAGE_LAYER_AND_ADAPTERS.md
-ONTOLOGY_PROFILE_REFACTOR/09_KORTEX_OVER_EXISTING_SYSTEMS.md
-ONTOLOGY_PROFILE_REFACTOR/README.md
-ONTOLOGY_PROFILE_REFACTOR/NEXT_LLM_CONTEXT.md
-ONTOLOGY_PROFILE_REFACTOR/TOMORROW_START.md
-ONTOLOGY_PROFILE_REFACTOR/00_DOC_SYNC.md
+ONTOLOGY_PROFILE_REFACTOR/05_ANTI_REGRESSION_RULES.md
 ONTOLOGY_PROFILE_REFACTOR/implementation_handoff.md
-src/features/ontology/index.ts
-src/features/ontology/types.ts
-src/features/ontology/profileComposition.ts
 src/features/ontology/__tests__/profileComposition.test.ts
 src/features/ontology/__tests__/activeProfile.test.ts
+src/__tests__/stage10-architecture-guards.test.ts
 ```
 
 Expected untracked local tool folders:
@@ -109,6 +101,13 @@ Do not include local tool folders in a product commit unless the user explicitly
   - `getActiveDomainProfile([])` returns `codingProfile` directly
   - `getActiveDomainProfile(overlays)` composes overlays explicitly
   - no global selector, persistence, UI, or automatic profile mutation has been added
+- The five-slice ontology guard batch hardened this seam and the future architecture boundaries:
+  - profile composition output does not share mutable nested graph, ontology, or metadata references with base profiles or overlays
+  - active-profile overlay composition has no cache/global state and does not mutate overlay inputs
+  - stage10 guards block hidden active overlay/profile state names in ontology source
+  - stage10 guards block future agent/app operation names and profile overlay persistence table names from production source
+  - `05_ANTI_REGRESSION_RULES.md` now preserves Kortex Core boundary rules and future architecture guardrails
+  - stage10 doc-anchor guards preserve agent/subagent and self-building-app architecture sections in durable docs
 
 ## Verification Already Run
 
@@ -116,7 +115,7 @@ Latest verified commands:
 
 ```powershell
 node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit
-npm test -- --run src/features/ontology/__tests__/codingProfile.test.ts src/features/ontology/__tests__/profileComposition.test.ts src/features/ontology/__tests__/activeProfile.test.ts
+npm test -- --run src/features/ontology/__tests__/profileComposition.test.ts src/features/ontology/__tests__/activeProfile.test.ts src/__tests__/stage10-architecture-guards.test.ts
 npm test -- --run
 ```
 
@@ -124,8 +123,8 @@ Latest result:
 
 ```text
 TypeScript clean
-ontology targeted tests: 28/28 passed across 3 test files
-full suite: 371/371 passed across 52 test files
+focused profile/guard tests: 63/63 passed across 3 test files
+full suite: 402/402 passed across 52 test files
 ```
 
 ## Important Compatibility Boundaries

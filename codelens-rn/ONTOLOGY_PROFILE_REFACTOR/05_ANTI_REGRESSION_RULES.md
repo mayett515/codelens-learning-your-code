@@ -70,6 +70,56 @@ Use this file as an instruction contract for future agents working on the ontolo
 - Do not hide uncertainty. Surface it calmly as "needs review" or equivalent profile-owned wording.
 </ui_rules>
 
+## Kortex Architecture Boundary Rules
+
+<kortex_boundary_rules>
+- Kortex Core must not depend on CodeLens UI, React Native, or coding-only assumptions.
+- Kortex Core must not import from code-specific feature folders (learning, graph, promotion, review, chat) except through explicit child-core seams.
+- CodeLens/coding is a child core, not the boundary of the system. Do not design future branch, graph, relationship, or correction code as if CodeLens is the outermost layer.
+- Do not let Kortex Core assume it owns every source entity; future overlays may reference external systems.
+</kortex_boundary_rules>
+
+## Future Architecture Guardrails
+
+The following directions are documented in `07_KORTEX_CORE_AND_CHILD_CORES.md`, `08_KORTEX_LANGUAGE_LAYER_AND_ADAPTERS.md`, and `09_KORTEX_OVER_EXISTING_SYSTEMS.md`. They are architecture direction only. They must not appear as runtime or source code on this branch without explicit user approval.
+
+<future_architecture_rules>
+
+### Agent/Subagent Execution
+
+- No agent runtime, orchestration, or subagent execution implementation.
+- No MCP policy tools or permission enforcement helpers.
+- No structured execution policy types outside documentation.
+- Tags/subtags as agent identity descriptors are a future concept only.
+
+### Self-Building App Framework
+
+- No app-builder runtime or project-app-core scaffolding.
+- No code-generation orchestration or generated-app persistence.
+- No source write-back from ontology state to production code.
+
+### Language/DSL Direction
+
+- No Racket runtime, Racket dependencies, or Racket build steps.
+- No DSL parser or interpreter implementation.
+- Keep TypeScript core seams stable and operation-shaped so a future DSL can compile into them.
+- Self-updating means validated, diffable, reversible core operations, not hidden source-code mutation.
+
+### Overlay Over Existing Systems
+
+- No source-sync adapters, static-analysis adapters, file watchers, or MCP adapters.
+- No write-back to external systems (codebases, databases, notes) without explicit adapter and approval.
+- No source-identity tracking or drift-detection implementation.
+
+### Active-Profile Overlays
+
+- No hidden global active-overlay state.
+- No overlay persistence or automatic profile mutation.
+- `getActiveDomainProfile()` must remain an explicit opt-in seam: callers pass overlays; nothing stores or activates overlays implicitly.
+- Profile mutation requires user/profile-owner approval.
+
+</future_architecture_rules>
+
 ## Verification Checklist
 
 <verification_checklist>
@@ -101,6 +151,24 @@ THEN check whether it should come from profile labels.
 
 IF a migration touches concepts or learning_captures,
 THEN update backup/import/export expectations.
+
+IF a change puts a CodeLens UI or coding-only import into Kortex Core,
+THEN stop and extract it to a child-core seam instead.
+
+IF a change adds agent/subagent runtime, orchestration, permission enforcement, or MCP policy,
+THEN stop: future architecture only. Ask for explicit approval.
+
+IF a change adds app-builder runtime, code-generation orchestration, generated-app persistence, or source write-back,
+THEN stop: future architecture only. Ask for explicit approval.
+
+IF a change adds Racket runtime, DSL parser/interpreter, or language-layer implementation,
+THEN stop: future architecture only. Ask for explicit approval.
+
+IF a change adds source sync, static analysis adapters, file watchers, MCP adapters, or external-system write-back,
+THEN stop: future architecture only. Ask for explicit approval.
+
+IF a change adds global active-overlay state, overlay persistence, or automatic profile mutation,
+THEN stop: overlays must be explicit opt-in only at this stage.
 </logic_gate>
 
 ## Naming Boundary Rules
