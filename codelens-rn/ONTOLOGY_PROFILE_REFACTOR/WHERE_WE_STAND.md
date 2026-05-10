@@ -161,6 +161,22 @@ Codex Decision Slice (runtime activation wiring):
   - Runtime Profile Coordinator remains pure
   - no global active profile, DB-owned composed profile, UI selector, MCP, agent runtime, app-builder runtime, or DSL runtime in this slice
 
+Pi/Qwen Slice (runtime activation helper implementation):
+
+- Added `src/features/ontology/runtimeProfileActivation.ts`:
+  - `resolveRuntimeProfileForProject(input)`
+  - `ProjectRuntimeProfileActivationInput`
+  - `ProjectRuntimeProfileActivationResult`
+  - `ProjectProfileSelectionStore`
+  - `RuntimeProfileActivationError`
+  - `RuntimeProfileActivationErrorCode`
+  - `DEFAULT_RUNTIME_PROFILE_BASE_PROFILE_ID`
+- The resolver reads project selection through a caller-supplied store, resolves the base profile through `ProfileRegistry`, resolves selected branch ids through `ProfileBranchStore`, validates missing/wrong-kind branch ids with structured errors, composes through `composeRuntimeDomainProfileFromSelection`, and returns the finished `DomainProfile` plus trace data.
+- Missing project selection rows fall back to the `coding` base profile.
+- The helper is interface-based and does not import DB repos, services, UI, MCP/adapters, agent runtime, app-builder runtime, or DSL runtime.
+- Added `src/features/ontology/__tests__/runtimeProfileActivation.test.ts` with fallback, custom default, persisted selection, branch order/precedence, structured error, immutability, barrel export, and boundary tests.
+- Pi/Qwen completed the implementation but timed out during doc-finalization; Codex removed the scratch artifact, fixed two test issues, and verified the slice.
+
 ## Current Implementation State
 
 The ontology-profile refactor has moved beyond profile labels and compatibility naming. The current state is:
@@ -188,8 +204,8 @@ The ontology-profile refactor has moved beyond profile labels and compatibility 
 - The ProfileBranchStore v1 static helper is implemented. Branch stores are now a separate seam from ProfileRegistry and ProfileSelection. The first implementation is in-memory only, snapshots the branch array at construction, returns branch objects by reference, and exposes async read methods for future persistent adapters.
 - The branch/overlay DB persistence v1 slice is implemented: `profile_branches` rows with inline `overlay_json`, ontology data-boundary repo/codec, backup/export/import/clear support, and guards. Active selection and merge proposals stay separate.
 - The project-scoped selection DB persistence v1 slice is implemented: `profile_selections` stores one active selection per project as one base profile id plus ordered project/learning/personal branch id arrays. Runtime composition remains derived and caller-owned.
-- The runtime activation wiring decision is locked (doc 16): the app should build runtime profiles through an explicit interface-based resolver that reads a context selection, registry, and branch store, then delegates composition to pure helpers.
-- The remaining open work is: (1) runtime activation helper implementation, (2) profile persistence / user-created base profile storage, (3) merge proposal storage and review UI, (4) correction storage implementation, (5) checker runtime and approval UI, (6) agent/subagent execution ontology brief, (7) self-building-app framework brief.
+- The runtime activation helper is implemented and tested. `runtimeProfileActivation.ts` builds runtime profiles through an explicit interface-based resolver that reads a project/context selection, registry, and branch store, then delegates composition to pure helpers.
+- The remaining open work is: (1) profile persistence / user-created base profile storage, (2) merge proposal storage and review UI, (3) correction storage implementation, (4) checker runtime and approval UI, (5) agent/subagent execution ontology brief, (6) self-building-app framework brief.
 
 ## Core Activation Files
 
@@ -507,18 +523,17 @@ Reusable HR lessons from this slice:
 
 ## Next Decision Gate
 
-The A2 decision for `prepareSaveCandidates` is locked and implemented. The runtime profile coordinator decision is locked (doc 11). The correction evidence persistence decision is locked (doc 12). The branch/overlay persistence decision is locked (doc 13). The profile selection and branch resolution decision is locked (doc 14). The ProfileRegistry/ProfileSource v1 static helper is implemented (doc 15). The runtime activation wiring decision is locked (doc 16). The domain-only `ProfileBranch`, `ProfileSelection`, `ProfileRegistry`, and static/in-memory `ProfileBranchStore` helper seams are implemented.
+The A2 decision for `prepareSaveCandidates` is locked and implemented. The runtime profile coordinator decision is locked (doc 11). The correction evidence persistence decision is locked (doc 12). The branch/overlay persistence decision is locked (doc 13). The profile selection and branch resolution decision is locked (doc 14). The ProfileRegistry/ProfileSource v1 static helper is implemented (doc 15). The runtime activation wiring decision is locked (doc 16) and the interface-based runtime activation helper is implemented. The domain-only `ProfileBranch`, `ProfileSelection`, `ProfileRegistry`, and static/in-memory `ProfileBranchStore` helper seams are implemented.
 
 The coordinator helper is now implemented and tested. The remaining open decisions require Codex plus human input:
 
 ```text
-1. Runtime activation helper implementation - interface-based project/context resolver before UI/service wiring.
-2. Profile persistence / user-created base profile storage, later.
-3. Merge proposal storage and review UI - how merge proposals are stored, presented, and approved/rejected/postponed.
-4. Correction storage implementation - DB/migration/store for profileId-only OntologyCorrectionEvidence; branch-targeted correction fields can come later now that branch persistence exists.
-5. Checker runtime and approval UI - patch suggestion generation and review.
-6. Agent/subagent execution ontology decision brief.
-7. Self-building-app framework decision brief.
+1. Profile persistence / user-created base profile storage, later.
+2. Merge proposal storage and review UI - how merge proposals are stored, presented, and approved/rejected/postponed.
+3. Correction storage implementation - DB/migration/store for profileId-only OntologyCorrectionEvidence; branch-targeted correction fields can come later now that branch persistence exists.
+4. Checker runtime and approval UI - patch suggestion generation and review.
+5. Agent/subagent execution ontology decision brief.
+6. Self-building-app framework decision brief.
 ```
 
 Model recommendation:

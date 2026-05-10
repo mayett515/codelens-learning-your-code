@@ -69,6 +69,18 @@ export type { DomainProfileSummary, ProfileRegistry, ProfileSource } from './typ
 export type { ProfileBranchStore } from './types';
 export { createStaticProfileBranchStore } from './profileBranchStore';
 
+export {
+  DEFAULT_RUNTIME_PROFILE_BASE_PROFILE_ID,
+  RuntimeProfileActivationError,
+  resolveRuntimeProfileForProject,
+} from './runtimeProfileActivation';
+export type {
+  ProjectProfileSelectionStore,
+  ProjectRuntimeProfileActivationInput,
+  ProjectRuntimeProfileActivationResult,
+  RuntimeProfileActivationErrorCode,
+} from './runtimeProfileActivation';
+
 export { getMetadataField, getMetadataFieldLabel, getMetadataFieldPlaceholder } from './metadata';
 export { validateOntologyCorrection } from './corrections';
 

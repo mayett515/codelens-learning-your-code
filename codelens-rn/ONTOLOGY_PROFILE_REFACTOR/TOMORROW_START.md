@@ -105,25 +105,25 @@ Project-scoped profile selection persistence v1 is implemented:
   - ontology data repo/codec, backup/export/import/clear, and guards are updated
   - no UI selector, global active selection singleton, DB-owned runtime composition, merge proposal storage, profile/base persistence, MCP, agent runtime, app-builder runtime, or DSL runtime was added
 
-The runtime activation wiring decision is locked (doc 16):
+The runtime activation wiring decision is locked and implemented (doc 16):
   - runtime activation wiring is a small application/coordinator layer above screens/services and above low-level repos
-  - it reads a project/context selection
+  - `runtimeProfileActivation.ts` exposes `resolveRuntimeProfileForProject(input)` plus structured input/result/error types
+  - it reads a project/context selection through a caller-supplied store
   - it resolves the base profile through ProfileRegistry
   - it resolves branch ids through ProfileBranchStore
+  - it validates missing and wrong-kind branch ids with structured errors
   - it composes via the existing pure selection/runtime profile pipeline
   - it passes only the finished DomainProfile to services
   - missing project selection rows fall back to the coding base
-  - invalid base/branch references should throw structured activation errors
   - no global active profile, DB-owned composed profile, UI selector, MCP, agent runtime, app-builder runtime, or DSL runtime was added
 
 The remaining open decisions are:
-  1. Runtime activation helper implementation - interface-based project/context resolver, still no UI/global state/service lookup.
-  2. Profile persistence / user-created base profile storage, later.
-  3. Merge proposal storage and review UI - how merge proposals are stored, presented, and approved/rejected/postponed.
-  4. Correction storage implementation - DB/migration/store for profileId-only OntologyCorrectionEvidence; branch-targeted correction fields can come later now that branch persistence exists.
-  5. Checker runtime and approval UI - patch suggestion generation and review.
-  6. Agent/subagent execution ontology brief.
-  7. Self-building-app framework brief.
+  1. Profile persistence / user-created base profile storage, later.
+  2. Merge proposal storage and review UI - how merge proposals are stored, presented, and approved/rejected/postponed.
+  3. Correction storage implementation - DB/migration/store for profileId-only OntologyCorrectionEvidence; branch-targeted correction fields can come later now that branch persistence exists.
+  4. Checker runtime and approval UI - patch suggestion generation and review.
+  5. Agent/subagent execution ontology brief.
+  6. Self-building-app framework brief.
 ```
 
 Strict boundaries:
@@ -266,9 +266,9 @@ The correction evidence persistence decision is locked (doc 12). Evidence-first 
 
 The branch/overlay persistence decision is locked and v1 DB plumbing is implemented (doc 13). Persist branch layers separately, not composed runtime profiles. V1 uses `profile_branches` rows with inline `overlay_json`; composition is derived. Active selection and merge proposals stay separate. No UI activation selector, automatic merge, checker runtime, patch suggestion table, correction storage, agent/subagent runtime, app-builder runtime, Racket/DSL implementation, or MCP/adapters is implemented.
 
-The project-scoped profile selection persistence slice is implemented. `profile_selections` stores one selection per project: base profile id plus ordered project/learning/personal branch id arrays. The ontology data boundary owns the repo/codec. Backup/export/import/clear supports the table. Runtime composition remains derived and caller-owned; nothing reads this table automatically yet.
+The project-scoped profile selection persistence slice is implemented. `profile_selections` stores one selection per project: base profile id plus ordered project/learning/personal branch id arrays. The ontology data boundary owns the repo/codec. Backup/export/import/clear supports the table. Runtime composition remains derived and caller-owned; the runtime activation helper can read selections through a caller-supplied store, but no UI route wires this table automatically yet.
 
-The runtime activation wiring decision is locked (doc 16). The next runtime bridge is explicit: project/context -> selection store -> profile registry -> branch store -> pure selection resolver -> pure runtime coordinator -> composed DomainProfile -> service `options.profile`. Repos remain fact storage, services remain dumb in the good way, and no global active profile is introduced.
+The runtime activation wiring decision is locked and implemented (doc 16). The runtime bridge is explicit: project/context -> selection store -> profile registry -> branch store -> pure selection resolver -> pure runtime coordinator -> composed DomainProfile -> service `options.profile`. Repos remain fact storage, services remain dumb in the good way, and no global active profile is introduced.
 
 The domain-only ProfileBranch model is now implemented and tested. `ProfileBranchKind` and `ProfileBranch<TItemTypeNodeId>` live in `types.ts`; `profileBranches.ts` provides pure helpers that convert branches to overlays/grouped activation input/runtime profiles without duplicating composition logic. No DB, migration, storage API, UI selector, automatic merge, correction branch fields, MCP/adapters, agent runtime, app-builder runtime, or DSL runtime was added.
 
@@ -280,14 +280,13 @@ The ProfileRegistry/ProfileSource v1 static source helper is implemented (doc 15
 
 The ProfileBranchStore v1 static helper is implemented. `ProfileBranchStore<TItemTypeNodeId>` lives in ontology types, and `createStaticProfileBranchStore({ branches })` lives in `profileBranchStore.ts`. This is in-memory only: it snapshots the branch array at construction, returns branch objects by reference, preserves requested id order, skips missing ids, preserves duplicate requested ids, and lists branches by parent profile in constructor order. No DB, migration, backup, persistent adapter, UI selector, global active selection, automatic merge, MCP/adapters, agent runtime, app-builder runtime, or DSL runtime was added.
 
-Latest source/test verification after Kimi Code CLI Slice 1: TypeScript clean; targeted branch-store/branch/selection tests 53/53 passed across 3 files; full suite 540/540 passed across 58 files; forbidden-name rg clean for profileBranchStore source/test; non-ASCII rg clean for profileBranchStore source/test; `git diff --check` clean for Kimi-touched files with CRLF warnings only.
+Latest source/test verification after the runtime activation helper slice: TypeScript clean; targeted runtime activation/selection/registry/branch-store/stage10 tests 125/125 passed across 5 files; full suite 608/608 passed across 63 files. Pi/Qwen implemented the slice, then Codex removed a scratch artifact and fixed two test issues before verification.
 
 Remaining open decisions:
 
-1. Runtime activation helper implementation - interface-based project/context resolver before UI/service wiring.
-2. Profile persistence / user-created base profile storage, later.
-3. Merge proposal storage and review UI - how merge proposals are stored, presented, and approved/rejected/postponed.
-4. Correction storage implementation - DB/migration/store for profileId-only OntologyCorrectionEvidence; branch-targeted correction fields can come later now that branch persistence exists.
-5. Checker runtime and approval UI - patch suggestion generation and review.
-6. Agent/subagent execution ontology brief.
-7. Self-building-app framework brief.
+1. Profile persistence / user-created base profile storage, later.
+2. Merge proposal storage and review UI - how merge proposals are stored, presented, and approved/rejected/postponed.
+3. Correction storage implementation - DB/migration/store for profileId-only OntologyCorrectionEvidence; branch-targeted correction fields can come later now that branch persistence exists.
+4. Checker runtime and approval UI - patch suggestion generation and review.
+5. Agent/subagent execution ontology brief.
+6. Self-building-app framework brief.

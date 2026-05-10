@@ -29,7 +29,7 @@ The ProfileRegistry/ProfileSource direction is documented and the v1 static sour
 
 The ProfileBranchStore v1 seam is now implemented by Kimi Code CLI and accepted after Codex review. `ProfileBranchStore<TItemTypeNodeId>` lives in `types.ts`, and `profileBranchStore.ts` exposes `createStaticProfileBranchStore({ branches })`. This is static/in-memory only: it snapshots the branch array at construction, returns branch objects by reference, preserves requested id order, skips missing ids, preserves duplicate requested ids, and lists branches by `parentProfileId` in constructor order. No DB, migration, backup, UI, global active selection, automatic merge, MCP/adapters, agent runtime, app-builder runtime, or DSL runtime was added. The CLI run ended with a Windows console Unicode/charmap final-report crash, but Codex verification passed.
 
-The runtime activation wiring decision is now locked (doc 16). The layer that builds a runtime brain for a project/context sits above screens/services and above low-level repos: it reads a project/context selection, resolves the base profile through `ProfileRegistry`, resolves branch ids through `ProfileBranchStore`, delegates composition to the pure selection/runtime profile pipeline, and returns a finished `DomainProfile` for services. Repos remain fact storage; the Runtime Profile Coordinator remains pure; services still receive only `options.profile`. Missing selection rows fall back to the default coding base. Invalid base/branch references should throw structured activation errors. No global active profile, DB-owned composed profile, UI selector, MCP, agent runtime, app-builder runtime, or DSL runtime is part of this decision.
+The runtime activation wiring decision is locked (doc 16) and now implemented. `runtimeProfileActivation.ts` exposes `resolveRuntimeProfileForProject(input)`, `ProjectRuntimeProfileActivationInput`, `ProjectRuntimeProfileActivationResult`, `ProjectProfileSelectionStore`, `RuntimeProfileActivationError`, and `RuntimeProfileActivationErrorCode`. The resolver reads a project selection via caller-supplied store, resolves the base profile through the registry, resolves selected branch ids through the branch store, detects missing and wrong-kind branch ids with structured errors, composes through `composeRuntimeDomainProfileFromSelection`, and returns the finished profile plus trace data. Missing selection falls back to `coding` base. No global active profile, DB-owned composed profile, UI selector, MCP, agent runtime, app-builder runtime, or DSL runtime was added.
 
 The coordinator helper is now implemented and tested: `runtimeProfileCoordinator.ts` is the explicit above-services coordinator boundary. `composeRuntimeDomainProfile(input)` delegates to `resolveActiveDomainProfileFromActivationInput(input)`. `RuntimeProfileCoordinatorInput` aliases `ActiveDomainProfileActivationInput`. Services still receive composed `DomainProfile`; they do not call this helper directly unless their caller passes the result. No DB, UI, persistence, global store, service hidden lookup, agent runtime, app-builder runtime, or DSL runtime was added.
 
@@ -61,7 +61,7 @@ Read in this order:
 8. `ONTOLOGY_PROFILE_REFACTOR/13_BRANCH_OVERLAY_PERSISTENCE_DECISION.md` - locked decision: persist branch rows with inline `overlay_json`; overlays are the durable diff, runtime profiles are derived, active selection and merge proposals stay separate.
 9. `ONTOLOGY_PROFILE_REFACTOR/14_PROFILE_SELECTION_AND_BRANCH_RESOLUTION_DECISION.md` - locked decision: branch persistence, active selection, branch resolution, and runtime composition are separate boundaries. Selection is per-context, id-based, single-base in v1, and resolved before composition.
 10. `ONTOLOGY_PROFILE_REFACTOR/15_PROFILE_REGISTRY_AND_PROFILE_SOURCES_DECISION.md` - decision + implementation: source-based ProfileRegistry, static/in-memory source v1, future built-in/file/DB/adapter sources, duplicate profile ids throw structured errors.
-11. `ONTOLOGY_PROFILE_REFACTOR/16_RUNTIME_ACTIVATION_WIRING_DECISION.md` - locked decision: runtime activation wiring loads selected ingredients for one context, composes via pure helpers, and passes only finished DomainProfile to services.
+11. `ONTOLOGY_PROFILE_REFACTOR/16_RUNTIME_ACTIVATION_WIRING_DECISION.md` - locked decision + implementation: runtime activation wiring loads selected ingredients for one context, composes via pure helpers, and passes only finished DomainProfile to services. `resolveRuntimeProfileForProject` is now implemented and tested.
 12. `ONTOLOGY_PROFILE_REFACTOR/05_ANTI_REGRESSION_RULES.md` - hard constraints and compatibility boundaries.
 13. `ONTOLOGY_PROFILE_REFACTOR/03_CATEGORIZATION_AND_ONTOLOGY_CHECKER.md` - next product direction: correction flow and ontology checker.
 14. `ONTOLOGY_PROFILE_REFACTOR/04_REFACTOR_WITHOUT_BREAKING_APP.md` - staged implementation plan and persistence/correction ideas.
@@ -101,6 +101,8 @@ src/features/ontology/profileRegistry.ts
 src/features/ontology/__tests__/profileRegistry.test.ts
 src/features/ontology/profileBranchStore.ts
 src/features/ontology/__tests__/profileBranchStore.test.ts
+src/features/ontology/runtimeProfileActivation.ts
+src/features/ontology/__tests__/runtimeProfileActivation.test.ts
 src/features/ontology/runtimeProfileCoordinator.ts
 src/features/ontology/__tests__/runtimeProfileCoordinator.test.ts
 src/features/ontology/index.ts
@@ -292,30 +294,23 @@ The label-profile cleanup is complete. Correction evidence domain groundwork is 
 
 The runtime profile coordinator decision is now locked (doc 11). The brain mixer is an explicit separate layer above runtime services. Services receive composed `DomainProfile`, do not know branch groups, do not call activation input resolvers, and do not read hidden global active-profile state. Service-owned mixing, UI-screen-owned mixing, hidden global `getRuntimeProfile()` / active-profile store, and persistence-owned composed profile were all explicitly rejected.
 
-The coordinator helper module is now implemented and tested. The correction evidence persistence decision is now locked (doc 12). The branch/overlay persistence decision is now locked (doc 13) and branch DB persistence is implemented. The profile selection and branch resolution decision is now locked (doc 14) and project-scoped selection DB persistence is implemented. The source-based ProfileRegistry v1 decision is locked and implemented for static/in-memory sources only (doc 15). The runtime activation wiring decision is locked (doc 16). The domain-only `ProfileBranch`, `ProfileSelection`, `ProfileRegistry`, and static/in-memory `ProfileBranchStore` helper seams are implemented and tested. The remaining open decisions are:
+The coordinator helper module is now implemented and tested. The correction evidence persistence decision is now locked (doc 12). The branch/overlay persistence decision is now locked (doc 13) and branch DB persistence is implemented. The profile selection and branch resolution decision is now locked (doc 14) and project-scoped selection DB persistence is implemented. The source-based ProfileRegistry v1 decision is locked and implemented for static/in-memory sources only (doc 15). The runtime activation wiring decision is locked (doc 16) and `runtimeProfileActivation.ts` is implemented/tested. The domain-only `ProfileBranch`, `ProfileSelection`, `ProfileRegistry`, static/in-memory `ProfileBranchStore`, and interface-based runtime activation helper seams are implemented and tested. The remaining open decisions are:
 
 ```text
-1. Runtime activation helper implementation - interface-based project/context resolver, still no UI/global state/service lookup.
-2. Profile persistence / user-created base profile storage, later.
-3. Merge proposal storage and review UI - how merge proposals are stored, presented, and approved/rejected/postponed.
-4. Correction storage implementation - DB/migration/store for profileId-only OntologyCorrectionEvidence; branch-targeted correction fields can come later now that branch persistence exists.
-5. Checker runtime and approval UI - patch suggestion generation and review.
-6. Agent/subagent execution ontology brief.
-7. Self-building-app framework brief.
+1. Profile persistence / user-created base profile storage, later.
+2. Merge proposal storage and review UI - how merge proposals are stored, presented, and approved/rejected/postponed.
+3. Correction storage implementation - DB/migration/store for profileId-only OntologyCorrectionEvidence; branch-targeted correction fields can come later now that branch persistence exists.
+4. Checker runtime and approval UI - patch suggestion generation and review.
+5. Agent/subagent execution ontology brief.
+6. Self-building-app framework brief.
 ```
 
-Good next bounded implementation slice:
+Good next work should stay behind a human decision gate. Likely candidates:
 
 ```text
-src/features/ontology/runtimeProfileActivation.ts
-
-Add an interface-based resolver:
-- resolveRuntimeProfileForProject(input)
-- ProjectRuntimeProfileActivationInput
-- ProjectRuntimeProfileActivationResult
-- RuntimeProfileActivationError
-
-It should use caller-supplied selection/profile/branch stores, compose through existing pure helpers, and add no UI/global active state/service lookup/DB client import.
+1. Profile persistence / user-created base profile storage decision.
+2. Merge proposal storage and review UI decision.
+3. Correction storage implementation decision, including whether v1 stays profileId-only or now includes optional branch targeting.
 ```
 
 The user also wants Kortex profile branches: a general coding child should be extendable into project, job, learning, or personal branches that can stay separate or later merge selected changes back. "Core" means immutable within a profile lineage; a fork/user can create a different ground-zero base profile later. Read `06_PROFILE_BRANCHING_AND_MERGE.md` before proposing correction/checker storage or UI.
