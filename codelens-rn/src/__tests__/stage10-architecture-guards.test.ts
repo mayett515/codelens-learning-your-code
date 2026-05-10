@@ -327,15 +327,46 @@ describe('Kortex future operation name guards', () => {
 });
 
 describe('Kortex overlay persistence table guards', () => {
-  // No profile overlay persistence tables or string constants must exist
-  // under src/ production code yet. Branch/overlay state persistence
-  // belongs to a later slice after branch semantics and activation
-  // decisions are settled (06_PROFILE_BRANCHING_AND_MERGE.md).
+  const allowedProfileBranchesFiles = new Set(
+    [
+      'src/db/schema.ts',
+      'src/db/migrations/012-profile-branches.ts',
+      'src/db/migrations/index.ts',
+      'src/features/ontology/data/schema.ts',
+      'src/features/ontology/data/profileBranchRepo.ts',
+      'src/features/ontology/data/index.ts',
+      'src/features/ontology/codecs/profileBranch.ts',
+      'src/features/backup/format.ts',
+      'src/features/backup/export.ts',
+      'src/features/backup/import.ts',
+      'src/features/backup/clear.ts',
+      'src/features/backup/columnMaps.ts',
+    ].map((p) => path.normalize(p)),
+  );
+
+  it('profile_branches is only allowed in planned persistence boundary files and tests', () => {
+    const offenders = sourceFiles()
+      .filter((filePath) => {
+        const content = read(filePath);
+        return content.includes('profile_branches');
+      })
+      .map(toRepoPath)
+      .filter((p) => {
+        if (p.startsWith('ONTOLOGY_PROFILE_REFACTOR/')) return false;
+        if (p.endsWith('.test.ts') || p.endsWith('.test.tsx') || p.includes('__tests__/')) return false;
+        return !allowedProfileBranchesFiles.has(path.normalize(p));
+      });
+    expect(offenders).toEqual([]);
+  });
 
   const forbiddenTableNames = [
     'profile_overlays',
-    'profile_branches',
     'active_profile_overlay',
+    'active_profile_selection',
+    'profile_merge_proposals',
+    'persisted_runtime_profile',
+    'runtime_profile_json',
+    'composed_profile_json',
   ];
 
   const isAllowedFile = (p: string) =>

@@ -1,6 +1,6 @@
 # Branch/Overlay Persistence Decision
 
-**Status:** Locked decision on 2026-05-07.
+**Status:** Locked persistence model on 2026-05-07. V1 table shape locked and implemented on 2026-05-10.
 **Branch:** `refactor/ontology-profile`
 
 ## Locked Decision
@@ -27,6 +27,43 @@ Base profile
 
 The persisted branch/overlay is the durable source. The composed runtime profile is derived.
 
+## V1 DB Shape Decision
+
+V1 persists branch containers as rows. Each branch row owns exactly one inline overlay JSON payload.
+
+```text
+profile_branches
+  id TEXT PRIMARY KEY
+  parent_profile_id TEXT NOT NULL
+  branch_kind TEXT NOT NULL CHECK(branch_kind IN ('project','learning','personal'))
+  name TEXT NOT NULL
+  overlay_json TEXT NOT NULL
+  created_at INTEGER NOT NULL
+  updated_at INTEGER NOT NULL
+```
+
+This means:
+
+- `ProfileBranch` is the durable container: identity, parent reference, kind, name, timestamps.
+- `ProfileOverlay` is the actual diff/change set inside that container.
+- `overlay_json` stores the branch's one overlay.
+- Runtime composition reads selected branch rows, extracts overlays, and composes them with the base profile.
+- The composed runtime `DomainProfile` is never stored as source of truth.
+
+V1 does not create separate `profile_overlays`, `active_profile_selection`, or `profile_merge_proposals` tables.
+
+## V1 Implementation Note
+
+Implemented on 2026-05-10:
+
+- Migration `012-profile-branches`
+- Drizzle `profileBranches` schema
+- Ontology data-boundary repo and codec under `src/features/ontology/data` and `src/features/ontology/codecs`
+- Backup export/import/clear/column-map support
+- Architecture guards that allow only `profile_branches` in the planned persistence boundary and keep composed runtime profiles, active selections, standalone overlay tables, and merge proposals out of v1
+
+The DB-backed repo is intentionally not exported from the root ontology barrel. Pure ontology imports must not pull in `db/client` or native SQLite dependencies.
+
 ## Definitions
 
 - **Parent profile:** The profile/layer a branch extends. In this app lineage, the current base is the coding profile.
@@ -37,9 +74,9 @@ The persisted branch/overlay is the durable source. The composed runtime profile
 - **Promotion upward:** A proposed merge from child to parent. Never automatic.
 - **Merge:** Explicit approved change from one layer into another. Never automatic.
 
-## Conceptual First Persisted Branch Shape
+## First Persisted Branch Shape
 
-This shape is a future target. It is not implemented in this slice.
+This shape is the source-level model that maps to the v1 `profile_branches` table.
 
 ```text
 ProfileBranch
@@ -52,7 +89,15 @@ ProfileBranch
   updatedAt: number
 ```
 
-The exact DB rows and schema are deferred. This shape documents the concept, not a migration.
+In DB terms, `overlay` maps to `overlay_json`.
+
+Important adapter boundary:
+
+```text
+src/features/ontology/data/...
+```
+
+The persistent branch repo/adapter should live behind the ontology data boundary. Do not export DB-backed repo functions from the root `src/features/ontology/index.ts` barrel, because pure ontology imports must not pull in `db/client` or native SQLite dependencies.
 
 ## What A Child Branch Can Change
 
@@ -92,6 +137,10 @@ This means:
 3. **Merging upward is explicit and requires approval.** A child branch can propose a merge into its parent. The user must accept, edit, reject, or postpone the merge proposal. Nothing changes the parent automatically.
 
 4. **Sibling branches do not affect each other.** Two project branches with the same parent are independent. Changes in one do not appear in the other unless the user merges selected changes through a parent or another explicit target.
+
+5. **Active selection stays separate.** The branch table stores what branches exist. It does not store which branches are active for a project/session/user. Active selection remains a separate boundary.
+
+6. **Merge proposals stay separate.** Merge proposals are not branch rows. A future merge proposal table can reference branch ids and overlay changes, but v1 branch persistence does not implement proposal storage.
 
 ## Why This Decision Is Correct
 
@@ -155,8 +204,7 @@ Rejected because:
 
 This decision document locks the branch/overlay persistence model. It does not implement:
 
-- No DB table, migration, or schema for branches or overlays
-- No storage API for branches or overlays
+- No migration or source implementation in this document
 - No UI for branch selection, overlay editing, or merge review
 - No automatic merge logic
 - No checker runtime
@@ -167,6 +215,8 @@ This decision document locks the branch/overlay persistence model. It does not i
 - No final relationship taxonomy decision
 - No Racket/DSL implementation
 - No MCP/adapters/source sync
+
+The `profile_branches` migration/schema/repo/backup plumbing is now implemented. Active selection, merge proposal storage, correction storage, UI, checker runtime, MCP/adapters, agent runtime, app-builder runtime, and Racket/DSL implementation are still deferred.
 
 ## Relationship To Existing Decisions
 
@@ -222,13 +272,13 @@ Do not rename or remove these in this cycle:
 
 Do not introduce:
 
-- DB/schema/migration code for branches or overlays
+- Separate `profile_overlays` table in v1
+- `active_profile_selection` table in the same branch-persistence slice
+- `profile_merge_proposals` table in the same branch-persistence slice
 - AsyncStorage for branch state
 - Zustand/store/global mutable active branch
 - setter functions for branch activation
 - automatic profile mutation
-- branch persistence table or store
-- overlay persistence table or store
 - UI activation selector for branches
 - MCP/adapters for profile sync
 - agent/subagent runtime
@@ -252,17 +302,17 @@ opencode-go/glm-5.1 with --thinking high
 TypeScript implementation worker (after this decision is locked):
 
 ```text
-opencode-go/qwen3.6-plus with --thinking high
+Codex strict review, with any worker result treated as draft until verified
 ```
 
 ## Next Open Decisions
 
 After this decision:
 
-1. Branch/overlay persistence implementation - DB schema, migration, and store for `ProfileBranch` (deferred, not this slice).
-2. Branch selection and activation - how the user selects which branches are active at runtime (deferred).
-3. Merge proposal storage and review UI - how merge proposals are stored, presented, and approved/rejected/postponed (deferred).
-4. Correction storage implementation - DB/migration/store for profileId-only `OntologyCorrectionEvidence`; `branchId`/`targetLayerId` come later with branch persistence.
+1. Branch selection and activation - how the user selects which branch ids are active for a context (deferred).
+2. Merge proposal storage and review UI - how merge proposals are stored, presented, and approved/rejected/postponed (deferred).
+3. Correction storage implementation - DB/migration/store for profileId-only `OntologyCorrectionEvidence`; branch-targeted correction fields can come later now that branch persistence exists.
+4. Profile persistence / user-created base profile storage, later.
 5. Checker runtime and approval UI - patch suggestion generation and review.
 6. Agent/subagent execution ontology brief.
 7. Self-building-app framework brief.

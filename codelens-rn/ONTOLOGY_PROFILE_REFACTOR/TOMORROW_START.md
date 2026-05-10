@@ -97,10 +97,10 @@ The ProfileBranchStore v1 static helper is implemented:
   - no DB, migration, backup, persistent adapter, UI selector, global active selection, or automatic merge was added
 
 The remaining open decisions are:
-  1. Branch/overlay DB persistence - schema, migration, and persistent adapter/store for ProfileBranch.
+  1. Branch selection and activation persistence - how selected branch ids are stored per context.
   2. Profile persistence / user-created base profile storage, later.
   3. Merge proposal storage and review UI - how merge proposals are stored, presented, and approved/rejected/postponed.
-  4. Correction storage implementation - DB/migration/store for profileId-only OntologyCorrectionEvidence; branchId/targetLayerId come later with branch persistence.
+  4. Correction storage implementation - DB/migration/store for profileId-only OntologyCorrectionEvidence; branch-targeted correction fields can come later now that branch persistence exists.
   5. Checker runtime and approval UI - patch suggestion generation and review.
   6. Agent/subagent execution ontology brief.
   7. Self-building-app framework brief.
@@ -244,7 +244,7 @@ The runtime profile coordinator decision is locked (doc 11). The coordinator hel
 
 The correction evidence persistence decision is locked (doc 12). Evidence-first persistence: correction evidence is stored as a fact, not a mutation. Patch suggestions come later and require user approval. No automatic ontology/profile mutation. Direct user-authored ontology changes are allowed. Model/checker suggestions require approval. No `branchId` or `targetLayerId` until branch persistence exists. No checker runtime/UI, no DB/migration/source implementation, no auto-apply, no agent/app-builder runtime in this slice.
 
-The branch/overlay persistence decision is now locked (doc 13). Persist branch layers separately, not composed runtime profiles. Overlays are the durable source; composition is derived. Merging upward requires approval. Sibling branches do not affect each other. Parent profiles stay clean. This backs the product model in doc 06 and is consistent with the runtime composition decisions in docs 10 and 11. No DB, UI, storage API, automatic merge, checker runtime, patch suggestion table, correction storage, agent/subagent runtime, app-builder runtime, Racket/DSL implementation, or MCP/adapters is implemented in this slice.
+The branch/overlay persistence decision is locked and v1 DB plumbing is implemented (doc 13). Persist branch layers separately, not composed runtime profiles. V1 uses `profile_branches` rows with inline `overlay_json`; composition is derived. Active selection and merge proposals stay separate. No UI activation selector, automatic merge, checker runtime, patch suggestion table, correction storage, agent/subagent runtime, app-builder runtime, Racket/DSL implementation, or MCP/adapters is implemented.
 
 The domain-only ProfileBranch model is now implemented and tested. `ProfileBranchKind` and `ProfileBranch<TItemTypeNodeId>` live in `types.ts`; `profileBranches.ts` provides pure helpers that convert branches to overlays/grouped activation input/runtime profiles without duplicating composition logic. No DB, migration, storage API, UI selector, automatic merge, correction branch fields, MCP/adapters, agent runtime, app-builder runtime, or DSL runtime was added.
 
@@ -260,10 +260,10 @@ Latest source/test verification after Kimi Code CLI Slice 1: TypeScript clean; t
 
 Remaining open decisions:
 
-1. Branch/overlay DB persistence - schema, migration, and persistent adapter/store for ProfileBranch.
+1. Branch selection and activation persistence - how selected branch ids are stored per context.
 2. Profile persistence / user-created base profile storage, later.
 3. Merge proposal storage and review UI - how merge proposals are stored, presented, and approved/rejected/postponed.
-4. Correction storage implementation - DB/migration/store for profileId-only OntologyCorrectionEvidence; branchId/targetLayerId come later with branch persistence.
+4. Correction storage implementation - DB/migration/store for profileId-only OntologyCorrectionEvidence; branch-targeted correction fields can come later now that branch persistence exists.
 5. Checker runtime and approval UI - patch suggestion generation and review.
 6. Agent/subagent execution ontology brief.
 7. Self-building-app framework brief.

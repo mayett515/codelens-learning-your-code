@@ -10,6 +10,7 @@ import {
   LEARNING_CAPTURES_COLUMN_MAP,
   CONCEPTS_COLUMN_MAP,
   CONCEPT_LINKS_COLUMN_MAP,
+  PROFILE_BRANCHES_COLUMN_MAP,
   TABLE_COLUMN_MAPS,
   TABLE_JSON_COLUMNS,
 } from '../columnMaps';
@@ -396,6 +397,45 @@ describe('Column map: concept_links', () => {
   });
 });
 
+describe('Column map: profile_branches', () => {
+  it('maps all columns including overlay_json', () => {
+    const raw = {
+      id: 'b1',
+      parent_profile_id: 'coding',
+      branch_kind: 'project',
+      name: 'Project A',
+      overlay_json: '{"kind":"project","id":"o1"}',
+      created_at: 1000,
+      updated_at: 2000,
+    };
+    const m = mapBackupRow(raw, PROFILE_BRANCHES_COLUMN_MAP);
+    expect(m['id']).toBe('b1');
+    expect(m['parentProfileId']).toBe('coding');
+    expect(m['branchKind']).toBe('project');
+    expect(m['name']).toBe('Project A');
+    expect(m['overlayJson']).toBe('{"kind":"project","id":"o1"}');
+    expect(m['createdAt']).toBe(1000);
+    expect(m['updatedAt']).toBe(2000);
+    expect(Object.keys(m).length).toBe(7);
+  });
+
+  it('drops unknown keys', () => {
+    const raw = {
+      id: 'b1',
+      parent_profile_id: 'coding',
+      branch_kind: 'project',
+      name: 'Project A',
+      overlay_json: '{}',
+      created_at: 1000,
+      updated_at: 2000,
+      unknown_field: 42,
+    };
+    const m = mapBackupRow(raw, PROFILE_BRANCHES_COLUMN_MAP);
+    expect('unknown_field' in m).toBe(false);
+    expect(Object.keys(m).length).toBe(7);
+  });
+});
+
 describe('JSON decoding for Drizzle insert shape', () => {
   it('decodes project JSON columns', () => {
     const mapped = mapBackupRow(
@@ -446,6 +486,15 @@ describe('JSON decoding for Drizzle insert shape', () => {
     );
     expect(nullMapped['conceptHint']).toBeNull();
     expect(nullMapped['classificationJson']).toBeNull();
+  });
+
+  it('decodes profile_branches overlay_json', () => {
+    const mapped = mapBackupRow(
+      { id: 'b1', parent_profile_id: 'coding', branch_kind: 'project', name: 'P', overlay_json: '{"kind":"project"}', created_at: 1, updated_at: 1 },
+      PROFILE_BRANCHES_COLUMN_MAP,
+      TABLE_JSON_COLUMNS['profile_branches']!,
+    );
+    expect(mapped['overlayJson']).toEqual({ kind: 'project' });
   });
 
   it('throws on malformed JSON before import insert', () => {
@@ -721,6 +770,7 @@ describe('TABLE_COLUMN_MAPS index', () => {
   const exportedTables = [
     'projects', 'files', 'chats', 'chat_messages',
     'learning_sessions', 'learning_captures', 'concepts', 'concept_links',
+    'profile_branches',
   ];
 
   it('contains an entry for every exported table', () => {
@@ -738,6 +788,7 @@ describe('TABLE_COLUMN_MAPS index', () => {
     expect(TABLE_COLUMN_MAPS['learning_captures']).toBe(LEARNING_CAPTURES_COLUMN_MAP);
     expect(TABLE_COLUMN_MAPS['concepts']).toBe(CONCEPTS_COLUMN_MAP);
     expect(TABLE_COLUMN_MAPS['concept_links']).toBe(CONCEPT_LINKS_COLUMN_MAP);
+    expect(TABLE_COLUMN_MAPS['profile_branches']).toBe(PROFILE_BRANCHES_COLUMN_MAP);
   });
 
   it('every map has the expected number of columns', () => {
@@ -749,5 +800,6 @@ describe('TABLE_COLUMN_MAPS index', () => {
     expect(Object.keys(LEARNING_CAPTURES_COLUMN_MAP).length).toBe(26);
     expect(Object.keys(CONCEPTS_COLUMN_MAP).length).toBe(28);
     expect(Object.keys(CONCEPT_LINKS_COLUMN_MAP).length).toBe(4);
+    expect(Object.keys(PROFILE_BRANCHES_COLUMN_MAP).length).toBe(7);
   });
 });

@@ -28,6 +28,7 @@ const TABLES: TableSpec[] = [
   { name: 'learning_sessions', sql: 'SELECT * FROM learning_sessions' },
   { name: 'learning_captures', sql: 'SELECT * FROM learning_captures' },
   { name: 'concept_links',     sql: 'SELECT * FROM concept_links' },
+  { name: 'profile_branches',  sql: 'SELECT * FROM profile_branches' },
 ];
 
 interface EmbeddingMetaRow {

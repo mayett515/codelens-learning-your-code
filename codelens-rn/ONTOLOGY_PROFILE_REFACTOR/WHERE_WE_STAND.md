@@ -148,7 +148,8 @@ The ontology-profile refactor has moved beyond profile labels and compatibility 
 - The domain-only profile selection helper is implemented. `ProfileSelection`, `resolveProfileSelection`, and `composeRuntimeDomainProfileFromSelection` let callers select a base id and ordered branch ids, resolve them from provided branch values, and compose through the existing branch/coordinator pipeline without DB/UI/global state.
 - The ProfileRegistry/ProfileSource v1 static helper is implemented. Base profiles resolve through a source-based registry, and duplicate profile ids throw structured errors. The interface still leaves room for future built-in/file/DB/adapter sources without changing callers.
 - The ProfileBranchStore v1 static helper is implemented. Branch stores are now a separate seam from ProfileRegistry and ProfileSelection. The first implementation is in-memory only, snapshots the branch array at construction, returns branch objects by reference, and exposes async read methods for future persistent adapters.
-- The remaining open decisions are: (1) branch/overlay DB persistence, (2) profile persistence / user-created base profile storage, (3) merge proposal storage and review UI, (4) correction storage implementation, (5) checker runtime and approval UI, (6) agent/subagent execution ontology brief, (7) self-building-app framework brief.
+- The branch/overlay DB persistence v1 slice is implemented: `profile_branches` rows with inline `overlay_json`, ontology data-boundary repo/codec, backup/export/import/clear support, and guards. Active selection and merge proposals stay separate.
+- The remaining open work is: (1) branch selection and activation persistence, (2) profile persistence / user-created base profile storage, (3) merge proposal storage and review UI, (4) correction storage implementation, (5) checker runtime and approval UI, (6) agent/subagent execution ontology brief, (7) self-building-app framework brief.
 
 ## Core Activation Files
 
@@ -471,10 +472,10 @@ The A2 decision for `prepareSaveCandidates` is locked and implemented. The runti
 The coordinator helper is now implemented and tested. The remaining open decisions require Codex plus human input:
 
 ```text
-1. Branch/overlay DB persistence - schema, migration, and persistent adapter/store for ProfileBranch.
+1. Branch selection and activation persistence - how selected branch ids are stored per context.
 2. Profile persistence / user-created base profile storage, later.
 3. Merge proposal storage and review UI - how merge proposals are stored, presented, and approved/rejected/postponed.
-4. Correction storage implementation - DB/migration/store for profileId-only OntologyCorrectionEvidence; branchId/targetLayerId come later with branch persistence.
+4. Correction storage implementation - DB/migration/store for profileId-only OntologyCorrectionEvidence; branch-targeted correction fields can come later now that branch persistence exists.
 5. Checker runtime and approval UI - patch suggestion generation and review.
 6. Agent/subagent execution ontology decision brief.
 7. Self-building-app framework decision brief.

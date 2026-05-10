@@ -287,3 +287,17 @@ export const reviewEvents = sqliteTable('review_events', {
   index('idx_review_events_concept').on(t.conceptId),
   index('idx_review_events_created').on(t.createdAt),
 ]);
+
+export const profileBranches = sqliteTable('profile_branches', {
+  id: text('id').primaryKey(),
+  parentProfileId: text('parent_profile_id').notNull(),
+  branchKind: text('branch_kind', { enum: ['project', 'learning', 'personal'] }).notNull(),
+  name: text('name').notNull(),
+  overlayJson: text('overlay_json', { mode: 'json' }).notNull().$type<unknown>(),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+}, (t) => [
+  index('idx_profile_branches_parent').on(t.parentProfileId),
+  index('idx_profile_branches_kind').on(t.branchKind),
+  index('idx_profile_branches_updated').on(t.updatedAt),
+]);

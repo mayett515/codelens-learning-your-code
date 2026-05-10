@@ -15,7 +15,7 @@ The runtime profile coordinator decision is now locked (doc 11). The brain mixer
 
 The correction evidence persistence decision is now locked (doc 12). Evidence-first persistence: correction evidence is stored as a fact, not a mutation. Patch suggestions come later and require user approval before any ontology or profile change. No automatic ontology/profile mutation. Direct user-authored ontology changes are allowed. Model/checker suggestions require approval. No `branchId` or `targetLayerId` until branch persistence exists. No checker runtime/UI, no DB/migration/source implementation, no auto-apply, no agent/app-builder runtime in this slice.
 
-The branch/overlay persistence decision is now locked (doc 13). Persist branch layers separately, not composed runtime profiles. Overlays are the durable source; the composed runtime profile is derived. Merging upward requires approval. Sibling branches do not affect each other. Parent profiles stay clean. This locks the persistence model that backs the product model in doc 06 and is consistent with the runtime composition decisions in docs 10 and 11. No DB, UI, storage API, automatic merge, checker runtime, patch suggestion table, correction storage, agent/subagent runtime, app-builder runtime, Racket/DSL implementation, or MCP/adapters is implemented in this slice.
+The branch/overlay persistence decision is now locked and v1 DB plumbing is implemented (doc 13). Persist branch layers separately, not composed runtime profiles. V1 persists `profile_branches` rows with inline `overlay_json`: branch identity/parent/kind/name/timestamps are the durable container, and the overlay JSON is the actual diff/change set. Runtime profiles are derived. Active selection and merge proposals stay separate. Implemented scope is migration/schema/ontology data-boundary repo/codec/backup support/guards only. No UI activation selector, automatic merge, checker runtime, patch suggestion table, correction storage, agent/subagent runtime, app-builder runtime, Racket/DSL implementation, or MCP/adapters is implemented.
 
 The profile selection and branch resolution decision is now locked (doc 14). Branch persistence, active selection, branch resolution, and runtime composition are separate boundaries. `ProfileSelection` is per-context and id-based: it selects one base profile id plus ordered project/learning/personal branch ids. A resolver later turns ids into branch values; the Runtime Profile Coordinator composes resolved values into a runtime `DomainProfile`. There is no global active selection singleton, no composed runtime profile as canonical truth, no DB/UI/MCP/agent/app-builder/DSL runtime in this slice, and no multi-base composition in v1.
 
@@ -54,7 +54,7 @@ Read in this order:
 5. `ONTOLOGY_PROFILE_REFACTOR/10_ACTIVE_PROFILE_RUNTIME_SOURCE_DECISION.md` - locked decision (A2): save/extraction receives composed DomainProfile via options.profile, not activation input.
 6. `ONTOLOGY_PROFILE_REFACTOR/11_RUNTIME_PROFILE_COORDINATOR_DECISION.md` - locked decision: explicit Runtime Profile Coordinator / Brain Mixer layer above services.
 7. `ONTOLOGY_PROFILE_REFACTOR/12_CORRECTION_EVIDENCE_PERSISTENCE_DECISION.md` - locked decision: evidence-first persistence, patch suggestions later, no automatic ontology/profile mutation.
-8. `ONTOLOGY_PROFILE_REFACTOR/13_BRANCH_OVERLAY_PERSISTENCE_DECISION.md` - locked decision: persist branch layers separately, not composed runtime profiles. Overlays are the durable source; composition is derived. Merging upward requires approval.
+8. `ONTOLOGY_PROFILE_REFACTOR/13_BRANCH_OVERLAY_PERSISTENCE_DECISION.md` - locked decision: persist branch rows with inline `overlay_json`; overlays are the durable diff, runtime profiles are derived, active selection and merge proposals stay separate.
 9. `ONTOLOGY_PROFILE_REFACTOR/14_PROFILE_SELECTION_AND_BRANCH_RESOLUTION_DECISION.md` - locked decision: branch persistence, active selection, branch resolution, and runtime composition are separate boundaries. Selection is per-context, id-based, single-base in v1, and resolved before composition.
 10. `ONTOLOGY_PROFILE_REFACTOR/15_PROFILE_REGISTRY_AND_PROFILE_SOURCES_DECISION.md` - decision + implementation: source-based ProfileRegistry, static/in-memory source v1, future built-in/file/DB/adapter sources, duplicate profile ids throw structured errors.
 11. `ONTOLOGY_PROFILE_REFACTOR/05_ANTI_REGRESSION_RULES.md` - hard constraints and compatibility boundaries.
@@ -290,10 +290,10 @@ The runtime profile coordinator decision is now locked (doc 11). The brain mixer
 The coordinator helper module is now implemented and tested. The correction evidence persistence decision is now locked (doc 12). The branch/overlay persistence decision is now locked (doc 13). The profile selection and branch resolution decision is now locked (doc 14). The source-based ProfileRegistry v1 decision is locked and implemented for static/in-memory sources only (doc 15). The domain-only `ProfileBranch`, `ProfileSelection`, `ProfileRegistry`, and static/in-memory `ProfileBranchStore` helper seams are implemented and tested. The remaining open decisions are:
 
 ```text
-1. Branch/overlay DB persistence - schema, migration, and persistent adapter/store for ProfileBranch.
+1. Branch selection and activation persistence - how selected branch ids are stored per context.
 2. Profile persistence / user-created base profile storage, later.
 3. Merge proposal storage and review UI - how merge proposals are stored, presented, and approved/rejected/postponed.
-4. Correction storage implementation - DB/migration/store for profileId-only OntologyCorrectionEvidence; branchId/targetLayerId come later with branch persistence.
+4. Correction storage implementation - DB/migration/store for profileId-only OntologyCorrectionEvidence; branch-targeted correction fields can come later now that branch persistence exists.
 5. Checker runtime and approval UI - patch suggestion generation and review.
 6. Agent/subagent execution ontology brief.
 7. Self-building-app framework brief.
@@ -302,9 +302,9 @@ The coordinator helper module is now implemented and tested. The correction evid
 Good next bounded slice should stay behind a human decision gate. Likely candidates:
 
 ```text
-1. Branch/overlay DB persistence decision brief, not implementation yet.
-2. Correction storage implementation decision brief, still no branchId/targetLayerId until persistence is ready.
-3. Built-in demo profile decision (e.g. photography) if the user wants to test non-coding profile shape before persistence.
+1. Branch selection and activation persistence decision brief, still no UI implementation.
+2. Correction storage implementation decision brief, with a fresh decision on whether v1 stays profileId-only or can now include optional branch targeting.
+3. Built-in demo profile decision (e.g. photography) if the user wants to test non-coding profile shape before more persistence.
 ```
 
 The user also wants Kortex profile branches: a general coding child should be extendable into project, job, learning, or personal branches that can stay separate or later merge selected changes back. "Core" means immutable within a profile lineage; a fork/user can create a different ground-zero base profile later. Read `06_PROFILE_BRANCHING_AND_MERGE.md` before proposing correction/checker storage or UI.
