@@ -135,6 +135,45 @@ registry.getProfile('photography')
 
 It does not care whether `photography` came from built-in code, a file, DB, or an adapter.
 
+## Independent Base Profile Clarification
+
+`ProfileRegistry` resolves base profiles. A base profile can be a built-in profile, an imported
+profile, or a user-created profile.
+
+A user-created base profile is not automatically a branch of `coding`.
+
+Example:
+
+```text
+photography base profile
+  uses Kortex schema/mechanics
+  owns photography tags/subtags/families
+  owns photography fields and relationship types
+  does not inherit coding tags unless the user explicitly chooses a fork/cross-domain relation
+```
+
+Then branches can specialize that base:
+
+```text
+photography base profile
+  -> night-photography branch
+  -> studio-lighting branch
+  -> personal-fuji-workflow branch
+```
+
+This preserves both ideas:
+
+- **Independent bases:** `coding`, `photography`, `work-notes`, or `lisp` can be sibling base
+  profiles built from the shared Kortex schema/engine.
+- **Branches/overlays:** `react`, `typescript`, `night-photography`, or `company-onboarding` can
+  specialize one selected parent/base profile and later propose selected changes upward.
+
+Future creation UI may use an LLM to ask questions for either path. For a new base profile, it
+should ask broad domain-setup questions and suggest tags, subtags, families, fields, relationships,
+examples, and "is not" boundaries. For a branch, it should ask what differs from the parent and
+suggest local overlay changes. The user can accept, edit, reject, or manually create the ontology
+parts.
+
 ## V1 Meaning
 
 `v1` means the first version implemented now.

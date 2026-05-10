@@ -12,7 +12,7 @@ import type { profileBranches } from '../data/schema';
 
 const ProfileOverlayKindEnum = z.enum(['project', 'learning', 'personal']);
 
-const BoundaryRuleSchema = z
+export const BoundaryRuleSchema = z
   .object({
     id: z.string().min(1),
     text: z.string(),
@@ -22,7 +22,7 @@ const BoundaryRuleSchema = z
   })
   .strict();
 
-const OntologyNodeSchema: z.ZodType<OntologyNode> = z
+export const OntologyNodeSchema: z.ZodType<OntologyNode> = z
   .object({
     id: z.string().min(1),
     label: z.string(),
@@ -41,7 +41,7 @@ const OntologyNodeSchema: z.ZodType<OntologyNode> = z
   })
   .strict();
 
-const MetadataFieldSchema: z.ZodType<MetadataFieldDefinition> = z
+export const MetadataFieldSchema: z.ZodType<MetadataFieldDefinition> = z
   .object({
     id: z.string().min(1),
     label: z.string(),

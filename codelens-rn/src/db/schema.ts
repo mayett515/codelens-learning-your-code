@@ -327,3 +327,17 @@ export const profileSelections = sqliteTable('profile_selections', {
   index('idx_profile_selections_base_profile').on(t.baseProfileId),
   index('idx_profile_selections_updated').on(t.updatedAt),
 ]);
+
+export const profileDefinitions = sqliteTable('profile_definitions', {
+  id: text('id').primaryKey(),
+  label: text('label').notNull(),
+  description: text('description').notNull(),
+  version: integer('version').notNull(),
+  sourceKind: text('source_kind', { enum: ['built_in', 'user', 'imported', 'adapter'] }).notNull(),
+  profileJson: text('profile_json', { mode: 'json' }).notNull().$type<unknown>(),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+}, (t) => [
+  index('idx_profile_definitions_source_kind').on(t.sourceKind),
+  index('idx_profile_definitions_updated').on(t.updatedAt),
+]);

@@ -332,13 +332,16 @@ describe('Kortex overlay persistence table guards', () => {
       'src/db/schema.ts',
       'src/db/migrations/012-profile-branches.ts',
       'src/db/migrations/013-profile-selections.ts',
+      'src/db/migrations/014-profile-definitions.ts',
       'src/db/migrations/index.ts',
       'src/features/ontology/data/schema.ts',
       'src/features/ontology/data/profileBranchRepo.ts',
       'src/features/ontology/data/profileSelectionRepo.ts',
+      'src/features/ontology/data/profileDefinitionRepo.ts',
       'src/features/ontology/data/index.ts',
       'src/features/ontology/codecs/profileBranch.ts',
       'src/features/ontology/codecs/profileSelection.ts',
+      'src/features/ontology/codecs/profileDefinition.ts',
       'src/features/backup/format.ts',
       'src/features/backup/export.ts',
       'src/features/backup/import.ts',
@@ -367,6 +370,21 @@ describe('Kortex overlay persistence table guards', () => {
       .filter((filePath) => {
         const content = read(filePath);
         return content.includes('profile_selections');
+      })
+      .map(toRepoPath)
+      .filter((p) => {
+        if (p.startsWith('ONTOLOGY_PROFILE_REFACTOR/')) return false;
+        if (p.endsWith('.test.ts') || p.endsWith('.test.tsx') || p.includes('__tests__/')) return false;
+        return !allowedProfilePersistenceFiles.has(path.normalize(p));
+      });
+    expect(offenders).toEqual([]);
+  });
+
+  it('profile_definitions is only allowed in planned persistence boundary files and tests', () => {
+    const offenders = sourceFiles()
+      .filter((filePath) => {
+        const content = read(filePath);
+        return content.includes('profile_definitions');
       })
       .map(toRepoPath)
       .filter((p) => {

@@ -212,6 +212,18 @@ export const PROFILE_SELECTIONS_JSON_COLUMNS = new Set<string>([
   'personal_branch_ids_json',
 ]);
 
+export const PROFILE_DEFINITIONS_COLUMN_MAP = {
+  'id': 'id',
+  'label': 'label',
+  'description': 'description',
+  'version': 'version',
+  'source_kind': 'sourceKind',
+  'profile_json': 'profileJson',
+  'created_at': 'createdAt',
+  'updated_at': 'updatedAt',
+} as const satisfies Record<string, string>;
+export const PROFILE_DEFINITIONS_JSON_COLUMNS = new Set<string>(['profile_json']);
+
 export const TABLE_COLUMN_MAPS: Record<string, Record<string, string>> = {
   'projects': PROJECTS_COLUMN_MAP,
   'files': FILES_COLUMN_MAP,
@@ -223,6 +235,7 @@ export const TABLE_COLUMN_MAPS: Record<string, Record<string, string>> = {
   'concept_links': CONCEPT_LINKS_COLUMN_MAP,
   'profile_branches': PROFILE_BRANCHES_COLUMN_MAP,
   'profile_selections': PROFILE_SELECTIONS_COLUMN_MAP,
+  'profile_definitions': PROFILE_DEFINITIONS_COLUMN_MAP,
 };
 
 export const TABLE_JSON_COLUMNS: Record<string, ReadonlySet<string>> = {
@@ -236,6 +249,7 @@ export const TABLE_JSON_COLUMNS: Record<string, ReadonlySet<string>> = {
   'concept_links': CONCEPT_LINKS_JSON_COLUMNS,
   'profile_branches': PROFILE_BRANCHES_JSON_COLUMNS,
   'profile_selections': PROFILE_SELECTIONS_JSON_COLUMNS,
+  'profile_definitions': PROFILE_DEFINITIONS_JSON_COLUMNS,
 };
 
 type MissingMappedKeys<TMap extends Record<string, string>, TSchema extends Record<string, unknown>> =
@@ -264,3 +278,5 @@ type _CheckProfileBranchesMissing = AssertNever<MissingMappedKeys<typeof PROFILE
 type _CheckProfileBranchesExtra = AssertNever<ExtraMappedKeys<typeof PROFILE_BRANCHES_COLUMN_MAP, typeof schema.profileBranches.$inferSelect>>;
 type _CheckProfileSelectionsMissing = AssertNever<MissingMappedKeys<typeof PROFILE_SELECTIONS_COLUMN_MAP, typeof schema.profileSelections.$inferSelect>>;
 type _CheckProfileSelectionsExtra = AssertNever<ExtraMappedKeys<typeof PROFILE_SELECTIONS_COLUMN_MAP, typeof schema.profileSelections.$inferSelect>>;
+type _CheckProfileDefinitionsMissing = AssertNever<MissingMappedKeys<typeof PROFILE_DEFINITIONS_COLUMN_MAP, typeof schema.profileDefinitions.$inferSelect>>;
+type _CheckProfileDefinitionsExtra = AssertNever<ExtraMappedKeys<typeof PROFILE_DEFINITIONS_COLUMN_MAP, typeof schema.profileDefinitions.$inferSelect>>;

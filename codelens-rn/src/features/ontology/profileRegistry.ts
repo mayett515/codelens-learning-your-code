@@ -1,6 +1,7 @@
 import type {
   DomainProfile,
   DomainProfileSummary,
+  ProfileDefinition,
   ProfileRegistry,
   ProfileSource,
 } from './types';
@@ -82,6 +83,43 @@ export function createStaticProfileSource<TItemTypeNodeId extends string = strin
     },
     listProfiles() {
       return profiles.map((p) => toDomainProfileSummary(p));
+    },
+  };
+}
+
+export function createProfileDefinitionSource<TItemTypeNodeId extends string = string>(input: {
+  id: string;
+  definitions: readonly ProfileDefinition<TItemTypeNodeId>[];
+}): ProfileSource<TItemTypeNodeId> {
+  // Check for duplicates within this source.
+  const seen = new Map<string, string>();
+  for (const def of input.definitions) {
+    const existing = seen.get(def.id);
+    if (existing !== undefined) {
+      throw new DuplicateProfileIdError(def.id, [input.id]);
+    }
+    seen.set(def.id, def.id);
+  }
+
+  const id = input.id;
+  const definitions = [...input.definitions];
+  const profilesById = new Map<string, DomainProfile<TItemTypeNodeId>>();
+  for (const def of definitions) {
+    profilesById.set(def.id, def.profile);
+  }
+
+  return {
+    id,
+    getProfile(idToFind) {
+      return profilesById.get(idToFind) ?? null;
+    },
+    listProfiles() {
+      return definitions.map((def) => ({
+        id: def.id,
+        version: def.version,
+        label: def.label,
+        description: def.description,
+      }));
     },
   };
 }

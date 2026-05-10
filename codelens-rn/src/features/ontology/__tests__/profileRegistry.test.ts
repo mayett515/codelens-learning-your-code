@@ -6,10 +6,11 @@ import {
   ProfileNotFoundError,
   createProfileRegistry,
   createStaticProfileSource,
+  createProfileDefinitionSource,
   toDomainProfileSummary,
 } from '../profileRegistry';
 import { codingProfile } from '../profiles/codingProfile';
-import type { DomainProfile, OntologyNode } from '../types';
+import type { DomainProfile, OntologyNode, ProfileDefinition } from '../types';
 
 function makeTestNode(id: string, label?: string): OntologyNode {
   return {
@@ -251,6 +252,139 @@ describe('createStaticProfileSource', () => {
       const source = createStaticProfileSource({
         id: 'my-source',
         profiles: [codingProfile],
+      });
+      expect(source.id).toBe('my-source');
+    });
+  });
+});
+
+function makeProfileDefinition(id: string, label: string): ProfileDefinition<string> {
+  const profile = makeTestProfile(id, label);
+  return {
+    id,
+    label,
+    description: profile.description,
+    version: profile.version,
+    sourceKind: 'user',
+    profile,
+    createdAt: 0,
+    updatedAt: 0,
+  };
+}
+
+describe('createProfileDefinitionSource', () => {
+  describe('getProfile', () => {
+    it('returns profile by reference', () => {
+      const def = makeProfileDefinition('alpha', 'Alpha');
+      const source = createProfileDefinitionSource({
+        id: 'db-source',
+        definitions: [def],
+      });
+      expect(source.getProfile('alpha')).toBe(def.profile);
+    });
+
+    it('returns null for unknown id', () => {
+      const def = makeProfileDefinition('alpha', 'Alpha');
+      const source = createProfileDefinitionSource({
+        id: 'db-source',
+        definitions: [def],
+      });
+      expect(source.getProfile('nonexistent')).toBeNull();
+    });
+
+    it('returns correct profile among multiple definitions', () => {
+      const d1 = makeProfileDefinition('alpha', 'Alpha');
+      const d2 = makeProfileDefinition('beta', 'Beta');
+      const source = createProfileDefinitionSource({
+        id: 'db-source',
+        definitions: [d1, d2],
+      });
+      expect(source.getProfile('alpha')).toBe(d1.profile);
+      expect(source.getProfile('beta')).toBe(d2.profile);
+    });
+  });
+
+  describe('listProfiles', () => {
+    it('returns summaries from definition fields', () => {
+      const d1 = makeProfileDefinition('alpha', 'Alpha');
+      const d2 = makeProfileDefinition('beta', 'Beta');
+      const source = createProfileDefinitionSource({
+        id: 'db-source',
+        definitions: [d1, d2],
+      });
+      const summaries = source.listProfiles();
+      expect(summaries).toHaveLength(2);
+      expect(summaries[0]).toEqual({
+        id: 'alpha',
+        version: 1,
+        label: 'Alpha',
+        description: 'Description for alpha',
+      });
+      expect(summaries[1]).toEqual({
+        id: 'beta',
+        version: 1,
+        label: 'Beta',
+        description: 'Description for beta',
+      });
+    });
+
+    it('returns new array each call', () => {
+      const def = makeProfileDefinition('alpha', 'Alpha');
+      const source = createProfileDefinitionSource({
+        id: 'db-source',
+        definitions: [def],
+      });
+      const first = source.listProfiles();
+      const second = source.listProfiles();
+      expect(first).not.toBe(second);
+      expect(first).toEqual(second);
+    });
+  });
+
+  describe('duplicate id inside one definition source', () => {
+    it('throws DuplicateProfileIdError with code, profileId, and sourceIds', () => {
+      const d1 = makeProfileDefinition('dup', 'Duplicate 1');
+      const d2 = makeProfileDefinition('dup', 'Duplicate 2');
+      let caught: DuplicateProfileIdError | undefined;
+      try {
+        createProfileDefinitionSource({
+          id: 'bad-source',
+          definitions: [d1, d2],
+        });
+      } catch (e) {
+        caught = e as DuplicateProfileIdError;
+      }
+      expect(caught).toBeDefined();
+      expect(caught!.code).toBe('DUPLICATE_PROFILE_ID');
+      expect(caught!.profileId).toBe('dup');
+      expect(caught!.sourceIds).toEqual(['bad-source']);
+    });
+  });
+
+  describe('immutability', () => {
+    it('later changes to caller definitions array do not change the source', () => {
+      const d1 = makeProfileDefinition('alpha', 'Alpha');
+      const d2 = makeProfileDefinition('beta', 'Beta');
+      const definitions = [d1];
+      const source = createProfileDefinitionSource({
+        id: 'stable-source',
+        definitions,
+      });
+
+      definitions.push(d2);
+
+      expect(source.getProfile('alpha')).toBe(d1.profile);
+      expect(source.getProfile('beta')).toBeNull();
+      expect(source.listProfiles().map((s) => s.id)).toEqual(['alpha']);
+    });
+  });
+
+  describe('source identity', () => {
+    it('exposes the source id', () => {
+      const def = makeProfileDefinition('alpha', 'Alpha');
+      const source = createProfileDefinitionSource({
+        id: 'my-source',
+        definitions: [def],
       });
       expect(source.id).toBe('my-source');
     });

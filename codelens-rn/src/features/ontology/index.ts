@@ -60,11 +60,18 @@ export {
 export {
   DuplicateProfileIdError,
   ProfileNotFoundError,
+  createProfileDefinitionSource,
   createProfileRegistry,
   createStaticProfileSource,
   toDomainProfileSummary,
 } from './profileRegistry';
-export type { DomainProfileSummary, ProfileRegistry, ProfileSource } from './types';
+export type {
+  DomainProfileSummary,
+  ProfileDefinition,
+  ProfileDefinitionSourceKind,
+  ProfileRegistry,
+  ProfileSource,
+} from './types';
 
 export type { ProfileBranchStore } from './types';
 export { createStaticProfileBranchStore } from './profileBranchStore';

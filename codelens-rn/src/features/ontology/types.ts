@@ -317,6 +317,19 @@ export interface ProfileRegistry<TItemTypeNodeId extends string = string> {
   listProfiles(): readonly DomainProfileSummary[];
 }
 
+export type ProfileDefinitionSourceKind = 'built_in' | 'user' | 'imported' | 'adapter';
+
+export interface ProfileDefinition<TItemTypeNodeId extends string = string> {
+  id: string;
+  label: string;
+  description: string;
+  version: number;
+  sourceKind: ProfileDefinitionSourceKind;
+  profile: DomainProfile<TItemTypeNodeId>;
+  createdAt: number;
+  updatedAt: number;
+}
+
 // ---------------------------------------------------------------------------
 // Profile branch store: durable branch layer storage boundary.
 // ---------------------------------------------------------------------------

@@ -14,3 +14,12 @@ export {
   getProjectProfileSelectionByProjectId,
   deleteProjectProfileSelectionForProject,
 } from './profileSelectionRepo';
+
+export {
+  insertProfileDefinition,
+  upsertProfileDefinition,
+  getProfileDefinitionById,
+  getProfileDefinitionsByIds,
+  listProfileDefinitions,
+  deleteProfileDefinition,
+} from './profileDefinitionRepo';

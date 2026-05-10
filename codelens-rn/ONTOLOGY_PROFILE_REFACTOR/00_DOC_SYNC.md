@@ -27,6 +27,14 @@ This file explains how the root architecture docs and this refactor folder shoul
 - `07_KORTEX_CORE_AND_CHILD_CORES.md` defines the updated product boundary: Kortex Core, child cores, agent execution ontology, self-building app framework direction, graph projections, and dynamic relationship semantics direction.
 - `08_KORTEX_LANGUAGE_LAYER_AND_ADAPTERS.md` defines the future Racket/DSL language-layer direction, protocol-first adapters, and self-update boundary.
 - `09_KORTEX_OVER_EXISTING_SYSTEMS.md` defines the non-destructive overlay model for codebases, notes, databases, LLMs, and other existing systems.
+- `10_ACTIVE_PROFILE_RUNTIME_SOURCE_DECISION.md` locks the A2 service seam: services receive composed DomainProfile values.
+- `11_RUNTIME_PROFILE_COORDINATOR_DECISION.md` locks the explicit runtime coordinator / brain mixer layer.
+- `12_CORRECTION_EVIDENCE_PERSISTENCE_DECISION.md` locks evidence-first correction persistence.
+- `13_BRANCH_OVERLAY_PERSISTENCE_DECISION.md` locks branch overlay persistence as source, not composed runtime profiles.
+- `14_PROFILE_SELECTION_AND_BRANCH_RESOLUTION_DECISION.md` locks id-based per-context selection and branch resolution.
+- `15_PROFILE_REGISTRY_AND_PROFILE_SOURCES_DECISION.md` locks source-based base profile resolution through ProfileRegistry.
+- `16_RUNTIME_ACTIVATION_WIRING_DECISION.md` locks the application/coordinator runtime activation wiring seam.
+- `17_BASE_PROFILE_PERSISTENCE_DECISION.md` locks user-created base profiles as their own future persistence source, separate from branches.
 - `architecture_contract_for_profile_refactor.md` is the local adjusted LLM contract for this refactor.
 - `architecture_guide_for_profile_refactor_humans.md` is the local adjusted human guide.
 - `modules_architecture.md` is a draft future module/foldering architecture guide.

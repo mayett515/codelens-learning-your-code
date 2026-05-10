@@ -38,6 +38,60 @@ Child core / wrapper
 The coding product must stay strong. It is not a throwaway demo. It is the first real child of the
 core and the proof that the core works in a serious domain.
 
+## Independent Cores Versus Branches
+
+<independent_core_rule>
+A new base core is independent by default. It uses the shared Kortex schema, engine, and
+operation rules, but it does not automatically inherit the coding ontology just because coding was
+the first serious implementation.
+</independent_core_rule>
+
+The distinction is:
+
+```text
+Kortex Core mechanics
+  tags / subtags / families
+  relationships
+  is / is not boundaries
+  examples and counterexamples
+  correction evidence
+  branch / overlay / merge rules
+  graph and runtime projection rules
+
+Independent base cores
+  coding
+  photography
+  work-notes
+  lisp
+  personal-knowledge
+
+Branches of one base core
+  coding -> react
+  coding -> typescript
+  photography -> night-photography
+  work-notes -> company-onboarding
+```
+
+So a photography core should not need to use `Component`, `Hook`, or `Runtime` from the coding
+core unless the user explicitly creates a fork or relationship between those domains. It should use
+the same Kortex mechanics to define photography-specific tags, subtags, families, relationship
+types, fields, examples, and boundary rules.
+
+This does not remove inheritance, fork, branch, or upward-merge ideas. It only separates two
+different actions:
+
+- **Create a new independent base core:** start from the Kortex schema/engine and ask broad domain
+  questions. Example: "What are the main families in this domain?", "Which tags matter?", "What is
+  commonly confused?", "What fields should captures store?", "Which relationships should exist?"
+- **Create a branch from an existing base core:** ask what differs from the parent. Example:
+  "What does night photography add to photography?", "Which parent tags need local boundary
+  rules?", "Which project or personal terms should stay local?"
+
+The app/LLM can assist both flows because the system knows the Kortex mechanics and the app's own
+profile creation workflow. The user can accept suggestions, edit them manually, or mix manual and
+suggested ontology work. Durable changes still go through the normal evidence, approval, branch,
+and merge rules.
+
 ## One Truth, Multiple Projections
 
 <projection_rule>

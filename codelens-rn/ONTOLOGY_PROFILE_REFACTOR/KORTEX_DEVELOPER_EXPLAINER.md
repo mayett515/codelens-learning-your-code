@@ -66,6 +66,45 @@ Coding child core / CodeLens wrapper
 The coding product should remain useful and opinionated. It is not a toy demo. It is the first
 domain where Kortex proves it can model real work.
 
+## Independent Domain Cores
+
+The Kortex schema/engine is shared, but domain cores do not all have to descend from coding.
+
+For example:
+
+```text
+Kortex Core mechanics
+  -> Coding base core
+  -> Photography base core
+  -> Lisp base core
+  -> Work-notes base core
+```
+
+These are siblings by default. The photography core should not inherit React hooks, components, or
+runtime labels just because coding was implemented first. It should use the same Kortex mechanics
+to create its own tags, subtags, families, metadata fields, relationship types, examples, and
+boundaries.
+
+A branch is different:
+
+```text
+Photography base core
+  -> Night photography branch
+      -> personal camera workflow overlay
+
+Coding base core
+  -> React branch
+      -> TypeScript project overlay
+```
+
+When creating a new base core, an attached LLM can ask broad setup questions: what the domain is,
+which families/tags matter, what gets confused, which relationships matter, and what a capture
+should store. When creating a branch, it asks what differs from the parent. The user can work fully
+manually, accept suggestions, or mix both.
+
+Explicit forks and cross-domain relationships remain possible later. They should be deliberate
+relationships, not accidental inheritance from the first coding implementation.
+
 ## Ontology Is More Than Tags
 
 In Kortex, a tag is not just a label. A tag or node can have meaning, boundaries, relationships,

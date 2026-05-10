@@ -30,6 +30,7 @@ const TABLES: TableSpec[] = [
   { name: 'concept_links',     sql: 'SELECT * FROM concept_links' },
   { name: 'profile_branches',     sql: 'SELECT * FROM profile_branches' },
   { name: 'profile_selections',   sql: 'SELECT * FROM profile_selections' },
+  { name: 'profile_definitions',  sql: 'SELECT * FROM profile_definitions' },
 ];
 
 interface EmbeddingMetaRow {

@@ -12,6 +12,7 @@ import {
   CONCEPT_LINKS_COLUMN_MAP,
   PROFILE_BRANCHES_COLUMN_MAP,
   PROFILE_SELECTIONS_COLUMN_MAP,
+  PROFILE_DEFINITIONS_COLUMN_MAP,
   TABLE_COLUMN_MAPS,
   TABLE_JSON_COLUMNS,
 } from '../columnMaps';
@@ -479,6 +480,48 @@ describe('Column map: profile_selections', () => {
   });
 });
 
+describe('Column map: profile_definitions', () => {
+  it('maps all columns including profile_json', () => {
+    const raw = {
+      id: 'def-1',
+      label: 'Test Profile',
+      description: 'A test profile',
+      version: 2,
+      source_kind: 'user',
+      profile_json: '{"id":"def-1","label":"Test Profile"}',
+      created_at: 1000,
+      updated_at: 2000,
+    };
+    const m = mapBackupRow(raw, PROFILE_DEFINITIONS_COLUMN_MAP);
+    expect(m['id']).toBe('def-1');
+    expect(m['label']).toBe('Test Profile');
+    expect(m['description']).toBe('A test profile');
+    expect(m['version']).toBe(2);
+    expect(m['sourceKind']).toBe('user');
+    expect(m['profileJson']).toBe('{"id":"def-1","label":"Test Profile"}');
+    expect(m['createdAt']).toBe(1000);
+    expect(m['updatedAt']).toBe(2000);
+    expect(Object.keys(m).length).toBe(8);
+  });
+
+  it('drops unknown keys', () => {
+    const raw = {
+      id: 'def-1',
+      label: 'Test',
+      description: 'Desc',
+      version: 1,
+      source_kind: 'built_in',
+      profile_json: '{}',
+      created_at: 1000,
+      updated_at: 2000,
+      unknown_field: 42,
+    };
+    const m = mapBackupRow(raw, PROFILE_DEFINITIONS_COLUMN_MAP);
+    expect('unknown_field' in m).toBe(false);
+    expect(Object.keys(m).length).toBe(8);
+  });
+});
+
 describe('JSON decoding for Drizzle insert shape', () => {
   it('decodes project JSON columns', () => {
     const mapped = mapBackupRow(
@@ -575,6 +618,23 @@ describe('JSON decoding for Drizzle insert shape', () => {
       PROFILE_SELECTIONS_COLUMN_MAP,
       TABLE_JSON_COLUMNS['profile_selections']!,
     )).toThrow(/Invalid JSON in backup column project_branch_ids_json/);
+  });
+
+  it('decodes profile_definitions profile_json', () => {
+    const mapped = mapBackupRow(
+      { id: 'def-1', label: 'Test', description: 'Desc', version: 1, source_kind: 'user', profile_json: '{"id":"def-1"}', created_at: 1000, updated_at: 2000 },
+      PROFILE_DEFINITIONS_COLUMN_MAP,
+      TABLE_JSON_COLUMNS['profile_definitions']!,
+    );
+    expect(mapped['profileJson']).toEqual({ id: 'def-1' });
+  });
+
+  it('throws on malformed JSON in profile_definitions profile_json', () => {
+    expect(() => mapBackupRow(
+      { id: 'def-1', label: 'Test', description: 'Desc', version: 1, source_kind: 'user', profile_json: '{bad json', created_at: 1000, updated_at: 2000 },
+      PROFILE_DEFINITIONS_COLUMN_MAP,
+      TABLE_JSON_COLUMNS['profile_definitions']!,
+    )).toThrow(/Invalid JSON in backup column profile_json/);
   });
 
   it('raw SQL string vs decoded array boundary for profile_selections', () => {
@@ -889,6 +949,7 @@ describe('TABLE_COLUMN_MAPS index', () => {
     'learning_sessions', 'learning_captures', 'concepts', 'concept_links',
     'profile_branches',
     'profile_selections',
+    'profile_definitions',
   ];
 
   it('contains an entry for every exported table', () => {
@@ -908,6 +969,7 @@ describe('TABLE_COLUMN_MAPS index', () => {
     expect(TABLE_COLUMN_MAPS['concept_links']).toBe(CONCEPT_LINKS_COLUMN_MAP);
     expect(TABLE_COLUMN_MAPS['profile_branches']).toBe(PROFILE_BRANCHES_COLUMN_MAP);
     expect(TABLE_COLUMN_MAPS['profile_selections']).toBe(PROFILE_SELECTIONS_COLUMN_MAP);
+    expect(TABLE_COLUMN_MAPS['profile_definitions']).toBe(PROFILE_DEFINITIONS_COLUMN_MAP);
   });
 
   it('every map has the expected number of columns', () => {
@@ -921,5 +983,6 @@ describe('TABLE_COLUMN_MAPS index', () => {
     expect(Object.keys(CONCEPT_LINKS_COLUMN_MAP).length).toBe(4);
     expect(Object.keys(PROFILE_BRANCHES_COLUMN_MAP).length).toBe(7);
     expect(Object.keys(PROFILE_SELECTIONS_COLUMN_MAP).length).toBe(8);
+    expect(Object.keys(PROFILE_DEFINITIONS_COLUMN_MAP).length).toBe(8);
   });
 });

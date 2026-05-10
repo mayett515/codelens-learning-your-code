@@ -312,7 +312,7 @@ After this decision:
 1. Branch selection and activation - how the user selects which branch ids are active for a context (deferred).
 2. Merge proposal storage and review UI - how merge proposals are stored, presented, and approved/rejected/postponed (deferred).
 3. Correction storage implementation - DB/migration/store for profileId-only `OntologyCorrectionEvidence`; branch-targeted correction fields can come later now that branch persistence exists.
-4. Profile persistence / user-created base profile storage, later.
+4. Profile definitions persistence / user-created base profile storage is now implemented in doc 17 / migration 014.
 5. Checker runtime and approval UI - patch suggestion generation and review.
 6. Agent/subagent execution ontology brief.
 7. Self-building-app framework brief.

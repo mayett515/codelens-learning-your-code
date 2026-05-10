@@ -31,11 +31,15 @@ The ProfileBranchStore v1 seam is now implemented by Kimi Code CLI and accepted 
 
 The runtime activation wiring decision is locked (doc 16) and now implemented. `runtimeProfileActivation.ts` exposes `resolveRuntimeProfileForProject(input)`, `ProjectRuntimeProfileActivationInput`, `ProjectRuntimeProfileActivationResult`, `ProjectProfileSelectionStore`, `RuntimeProfileActivationError`, and `RuntimeProfileActivationErrorCode`. The resolver reads a project selection via caller-supplied store, resolves the base profile through the registry, resolves selected branch ids through the branch store, detects missing and wrong-kind branch ids with structured errors, composes through `composeRuntimeDomainProfileFromSelection`, and returns the finished profile plus trace data. Missing selection falls back to `coding` base. No global active profile, DB-owned composed profile, UI selector, MCP, agent runtime, app-builder runtime, or DSL runtime was added.
 
+The base profile persistence / user-created cores decision is locked and v1 storage is implemented (doc 17). User-created base cores/profiles are their own persistence concept. They are not stored as `profile_branches`, and composed runtime profiles are still not persisted as source of truth. `profile_definitions` now stores full base `DomainProfile` payloads behind the ontology data boundary. `createProfileDefinitionSource({ id, definitions })` plugs loaded definitions into the synchronous `ProfileRegistry` without changing the registry to async. New domains such as `photography`, `work-notes`, or `lisp` are independent base profiles by default; branches such as `night-photography` or `react` specialize one selected base. LLM-assisted creation may suggest tags, subtags, families, fields, relationships, examples, and "is not" boundaries later, but durable profile changes require user approval.
+
 The coordinator helper is now implemented and tested: `runtimeProfileCoordinator.ts` is the explicit above-services coordinator boundary. `composeRuntimeDomainProfile(input)` delegates to `resolveActiveDomainProfileFromActivationInput(input)`. `RuntimeProfileCoordinatorInput` aliases `ActiveDomainProfileActivationInput`. Services still receive composed `DomainProfile`; they do not call this helper directly unless their caller passes the result. No DB, UI, persistence, global store, service hidden lookup, agent runtime, app-builder runtime, or DSL runtime was added.
 
 The latest profile/core source slices add pure profile composition helpers, the first explicit active-profile overlay seam, and an explicit active-profile source resolver. `composeDomainProfile(base, overlays)` composes branch/project/learning/personal overlays without mutating inputs. `ActiveDomainProfileSource` packages a caller-owned `baseProfile` plus optional overlays, and `resolveActiveDomainProfile(source)` returns the base profile by reference when overlays are omitted/null/empty or composes explicit overlays when supplied. `getActiveDomainProfile(overlays?)` still returns `codingProfile` by reference with no overlays or an empty list, and now delegates through the resolver for explicit overlays. The latest guard batch added deeper immutability tests, active-profile no-cache/no-hidden-state tests, future runtime source guards, future architecture anti-regression rules, and durable doc-anchor guards.
 
 The latest product framing is stronger than "make CodeLens profile-driven": Kortex Core is the reusable ontology/graph/versioned reasoning system, and CodeLens/coding is the first serious child core/wrapper around it. Read `07_KORTEX_CORE_AND_CHILD_CORES.md` before implementing more branch, relationship, graph, or correction semantics.
+
+Independent base cores versus branches is now clarified in docs 07 and 15. A new base core such as `photography`, `work-notes`, or `lisp` uses the shared Kortex schema/engine but does not automatically inherit coding ontology content. Coding, photography, lisp, and work-notes can be sibling base profiles. A branch is different: it specializes one selected parent/base profile, such as `coding -> react` or `photography -> night-photography`. Future LLM-assisted creation should support both flows: broad domain questions for a new base core, and "what differs from the parent?" questions for a branch. Users can accept suggestions, edit manually, or mix both. Do not remove explicit fork, cross-domain relationship, or upward-merge ideas; make those deliberate choices rather than accidental inheritance from coding.
 
 The agent/subagent idea is preserved as architecture, not current implementation: Kortex can be an agent execution ontology. Tags/subtags, `is`, `is not`, and `extends` may later define agent identity, behavior, Ausfuehrung/execution constraints, allowed/forbidden operations, tool/file scope, and approval gates. Read the `Agent Execution Ontology` section in `07_KORTEX_CORE_AND_CHILD_CORES.md` before proposing orchestration or subagent behavior.
 
@@ -62,14 +66,15 @@ Read in this order:
 9. `ONTOLOGY_PROFILE_REFACTOR/14_PROFILE_SELECTION_AND_BRANCH_RESOLUTION_DECISION.md` - locked decision: branch persistence, active selection, branch resolution, and runtime composition are separate boundaries. Selection is per-context, id-based, single-base in v1, and resolved before composition.
 10. `ONTOLOGY_PROFILE_REFACTOR/15_PROFILE_REGISTRY_AND_PROFILE_SOURCES_DECISION.md` - decision + implementation: source-based ProfileRegistry, static/in-memory source v1, future built-in/file/DB/adapter sources, duplicate profile ids throw structured errors.
 11. `ONTOLOGY_PROFILE_REFACTOR/16_RUNTIME_ACTIVATION_WIRING_DECISION.md` - locked decision + implementation: runtime activation wiring loads selected ingredients for one context, composes via pure helpers, and passes only finished DomainProfile to services. `resolveRuntimeProfileForProject` is now implemented and tested.
-12. `ONTOLOGY_PROFILE_REFACTOR/05_ANTI_REGRESSION_RULES.md` - hard constraints and compatibility boundaries.
-13. `ONTOLOGY_PROFILE_REFACTOR/03_CATEGORIZATION_AND_ONTOLOGY_CHECKER.md` - next product direction: correction flow and ontology checker.
-14. `ONTOLOGY_PROFILE_REFACTOR/04_REFACTOR_WITHOUT_BREAKING_APP.md` - staged implementation plan and persistence/correction ideas.
-15. `ONTOLOGY_PROFILE_REFACTOR/02_DYNAMIC_PROFILE_SCHEMA.md` - proposed future profile/correction/suggestion shapes.
-16. `ONTOLOGY_PROFILE_REFACTOR/06_PROFILE_BRANCHING_AND_MERGE.md` - profile inheritance, branching, overlays, and merge semantics.
-17. `ONTOLOGY_PROFILE_REFACTOR/README.md` - map of this refactor folder.
-18. `ONTOLOGY_PROFILE_REFACTOR/TOMORROW_START.md` - startup prompt and next-slice reminder.
-19. Root docs if persistence or architecture is touched: `ARCHITECTURE.md`, `PERSISTENCE.md`.
+12. `ONTOLOGY_PROFILE_REFACTOR/17_BASE_PROFILE_PERSISTENCE_DECISION.md` - locked decision + implementation: user-created base profiles persist separately from branches/runtime profiles. `profile_definitions` storage plugs loaded definitions into ProfileRegistry through a synchronous source factory.
+13. `ONTOLOGY_PROFILE_REFACTOR/05_ANTI_REGRESSION_RULES.md` - hard constraints and compatibility boundaries.
+14. `ONTOLOGY_PROFILE_REFACTOR/03_CATEGORIZATION_AND_ONTOLOGY_CHECKER.md` - next product direction: correction flow and ontology checker.
+15. `ONTOLOGY_PROFILE_REFACTOR/04_REFACTOR_WITHOUT_BREAKING_APP.md` - staged implementation plan and persistence/correction ideas.
+16. `ONTOLOGY_PROFILE_REFACTOR/02_DYNAMIC_PROFILE_SCHEMA.md` - proposed future profile/correction/suggestion shapes.
+17. `ONTOLOGY_PROFILE_REFACTOR/06_PROFILE_BRANCHING_AND_MERGE.md` - profile inheritance, branching, overlays, and merge semantics.
+18. `ONTOLOGY_PROFILE_REFACTOR/README.md` - map of this refactor folder.
+19. `ONTOLOGY_PROFILE_REFACTOR/TOMORROW_START.md` - startup prompt and next-slice reminder.
+20. Root docs if persistence or architecture is touched: `ARCHITECTURE.md`, `PERSISTENCE.md`.
 
 ## Current Changed Files
 
@@ -108,6 +113,17 @@ src/features/ontology/__tests__/runtimeProfileCoordinator.test.ts
 src/features/ontology/index.ts
 src/features/ontology/profileActivation.ts
 src/features/ontology/__tests__/profileActivation.test.ts
+src/db/migrations/014-profile-definitions.ts
+src/db/migrations/__tests__/profile-definitions-migration.test.ts
+src/features/ontology/codecs/profileDefinition.ts
+src/features/ontology/__tests__/profileDefinitionCodec.test.ts
+src/features/ontology/data/profileDefinitionRepo.ts
+src/features/backup/format.ts
+src/features/backup/export.ts
+src/features/backup/import.ts
+src/features/backup/clear.ts
+src/features/backup/columnMaps.ts
+src/features/backup/__tests__/profile-columns.test.ts
 ```
 
 Expected untracked local tool folders:
@@ -251,29 +267,36 @@ Worker prompts/logs for the HR/KR workflow live under `C:\pi-stuff`, not in this
   - Added `profileBranchStore.test.ts` with 12 tests covering single lookup, missing lookup, requested-id order, missing-id skipping, duplicate requested ids, parent filtering, empty parent lists, constructor-order listing, caller array mutation after construction, frozen input arrays, and source-boundary forbidden-name checks
   - Exported `ProfileBranchStore` and `createStaticProfileBranchStore` from `src/features/ontology/index.ts`
   - No DB, migration, backup, storage adapter, UI selector, global active selection, automatic merge, MCP/adapters, agent runtime, app-builder runtime, DSL runtime, or profile persistence added
+- Kimi Code CLI Slice 2 added/accepted (profile definitions persistence v1):
+  - Added migration 014 for `profile_definitions` table with columns, source_kind CHECK constraint, and indexes
+  - Added `ProfileDefinition` and `ProfileDefinitionSourceKind` to ontology types
+  - Added `profileDefinition.ts` codec with strict DomainProfile zod schemas and definition/profile field match validation
+  - Added `profileDefinitionRepo.ts` with insert/upsert/getById/getByIds/list/delete
+  - Added `createProfileDefinitionSource` to `profileRegistry.ts` for synchronous `ProfileSource` from loaded definitions
+  - Added backup/export/import/clear/columnMaps support for `profile_definitions`
+  - Bumped FORMAT_VERSION 3 -> 4 and SCHEMA_VERSION 13 -> 14
+  - Added focused tests: migration (4), codec (17), registry source (10), backup columns (4)
+  - Updated stage10 architecture guards for `profile_definitions` boundary
+  - No UI, services, MCP/adapters, agent runtime, app-builder runtime, DSL runtime, merge proposal code, correction storage, or runtime activation changes
 
 ## Verification Already Run
 
-Latest verified commands after Kimi Code CLI Slice 1:
+Latest verified commands after Kimi Code CLI Slice 2:
 
 ```powershell
 node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit
-npm test -- --run src/features/ontology/__tests__/profileBranchStore.test.ts src/features/ontology/__tests__/profileBranches.test.ts src/features/ontology/__tests__/profileSelection.test.ts
+npm test -- --run src/db/migrations/__tests__/profile-definitions-migration.test.ts src/features/ontology/__tests__/profileDefinitionCodec.test.ts src/features/ontology/__tests__/profileRegistry.test.ts src/features/backup/__tests__/profile-columns.test.ts src/__tests__/stage10-architecture-guards.test.ts
 npm test -- --run
-rg -n "AsyncStorage|sqlite|drizzle|schema|db|migration|zustand|createStore|setActiveBranch|useActiveBranch|profile_branches|profile_overlays|automaticMerge|autoMerge|applyMerge|MCP|agent|app-builder|Racket|DSL" src/features/ontology/profileBranchStore.ts src/features/ontology/__tests__/profileBranchStore.test.ts
-rg -n "[^\x00-\x7F]" src/features/ontology/profileBranchStore.ts src/features/ontology/__tests__/profileBranchStore.test.ts
-git diff --check -- src/features/ontology/types.ts src/features/ontology/index.ts src/features/ontology/profileBranchStore.ts src/features/ontology/__tests__/profileBranchStore.test.ts
+git status --short
 ```
 
 Latest result:
 
 ```text
 TypeScript clean
-targeted branch-store/branch/selection tests: 53/53 passed across 3 test files
-full suite: 540/540 passed across 58 test files
-rg forbidden DB/UI/storage/runtime/agent/MCP/Racket/DSL names: no matches in profileBranchStore source/test
-rg non-ASCII: no matches in profileBranchStore source/test
-git diff --check clean for the Kimi-touched files, with CRLF warnings only
+targeted tests: 157/157 passed across 5 test files
+full suite: 645/645 passed across 65 test files
+git status --short clean for new/modified source files, with pre-existing doc modifications preserved
 ```
 
 ## Important Compatibility Boundaries
@@ -294,23 +317,22 @@ The label-profile cleanup is complete. Correction evidence domain groundwork is 
 
 The runtime profile coordinator decision is now locked (doc 11). The brain mixer is an explicit separate layer above runtime services. Services receive composed `DomainProfile`, do not know branch groups, do not call activation input resolvers, and do not read hidden global active-profile state. Service-owned mixing, UI-screen-owned mixing, hidden global `getRuntimeProfile()` / active-profile store, and persistence-owned composed profile were all explicitly rejected.
 
-The coordinator helper module is now implemented and tested. The correction evidence persistence decision is now locked (doc 12). The branch/overlay persistence decision is now locked (doc 13) and branch DB persistence is implemented. The profile selection and branch resolution decision is now locked (doc 14) and project-scoped selection DB persistence is implemented. The source-based ProfileRegistry v1 decision is locked and implemented for static/in-memory sources only (doc 15). The runtime activation wiring decision is locked (doc 16) and `runtimeProfileActivation.ts` is implemented/tested. The domain-only `ProfileBranch`, `ProfileSelection`, `ProfileRegistry`, static/in-memory `ProfileBranchStore`, and interface-based runtime activation helper seams are implemented and tested. The remaining open decisions are:
+The coordinator helper module is now implemented and tested. The correction evidence persistence decision is now locked (doc 12). The branch/overlay persistence decision is now locked (doc 13) and branch DB persistence is implemented. The profile selection and branch resolution decision is now locked (doc 14) and project-scoped selection DB persistence is implemented. The source-based ProfileRegistry v1 decision is locked and implemented for static/in-memory sources only (doc 15). The runtime activation wiring decision is locked (doc 16) and `runtimeProfileActivation.ts` is implemented/tested. The base profile persistence / user-created cores decision is locked and v1 `profile_definitions` storage is implemented (doc 17). The domain-only `ProfileBranch`, `ProfileSelection`, `ProfileRegistry`, static/in-memory `ProfileBranchStore`, persistent profile definitions, and interface-based runtime activation helper seams are implemented and tested. The remaining open decisions are:
 
 ```text
-1. Profile persistence / user-created base profile storage, later.
-2. Merge proposal storage and review UI - how merge proposals are stored, presented, and approved/rejected/postponed.
-3. Correction storage implementation - DB/migration/store for profileId-only OntologyCorrectionEvidence; branch-targeted correction fields can come later now that branch persistence exists.
-4. Checker runtime and approval UI - patch suggestion generation and review.
-5. Agent/subagent execution ontology brief.
-6. Self-building-app framework brief.
+1. Merge proposal storage and review UI - how merge proposals are stored, presented, and approved/rejected/postponed.
+2. Correction storage implementation - DB/migration/store for profileId-only OntologyCorrectionEvidence; branch-targeted correction fields can come later now that branch persistence exists.
+3. Checker runtime and approval UI - patch suggestion generation and review.
+4. Agent/subagent execution ontology brief.
+5. Self-building-app framework brief.
 ```
 
 Good next work should stay behind a human decision gate. Likely candidates:
 
 ```text
-1. Profile persistence / user-created base profile storage decision.
-2. Merge proposal storage and review UI decision.
-3. Correction storage implementation decision, including whether v1 stays profileId-only or now includes optional branch targeting.
+1. Merge proposal storage and review UI decision.
+2. Correction storage implementation decision, including whether v1 stays profileId-only or now includes optional branch targeting.
+3. Checker runtime and approval UI decision.
 ```
 
 The user also wants Kortex profile branches: a general coding child should be extendable into project, job, learning, or personal branches that can stay separate or later merge selected changes back. "Core" means immutable within a profile lineage; a fork/user can create a different ground-zero base profile later. Read `06_PROFILE_BRANCHING_AND_MERGE.md` before proposing correction/checker storage or UI.

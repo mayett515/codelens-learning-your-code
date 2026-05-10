@@ -12,6 +12,7 @@ import { migration010 } from './010-stage8-reader-bookmarks';
 import { migration011 } from './011-ontology-profile-columns';
 import { migration012 } from './012-profile-branches';
 import { migration013 } from './013-profile-selections';
+import { migration014 } from './014-profile-definitions';
 
 export interface Migration {
   version: number;
@@ -41,6 +42,7 @@ const MIGRATIONS: Migration[] = [
   migration011,
   migration012,
   migration013,
+  migration014,
 ];
 
 /*

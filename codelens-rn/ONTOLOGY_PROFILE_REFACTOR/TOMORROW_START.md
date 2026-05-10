@@ -117,13 +117,14 @@ The runtime activation wiring decision is locked and implemented (doc 16):
   - missing project selection rows fall back to the coding base
   - no global active profile, DB-owned composed profile, UI selector, MCP, agent runtime, app-builder runtime, or DSL runtime was added
 
+The base profile persistence / user-created cores decision is locked and v1 storage is implemented in doc 17.
+
 The remaining open decisions are:
-  1. Profile persistence / user-created base profile storage, later.
-  2. Merge proposal storage and review UI - how merge proposals are stored, presented, and approved/rejected/postponed.
-  3. Correction storage implementation - DB/migration/store for profileId-only OntologyCorrectionEvidence; branch-targeted correction fields can come later now that branch persistence exists.
-  4. Checker runtime and approval UI - patch suggestion generation and review.
-  5. Agent/subagent execution ontology brief.
-  6. Self-building-app framework brief.
+  1. Merge proposal storage and review UI - how merge proposals are stored, presented, and approved/rejected/postponed.
+  2. Correction storage implementation - DB/migration/store for profileId-only OntologyCorrectionEvidence; branch-targeted correction fields can come later now that branch persistence exists.
+  3. Checker runtime and approval UI - patch suggestion generation and review.
+  4. Agent/subagent execution ontology brief.
+  5. Self-building-app framework brief.
 ```
 
 Strict boundaries:
@@ -282,11 +283,12 @@ The ProfileBranchStore v1 static helper is implemented. `ProfileBranchStore<TIte
 
 Latest source/test verification after the runtime activation helper slice: TypeScript clean; targeted runtime activation/selection/registry/branch-store/stage10 tests 125/125 passed across 5 files; full suite 608/608 passed across 63 files. Pi/Qwen implemented the slice, then Codex removed a scratch artifact and fixed two test issues before verification.
 
+The base profile persistence / user-created cores decision is locked and v1 storage is implemented (doc 17). User-created base profiles are their own durable source, not `profile_branches` and not composed runtime profiles. `profile_definitions` stores full base DomainProfile payloads behind the ontology data boundary, and `createProfileDefinitionSource({ id, definitions })` plugs loaded definitions into ProfileRegistry without changing ProfileRegistry to async. New domains such as photography, work-notes, or lisp are independent base profiles by default; branches such as night-photography or react specialize one selected base. No UI, automatic LLM creation, duplicate-id resolution UI, merge proposal storage, correction storage, checker runtime, MCP, agent runtime, app-builder runtime, or DSL runtime was added.
+
 Remaining open decisions:
 
-1. Profile persistence / user-created base profile storage, later.
-2. Merge proposal storage and review UI - how merge proposals are stored, presented, and approved/rejected/postponed.
-3. Correction storage implementation - DB/migration/store for profileId-only OntologyCorrectionEvidence; branch-targeted correction fields can come later now that branch persistence exists.
-4. Checker runtime and approval UI - patch suggestion generation and review.
-5. Agent/subagent execution ontology brief.
-6. Self-building-app framework brief.
+1. Merge proposal storage and review UI - how merge proposals are stored, presented, and approved/rejected/postponed.
+2. Correction storage implementation - DB/migration/store for profileId-only OntologyCorrectionEvidence; branch-targeted correction fields can come later now that branch persistence exists.
+3. Checker runtime and approval UI - patch suggestion generation and review.
+4. Agent/subagent execution ontology brief.
+5. Self-building-app framework brief.
