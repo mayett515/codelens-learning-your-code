@@ -425,6 +425,21 @@ describe('Kortex overlay persistence table guards', () => {
   }
 });
 
+describe('Profile registry bootstrap boundary guards', () => {
+  it('root ontology barrel does not export DB-backed bootstrap helpers', () => {
+    const indexSrc = read('src/features/ontology/index.ts');
+    expect(indexSrc).not.toContain('profileRegistryBootstrap');
+    expect(indexSrc).not.toContain('loadPersistedProfileDefinitionSource');
+    expect(indexSrc).not.toContain('loadDefaultProfileRegistry');
+  });
+
+  it('ontology data barrel exports the bootstrap helpers', () => {
+    const dataIndexSrc = read('src/features/ontology/data/index.ts');
+    expect(dataIndexSrc).toContain('loadPersistedProfileDefinitionSource');
+    expect(dataIndexSrc).toContain('loadDefaultProfileRegistry');
+  });
+});
+
 describe('Ontology-profile naming boundary guards', () => {
   // These guards enforce that renamed fields stay renamed and legacy compat
   // boundaries stay documented. They do NOT globally ban conceptType - only

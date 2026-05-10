@@ -31,7 +31,7 @@ The ProfileBranchStore v1 seam is now implemented by Kimi Code CLI and accepted 
 
 The runtime activation wiring decision is locked (doc 16) and now implemented. `runtimeProfileActivation.ts` exposes `resolveRuntimeProfileForProject(input)`, `ProjectRuntimeProfileActivationInput`, `ProjectRuntimeProfileActivationResult`, `ProjectProfileSelectionStore`, `RuntimeProfileActivationError`, and `RuntimeProfileActivationErrorCode`. The resolver reads a project selection via caller-supplied store, resolves the base profile through the registry, resolves selected branch ids through the branch store, detects missing and wrong-kind branch ids with structured errors, composes through `composeRuntimeDomainProfileFromSelection`, and returns the finished profile plus trace data. Missing selection falls back to `coding` base. No global active profile, DB-owned composed profile, UI selector, MCP, agent runtime, app-builder runtime, or DSL runtime was added.
 
-The base profile persistence / user-created cores decision is locked and v1 storage is implemented (doc 17). User-created base cores/profiles are their own persistence concept. They are not stored as `profile_branches`, and composed runtime profiles are still not persisted as source of truth. `profile_definitions` now stores full base `DomainProfile` payloads behind the ontology data boundary. `createProfileDefinitionSource({ id, definitions })` plugs loaded definitions into the synchronous `ProfileRegistry` without changing the registry to async. New domains such as `photography`, `work-notes`, or `lisp` are independent base profiles by default; branches such as `night-photography` or `react` specialize one selected base. LLM-assisted creation may suggest tags, subtags, families, fields, relationships, examples, and "is not" boundaries later, but durable profile changes require user approval.
+The base profile persistence / user-created cores decision is locked and v1 storage is implemented (doc 17). User-created base cores/profiles are their own persistence concept. They are not stored as `profile_branches`, and composed runtime profiles are still not persisted as source of truth. `profile_definitions` now stores full base `DomainProfile` payloads behind the ontology data boundary. `createProfileDefinitionSource({ id, definitions })` plugs loaded definitions into the synchronous `ProfileRegistry` without changing the registry to async. `profileRegistryBootstrap.ts` provides `loadPersistedProfileDefinitionSource()` and `loadDefaultProfileRegistry()` to load persisted definitions once and expose them as synchronous `ProfileSource` / `ProfileRegistry` values alongside built-in profiles. New domains such as `photography`, `work-notes`, or `lisp` are independent base profiles by default; branches such as `night-photography` or `react` specialize one selected base. LLM-assisted creation may suggest tags, subtags, families, fields, relationships, examples, and "is not" boundaries later, but durable profile changes require user approval.
 
 The coordinator helper is now implemented and tested: `runtimeProfileCoordinator.ts` is the explicit above-services coordinator boundary. `composeRuntimeDomainProfile(input)` delegates to `resolveActiveDomainProfileFromActivationInput(input)`. `RuntimeProfileCoordinatorInput` aliases `ActiveDomainProfileActivationInput`. Services still receive composed `DomainProfile`; they do not call this helper directly unless their caller passes the result. No DB, UI, persistence, global store, service hidden lookup, agent runtime, app-builder runtime, or DSL runtime was added.
 
@@ -278,15 +278,27 @@ Worker prompts/logs for the HR/KR workflow live under `C:\pi-stuff`, not in this
   - Added focused tests: migration (4), codec (17), registry source (10), backup columns (4)
   - Updated stage10 architecture guards for `profile_definitions` boundary
   - No UI, services, MCP/adapters, agent runtime, app-builder runtime, DSL runtime, merge proposal code, correction storage, or runtime activation changes
+- Kimi Code CLI Slice 3 added/accepted (profile registry bootstrap v1):
+  - Added `profileRegistryBootstrap.ts` with `loadPersistedProfileDefinitionSource()` and `loadDefaultProfileRegistry()`
+  - `loadPersistedProfileDefinitionSource()` loads definitions through the ontology data boundary and returns a synchronous `ProfileSource`
+  - `loadDefaultProfileRegistry()` combines built-in coding profile source with persisted definition source into a synchronous `ProfileRegistry`
+  - Built-in source precedes persisted source in `listProfiles()` order
+  - Duplicate ids across built-in and persisted sources throw `DuplicateProfileIdError`
+  - Accepts dependency injection for tests (`listDefinitions`, `sourceId`, `additionalSources`)
+  - Exported from `src/features/ontology/data/index.ts`, not the root ontology barrel
+  - Added `profileRegistryBootstrap.test.ts` with focused tests for source creation, registry composition, order, duplicate id errors, and immutability
+  - Added stage10 boundary guard proving root ontology barrel does not export DB-backed bootstrap helpers
+  - No global active registry, no singleton mutable state, no UI, no services, no MCP/adapters, no agent runtime, no app-builder runtime, no DSL runtime
 
 ## Verification Already Run
 
-Latest verified commands after Kimi Code CLI Slice 2:
+Latest verified commands after Kimi Code CLI Slice 3:
 
 ```powershell
 node node_modules/typescript/bin/tsc -p tsconfig.json --noEmit
-npm test -- --run src/db/migrations/__tests__/profile-definitions-migration.test.ts src/features/ontology/__tests__/profileDefinitionCodec.test.ts src/features/ontology/__tests__/profileRegistry.test.ts src/features/backup/__tests__/profile-columns.test.ts src/__tests__/stage10-architecture-guards.test.ts
+npm test -- --run src/features/ontology/__tests__/profileRegistryBootstrap.test.ts src/features/ontology/__tests__/profileRegistry.test.ts src/__tests__/stage10-architecture-guards.test.ts
 npm test -- --run
+git diff --check
 git status --short
 ```
 
@@ -294,8 +306,9 @@ Latest result:
 
 ```text
 TypeScript clean
-targeted tests: 157/157 passed across 5 test files
-full suite: 645/645 passed across 65 test files
+targeted tests: 98/98 passed across 3 test files
+full suite: 660/660 passed across 66 test files
+git diff --check clean with CRLF warnings only
 git status --short clean for new/modified source files, with pre-existing doc modifications preserved
 ```
 

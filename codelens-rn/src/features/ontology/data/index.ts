@@ -23,3 +23,10 @@ export {
   listProfileDefinitions,
   deleteProfileDefinition,
 } from './profileDefinitionRepo';
+
+export {
+  BUILT_IN_PROFILE_SOURCE_ID,
+  PERSISTED_PROFILE_DEFINITION_SOURCE_ID,
+  loadDefaultProfileRegistry,
+  loadPersistedProfileDefinitionSource,
+} from './profileRegistryBootstrap';

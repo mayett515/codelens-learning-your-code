@@ -208,6 +208,7 @@ The ontology-profile refactor has moved beyond profile labels and compatibility 
 - The project-scoped selection DB persistence v1 slice is implemented: `profile_selections` stores one active selection per project as one base profile id plus ordered project/learning/personal branch id arrays. Runtime composition remains derived and caller-owned.
 - The runtime activation helper is implemented and tested. `runtimeProfileActivation.ts` builds runtime profiles through an explicit interface-based resolver that reads a project/context selection, registry, and branch store, then delegates composition to pure helpers.
 - The base profile persistence / user-created cores decision is locked and v1 storage is implemented in doc 17. `profile_definitions` stores full base `DomainProfile` payloads behind the ontology data boundary, and `createProfileDefinitionSource({ id, definitions })` plugs loaded definitions into ProfileRegistry without changing ProfileRegistry to async.
+- The profile registry bootstrap v1 is implemented. `profileRegistryBootstrap.ts` provides `loadPersistedProfileDefinitionSource()` and `loadDefaultProfileRegistry()` to load persisted definitions once through the ontology data boundary and expose them as synchronous `ProfileSource` / `ProfileRegistry` values alongside built-in profiles. The root ontology barrel does not export DB-backed bootstrap helpers.
 - The remaining open work is: (1) merge proposal storage and review UI, (2) correction storage implementation, (3) checker runtime and approval UI, (4) agent/subagent execution ontology brief, (5) self-building-app framework brief.
 
 ## Core Activation Files
@@ -561,15 +562,39 @@ Kimi Code CLI Slice 2 (profile definitions persistence v1):
 - Updated `NEXT_LLM_CONTEXT`, `WHERE_WE_STAND`
 - No UI, services, MCP/adapters, agent runtime, app-builder runtime, Racket/DSL runtime, merge proposal code, correction storage, or runtime activation changes
 
+Kimi Code CLI Slice 3 (profile registry bootstrap v1):
+
+- Added `profileRegistryBootstrap.ts` with:
+  - `PERSISTED_PROFILE_DEFINITION_SOURCE_ID`
+  - `BUILT_IN_PROFILE_SOURCE_ID`
+  - `loadPersistedProfileDefinitionSource(options?)` - async loader returning synchronous `ProfileSource`
+  - `loadDefaultProfileRegistry(options?)` - async loader returning synchronous `ProfileRegistry` with built-in + persisted + optional additional sources
+- Built-in coding profile source precedes persisted definition source in registry order
+- Duplicate ids across built-in and persisted sources throw `DuplicateProfileIdError`
+- Dependency injection supported for tests: `listDefinitions`, `sourceId`, `additionalSources`
+- Exported from `src/features/ontology/data/index.ts`, not the root ontology barrel
+- Added `profileRegistryBootstrap.test.ts` with focused tests:
+  - injected listDefinitions usage and sync source return
+  - persisted source id exposure (default and custom)
+  - summaries without full profile fields
+  - loaded definition order preservation
+  - built-in + persisted registry composition
+  - built-in before persisted in listProfiles order
+  - custom persisted profile resolution by id
+  - duplicate persisted id `coding` throws `DuplicateProfileIdError`
+  - caller additionalSources array is not mutated
+  - snapshot behavior for additional source arrays
+- Added stage10 boundary guard proving root ontology barrel does not export DB-backed bootstrap helpers
+- Updated `NEXT_LLM_CONTEXT`, `WHERE_WE_STAND`, `TOMORROW_START`
+- No global active registry, no singleton mutable state, no UI, no services, no MCP/adapters, no agent runtime, no app-builder runtime, no DSL runtime
+
 Verification:
 
 - TypeScript clean.
-- `profile-definitions-migration.test.ts` 4/4 passed.
-- `profileDefinitionCodec.test.ts` 17/17 passed.
-- `profileRegistry.test.ts` 36/36 passed (10 new).
-- `profile-columns.test.ts` 36/36 passed (4 new).
+- `profileRegistryBootstrap.test.ts` 13/13 passed.
+- `profileRegistry.test.ts` 36/36 passed.
 - `stage10-architecture-guards.test.ts` all passed.
-- Full suite: 645/645 passed across 65 test files.
+- Full suite: 660/660 passed across 66 test files.
 
 The coordinator helper is now implemented and tested. The remaining open decisions require Codex plus human input:
 

@@ -314,6 +314,7 @@ src/db/schema.ts
 src/features/ontology/types.ts
 src/features/ontology/codecs/profileDefinition.ts
 src/features/ontology/data/profileDefinitionRepo.ts
+src/features/ontology/data/profileRegistryBootstrap.ts
 src/features/ontology/profileRegistry.ts
 src/features/backup/*
 src/__tests__/stage10-architecture-guards.test.ts
@@ -329,9 +330,17 @@ Current behavior:
   data boundary.
 - `createProfileDefinitionSource({ id, definitions })` creates a synchronous `ProfileSource` from
   already-loaded definitions.
-- `ProfileRegistry` remains synchronous.
+- `profileRegistryBootstrap.ts` provides async loaders that read persisted definitions and compose
+  a synchronous `ProfileRegistry` with built-in plus persisted sources.
+- `loadPersistedProfileDefinitionSource()` returns a synchronous `ProfileSource` from DB definitions.
+- `loadDefaultProfileRegistry()` returns a synchronous `ProfileRegistry` combining the built-in
+  coding profile source and the persisted definition source.
+- `ProfileRegistry` remains synchronous; only loading is async.
+- DB-backed bootstrap helpers live under `src/features/ontology/data`, not the root barrel.
+- The root ontology barrel exports pure types/helpers only; it does not import DB-backed data repos.
 - Backup/export/import/clear supports `profile_definitions`.
 - Stage10 guards allow `profile_definitions` only in the planned persistence boundary and tests.
+- Stage10 guards prove the root ontology barrel does not export the DB-backed bootstrap.
 
 Still not implemented:
 
