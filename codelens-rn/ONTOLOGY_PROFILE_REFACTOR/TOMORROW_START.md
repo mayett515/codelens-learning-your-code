@@ -6,7 +6,7 @@ Use this when starting the next orchestrator session.
 
 ```text
 Read ONTOLOGY_PROFILE_REFACTOR/NEXT_LLM_CONTEXT.md first.
-Then read ONTOLOGY_PROFILE_REFACTOR/07_KORTEX_CORE_AND_CHILD_CORES.md, ONTOLOGY_PROFILE_REFACTOR/08_KORTEX_LANGUAGE_LAYER_AND_ADAPTERS.md, ONTOLOGY_PROFILE_REFACTOR/09_KORTEX_OVER_EXISTING_SYSTEMS.md, ONTOLOGY_PROFILE_REFACTOR/10_ACTIVE_PROFILE_RUNTIME_SOURCE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/11_RUNTIME_PROFILE_COORDINATOR_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/13_BRANCH_OVERLAY_PERSISTENCE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/14_PROFILE_SELECTION_AND_BRANCH_RESOLUTION_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/15_PROFILE_REGISTRY_AND_PROFILE_SOURCES_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/06_PROFILE_BRANCHING_AND_MERGE.md, and ONTOLOGY_PROFILE_REFACTOR/implementation_handoff.md.
+Then read ONTOLOGY_PROFILE_REFACTOR/07_KORTEX_CORE_AND_CHILD_CORES.md, ONTOLOGY_PROFILE_REFACTOR/08_KORTEX_LANGUAGE_LAYER_AND_ADAPTERS.md, ONTOLOGY_PROFILE_REFACTOR/09_KORTEX_OVER_EXISTING_SYSTEMS.md, ONTOLOGY_PROFILE_REFACTOR/10_ACTIVE_PROFILE_RUNTIME_SOURCE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/11_RUNTIME_PROFILE_COORDINATOR_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/13_BRANCH_OVERLAY_PERSISTENCE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/14_PROFILE_SELECTION_AND_BRANCH_RESOLUTION_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/15_PROFILE_REGISTRY_AND_PROFILE_SOURCES_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/16_RUNTIME_ACTIVATION_WIRING_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/06_PROFILE_BRANCHING_AND_MERGE.md, and ONTOLOGY_PROFILE_REFACTOR/implementation_handoff.md.
 
 We are continuing as orchestrator.
 Do not implement until we confirm the next slice.
@@ -105,8 +105,19 @@ Project-scoped profile selection persistence v1 is implemented:
   - ontology data repo/codec, backup/export/import/clear, and guards are updated
   - no UI selector, global active selection singleton, DB-owned runtime composition, merge proposal storage, profile/base persistence, MCP, agent runtime, app-builder runtime, or DSL runtime was added
 
+The runtime activation wiring decision is locked (doc 16):
+  - runtime activation wiring is a small application/coordinator layer above screens/services and above low-level repos
+  - it reads a project/context selection
+  - it resolves the base profile through ProfileRegistry
+  - it resolves branch ids through ProfileBranchStore
+  - it composes via the existing pure selection/runtime profile pipeline
+  - it passes only the finished DomainProfile to services
+  - missing project selection rows fall back to the coding base
+  - invalid base/branch references should throw structured activation errors
+  - no global active profile, DB-owned composed profile, UI selector, MCP, agent runtime, app-builder runtime, or DSL runtime was added
+
 The remaining open decisions are:
-  1. Runtime activation wiring - which layer reads a project selection, branch store, and profile registry, then composes the runtime DomainProfile for a screen/service call.
+  1. Runtime activation helper implementation - interface-based project/context resolver, still no UI/global state/service lookup.
   2. Profile persistence / user-created base profile storage, later.
   3. Merge proposal storage and review UI - how merge proposals are stored, presented, and approved/rejected/postponed.
   4. Correction storage implementation - DB/migration/store for profileId-only OntologyCorrectionEvidence; branch-targeted correction fields can come later now that branch persistence exists.
@@ -257,6 +268,8 @@ The branch/overlay persistence decision is locked and v1 DB plumbing is implemen
 
 The project-scoped profile selection persistence slice is implemented. `profile_selections` stores one selection per project: base profile id plus ordered project/learning/personal branch id arrays. The ontology data boundary owns the repo/codec. Backup/export/import/clear supports the table. Runtime composition remains derived and caller-owned; nothing reads this table automatically yet.
 
+The runtime activation wiring decision is locked (doc 16). The next runtime bridge is explicit: project/context -> selection store -> profile registry -> branch store -> pure selection resolver -> pure runtime coordinator -> composed DomainProfile -> service `options.profile`. Repos remain fact storage, services remain dumb in the good way, and no global active profile is introduced.
+
 The domain-only ProfileBranch model is now implemented and tested. `ProfileBranchKind` and `ProfileBranch<TItemTypeNodeId>` live in `types.ts`; `profileBranches.ts` provides pure helpers that convert branches to overlays/grouped activation input/runtime profiles without duplicating composition logic. No DB, migration, storage API, UI selector, automatic merge, correction branch fields, MCP/adapters, agent runtime, app-builder runtime, or DSL runtime was added.
 
 The profile selection and branch resolution decision is locked (doc 14). Branch persistence, active selection, branch resolution, and runtime composition are separate boundaries. `ProfileSelection` is per-context and id-based: one `baseProfileId` plus ordered project/learning/personal branch id arrays. A resolver later turns ids into branch values before the Runtime Profile Coordinator composes the runtime `DomainProfile`. No global active selection singleton, DB, UI, MCP, agent runtime, app-builder runtime, DSL runtime, or multi-base composition is part of this slice.
@@ -271,7 +284,7 @@ Latest source/test verification after Kimi Code CLI Slice 1: TypeScript clean; t
 
 Remaining open decisions:
 
-1. Runtime activation wiring - which layer reads project-scoped persisted selections, branch store, and profile registry before calling the Runtime Profile Coordinator.
+1. Runtime activation helper implementation - interface-based project/context resolver before UI/service wiring.
 2. Profile persistence / user-created base profile storage, later.
 3. Merge proposal storage and review UI - how merge proposals are stored, presented, and approved/rejected/postponed.
 4. Correction storage implementation - DB/migration/store for profileId-only OntologyCorrectionEvidence; branch-targeted correction fields can come later now that branch persistence exists.
