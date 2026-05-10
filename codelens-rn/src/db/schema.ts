@@ -301,3 +301,29 @@ export const profileBranches = sqliteTable('profile_branches', {
   index('idx_profile_branches_kind').on(t.branchKind),
   index('idx_profile_branches_updated').on(t.updatedAt),
 ]);
+
+export const profileSelections = sqliteTable('profile_selections', {
+  id: text('id').primaryKey(),
+  projectId: text('project_id')
+    .notNull()
+    .references(() => projects.id, { onDelete: 'cascade' }),
+  baseProfileId: text('base_profile_id').notNull(),
+  projectBranchIdsJson: text('project_branch_ids_json', { mode: 'json' })
+    .notNull()
+    .$type<string[]>()
+    .default([]),
+  learningBranchIdsJson: text('learning_branch_ids_json', { mode: 'json' })
+    .notNull()
+    .$type<string[]>()
+    .default([]),
+  personalBranchIdsJson: text('personal_branch_ids_json', { mode: 'json' })
+    .notNull()
+    .$type<string[]>()
+    .default([]),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+}, (t) => [
+  uniqueIndex('unique_profile_selections_project').on(t.projectId),
+  index('idx_profile_selections_base_profile').on(t.baseProfileId),
+  index('idx_profile_selections_updated').on(t.updatedAt),
+]);

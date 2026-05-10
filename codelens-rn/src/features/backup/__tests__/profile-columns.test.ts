@@ -11,6 +11,7 @@ import {
   CONCEPTS_COLUMN_MAP,
   CONCEPT_LINKS_COLUMN_MAP,
   PROFILE_BRANCHES_COLUMN_MAP,
+  PROFILE_SELECTIONS_COLUMN_MAP,
   TABLE_COLUMN_MAPS,
   TABLE_JSON_COLUMNS,
 } from '../columnMaps';
@@ -436,6 +437,48 @@ describe('Column map: profile_branches', () => {
   });
 });
 
+describe('Column map: profile_selections', () => {
+  it('maps all columns including branch id JSON columns', () => {
+    const raw = {
+      id: 'sel-1',
+      project_id: 'proj-1',
+      base_profile_id: 'coding',
+      project_branch_ids_json: '["pb-1","pb-2"]',
+      learning_branch_ids_json: '["lb-1"]',
+      personal_branch_ids_json: '["ps-1"]',
+      created_at: 1000,
+      updated_at: 2000,
+    };
+    const m = mapBackupRow(raw, PROFILE_SELECTIONS_COLUMN_MAP);
+    expect(m['id']).toBe('sel-1');
+    expect(m['projectId']).toBe('proj-1');
+    expect(m['baseProfileId']).toBe('coding');
+    expect(m['projectBranchIdsJson']).toBe('["pb-1","pb-2"]');
+    expect(m['learningBranchIdsJson']).toBe('["lb-1"]');
+    expect(m['personalBranchIdsJson']).toBe('["ps-1"]');
+    expect(m['createdAt']).toBe(1000);
+    expect(m['updatedAt']).toBe(2000);
+    expect(Object.keys(m).length).toBe(8);
+  });
+
+  it('drops unknown keys', () => {
+    const raw = {
+      id: 'sel-1',
+      project_id: 'proj-1',
+      base_profile_id: 'coding',
+      project_branch_ids_json: '[]',
+      learning_branch_ids_json: '[]',
+      personal_branch_ids_json: '[]',
+      created_at: 1000,
+      updated_at: 2000,
+      unknown_field: 42,
+    };
+    const m = mapBackupRow(raw, PROFILE_SELECTIONS_COLUMN_MAP);
+    expect('unknown_field' in m).toBe(false);
+    expect(Object.keys(m).length).toBe(8);
+  });
+});
+
 describe('JSON decoding for Drizzle insert shape', () => {
   it('decodes project JSON columns', () => {
     const mapped = mapBackupRow(
@@ -495,6 +538,80 @@ describe('JSON decoding for Drizzle insert shape', () => {
       TABLE_JSON_COLUMNS['profile_branches']!,
     );
     expect(mapped['overlayJson']).toEqual({ kind: 'project' });
+  });
+
+  it('decodes profile_selections branch id JSON columns into arrays', () => {
+    const mapped = mapBackupRow(
+      {
+        id: 'sel-1',
+        project_id: 'proj-1',
+        base_profile_id: 'coding',
+        project_branch_ids_json: '["pb-1","pb-2"]',
+        learning_branch_ids_json: '["lb-1"]',
+        personal_branch_ids_json: '["ps-1"]',
+        created_at: 1000,
+        updated_at: 2000,
+      },
+      PROFILE_SELECTIONS_COLUMN_MAP,
+      TABLE_JSON_COLUMNS['profile_selections']!,
+    );
+    expect(mapped['projectBranchIdsJson']).toEqual(['pb-1', 'pb-2']);
+    expect(mapped['learningBranchIdsJson']).toEqual(['lb-1']);
+    expect(mapped['personalBranchIdsJson']).toEqual(['ps-1']);
+  });
+
+  it('throws on malformed JSON in profile_selections branch id columns', () => {
+    expect(() => mapBackupRow(
+      {
+        id: 'sel-1',
+        project_id: 'proj-1',
+        base_profile_id: 'coding',
+        project_branch_ids_json: '{bad json',
+        learning_branch_ids_json: '[]',
+        personal_branch_ids_json: '[]',
+        created_at: 1000,
+        updated_at: 2000,
+      },
+      PROFILE_SELECTIONS_COLUMN_MAP,
+      TABLE_JSON_COLUMNS['profile_selections']!,
+    )).toThrow(/Invalid JSON in backup column project_branch_ids_json/);
+  });
+
+  it('raw SQL string vs decoded array boundary for profile_selections', () => {
+    // Without JSON decoding, branch id columns remain as strings.
+    const rawMapped = mapBackupRow(
+      {
+        id: 'sel-1',
+        project_id: 'proj-1',
+        base_profile_id: 'coding',
+        project_branch_ids_json: '["pb-1"]',
+        learning_branch_ids_json: '[]',
+        personal_branch_ids_json: '[]',
+        created_at: 1000,
+        updated_at: 2000,
+      },
+      PROFILE_SELECTIONS_COLUMN_MAP,
+    );
+    expect(typeof rawMapped['projectBranchIdsJson']).toBe('string');
+    expect(rawMapped['projectBranchIdsJson']).toBe('["pb-1"]');
+
+    // With JSON decoding, branch id columns become arrays.
+    const decodedMapped = mapBackupRow(
+      {
+        id: 'sel-1',
+        project_id: 'proj-1',
+        base_profile_id: 'coding',
+        project_branch_ids_json: '["pb-1"]',
+        learning_branch_ids_json: '[]',
+        personal_branch_ids_json: '[]',
+        created_at: 1000,
+        updated_at: 2000,
+      },
+      PROFILE_SELECTIONS_COLUMN_MAP,
+      TABLE_JSON_COLUMNS['profile_selections']!,
+    );
+    expect(Array.isArray(decodedMapped['projectBranchIdsJson'])).toBe(true);
+    expect(decodedMapped['projectBranchIdsJson']).toEqual(['pb-1']);
   });
 
   it('throws on malformed JSON before import insert', () => {
@@ -771,6 +888,7 @@ describe('TABLE_COLUMN_MAPS index', () => {
     'projects', 'files', 'chats', 'chat_messages',
     'learning_sessions', 'learning_captures', 'concepts', 'concept_links',
     'profile_branches',
+    'profile_selections',
   ];
 
   it('contains an entry for every exported table', () => {
@@ -789,6 +907,7 @@ describe('TABLE_COLUMN_MAPS index', () => {
     expect(TABLE_COLUMN_MAPS['concepts']).toBe(CONCEPTS_COLUMN_MAP);
     expect(TABLE_COLUMN_MAPS['concept_links']).toBe(CONCEPT_LINKS_COLUMN_MAP);
     expect(TABLE_COLUMN_MAPS['profile_branches']).toBe(PROFILE_BRANCHES_COLUMN_MAP);
+    expect(TABLE_COLUMN_MAPS['profile_selections']).toBe(PROFILE_SELECTIONS_COLUMN_MAP);
   });
 
   it('every map has the expected number of columns', () => {
@@ -801,5 +920,6 @@ describe('TABLE_COLUMN_MAPS index', () => {
     expect(Object.keys(CONCEPTS_COLUMN_MAP).length).toBe(28);
     expect(Object.keys(CONCEPT_LINKS_COLUMN_MAP).length).toBe(4);
     expect(Object.keys(PROFILE_BRANCHES_COLUMN_MAP).length).toBe(7);
+    expect(Object.keys(PROFILE_SELECTIONS_COLUMN_MAP).length).toBe(8);
   });
 });

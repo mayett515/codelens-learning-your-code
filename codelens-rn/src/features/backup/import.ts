@@ -75,6 +75,7 @@ export async function importBackup(sourceUri?: string): Promise<ImportResult> {
   const concepts     = await readNdjson<ConceptExport>(zip, 'concepts');
   const links        = await readNdjson<Record<string, unknown>>(zip, 'concept_links');
   const branches     = await readNdjson<Record<string, unknown>>(zip, 'profile_branches');
+  const selections   = await readNdjson<Record<string, unknown>>(zip, 'profile_selections');
 
   let preferences: Record<string, unknown> = {};
   try {
@@ -98,6 +99,7 @@ export async function importBackup(sourceUri?: string): Promise<ImportResult> {
   const mappedSessions = sessions.map((r) => mapBackupRow(r, TABLE_COLUMN_MAPS['learning_sessions']!, TABLE_JSON_COLUMNS['learning_sessions']!));
   const mappedLinks    = links.map((r)    => mapBackupRow(r, TABLE_COLUMN_MAPS['concept_links']!, TABLE_JSON_COLUMNS['concept_links']!));
   const mappedBranches = branches.map((r) => mapBackupRow(r, TABLE_COLUMN_MAPS['profile_branches']!, TABLE_JSON_COLUMNS['profile_branches']!));
+  const mappedSelections = selections.map((r) => mapBackupRow(r, TABLE_COLUMN_MAPS['profile_selections']!, TABLE_JSON_COLUMNS['profile_selections']!));
 
   // Strip the embedding before mapping. Embedding is a synthetic export
   // field, not a real DB column.
@@ -128,6 +130,7 @@ export async function importBackup(sourceUri?: string): Promise<ImportResult> {
     if (mappedCaptures.length) await insertBatch(tx, schema.learningCaptures, mappedCaptures);
     if (mappedLinks.length)    await insertBatch(tx, schema.conceptLinks, mappedLinks);
     if (mappedBranches.length) await insertBatch(tx, schema.profileBranches, mappedBranches);
+    if (mappedSelections.length) await insertBatch(tx, schema.profileSelections, mappedSelections);
   });
 
   imported['projects']          = projects.length;
@@ -139,6 +142,7 @@ export async function importBackup(sourceUri?: string): Promise<ImportResult> {
   imported['concepts']          = concepts.length;
   imported['concept_links']     = links.length;
   imported['profile_branches']  = branches.length;
+  imported['profile_selections'] = selections.length;
 
   // --- 8. Vectors (post-transaction). Per-concept failures do not abort. ---
   let vecRestored = 0;

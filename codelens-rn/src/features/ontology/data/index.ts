@@ -6,3 +6,11 @@ export {
   listProfileBranchesForParent,
   deleteProfileBranch,
 } from './profileBranchRepo';
+
+export {
+  insertProjectProfileSelection,
+  upsertProjectProfileSelection,
+  getProjectProfileSelectionById,
+  getProjectProfileSelectionByProjectId,
+  deleteProjectProfileSelectionForProject,
+} from './profileSelectionRepo';

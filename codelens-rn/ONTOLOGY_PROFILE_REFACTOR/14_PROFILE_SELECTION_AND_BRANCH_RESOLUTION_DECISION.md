@@ -226,11 +226,11 @@ Multi-base composition can be a later explicit decision.
 
 ## What This Decision Is Not
 
-This decision does not implement:
+This decision originally did not implement:
 
-- No DB table or migration for branches
-- No DB table or migration for profile selections
-- No storage implementation
+- No DB table or migration for branches (implemented later by the branch persistence slice)
+- No DB table or migration for profile selections (implemented later by the project-scoped persistence slice)
+- No storage implementation (implemented later for project-scoped selections only)
 - No UI branch selector
 - No global active selection store
 - No AsyncStorage/Zustand/store state
@@ -400,6 +400,31 @@ Current behavior:
 - Empty selections return the base profile by reference through existing branch helper behavior.
 - Frozen inputs are accepted without mutation.
 
+The project-scoped selection persistence slice is now also implemented:
+
+```text
+src/db/migrations/013-profile-selections.ts
+  - profile_selections table
+  - one row per project via unique project_id
+  - project_id references projects(id) on delete cascade
+  - base_profile_id
+  - ordered project/learning/personal branch id arrays as JSON columns
+
+src/features/ontology/codecs/profileSelection.ts
+  - validateProjectProfileSelection
+  - rowToProjectProfileSelection
+  - projectProfileSelectionToRow
+
+src/features/ontology/data/profileSelectionRepo.ts
+  - insertProjectProfileSelection
+  - upsertProjectProfileSelection
+  - getProjectProfileSelectionById
+  - getProjectProfileSelectionByProjectId
+  - deleteProjectProfileSelectionForProject
+```
+
+This is storage plumbing only. It does not make a global active selection, does not compose runtime profiles from DB by itself, and does not add UI.
+
 Verification after implementation:
 
 ```text
@@ -413,8 +438,7 @@ git diff --check: clean with CRLF warnings only.
 
 Still not implemented:
 
-- No DB, migration, or storage API
-- No profile registry
+- No profile registry changes
 - No UI selector
 - No global active selection store
 - No MCP, CLI, agent runtime, app-builder runtime, or DSL runtime

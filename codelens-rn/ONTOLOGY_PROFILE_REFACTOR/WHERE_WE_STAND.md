@@ -123,6 +123,29 @@ Verification:
 - No non-ASCII in `profileBranchStore` source/test.
 - `git diff --check` clean for Kimi-touched files with CRLF warnings only.
 
+Pi/Qwen Slice 1 (project-scoped ProfileSelection persistence v1):
+
+- Added migration `013-profile-selections` and registered it after migration 012.
+- Added Drizzle `profileSelections` schema:
+  - one row per project via unique `project_id`
+  - `project_id` references `projects(id)` with cascade delete
+  - `base_profile_id`
+  - ordered project/learning/personal branch id arrays as JSON columns
+  - timestamps
+- Added ontology data-boundary codec/repo:
+  - `validateProjectProfileSelection`
+  - `rowToProjectProfileSelection`
+  - `projectProfileSelectionToRow`
+  - insert/upsert/get-by-id/get-by-project/delete-for-project repo methods
+- Added backup/export/import/clear support for `profile_selections`; archive format is now v3 and schema version is 13.
+- Updated stage10 guards so `profile_selections` is allowed only in planned persistence boundary files/tests.
+- Reviewer fixes after Pi:
+  - `FORMAT_VERSION` bumped to 3 because the archive layout gained a new NDJSON file
+  - `upsertProjectProfileSelection` now conflicts on `projectId`, matching the one-selection-per-project invariant
+  - selection row codec now parses raw JSON-string branch id columns as well as decoded arrays
+  - clear-all-data deletes `profile_selections` before `projects`
+- No UI selector, global active selection singleton, DB-owned runtime composition, merge proposal storage, profile/base persistence, MCP/adapters, agent runtime, app-builder runtime, or DSL runtime added.
+
 ## Current Implementation State
 
 The ontology-profile refactor has moved beyond profile labels and compatibility naming. The current state is:
@@ -149,7 +172,8 @@ The ontology-profile refactor has moved beyond profile labels and compatibility 
 - The ProfileRegistry/ProfileSource v1 static helper is implemented. Base profiles resolve through a source-based registry, and duplicate profile ids throw structured errors. The interface still leaves room for future built-in/file/DB/adapter sources without changing callers.
 - The ProfileBranchStore v1 static helper is implemented. Branch stores are now a separate seam from ProfileRegistry and ProfileSelection. The first implementation is in-memory only, snapshots the branch array at construction, returns branch objects by reference, and exposes async read methods for future persistent adapters.
 - The branch/overlay DB persistence v1 slice is implemented: `profile_branches` rows with inline `overlay_json`, ontology data-boundary repo/codec, backup/export/import/clear support, and guards. Active selection and merge proposals stay separate.
-- The remaining open work is: (1) branch selection and activation persistence, (2) profile persistence / user-created base profile storage, (3) merge proposal storage and review UI, (4) correction storage implementation, (5) checker runtime and approval UI, (6) agent/subagent execution ontology brief, (7) self-building-app framework brief.
+- The project-scoped selection DB persistence v1 slice is implemented: `profile_selections` stores one active selection per project as one base profile id plus ordered project/learning/personal branch id arrays. Runtime composition remains derived and caller-owned.
+- The remaining open work is: (1) runtime activation wiring, (2) profile persistence / user-created base profile storage, (3) merge proposal storage and review UI, (4) correction storage implementation, (5) checker runtime and approval UI, (6) agent/subagent execution ontology brief, (7) self-building-app framework brief.
 
 ## Core Activation Files
 

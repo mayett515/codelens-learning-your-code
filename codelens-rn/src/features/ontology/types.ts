@@ -351,3 +351,24 @@ export interface ActiveDomainProfileActivationInput<TItemTypeNodeId extends stri
   learningOverlays?: readonly ProfileOverlay<TItemTypeNodeId>[] | null | undefined;
   personalOverlays?: readonly ProfileOverlay<TItemTypeNodeId>[] | null | undefined;
 }
+
+// ---------------------------------------------------------------------------
+// Project-scoped persisted profile selection.
+// ---------------------------------------------------------------------------
+
+/**
+ * A persisted, project-scoped profile selection record.
+ *
+ * Wraps a domain `ProfileSelection` (baseProfileId + ordered branch id arrays)
+ * in a project context with DB identity and timestamps.
+ *
+ * V1: one active selection per project. Multiple selections per project are not
+ * supported yet; this type stores the full row shape for insert/update/lookup.
+ */
+export interface ProjectProfileSelection {
+  id: string;
+  projectId: string;
+  selection: ProfileSelection;
+  createdAt: number;
+  updatedAt: number;
+}

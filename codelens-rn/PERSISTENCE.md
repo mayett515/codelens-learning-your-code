@@ -63,11 +63,20 @@ The current code dual-reads and dual-writes these fields. `type_node_id` wins ov
 
 `language_or_runtime_json` and `surface_features_json` intentionally remain first-class concept columns for this stage. Retrieval, embedding, and mutation helpers still use them directly.
 
+## Ontology branch and selection persistence
+
+Migrations 012 and 013 add the first durable ontology-profile branch plumbing:
+
+- `profile_branches` stores branch records separately from composed runtime profiles. The row owns branch identity, parent profile id, branch kind, display name, timestamps, and inline `overlay_json`.
+- `profile_selections` stores one active project-scoped selection per project. It references `projects(id)` with `ON DELETE CASCADE`, stores one `base_profile_id`, and stores ordered project/learning/personal branch id arrays as JSON columns.
+
+Runtime `DomainProfile` values are still derived. Do not persist composed runtime profiles as canonical state. Branch rows, selections, merge proposals, and profile/base sources remain separate boundaries.
+
 ## Backup and restore shape
 
 `.codelens` export uses raw `SELECT *`, so NDJSON rows contain database column names such as `concept_type`, `core_concept`, and `metadata_json`. Drizzle inserts expect schema property names such as `conceptType`, `coreConcept`, and `metadataJson`.
 
-Import must pass every table through `src/features/backup/columnMaps.ts` before `insertBatch()`. That mapper converts raw snake_case backup rows into Drizzle's camelCase insert shape and decodes JSON columns into arrays/objects/null. The import path validates and maps all rows before calling `clearAllData()`, so malformed backup JSON aborts while the current database is still intact.
+Import must pass every table through `src/features/backup/columnMaps.ts` before `insertBatch()`. That mapper converts raw snake_case backup rows into Drizzle's camelCase insert shape and decodes JSON columns into arrays/objects/null, including `profile_branches.overlay_json` and the three branch id array columns on `profile_selections`. The import path validates and maps all rows before calling `clearAllData()`, so malformed backup JSON aborts while the current database is still intact.
 
 ## Layout
 

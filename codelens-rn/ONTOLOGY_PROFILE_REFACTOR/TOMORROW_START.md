@@ -96,8 +96,17 @@ The ProfileBranchStore v1 static helper is implemented:
   - returned branch objects stay by reference
   - no DB, migration, backup, persistent adapter, UI selector, global active selection, or automatic merge was added
 
+Project-scoped profile selection persistence v1 is implemented:
+  - migration 013 adds profile_selections
+  - one row per project via unique project_id
+  - project_id references projects(id) on delete cascade
+  - base_profile_id stores the selected base profile
+  - project/learning/personal branch id arrays are stored as JSON columns
+  - ontology data repo/codec, backup/export/import/clear, and guards are updated
+  - no UI selector, global active selection singleton, DB-owned runtime composition, merge proposal storage, profile/base persistence, MCP, agent runtime, app-builder runtime, or DSL runtime was added
+
 The remaining open decisions are:
-  1. Branch selection and activation persistence - how selected branch ids are stored per context.
+  1. Runtime activation wiring - which layer reads a project selection, branch store, and profile registry, then composes the runtime DomainProfile for a screen/service call.
   2. Profile persistence / user-created base profile storage, later.
   3. Merge proposal storage and review UI - how merge proposals are stored, presented, and approved/rejected/postponed.
   4. Correction storage implementation - DB/migration/store for profileId-only OntologyCorrectionEvidence; branch-targeted correction fields can come later now that branch persistence exists.
@@ -246,6 +255,8 @@ The correction evidence persistence decision is locked (doc 12). Evidence-first 
 
 The branch/overlay persistence decision is locked and v1 DB plumbing is implemented (doc 13). Persist branch layers separately, not composed runtime profiles. V1 uses `profile_branches` rows with inline `overlay_json`; composition is derived. Active selection and merge proposals stay separate. No UI activation selector, automatic merge, checker runtime, patch suggestion table, correction storage, agent/subagent runtime, app-builder runtime, Racket/DSL implementation, or MCP/adapters is implemented.
 
+The project-scoped profile selection persistence slice is implemented. `profile_selections` stores one selection per project: base profile id plus ordered project/learning/personal branch id arrays. The ontology data boundary owns the repo/codec. Backup/export/import/clear supports the table. Runtime composition remains derived and caller-owned; nothing reads this table automatically yet.
+
 The domain-only ProfileBranch model is now implemented and tested. `ProfileBranchKind` and `ProfileBranch<TItemTypeNodeId>` live in `types.ts`; `profileBranches.ts` provides pure helpers that convert branches to overlays/grouped activation input/runtime profiles without duplicating composition logic. No DB, migration, storage API, UI selector, automatic merge, correction branch fields, MCP/adapters, agent runtime, app-builder runtime, or DSL runtime was added.
 
 The profile selection and branch resolution decision is locked (doc 14). Branch persistence, active selection, branch resolution, and runtime composition are separate boundaries. `ProfileSelection` is per-context and id-based: one `baseProfileId` plus ordered project/learning/personal branch id arrays. A resolver later turns ids into branch values before the Runtime Profile Coordinator composes the runtime `DomainProfile`. No global active selection singleton, DB, UI, MCP, agent runtime, app-builder runtime, DSL runtime, or multi-base composition is part of this slice.
@@ -260,7 +271,7 @@ Latest source/test verification after Kimi Code CLI Slice 1: TypeScript clean; t
 
 Remaining open decisions:
 
-1. Branch selection and activation persistence - how selected branch ids are stored per context.
+1. Runtime activation wiring - which layer reads project-scoped persisted selections, branch store, and profile registry before calling the Runtime Profile Coordinator.
 2. Profile persistence / user-created base profile storage, later.
 3. Merge proposal storage and review UI - how merge proposals are stored, presented, and approved/rejected/postponed.
 4. Correction storage implementation - DB/migration/store for profileId-only OntologyCorrectionEvidence; branch-targeted correction fields can come later now that branch persistence exists.
