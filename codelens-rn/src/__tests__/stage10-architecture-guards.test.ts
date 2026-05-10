@@ -204,6 +204,87 @@ describe('Kortex active-profile overlay state guards', () => {
       .map(toRepoPath);
     expect(offenders).toEqual([]);
   });
+
+  it('profileActivation.ts exports createActiveDomainProfileSource and resolveActiveDomainProfileFromActivationInput without forbidden state/persistence/runtime strings', () => {
+    const activationSrc = read('src/features/ontology/profileActivation.ts');
+
+    // The file must export the explicit activation helpers
+    expect(activationSrc).toMatch(/\bcreateActiveDomainProfileSource\b/);
+    expect(activationSrc).toMatch(/\bresolveActiveDomainProfileFromActivationInput\b/);
+
+    // The file must not contain forbidden state/persistence/runtime strings
+    const forbiddenStrings = [
+      'AsyncStorage',
+      'sqlite',
+      'drizzle',
+      'schema',
+      'db',
+      'zustand',
+      'createStore',
+      'useActiveDomainProfile',
+      'setActiveDomainProfile',
+      'setActiveProfile',
+      'activeProfileStore',
+      'activeOverlays',
+      'profile_overlays',
+      'profile_branches',
+      'active_profile_overlay',
+    ] as const;
+
+    for (const forbidden of forbiddenStrings) {
+      const regex = new RegExp(`\\b${forbidden}\\b`);
+      expect(activationSrc).not.toMatch(regex);
+    }
+  });
+});
+
+describe('Runtime Profile Coordinator guard', () => {
+  // The coordinator helper is the explicit above-services boundary.
+  // It must export composeRuntimeDomainProfile and RuntimeProfileCoordinatorInput,
+  // must delegate to resolveActiveDomainProfileFromActivationInput, and must
+  // not contain forbidden state/persistence/runtime strings.
+
+  it('runtimeProfileCoordinator.ts exports the coordinator function and type alias and delegates to the activation input resolver', () => {
+    const coordinatorSrc = read('src/features/ontology/runtimeProfileCoordinator.ts');
+
+    // Must export the coordinator entry point
+    expect(coordinatorSrc).toMatch(/\bcomposeRuntimeDomainProfile\b/);
+    // Must export the input type alias
+    expect(coordinatorSrc).toMatch(/\bRuntimeProfileCoordinatorInput\b/);
+    // Must delegate to the existing grouped activation pipeline
+    expect(coordinatorSrc).toMatch(/\bresolveActiveDomainProfileFromActivationInput\b/);
+  });
+
+  it('runtimeProfileCoordinator.ts does not contain forbidden state/persistence/runtime strings', () => {
+    const coordinatorSrc = read('src/features/ontology/runtimeProfileCoordinator.ts');
+
+    const forbiddenStrings = [
+      'AsyncStorage',
+      'sqlite',
+      'drizzle',
+      'schema',
+      'db',
+      'zustand',
+      'createStore',
+      'getRuntimeProfile',
+      'useRuntimeProfile',
+      'setRuntimeProfile',
+      'useActiveDomainProfile',
+      'setActiveDomainProfile',
+      'setActiveProfile',
+      'activeProfileStore',
+      'activeOverlays',
+      'profile_overlays',
+      'profile_branches',
+      'active_profile_overlay',
+      'prepareSaveCandidates',
+    ] as const;
+
+    for (const forbidden of forbiddenStrings) {
+      const regex = new RegExp(`\\b${forbidden}\\b`);
+      expect(coordinatorSrc).not.toMatch(regex);
+    }
+  });
 });
 
 describe('Kortex future operation name guards', () => {

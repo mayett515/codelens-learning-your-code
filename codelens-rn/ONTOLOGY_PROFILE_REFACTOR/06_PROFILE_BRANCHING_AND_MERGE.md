@@ -2,6 +2,8 @@
 
 This document captures the product model for extensible profiles before more correction/checker implementation work.
 
+**Persistence decision:** The branch/overlay persistence model is now locked in `13_BRANCH_OVERLAY_PERSISTENCE_DECISION.md`. Branches persist as overlays, not as composed profiles. Merging upward requires approval. Sibling branches do not affect each other. Parent profiles stay clean. The product model in this doc (doc 06) is now backed by that locked persistence-source decision.
+
 ## Product Goal
 
 Kortex should support a strong general coding ontology while letting the user branch it for a project, job, learning track, or personal conceptualization effort.

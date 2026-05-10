@@ -37,6 +37,37 @@ export { composeDomainProfile } from './profileComposition';
 export type { ProfileOverlay, ProfileOverlayKind } from './types';
 export { resolveActiveDomainProfile } from './profileActivation';
 export type { ActiveDomainProfileSource } from './types';
+export { createActiveDomainProfileSource, resolveActiveDomainProfileFromActivationInput } from './profileActivation';
+export type { ActiveDomainProfileActivationInput } from './types';
+
+export { composeRuntimeDomainProfile } from './runtimeProfileCoordinator';
+export type { RuntimeProfileCoordinatorInput } from './runtimeProfileCoordinator';
+
+export type { ProfileBranch, ProfileBranchKind, ProfileSelection } from './types';
+export {
+  composeRuntimeDomainProfileFromBranches,
+  createActiveDomainProfileSourceFromBranches,
+  groupProfileBranchesByKind,
+  profileBranchToOverlay,
+} from './profileBranches';
+
+export type { ResolvedProfileSelection } from './profileSelection';
+export {
+  composeRuntimeDomainProfileFromSelection,
+  resolveProfileSelection,
+} from './profileSelection';
+
+export {
+  DuplicateProfileIdError,
+  ProfileNotFoundError,
+  createProfileRegistry,
+  createStaticProfileSource,
+  toDomainProfileSummary,
+} from './profileRegistry';
+export type { DomainProfileSummary, ProfileRegistry, ProfileSource } from './types';
+
+export type { ProfileBranchStore } from './types';
+export { createStaticProfileBranchStore } from './profileBranchStore';
 
 export { getMetadataField, getMetadataFieldLabel, getMetadataFieldPlaceholder } from './metadata';
 export { validateOntologyCorrection } from './corrections';

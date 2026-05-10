@@ -204,6 +204,19 @@ export interface DomainProfile<TItemTypeNodeId extends string = string> {
 
 export type ProfileOverlayKind = 'project' | 'learning' | 'personal';
 
+/** Branch kind that determines overlay grouping and runtime precedence. */
+export type ProfileBranchKind = 'project' | 'learning' | 'personal';
+
+export interface ProfileBranch<TItemTypeNodeId extends string = string> {
+  id: string;
+  parentProfileId: string;
+  branchKind: ProfileBranchKind;
+  name: string;
+  overlay: ProfileOverlay<TItemTypeNodeId>;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export type DomainLabelOverrides = Partial<Omit<DomainLabels, 'flashback'>> & {
   flashback?: Partial<DomainLabels['flashback']> | undefined;
 };
@@ -263,4 +276,78 @@ export interface ProfileOverlay<TItemTypeNodeId extends string = string> {
   overrideGraph?: GraphProfileOverrides<TItemTypeNodeId> | undefined;
   /** Partial ontology profile overrides (e.g., additional nodes beyond the typed fields). */
   overrideOntology?: Partial<OntologyProfile<TItemTypeNodeId>> | undefined;
+}
+
+// ---------------------------------------------------------------------------
+// Profile selection: id-based per-context branch selection.
+// ---------------------------------------------------------------------------
+
+/**
+ * Represents one caller-owned selection for one context.
+ * Stores branch ids (not full branch objects) to keep selections serializable.
+ * Order within each kind array matters: later entries win for same-kind conflicts.
+ */
+export interface ProfileSelection {
+  id?: string | undefined;
+  baseProfileId: string;
+  projectBranchIds?: readonly string[] | undefined;
+  learningBranchIds?: readonly string[] | undefined;
+  personalBranchIds?: readonly string[] | undefined;
+}
+
+// ---------------------------------------------------------------------------
+// Profile registry and profile source types
+// ---------------------------------------------------------------------------
+
+export interface DomainProfileSummary {
+  id: string;
+  version: number;
+  label: string;
+  description: string;
+}
+
+export interface ProfileSource<TItemTypeNodeId extends string = string> {
+  id: string;
+  getProfile(id: string): DomainProfile<TItemTypeNodeId> | null;
+  listProfiles(): readonly DomainProfileSummary[];
+}
+
+export interface ProfileRegistry<TItemTypeNodeId extends string = string> {
+  getProfile(id: string): DomainProfile<TItemTypeNodeId>;
+  listProfiles(): readonly DomainProfileSummary[];
+}
+
+// ---------------------------------------------------------------------------
+// Profile branch store: durable branch layer storage boundary.
+// ---------------------------------------------------------------------------
+
+/**
+ * Stores and retrieves durable branch layers.
+ *
+ * The store does not decide which branches are active, compose runtime
+ * profiles, own merge semantics, or own UI/MCP/agent state.
+ *
+ * This is the first in-memory seam only. Persistence adapters can wrap
+ * or replace the static implementation later.
+ */
+export interface ProfileBranchStore<TItemTypeNodeId extends string = string> {
+  getBranch(id: string): Promise<ProfileBranch<TItemTypeNodeId> | null>;
+  getBranchesByIds(ids: readonly string[]): Promise<ProfileBranch<TItemTypeNodeId>[]>;
+  listBranchesForParent(parentProfileId: string): Promise<ProfileBranch<TItemTypeNodeId>[]>;
+}
+
+// ---------------------------------------------------------------------------
+// Caller/runtime activation input: overlays grouped by source role.
+// ---------------------------------------------------------------------------
+
+/**
+ * A caller-owned input shape that groups overlays by runtime role.
+ * Use this to supply project, learning, and personal overlays separately,
+ * then normalize them into an `ActiveDomainProfileSource`.
+ */
+export interface ActiveDomainProfileActivationInput<TItemTypeNodeId extends string = string> {
+  baseProfile: DomainProfile<TItemTypeNodeId>;
+  projectOverlays?: readonly ProfileOverlay<TItemTypeNodeId>[] | null | undefined;
+  learningOverlays?: readonly ProfileOverlay<TItemTypeNodeId>[] | null | undefined;
+  personalOverlays?: readonly ProfileOverlay<TItemTypeNodeId>[] | null | undefined;
 }

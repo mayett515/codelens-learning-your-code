@@ -1,4 +1,4 @@
-import { getActiveDomainProfile } from '../../ontology';
+import { getActiveDomainProfile, type DomainProfile } from '../../ontology';
 import { unsafeConceptId } from '../types/ids';
 import { buildExtractorSystemPrompt } from '../extractor/extractorPrompt';
 import { runExtractor, type ExtractorComplete } from '../extractor/runExtractor';
@@ -25,14 +25,16 @@ export async function prepareSaveCandidates(
     signal?: AbortSignal | undefined;
     complete?: ExtractorComplete | undefined;
     preCheck?: ((text: string) => Promise<ConceptMatch[]>) | undefined;
+    profile?: DomainProfile | undefined;
   },
 ): Promise<SaveModalCandidateData[]> {
   const selectedText = source.selectedText.trim().slice(0, MAX_SNIPPET_LENGTH);
   if (!selectedText) throw new Error('Cannot extract a capture from empty source text');
 
   const relevantConcepts = await (options?.preCheck ?? conceptMatchPreCheck)(selectedText);
+  const profile = options?.profile ?? getActiveDomainProfile();
   const prompt = buildExtractorSystemPrompt({
-    profile: getActiveDomainProfile(),
+    profile,
     relevantConcepts,
   });
   const output = await runExtractor(prompt, selectedText, {
