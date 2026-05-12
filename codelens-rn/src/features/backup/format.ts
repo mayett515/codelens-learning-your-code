@@ -5,8 +5,8 @@
  * - SCHEMA_VERSION: must match the highest migration in src/db/migrations/index.ts.
  * - APP_VERSION: mirror package.json and app.json.
  */
-export const FORMAT_VERSION = 4;
-export const SCHEMA_VERSION = 14;
+export const FORMAT_VERSION = 6;
+export const SCHEMA_VERSION = 16;
 export const APP_VERSION = '1.0.0';
 
 export const ARCHIVE_MAGIC = 'codelens-backup';

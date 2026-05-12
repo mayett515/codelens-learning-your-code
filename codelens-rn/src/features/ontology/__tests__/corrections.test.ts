@@ -8,6 +8,12 @@ function validCorrection(overrides: Partial<OntologyCorrectionEvidence> = {}): O
   return {
     id: 'ev_1',
     profileId: 'coding',
+    activeSelectionSnapshot: {
+      baseProfileId: 'coding',
+      projectBranchIds: ['project-branch-1'],
+      learningBranchIds: ['learning-branch-1'],
+      personalBranchIds: ['personal-branch-1'],
+    },
     subjectKind: 'item',
     subjectId: 'concept_abc',
     field: 'typeNodeId',
@@ -75,10 +81,34 @@ describe('validateOntologyCorrection', () => {
   });
 
   it('rejects mismatched profile id', () => {
-    const ev = validCorrection({ profileId: 'other_profile' });
+    const ev = validCorrection({
+      profileId: 'other_profile',
+      activeSelectionSnapshot: { baseProfileId: 'other_profile' },
+    });
     const errors = validateOntologyCorrection(ev, codingProfile);
     expect(errors).toHaveLength(1);
     expect(errors[0]).toContain('profile id mismatch');
+  });
+
+  it('rejects active selection snapshots whose base profile does not match the evidence profile', () => {
+    const ev = validCorrection({
+      activeSelectionSnapshot: { baseProfileId: 'other_profile' },
+    });
+    const errors = validateOntologyCorrection(ev, codingProfile);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain('active selection snapshot baseProfileId mismatch');
+  });
+
+  it('rejects active selection snapshots with empty branch ids', () => {
+    const ev = validCorrection({
+      activeSelectionSnapshot: {
+        baseProfileId: 'coding',
+        projectBranchIds: ['project-branch-1', ''],
+      },
+    });
+    const errors = validateOntologyCorrection(ev, codingProfile);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain('projectBranchIds');
   });
 
   it('rejects no-op correction where previous and corrected are equal', () => {

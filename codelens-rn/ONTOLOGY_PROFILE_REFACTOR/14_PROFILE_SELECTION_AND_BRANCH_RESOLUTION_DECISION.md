@@ -238,7 +238,7 @@ This decision originally did not implement:
 - No CLI selection command
 - No agent/subagent runtime
 - No app-builder runtime
-- No merge proposal storage
+- No proposal review UI or apply/merge service
 - No automatic merge or promotion
 - No correction evidence `branchId` or `targetLayerId`
 - No Racket/DSL runtime
@@ -467,13 +467,17 @@ opencode-go/glm-5.1 with --thinking high
 
 ## Next Open Decisions
 
-After this decision:
+Status update after later slices:
 
-1. Whether the first implementation uses branch arrays or lookup functions for pure selection resolution.
-2. Branch/overlay DB persistence schema and store.
-3. Profile registry shape for resolving `baseProfileId`.
-4. Merge proposal storage and review UI.
-5. Correction storage implementation with future branch targeting.
-6. Checker runtime and approval UI.
-7. Agent/subagent execution ontology brief.
-8. Self-building-app framework brief.
+1. Pure selection resolution is implemented.
+2. Branch/overlay DB persistence is implemented.
+3. Profile registry and base profile definition persistence are implemented.
+4. Correction evidence persistence is implemented as evidence-only storage.
+5. Adaptive suggestion policy is locked in doc 18.
+6. Patch/merge proposal storage decision is locked in doc 19 and storage-only v1 is implemented.
+7. First correction/proposal UI surface remains open.
+8. Checker runtime and approval UI remain open.
+9. Trust setting storage remains open.
+10. Proposal apply/base-versioning semantics remain open.
+11. Agent/subagent execution ontology brief remains open.
+12. Self-building-app framework brief remains open.

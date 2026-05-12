@@ -19,10 +19,18 @@ export type {
   PromotionProfile,
   RetrievalProfile,
   ReviewProfile,
+  OntologyCorrectionActiveSelectionSnapshot,
   OntologyCorrectionEvidence,
   OntologyCorrectionField,
   OntologyCorrectionSource,
   OntologyCorrectionSubjectKind,
+  ProfileChangeProposal,
+  ProfileChangeProposalKind,
+  ProfileChangeProposalSourceKind,
+  ProfileChangeProposalStatus,
+  ProfileChangeProposalTarget,
+  ProfileChangeProposalTargetKind,
+  ProfilePatch,
 } from './types';
 
 export {

@@ -30,3 +30,21 @@ export {
   loadDefaultProfileRegistry,
   loadPersistedProfileDefinitionSource,
 } from './profileRegistryBootstrap';
+
+export {
+  insertOntologyCorrectionEvidence,
+  getOntologyCorrectionEvidenceById,
+  listOntologyCorrectionEvidenceForProfile,
+  listOntologyCorrectionEvidenceForSubject,
+  deleteOntologyCorrectionEvidence,
+} from './ontologyCorrectionEvidenceRepo';
+
+export {
+  insertProfileChangeProposal,
+  upsertProfileChangeProposal,
+  getProfileChangeProposalById,
+  listProfileChangeProposalsByStatus,
+  listProfileChangeProposalsForBaseProfile,
+  listProfileChangeProposalsForTargetBranch,
+  deleteProfileChangeProposal,
+} from './profileChangeProposalRepo';

@@ -13,6 +13,8 @@ import {
   PROFILE_BRANCHES_COLUMN_MAP,
   PROFILE_SELECTIONS_COLUMN_MAP,
   PROFILE_DEFINITIONS_COLUMN_MAP,
+  ONTOLOGY_CORRECTION_EVIDENCE_COLUMN_MAP,
+  PROFILE_CHANGE_PROPOSALS_COLUMN_MAP,
   TABLE_COLUMN_MAPS,
   TABLE_JSON_COLUMNS,
 } from '../columnMaps';
@@ -522,6 +524,133 @@ describe('Column map: profile_definitions', () => {
   });
 });
 
+describe('Column map: ontology_correction_evidence', () => {
+  it('maps all columns including active selection snapshot JSON', () => {
+    const raw = {
+      id: 'ev-1',
+      profile_id: 'coding',
+      active_selection_snapshot_json: '{"baseProfileId":"coding","projectBranchIds":["pb-1"]}',
+      subject_kind: 'item',
+      subject_id: 'concept-1',
+      field: 'typeNodeId',
+      previous_type_node_id: 'mechanism',
+      corrected_type_node_id: 'pattern',
+      reason: 'Reviewed by user',
+      source: 'user',
+      created_at: 1000,
+    };
+    const m = mapBackupRow(raw, ONTOLOGY_CORRECTION_EVIDENCE_COLUMN_MAP);
+    expect(m['id']).toBe('ev-1');
+    expect(m['profileId']).toBe('coding');
+    expect(m['activeSelectionSnapshotJson']).toBe('{"baseProfileId":"coding","projectBranchIds":["pb-1"]}');
+    expect(m['subjectKind']).toBe('item');
+    expect(m['subjectId']).toBe('concept-1');
+    expect(m['field']).toBe('typeNodeId');
+    expect(m['previousTypeNodeId']).toBe('mechanism');
+    expect(m['correctedTypeNodeId']).toBe('pattern');
+    expect(m['reason']).toBe('Reviewed by user');
+    expect(m['source']).toBe('user');
+    expect(m['createdAt']).toBe(1000);
+    expect(Object.keys(m).length).toBe(11);
+  });
+
+  it('drops unknown target/apply keys from imported rows', () => {
+    const raw = {
+      id: 'ev-1',
+      profile_id: 'coding',
+      active_selection_snapshot_json: '{"baseProfileId":"coding"}',
+      subject_kind: 'item',
+      subject_id: 'concept-1',
+      field: 'typeNodeId',
+      previous_type_node_id: 'mechanism',
+      corrected_type_node_id: 'pattern',
+      reason: null,
+      source: 'user',
+      created_at: 1000,
+      target_layer_id: 'personal',
+      apply_to_branch_id: 'branch-1',
+    };
+    const m = mapBackupRow(raw, ONTOLOGY_CORRECTION_EVIDENCE_COLUMN_MAP);
+    expect('targetLayerId' in m).toBe(false);
+    expect('applyToBranchId' in m).toBe(false);
+    expect(Object.keys(m).length).toBe(11);
+  });
+});
+
+describe('Column map: profile_change_proposals', () => {
+  it('maps all columns including JSON patch and evidence columns', () => {
+    const raw = {
+      id: 'proposal-1',
+      proposal_kind: 'classification_patch',
+      source_kind: 'checker',
+      base_profile_id: 'coding',
+      source_branch_id: null,
+      target_kind: 'profile_branch',
+      target_profile_id: null,
+      target_branch_id: 'branch-1',
+      evidence_ids_json: '["ev-1"]',
+      patch_json: '{"addItemTypeNodeIds":["react_hook"]}',
+      title: 'Add React hook type',
+      summary: 'Suggests a repeated type',
+      reason: 'User corrections support it',
+      risk_score: 35,
+      semantic_confidence: 0.8,
+      user_fit_confidence: 0.7,
+      status: 'pending',
+      superseded_by_proposal_id: null,
+      created_at: 1000,
+      updated_at: 2000,
+      reviewed_at: null,
+      applied_at: null,
+    };
+    const m = mapBackupRow(raw, PROFILE_CHANGE_PROPOSALS_COLUMN_MAP);
+    expect(m['id']).toBe('proposal-1');
+    expect(m['proposalKind']).toBe('classification_patch');
+    expect(m['sourceKind']).toBe('checker');
+    expect(m['baseProfileId']).toBe('coding');
+    expect(m['targetKind']).toBe('profile_branch');
+    expect(m['targetBranchId']).toBe('branch-1');
+    expect(m['evidenceIdsJson']).toBe('["ev-1"]');
+    expect(m['patchJson']).toBe('{"addItemTypeNodeIds":["react_hook"]}');
+    expect(m['riskScore']).toBe(35);
+    expect(m['status']).toBe('pending');
+    expect(Object.keys(m).length).toBe(22);
+  });
+
+  it('drops unknown apply/runtime keys from imported rows', () => {
+    const raw = {
+      id: 'proposal-1',
+      proposal_kind: 'classification_patch',
+      source_kind: 'checker',
+      base_profile_id: 'coding',
+      source_branch_id: null,
+      target_kind: 'profile_branch',
+      target_profile_id: null,
+      target_branch_id: 'branch-1',
+      evidence_ids_json: '[]',
+      patch_json: '{"addItemTypeNodeIds":["react_hook"]}',
+      title: 'Add React hook type',
+      summary: '',
+      reason: '',
+      risk_score: 35,
+      semantic_confidence: null,
+      user_fit_confidence: null,
+      status: 'pending',
+      superseded_by_proposal_id: null,
+      created_at: 1000,
+      updated_at: 2000,
+      reviewed_at: null,
+      applied_at: null,
+      active_runtime_profile_json: '{}',
+      apply_immediately: true,
+    };
+    const m = mapBackupRow(raw, PROFILE_CHANGE_PROPOSALS_COLUMN_MAP);
+    expect('activeRuntimeProfileJson' in m).toBe(false);
+    expect('applyImmediately' in m).toBe(false);
+    expect(Object.keys(m).length).toBe(22);
+  });
+});
+
 describe('JSON decoding for Drizzle insert shape', () => {
   it('decodes project JSON columns', () => {
     const mapped = mapBackupRow(
@@ -627,6 +756,114 @@ describe('JSON decoding for Drizzle insert shape', () => {
       TABLE_JSON_COLUMNS['profile_definitions']!,
     );
     expect(mapped['profileJson']).toEqual({ id: 'def-1' });
+  });
+
+  it('decodes ontology_correction_evidence active selection snapshot JSON', () => {
+    const mapped = mapBackupRow(
+      {
+        id: 'ev-1',
+        profile_id: 'coding',
+        active_selection_snapshot_json: '{"baseProfileId":"coding","projectBranchIds":["pb-1"]}',
+        subject_kind: 'item',
+        subject_id: 'concept-1',
+        field: 'typeNodeId',
+        previous_type_node_id: 'mechanism',
+        corrected_type_node_id: 'pattern',
+        reason: null,
+        source: 'user',
+        created_at: 1000,
+      },
+      ONTOLOGY_CORRECTION_EVIDENCE_COLUMN_MAP,
+      TABLE_JSON_COLUMNS['ontology_correction_evidence']!,
+    );
+    expect(mapped['activeSelectionSnapshotJson']).toEqual({
+      baseProfileId: 'coding',
+      projectBranchIds: ['pb-1'],
+    });
+  });
+
+  it('decodes profile_change_proposals evidence and patch JSON columns', () => {
+    const mapped = mapBackupRow(
+      {
+        id: 'proposal-1',
+        proposal_kind: 'classification_patch',
+        source_kind: 'checker',
+        base_profile_id: 'coding',
+        source_branch_id: null,
+        target_kind: 'profile_branch',
+        target_profile_id: null,
+        target_branch_id: 'branch-1',
+        evidence_ids_json: '["ev-1"]',
+        patch_json: '{"addItemTypeNodeIds":["react_hook"]}',
+        title: 'Add React hook type',
+        summary: '',
+        reason: '',
+        risk_score: 35,
+        semantic_confidence: null,
+        user_fit_confidence: null,
+        status: 'pending',
+        superseded_by_proposal_id: null,
+        created_at: 1000,
+        updated_at: 2000,
+        reviewed_at: null,
+        applied_at: null,
+      },
+      PROFILE_CHANGE_PROPOSALS_COLUMN_MAP,
+      TABLE_JSON_COLUMNS['profile_change_proposals']!,
+    );
+    expect(mapped['evidenceIdsJson']).toEqual(['ev-1']);
+    expect(mapped['patchJson']).toEqual({ addItemTypeNodeIds: ['react_hook'] });
+  });
+
+  it('throws on malformed JSON in profile_change_proposals patch', () => {
+    expect(() => mapBackupRow(
+      {
+        id: 'proposal-1',
+        proposal_kind: 'classification_patch',
+        source_kind: 'checker',
+        base_profile_id: 'coding',
+        source_branch_id: null,
+        target_kind: 'profile_branch',
+        target_profile_id: null,
+        target_branch_id: 'branch-1',
+        evidence_ids_json: '[]',
+        patch_json: '{bad json',
+        title: 'Add React hook type',
+        summary: '',
+        reason: '',
+        risk_score: 35,
+        semantic_confidence: null,
+        user_fit_confidence: null,
+        status: 'pending',
+        superseded_by_proposal_id: null,
+        created_at: 1000,
+        updated_at: 2000,
+        reviewed_at: null,
+        applied_at: null,
+      },
+      PROFILE_CHANGE_PROPOSALS_COLUMN_MAP,
+      TABLE_JSON_COLUMNS['profile_change_proposals']!,
+    )).toThrow(/Invalid JSON in backup column patch_json/);
+  });
+
+  it('throws on malformed JSON in ontology_correction_evidence active selection snapshot', () => {
+    expect(() => mapBackupRow(
+      {
+        id: 'ev-1',
+        profile_id: 'coding',
+        active_selection_snapshot_json: '{bad json',
+        subject_kind: 'item',
+        subject_id: 'concept-1',
+        field: 'typeNodeId',
+        previous_type_node_id: 'mechanism',
+        corrected_type_node_id: 'pattern',
+        reason: null,
+        source: 'user',
+        created_at: 1000,
+      },
+      ONTOLOGY_CORRECTION_EVIDENCE_COLUMN_MAP,
+      TABLE_JSON_COLUMNS['ontology_correction_evidence']!,
+    )).toThrow(/Invalid JSON in backup column active_selection_snapshot_json/);
   });
 
   it('throws on malformed JSON in profile_definitions profile_json', () => {
@@ -950,6 +1187,8 @@ describe('TABLE_COLUMN_MAPS index', () => {
     'profile_branches',
     'profile_selections',
     'profile_definitions',
+    'ontology_correction_evidence',
+    'profile_change_proposals',
   ];
 
   it('contains an entry for every exported table', () => {
@@ -970,6 +1209,8 @@ describe('TABLE_COLUMN_MAPS index', () => {
     expect(TABLE_COLUMN_MAPS['profile_branches']).toBe(PROFILE_BRANCHES_COLUMN_MAP);
     expect(TABLE_COLUMN_MAPS['profile_selections']).toBe(PROFILE_SELECTIONS_COLUMN_MAP);
     expect(TABLE_COLUMN_MAPS['profile_definitions']).toBe(PROFILE_DEFINITIONS_COLUMN_MAP);
+    expect(TABLE_COLUMN_MAPS['ontology_correction_evidence']).toBe(ONTOLOGY_CORRECTION_EVIDENCE_COLUMN_MAP);
+    expect(TABLE_COLUMN_MAPS['profile_change_proposals']).toBe(PROFILE_CHANGE_PROPOSALS_COLUMN_MAP);
   });
 
   it('every map has the expected number of columns', () => {
@@ -984,5 +1225,7 @@ describe('TABLE_COLUMN_MAPS index', () => {
     expect(Object.keys(PROFILE_BRANCHES_COLUMN_MAP).length).toBe(7);
     expect(Object.keys(PROFILE_SELECTIONS_COLUMN_MAP).length).toBe(8);
     expect(Object.keys(PROFILE_DEFINITIONS_COLUMN_MAP).length).toBe(8);
+    expect(Object.keys(ONTOLOGY_CORRECTION_EVIDENCE_COLUMN_MAP).length).toBe(11);
+    expect(Object.keys(PROFILE_CHANGE_PROPOSALS_COLUMN_MAP).length).toBe(22);
   });
 });

@@ -31,6 +31,8 @@ const TABLES: TableSpec[] = [
   { name: 'profile_branches',     sql: 'SELECT * FROM profile_branches' },
   { name: 'profile_selections',   sql: 'SELECT * FROM profile_selections' },
   { name: 'profile_definitions',  sql: 'SELECT * FROM profile_definitions' },
+  { name: 'ontology_correction_evidence', sql: 'SELECT * FROM ontology_correction_evidence' },
+  { name: 'profile_change_proposals', sql: 'SELECT * FROM profile_change_proposals' },
 ];
 
 interface EmbeddingMetaRow {

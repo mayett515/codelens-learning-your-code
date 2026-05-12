@@ -224,6 +224,52 @@ export const PROFILE_DEFINITIONS_COLUMN_MAP = {
 } as const satisfies Record<string, string>;
 export const PROFILE_DEFINITIONS_JSON_COLUMNS = new Set<string>(['profile_json']);
 
+export const ONTOLOGY_CORRECTION_EVIDENCE_COLUMN_MAP = {
+  'id': 'id',
+  'profile_id': 'profileId',
+  'active_selection_snapshot_json': 'activeSelectionSnapshotJson',
+  'subject_kind': 'subjectKind',
+  'subject_id': 'subjectId',
+  'field': 'field',
+  'previous_type_node_id': 'previousTypeNodeId',
+  'corrected_type_node_id': 'correctedTypeNodeId',
+  'reason': 'reason',
+  'source': 'source',
+  'created_at': 'createdAt',
+} as const satisfies Record<string, string>;
+export const ONTOLOGY_CORRECTION_EVIDENCE_JSON_COLUMNS = new Set<string>([
+  'active_selection_snapshot_json',
+]);
+
+export const PROFILE_CHANGE_PROPOSALS_COLUMN_MAP = {
+  'id': 'id',
+  'proposal_kind': 'proposalKind',
+  'source_kind': 'sourceKind',
+  'base_profile_id': 'baseProfileId',
+  'source_branch_id': 'sourceBranchId',
+  'target_kind': 'targetKind',
+  'target_profile_id': 'targetProfileId',
+  'target_branch_id': 'targetBranchId',
+  'evidence_ids_json': 'evidenceIdsJson',
+  'patch_json': 'patchJson',
+  'title': 'title',
+  'summary': 'summary',
+  'reason': 'reason',
+  'risk_score': 'riskScore',
+  'semantic_confidence': 'semanticConfidence',
+  'user_fit_confidence': 'userFitConfidence',
+  'status': 'status',
+  'superseded_by_proposal_id': 'supersededByProposalId',
+  'created_at': 'createdAt',
+  'updated_at': 'updatedAt',
+  'reviewed_at': 'reviewedAt',
+  'applied_at': 'appliedAt',
+} as const satisfies Record<string, string>;
+export const PROFILE_CHANGE_PROPOSALS_JSON_COLUMNS = new Set<string>([
+  'evidence_ids_json',
+  'patch_json',
+]);
+
 export const TABLE_COLUMN_MAPS: Record<string, Record<string, string>> = {
   'projects': PROJECTS_COLUMN_MAP,
   'files': FILES_COLUMN_MAP,
@@ -236,6 +282,8 @@ export const TABLE_COLUMN_MAPS: Record<string, Record<string, string>> = {
   'profile_branches': PROFILE_BRANCHES_COLUMN_MAP,
   'profile_selections': PROFILE_SELECTIONS_COLUMN_MAP,
   'profile_definitions': PROFILE_DEFINITIONS_COLUMN_MAP,
+  'ontology_correction_evidence': ONTOLOGY_CORRECTION_EVIDENCE_COLUMN_MAP,
+  'profile_change_proposals': PROFILE_CHANGE_PROPOSALS_COLUMN_MAP,
 };
 
 export const TABLE_JSON_COLUMNS: Record<string, ReadonlySet<string>> = {
@@ -250,6 +298,8 @@ export const TABLE_JSON_COLUMNS: Record<string, ReadonlySet<string>> = {
   'profile_branches': PROFILE_BRANCHES_JSON_COLUMNS,
   'profile_selections': PROFILE_SELECTIONS_JSON_COLUMNS,
   'profile_definitions': PROFILE_DEFINITIONS_JSON_COLUMNS,
+  'ontology_correction_evidence': ONTOLOGY_CORRECTION_EVIDENCE_JSON_COLUMNS,
+  'profile_change_proposals': PROFILE_CHANGE_PROPOSALS_JSON_COLUMNS,
 };
 
 type MissingMappedKeys<TMap extends Record<string, string>, TSchema extends Record<string, unknown>> =
@@ -280,3 +330,7 @@ type _CheckProfileSelectionsMissing = AssertNever<MissingMappedKeys<typeof PROFI
 type _CheckProfileSelectionsExtra = AssertNever<ExtraMappedKeys<typeof PROFILE_SELECTIONS_COLUMN_MAP, typeof schema.profileSelections.$inferSelect>>;
 type _CheckProfileDefinitionsMissing = AssertNever<MissingMappedKeys<typeof PROFILE_DEFINITIONS_COLUMN_MAP, typeof schema.profileDefinitions.$inferSelect>>;
 type _CheckProfileDefinitionsExtra = AssertNever<ExtraMappedKeys<typeof PROFILE_DEFINITIONS_COLUMN_MAP, typeof schema.profileDefinitions.$inferSelect>>;
+type _CheckOntologyCorrectionEvidenceMissing = AssertNever<MissingMappedKeys<typeof ONTOLOGY_CORRECTION_EVIDENCE_COLUMN_MAP, typeof schema.ontologyCorrectionEvidence.$inferSelect>>;
+type _CheckOntologyCorrectionEvidenceExtra = AssertNever<ExtraMappedKeys<typeof ONTOLOGY_CORRECTION_EVIDENCE_COLUMN_MAP, typeof schema.ontologyCorrectionEvidence.$inferSelect>>;
+type _CheckProfileChangeProposalsMissing = AssertNever<MissingMappedKeys<typeof PROFILE_CHANGE_PROPOSALS_COLUMN_MAP, typeof schema.profileChangeProposals.$inferSelect>>;
+type _CheckProfileChangeProposalsExtra = AssertNever<ExtraMappedKeys<typeof PROFILE_CHANGE_PROPOSALS_COLUMN_MAP, typeof schema.profileChangeProposals.$inferSelect>>;

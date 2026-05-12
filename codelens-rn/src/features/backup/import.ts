@@ -77,6 +77,8 @@ export async function importBackup(sourceUri?: string): Promise<ImportResult> {
   const branches     = await readNdjson<Record<string, unknown>>(zip, 'profile_branches');
   const selections   = await readNdjson<Record<string, unknown>>(zip, 'profile_selections');
   const definitions  = await readNdjson<Record<string, unknown>>(zip, 'profile_definitions');
+  const correctionEvidence = await readNdjson<Record<string, unknown>>(zip, 'ontology_correction_evidence');
+  const changeProposals = await readNdjson<Record<string, unknown>>(zip, 'profile_change_proposals');
 
   let preferences: Record<string, unknown> = {};
   try {
@@ -102,6 +104,8 @@ export async function importBackup(sourceUri?: string): Promise<ImportResult> {
   const mappedBranches = branches.map((r) => mapBackupRow(r, TABLE_COLUMN_MAPS['profile_branches']!, TABLE_JSON_COLUMNS['profile_branches']!));
   const mappedSelections = selections.map((r) => mapBackupRow(r, TABLE_COLUMN_MAPS['profile_selections']!, TABLE_JSON_COLUMNS['profile_selections']!));
   const mappedDefinitions = definitions.map((r) => mapBackupRow(r, TABLE_COLUMN_MAPS['profile_definitions']!, TABLE_JSON_COLUMNS['profile_definitions']!));
+  const mappedCorrectionEvidence = correctionEvidence.map((r) => mapBackupRow(r, TABLE_COLUMN_MAPS['ontology_correction_evidence']!, TABLE_JSON_COLUMNS['ontology_correction_evidence']!));
+  const mappedChangeProposals = changeProposals.map((r) => mapBackupRow(r, TABLE_COLUMN_MAPS['profile_change_proposals']!, TABLE_JSON_COLUMNS['profile_change_proposals']!));
 
   // Strip the embedding before mapping. Embedding is a synthetic export
   // field, not a real DB column.
@@ -134,6 +138,8 @@ export async function importBackup(sourceUri?: string): Promise<ImportResult> {
     if (mappedBranches.length) await insertBatch(tx, schema.profileBranches, mappedBranches);
     if (mappedSelections.length) await insertBatch(tx, schema.profileSelections, mappedSelections);
     if (mappedDefinitions.length) await insertBatch(tx, schema.profileDefinitions, mappedDefinitions);
+    if (mappedCorrectionEvidence.length) await insertBatch(tx, schema.ontologyCorrectionEvidence, mappedCorrectionEvidence);
+    if (mappedChangeProposals.length) await insertBatch(tx, schema.profileChangeProposals, mappedChangeProposals);
   });
 
   imported['projects']          = projects.length;
@@ -147,6 +153,8 @@ export async function importBackup(sourceUri?: string): Promise<ImportResult> {
   imported['profile_branches']  = branches.length;
   imported['profile_selections'] = selections.length;
   imported['profile_definitions'] = definitions.length;
+  imported['ontology_correction_evidence'] = correctionEvidence.length;
+  imported['profile_change_proposals'] = changeProposals.length;
 
   // --- 8. Vectors (post-transaction). Per-concept failures do not abort. ---
   let vecRestored = 0;

@@ -3,11 +3,106 @@
 Repo: `C:\Projects\CodeLensApp\CodeLens-v2\codelens-rn`
 Branch: `refactor/ontology-profile`
 
-This file captures the current state after completing the Kimi Code CLI ProfileBranchStore v1 slice.
+This file captures the current state after implementing correction evidence persistence v1, locking the adaptive suggestion policy, implementing storage-only patch/merge proposal persistence v1, locking the Conceptualize preview/correction-surface decision, and locking the checker/proposal/context/apply architecture.
 
 ## Last Status Response
 
 Done.
+
+Codex direct slice (correction evidence persistence v1):
+
+- Implemented storage-only `OntologyCorrectionEvidence` persistence:
+  - migration 015 creates `ontology_correction_evidence`
+  - Drizzle schema exposes `ontologyCorrectionEvidence`
+  - `OntologyCorrectionActiveSelectionSnapshot` is required on `OntologyCorrectionEvidence`
+  - strict codec rejects target/apply fields and validates profile/snapshot consistency
+  - ontology data-boundary repo supports insert, get-by-id, list-by-profile, list-by-subject, and delete
+  - backup/export/import/clear/columnMaps support `ontology_correction_evidence`
+  - `ARCHITECTURE.md` backup/archive version notes updated to format 5 / schema 15
+  - `FORMAT_VERSION` bumped 4 -> 5 and `SCHEMA_VERSION` bumped 14 -> 15
+  - stage10 guards allow the table only in the planned persistence boundary and still ban legacy `ontology_corrections` / `ontology_patch_suggestions`
+- Updated `validateOntologyCorrection()` so correction evidence records active selection context where the mistake happened.
+- No correction UI, checker runtime, target/apply branch fields, automatic profile mutation, MCP/adapters, agent runtime, app-builder runtime, or DSL runtime added in the correction-evidence slice. Proposal storage was added later in doc 19.
+- Verification so far:
+  - TypeScript clean
+  - targeted tests: 133/133 passed across 5 files
+  - full suite: 676/676 passed across 68 files
+  - stage10 doc/source guards after proposal storage: 53/53 passed
+  - `git diff --check` clean with CRLF warnings only
+
+Codex docs-only decision slice (adaptive suggestion policy):
+
+- Created `18_ADAPTIVE_SUGGESTION_POLICY_DECISION.md` with locked decision:
+  - correction evidence stays factual
+  - patch suggestions stay separate from evidence
+  - default behavior is conservative suggest-first
+  - manual tag/subtag/relationship creation is allowed through a structured validate/preview/target/audit/undo flow
+  - personal layer is the same branch machinery with `branchKind: 'personal'`
+  - relationship tags and edges use the same trust/risk policy as tags and subtags
+  - adaptive behavior combines semantic confidence, user-fit confidence, risk score, and trust mode
+  - risk overrides trust
+  - base/core changes, upward merges, old-data rewrites, agent/app-builder policy, and external write-back always require explicit approval
+- Updated README doc map, NEXT_LLM_CONTEXT, TOMORROW_START, WHERE_WE_STAND, implementation_handoff, and cross-references.
+- No source code, tests, DB, UI, checker runtime, patch suggestion storage, trust storage, or auto-apply engine added in this docs-only slice.
+
+Codex docs-only decision slice (patch/merge proposal storage and review):
+
+- Created `19_PATCH_MERGE_PROPOSAL_STORAGE_DECISION.md` with locked decision:
+  - patch suggestions, relationship suggestions, branch merge proposals, and manual drafts share one `profile_change_proposals` concept
+  - product language can still distinguish patch suggestions from merge proposals
+  - persistence/review uses one lifecycle and one review shape
+  - proposals store source/evidence, explicit target layer, `ProfilePatch`, risk/confidence, and review status
+  - `ProfilePatch` is overlay-like diff language without branch identity
+  - proposals do not apply themselves
+  - apply/merge is explicit and later
+  - separate `ontology_patch_suggestions` and `profile_merge_proposals` tables are rejected for v1
+- Updated README doc map, NEXT_LLM_CONTEXT, TOMORROW_START, WHERE_WE_STAND, implementation_handoff, and cross-references.
+- No source code, tests, DB, UI, checker runtime, apply service, trust storage, auto-apply, or base-profile versioning added in this docs-only slice.
+
+Codex direct slice (profile change proposals storage v1):
+
+- Implemented storage-only `ProfileChangeProposal` persistence:
+  - migration 016 creates `profile_change_proposals`
+  - Drizzle schema exposes `profileChangeProposals`
+  - `ProfilePatch` is the overlay-like diff language without branch identity
+  - strict codec validates target shape, evidence/source requirements, no-op patches, risk/confidence, and review/apply status constraints
+  - ontology data-boundary repo supports insert, upsert, get-by-id, list-by-status, list-by-base-profile, list-by-target-branch, and delete
+  - backup/export/import/clear/columnMaps support `profile_change_proposals`
+  - `ARCHITECTURE.md` backup/archive version notes updated to format 6 / schema 16
+  - `FORMAT_VERSION` bumped 5 -> 6 and `SCHEMA_VERSION` bumped 15 -> 16
+  - stage10 guards allow the table only in the planned persistence boundary and still ban separate `ontology_patch_suggestions` / `profile_merge_proposals`
+- No review UI, checker runtime, apply service, trust storage, auto-apply, old-data backfill, base-profile versioning, MCP/adapters, agent runtime, app-builder runtime, or DSL runtime added.
+- Verification so far:
+  - TypeScript clean
+  - targeted proposal/migration/codec/backup/guard tests: 121/121 passed across 4 files
+  - full suite: 691/691 passed across 70 files
+  - `git diff --check` clean with CRLF warnings only
+
+Codex docs-only decision slice (Conceptualize preview and correction surface):
+
+- Created `20_CONCEPTUALIZE_PREVIEW_AND_CORRECTION_SURFACE_DECISION.md` with locked decision:
+  - the first correction surface is the Conceptualize preview before final save
+  - "save as learning" should grow toward Conceptualize
+  - every correction stores mistake-understanding evidence, not only the final corrected label
+  - new tag/subtag creation validates against the composed active profile
+  - approved new ontology nodes are branch-local by default
+  - Conceptualize starts as a safe correction doorway, not the full Kortex ontology editor
+- Updated README doc map, NEXT_LLM_CONTEXT, TOMORROW_START, WHERE_WE_STAND, and implementation_handoff.
+- No source code, tests, UI, checker runtime, apply service, trust storage, auto-apply, old-item backfill, or base/core mutation added in this docs-only slice.
+
+Codex docs-only decision slice (checker/proposal/context/apply architecture):
+
+- Created `21_CHECKER_PROPOSAL_REVIEW_CONTEXT_AND_APPLY_DECISION.md` with locked decision:
+  - checker output has three kinds: explanation, evidence, and proposal
+  - Conceptualize, checker runs, graph selection chat, repeated-mistake review, old-card backfill, and future agent/app-builder flows share one proposal/review/apply architecture
+  - proposal review tracks both user review status and freshness/validity
+  - proposal basis metadata is required for revalidation before review/apply
+  - context assembly is a first-class branch/profile-scoped layer with provenance, relevance ranking, contradiction preservation, and drill-down paths
+  - accepted proposals compile to typed Kortex operations, not raw patch writes
+  - normal proposal apply is atomic; large backfills become chunked bulk jobs
+  - historical undo is an impact-reviewed reversal proposal, not silent time travel
+- Updated README doc map, NEXT_LLM_CONTEXT, TOMORROW_START, WHERE_WE_STAND, and implementation_handoff.
+- No source code, tests, UI, checker runtime, context builder, event store, apply service, undo service, graph selection chat, trust storage, agent runtime, app-builder runtime, or DSL runtime added in this docs-only slice.
 
 Batch 8 Slice 1 (correction evidence persistence decision doc):
 
@@ -17,7 +112,8 @@ Batch 8 Slice 1 (correction evidence persistence decision doc):
   - no automatic ontology/profile mutation
   - direct user-authored ontology changes are allowed
   - model/checker-suggested ontology changes require approval
-  - no `branchId`/`targetLayerId` until branch persistence exists
+  - 2026-05-11 update: active selection context is stored where the mistake happened
+  - no `branchId`, `targetLayerId`, or apply target in v1
   - no checker runtime/UI in this slice
   - no DB/migration/source implementation in this slice
 - Updated README doc map, NEXT_LLM_CONTEXT, TOMORROW_START, WHERE_WE_STAND, implementation_handoff
@@ -144,7 +240,7 @@ Pi/Qwen Slice 1 (project-scoped ProfileSelection persistence v1):
   - `upsertProjectProfileSelection` now conflicts on `projectId`, matching the one-selection-per-project invariant
   - selection row codec now parses raw JSON-string branch id columns as well as decoded arrays
   - clear-all-data deletes `profile_selections` before `projects`
-- No UI selector, global active selection singleton, DB-owned runtime composition, merge proposal storage, profile/base persistence, MCP/adapters, agent runtime, app-builder runtime, or DSL runtime added.
+- No UI selector, global active selection singleton, DB-owned runtime composition, profile/base persistence, MCP/adapters, agent runtime, app-builder runtime, or DSL runtime added in the profile-selection slice.
 
 Codex Decision Slice (runtime activation wiring):
 
@@ -184,6 +280,8 @@ The ontology-profile refactor has moved beyond profile labels and compatibility 
 - `codingProfile` is the current base profile for this app lineage.
 - Independent future base profiles such as `photography`, `work-notes`, or `lisp` should be sibling base profiles built from the shared Kortex schema/engine, not automatic children of `coding`. Branches remain different: they specialize one selected parent/base profile, such as `coding -> react` or `photography -> night-photography`.
 - Future LLM-assisted creation should support both paths: broad setup questions for a new base core/profile, and parent-difference questions for a branch. The user may accept suggestions, edit manually, reject them, or mix manual and suggested ontology work.
+- Adaptive suggestion policy is locked in doc 18: evidence stays factual, suggestions stay separate, default behavior is conservative suggest-first, relationship changes follow the same policy as tags/subtags, personal layer is `branchKind: 'personal'`, and risk overrides trust.
+- Patch/merge proposal storage is locked and v1 storage is implemented in doc 19: patch suggestions, relationship suggestions, branch merge proposals, and manual drafts share `profile_change_proposals`; proposals store `ProfilePatch` plus source/evidence, target, risk/confidence, and review status; proposals do not apply themselves.
 - `composeDomainProfile(base, overlays)` composes project, learning, and personal overlays.
 - `getActiveDomainProfile(overlays?)` preserves old behavior for no overlays:
   - no argument returns `codingProfile` by reference
@@ -209,7 +307,10 @@ The ontology-profile refactor has moved beyond profile labels and compatibility 
 - The runtime activation helper is implemented and tested. `runtimeProfileActivation.ts` builds runtime profiles through an explicit interface-based resolver that reads a project/context selection, registry, and branch store, then delegates composition to pure helpers.
 - The base profile persistence / user-created cores decision is locked and v1 storage is implemented in doc 17. `profile_definitions` stores full base `DomainProfile` payloads behind the ontology data boundary, and `createProfileDefinitionSource({ id, definitions })` plugs loaded definitions into ProfileRegistry without changing ProfileRegistry to async.
 - The profile registry bootstrap v1 is implemented. `profileRegistryBootstrap.ts` provides `loadPersistedProfileDefinitionSource()` and `loadDefaultProfileRegistry()` to load persisted definitions once through the ontology data boundary and expose them as synchronous `ProfileSource` / `ProfileRegistry` values alongside built-in profiles. The root ontology barrel does not export DB-backed bootstrap helpers.
-- The remaining open work is: (1) merge proposal storage and review UI, (2) correction storage implementation, (3) checker runtime and approval UI, (4) agent/subagent execution ontology brief, (5) self-building-app framework brief.
+- Correction evidence persistence v1 is implemented: `ontology_correction_evidence` stores append-only evidence with an active selection context snapshot, but no target/apply branch fields and no automatic profile mutation.
+- The Conceptualize preview/correction-surface decision is locked in doc 20: first correction surface is before final save, user corrections store mistake-understanding evidence, and approved new ontology nodes are branch-local by default.
+- The checker/proposal/context/apply decision is locked in doc 21: explanations, evidence, and proposals are separate; proposal review includes freshness/revalidation; context assembly is a branch/profile-scoped layer; accepted proposals compile to typed Kortex operations; normal apply is atomic; large backfills are chunked; historical undo is an impact-reviewed reversal proposal.
+- The remaining open work is: (1) Conceptualize first implementation scope, (2) trust setting storage, (3) context assembly/event/apply implementation sequencing, (4) base profile versioning for accepted operations, (5) agent/subagent execution ontology brief, (6) self-building-app framework brief.
 
 ## Core Activation Files
 
@@ -401,6 +502,11 @@ ONTOLOGY_PROFILE_REFACTOR/12_CORRECTION_EVIDENCE_PERSISTENCE_DECISION.md
 ONTOLOGY_PROFILE_REFACTOR/13_BRANCH_OVERLAY_PERSISTENCE_DECISION.md
 ONTOLOGY_PROFILE_REFACTOR/14_PROFILE_SELECTION_AND_BRANCH_RESOLUTION_DECISION.md
 ONTOLOGY_PROFILE_REFACTOR/15_PROFILE_REGISTRY_AND_PROFILE_SOURCES_DECISION.md
+ONTOLOGY_PROFILE_REFACTOR/17_BASE_PROFILE_PERSISTENCE_DECISION.md
+ONTOLOGY_PROFILE_REFACTOR/18_ADAPTIVE_SUGGESTION_POLICY_DECISION.md
+ONTOLOGY_PROFILE_REFACTOR/19_PATCH_MERGE_PROPOSAL_STORAGE_DECISION.md
+ONTOLOGY_PROFILE_REFACTOR/20_CONCEPTUALIZE_PREVIEW_AND_CORRECTION_SURFACE_DECISION.md
+ONTOLOGY_PROFILE_REFACTOR/21_CHECKER_PROPOSAL_REVIEW_CONTEXT_AND_APPLY_DECISION.md
 ONTOLOGY_PROFILE_REFACTOR/KORTEX_DEVELOPER_EXPLAINER.md
 src/__tests__/stage10-architecture-guards.test.ts
 src/features/ontology/__tests__/profileActivation.test.ts
@@ -527,7 +633,7 @@ Reusable HR lessons from this slice:
 
 ## Next Decision Gate
 
-The A2 decision for `prepareSaveCandidates` is locked and implemented. The runtime profile coordinator decision is locked (doc 11). The correction evidence persistence decision is locked (doc 12). The branch/overlay persistence decision is locked (doc 13). The profile selection and branch resolution decision is locked (doc 14). The ProfileRegistry/ProfileSource v1 static helper is implemented (doc 15). The runtime activation wiring decision is locked (doc 16) and the interface-based runtime activation helper is implemented. The base profile persistence / user-created cores decision is locked and v1 storage is implemented (doc 17). The domain-only `ProfileBranch`, `ProfileSelection`, `ProfileRegistry`, static/in-memory `ProfileBranchStore`, and persistent `ProfileDefinition` helper seams are implemented.
+The A2 decision for `prepareSaveCandidates` is locked and implemented. The runtime profile coordinator decision is locked (doc 11). The correction evidence persistence decision is locked and v1 storage is implemented (doc 12): evidence stores active selection context, but not target/apply branch fields. The branch/overlay persistence decision is locked (doc 13). The profile selection and branch resolution decision is locked (doc 14). The ProfileRegistry/ProfileSource v1 static helper is implemented (doc 15). The runtime activation wiring decision is locked (doc 16) and the interface-based runtime activation helper is implemented. The base profile persistence / user-created cores decision is locked and v1 storage is implemented (doc 17). The adaptive suggestion policy decision is locked (doc 18). The patch/merge proposal storage decision is locked and v1 storage is implemented (doc 19). The Conceptualize preview/correction-surface decision is locked (doc 20). The checker/proposal/context/apply decision is locked (doc 21). The domain-only `ProfileBranch`, `ProfileSelection`, `ProfileRegistry`, static/in-memory `ProfileBranchStore`, persistent `ProfileDefinition`, correction evidence, and profile change proposal seams are implemented.
 
 Kimi Code CLI Slice 2 (profile definitions persistence v1):
 
@@ -596,21 +702,21 @@ Verification:
 - `stage10-architecture-guards.test.ts` all passed.
 - Full suite: 660/660 passed across 66 test files.
 
-The coordinator helper is now implemented and tested. The remaining open decisions require Codex plus human input:
+The coordinator helper is now implemented and tested. The adaptive suggestion policy is locked as a docs-only decision, patch/merge proposal storage v1 is implemented as storage-only code, Conceptualize preview is locked as the first correction surface, and the checker/proposal/context/apply architecture is locked. The remaining open decisions require Codex plus human input:
 
 ```text
-1. Merge proposal storage and review UI - how merge proposals are stored, presented, and approved/rejected/postponed.
-2. Correction storage implementation - DB/migration/store for profileId-only OntologyCorrectionEvidence; branch-targeted correction fields can come later now that branch persistence exists.
-3. Checker runtime and approval UI - patch suggestion generation and review.
-4. Agent/subagent execution ontology decision brief.
-5. Self-building-app framework decision brief.
+1. Conceptualize first implementation scope - existing-tag correction only, or existing-tag correction plus branch-local new tag/subtag creation.
+2. Trust setting storage - where conservative/suggest-first/adaptive settings and user-fit learning live.
+3. Context assembly/event/apply implementation sequencing - which context-pack and typed-operation slice ships first.
+4. Base profile versioning - how accepted operations safely target base profiles.
+5. Agent/subagent execution ontology decision brief.
+6. Self-building-app framework decision brief.
 ```
 
 Model recommendation:
 
-- Decision: Codex/GPT-5
-- Bounded TypeScript worker after decision: Kimi Code CLI or `opencode-go/qwen3.6-plus`, depending on risk and scope
-- Guard/docs worker after decision: `opencode-go/glm-5.1` with high thinking
+- Decision/review: Codex
+- Implementation: Codex directly unless the human explicitly asks for a worker/model experiment
 
 ## Commit Message
 

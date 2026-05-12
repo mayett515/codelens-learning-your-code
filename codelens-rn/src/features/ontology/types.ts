@@ -163,9 +163,17 @@ export type OntologyCorrectionSubjectKind = 'capture' | 'item';
 export type OntologyCorrectionField = 'typeNodeId';
 export type OntologyCorrectionSource = 'user';
 
+export interface OntologyCorrectionActiveSelectionSnapshot {
+  baseProfileId: string;
+  projectBranchIds?: readonly string[] | undefined;
+  learningBranchIds?: readonly string[] | undefined;
+  personalBranchIds?: readonly string[] | undefined;
+}
+
 export interface OntologyCorrectionEvidence {
   id: string;
   profileId: string;
+  activeSelectionSnapshot: OntologyCorrectionActiveSelectionSnapshot;
   subjectKind: OntologyCorrectionSubjectKind;
   subjectId: string;
   field: OntologyCorrectionField;
@@ -174,6 +182,23 @@ export interface OntologyCorrectionEvidence {
   reason?: string | null | undefined;
   source: OntologyCorrectionSource;
   createdAt: number;
+}
+
+export type ProfileChangeProposalKind =
+  | 'classification_patch'
+  | 'ontology_node_patch'
+  | 'relationship_patch'
+  | 'branch_merge'
+  | 'manual_draft';
+
+export type ProfileChangeProposalSourceKind = 'checker' | 'model' | 'user' | 'system';
+export type ProfileChangeProposalTargetKind = 'base_profile' | 'profile_branch';
+export type ProfileChangeProposalStatus = 'pending' | 'accepted' | 'rejected' | 'postponed' | 'superseded';
+
+export interface ProfileChangeProposalTarget {
+  kind: ProfileChangeProposalTargetKind;
+  profileId?: string | null | undefined;
+  branchId?: string | null | undefined;
 }
 
 export interface OntologyProfile<TItemTypeNodeId extends string = string> {
@@ -276,6 +301,54 @@ export interface ProfileOverlay<TItemTypeNodeId extends string = string> {
   overrideGraph?: GraphProfileOverrides<TItemTypeNodeId> | undefined;
   /** Partial ontology profile overrides (e.g., additional nodes beyond the typed fields). */
   overrideOntology?: Partial<OntologyProfile<TItemTypeNodeId>> | undefined;
+}
+
+/**
+ * Overlay-like diff language used by suggestions and merge proposals.
+ *
+ * Unlike ProfileOverlay, this has no branch identity or precedence kind. The
+ * proposal review/apply layer decides where the patch goes.
+ */
+export interface ProfilePatch<TItemTypeNodeId extends string = string> {
+  /** Ontology nodes to add (ids must not exist in the target at apply time). */
+  addOntologyNodes?: readonly OntologyNode[] | undefined;
+  /** Existing ontology nodes to override by id (full replacement). */
+  overrideOntologyNodes?: readonly OntologyNode[] | undefined;
+  /** Additional item type node ids to append. */
+  addItemTypeNodeIds?: readonly TItemTypeNodeId[] | undefined;
+  /** Additional relationship type node ids to append. */
+  addRelationshipTypeNodeIds?: readonly string[] | undefined;
+  /** Partial labels to override; unspecified keys retain target values. */
+  overrideLabels?: DomainLabelOverrides | undefined;
+  /** Metadata fields: overrides by id replace the target definition; new ids are appended. */
+  overrideMetadataFields?: readonly MetadataFieldDefinition[] | undefined;
+  /** Partial graph overrides: nodeColors and relationshipLabels are merged by key. */
+  overrideGraph?: GraphProfileOverrides<TItemTypeNodeId> | undefined;
+  /** Partial ontology profile overrides (e.g., additional nodes beyond the typed fields). */
+  overrideOntology?: Partial<OntologyProfile<TItemTypeNodeId>> | undefined;
+}
+
+export interface ProfileChangeProposal<TItemTypeNodeId extends string = string> {
+  id: string;
+  proposalKind: ProfileChangeProposalKind;
+  sourceKind: ProfileChangeProposalSourceKind;
+  baseProfileId: string;
+  sourceBranchId?: string | null | undefined;
+  target: ProfileChangeProposalTarget;
+  evidenceIds: readonly string[];
+  patch: ProfilePatch<TItemTypeNodeId>;
+  title: string;
+  summary: string;
+  reason: string;
+  riskScore: number;
+  semanticConfidence?: number | null | undefined;
+  userFitConfidence?: number | null | undefined;
+  status: ProfileChangeProposalStatus;
+  supersededByProposalId?: string | null | undefined;
+  createdAt: number;
+  updatedAt: number;
+  reviewedAt?: number | null | undefined;
+  appliedAt?: number | null | undefined;
 }
 
 // ---------------------------------------------------------------------------

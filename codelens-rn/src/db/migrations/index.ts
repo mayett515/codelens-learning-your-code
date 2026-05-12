@@ -13,6 +13,8 @@ import { migration011 } from './011-ontology-profile-columns';
 import { migration012 } from './012-profile-branches';
 import { migration013 } from './013-profile-selections';
 import { migration014 } from './014-profile-definitions';
+import { migration015 } from './015-ontology-correction-evidence';
+import { migration016 } from './016-profile-change-proposals';
 
 export interface Migration {
   version: number;
@@ -43,6 +45,8 @@ const MIGRATIONS: Migration[] = [
   migration012,
   migration013,
   migration014,
+  migration015,
+  migration016,
 ];
 
 /*

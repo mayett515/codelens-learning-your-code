@@ -341,3 +341,58 @@ export const profileDefinitions = sqliteTable('profile_definitions', {
   index('idx_profile_definitions_source_kind').on(t.sourceKind),
   index('idx_profile_definitions_updated').on(t.updatedAt),
 ]);
+
+export const ontologyCorrectionEvidence = sqliteTable('ontology_correction_evidence', {
+  id: text('id').primaryKey(),
+  profileId: text('profile_id').notNull(),
+  activeSelectionSnapshotJson: text('active_selection_snapshot_json', { mode: 'json' })
+    .notNull()
+    .$type<unknown>(),
+  subjectKind: text('subject_kind', { enum: ['capture', 'item'] }).notNull(),
+  subjectId: text('subject_id').notNull(),
+  field: text('field', { enum: ['typeNodeId'] }).notNull(),
+  previousTypeNodeId: text('previous_type_node_id'),
+  correctedTypeNodeId: text('corrected_type_node_id').notNull(),
+  reason: text('reason'),
+  source: text('source', { enum: ['user'] }).notNull(),
+  createdAt: integer('created_at').notNull(),
+}, (t) => [
+  index('idx_ontology_correction_evidence_profile').on(t.profileId),
+  index('idx_ontology_correction_evidence_subject').on(t.subjectKind, t.subjectId),
+  index('idx_ontology_correction_evidence_created').on(t.createdAt),
+]);
+
+export const profileChangeProposals = sqliteTable('profile_change_proposals', {
+  id: text('id').primaryKey(),
+  proposalKind: text('proposal_kind', {
+    enum: ['classification_patch', 'ontology_node_patch', 'relationship_patch', 'branch_merge', 'manual_draft'],
+  }).notNull(),
+  sourceKind: text('source_kind', { enum: ['checker', 'model', 'user', 'system'] }).notNull(),
+  baseProfileId: text('base_profile_id').notNull(),
+  sourceBranchId: text('source_branch_id'),
+  targetKind: text('target_kind', { enum: ['base_profile', 'profile_branch'] }).notNull(),
+  targetProfileId: text('target_profile_id'),
+  targetBranchId: text('target_branch_id'),
+  evidenceIdsJson: text('evidence_ids_json', { mode: 'json' }).notNull().$type<string[]>(),
+  patchJson: text('patch_json', { mode: 'json' }).notNull().$type<unknown>(),
+  title: text('title').notNull(),
+  summary: text('summary').notNull(),
+  reason: text('reason').notNull(),
+  riskScore: real('risk_score').notNull(),
+  semanticConfidence: real('semantic_confidence'),
+  userFitConfidence: real('user_fit_confidence'),
+  status: text('status', {
+    enum: ['pending', 'accepted', 'rejected', 'postponed', 'superseded'],
+  }).notNull(),
+  supersededByProposalId: text('superseded_by_proposal_id'),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+  reviewedAt: integer('reviewed_at'),
+  appliedAt: integer('applied_at'),
+}, (t) => [
+  index('idx_profile_change_proposals_base_profile').on(t.baseProfileId),
+  index('idx_profile_change_proposals_source_branch').on(t.sourceBranchId),
+  index('idx_profile_change_proposals_target_branch').on(t.targetBranchId),
+  index('idx_profile_change_proposals_status').on(t.status),
+  index('idx_profile_change_proposals_updated').on(t.updatedAt),
+]);

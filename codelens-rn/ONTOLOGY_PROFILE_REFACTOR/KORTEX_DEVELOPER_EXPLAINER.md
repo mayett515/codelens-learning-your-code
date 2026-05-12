@@ -757,14 +757,13 @@ Currently implemented in this repo:
 - `prepareSaveCandidates(options.profile?: DomainProfile)` receives a composed profile
 - `runtimeProfileCoordinator.ts` as the explicit above-services brain mixer
 - correction evidence domain groundwork and validation
-- decision docs for runtime source, coordinator, correction evidence persistence, and branch/overlay persistence
+- branch/selection/base-profile/correction/proposal persistence storage seams
+- decision docs for runtime source, coordinator, correction evidence, branch/overlay persistence, adaptive suggestions, and proposal storage
 
 Not implemented yet:
 
-- branch/overlay DB persistence
 - branch selection UI
-- merge proposal storage/UI
-- correction storage DB table
+- proposal review UI and apply/merge service
 - checker runtime
 - MCP server
 - source adapters
@@ -773,7 +772,7 @@ Not implemented yet:
 - Racket DSL
 - game engine
 
-The next practical engineering question is whether to add domain-only `ProfileBranch` types/helpers
+The next practical engineering question is where the first correction/proposal review surface belongs
 before DB persistence. The current recommendation is yes: define the branch model in TypeScript
 without touching migrations first.
 

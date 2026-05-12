@@ -80,14 +80,15 @@ describe('Stage 10 Phase A architecture guards', () => {
 
 describe('Ontology correction evidence guards', () => {
   // These guards enforce that ontology correction evidence stays in the
-  // ontology feature and remains domain-only at this stage - no persistence,
-  // no automatic profile mutations, no cross-feature imports.
+  // ontology feature. Persistence is allowed only for append-only evidence
+  // records; automatic profile mutations and patch target fields stay out.
 
   it('OntologyCorrectionEvidence exists in src/features/ontology/types.ts', () => {
     const typesSrc = read('src/features/ontology/types.ts');
     expect(typesSrc).toMatch(/export interface OntologyCorrectionEvidence\s*\{/);
     expect(typesSrc).toMatch(/id:\s*string/);
     expect(typesSrc).toMatch(/profileId:\s*string/);
+    expect(typesSrc).toMatch(/activeSelectionSnapshot:\s*OntologyCorrectionActiveSelectionSnapshot/);
     expect(typesSrc).toMatch(/subjectKind:\s*OntologyCorrectionSubjectKind/);
     expect(typesSrc).toMatch(/subjectId:\s*string/);
     expect(typesSrc).toMatch(/field:\s*OntologyCorrectionField/);
@@ -137,7 +138,7 @@ describe('Ontology correction evidence guards', () => {
     expect(correctionsSrc).not.toMatch(/from\s+['"][^'"]*(?:\/db|features\/backup|features\/learning|features\/graph)[^'"]*['"]/);
   });
 
-  it('no ontology_corrections or ontology_patch_suggestions table/string exists under src yet', () => {
+  it('no legacy ontology_corrections or ontology_patch_suggestions table/string exists under src yet', () => {
     const offenders = sourceFiles()
       .filter((filePath) => {
         const content = read(filePath);
@@ -151,6 +152,34 @@ describe('Ontology correction evidence guards', () => {
       (p) => !p.startsWith('ONTOLOGY_PROFILE_REFACTOR/') && !p.endsWith('.test.ts') && !p.endsWith('NEXT_LLM_CONTEXT.md')
     );
     expect(actualOffenders).toEqual([]);
+  });
+
+  it('ontology_correction_evidence appears only in the planned persistence boundary', () => {
+    const allowedFiles = new Set(
+      [
+        'src/db/schema.ts',
+        'src/db/migrations/015-ontology-correction-evidence.ts',
+        'src/db/migrations/index.ts',
+        'src/features/ontology/data/schema.ts',
+        'src/features/ontology/data/ontologyCorrectionEvidenceRepo.ts',
+        'src/features/ontology/data/index.ts',
+        'src/features/ontology/codecs/ontologyCorrectionEvidence.ts',
+        'src/features/backup/format.ts',
+        'src/features/backup/export.ts',
+        'src/features/backup/import.ts',
+        'src/features/backup/clear.ts',
+        'src/features/backup/columnMaps.ts',
+      ].map((p) => path.normalize(p)),
+    );
+
+    const offenders = sourceFiles()
+      .filter((filePath) => read(filePath).includes('ontology_correction_evidence'))
+      .map(toRepoPath)
+      .filter((p) => {
+        if (p.endsWith('.test.ts') || p.endsWith('.test.tsx') || p.includes('__tests__/')) return false;
+        return !allowedFiles.has(path.normalize(p));
+      });
+    expect(offenders).toEqual([]);
   });
 
   it('no automatic profile mutation helper exists in src/features/ontology/corrections.ts', () => {
@@ -333,15 +362,18 @@ describe('Kortex overlay persistence table guards', () => {
       'src/db/migrations/012-profile-branches.ts',
       'src/db/migrations/013-profile-selections.ts',
       'src/db/migrations/014-profile-definitions.ts',
+      'src/db/migrations/016-profile-change-proposals.ts',
       'src/db/migrations/index.ts',
       'src/features/ontology/data/schema.ts',
       'src/features/ontology/data/profileBranchRepo.ts',
       'src/features/ontology/data/profileSelectionRepo.ts',
       'src/features/ontology/data/profileDefinitionRepo.ts',
+      'src/features/ontology/data/profileChangeProposalRepo.ts',
       'src/features/ontology/data/index.ts',
       'src/features/ontology/codecs/profileBranch.ts',
       'src/features/ontology/codecs/profileSelection.ts',
       'src/features/ontology/codecs/profileDefinition.ts',
+      'src/features/ontology/codecs/profileChangeProposal.ts',
       'src/features/backup/format.ts',
       'src/features/backup/export.ts',
       'src/features/backup/import.ts',
@@ -385,6 +417,21 @@ describe('Kortex overlay persistence table guards', () => {
       .filter((filePath) => {
         const content = read(filePath);
         return content.includes('profile_definitions');
+      })
+      .map(toRepoPath)
+      .filter((p) => {
+        if (p.startsWith('ONTOLOGY_PROFILE_REFACTOR/')) return false;
+        if (p.endsWith('.test.ts') || p.endsWith('.test.tsx') || p.includes('__tests__/')) return false;
+        return !allowedProfilePersistenceFiles.has(path.normalize(p));
+      });
+    expect(offenders).toEqual([]);
+  });
+
+  it('profile_change_proposals is only allowed in planned persistence boundary files and tests', () => {
+    const offenders = sourceFiles()
+      .filter((filePath) => {
+        const content = read(filePath);
+        return content.includes('profile_change_proposals');
       })
       .map(toRepoPath)
       .filter((p) => {

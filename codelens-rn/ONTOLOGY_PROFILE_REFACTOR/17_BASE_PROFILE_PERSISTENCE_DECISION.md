@@ -294,7 +294,7 @@ The implementation slice for this decision must not add:
 - import/export UI
 - duplicate-id resolution UI
 - automatic version creation
-- merge proposal storage
+- proposal review UI and apply/base-versioning service
 - correction storage
 - checker runtime
 - MCP/adapters
@@ -348,10 +348,15 @@ Still not implemented:
 - LLM-assisted profile creation flow
 - duplicate-id resolution UI
 - automatic profile version creation
-- merge proposal storage/review
-- correction storage
+- proposal review UI
+- correction UI
 - checker runtime
 - MCP/adapters
 - agent runtime
 - app-builder runtime
 - Racket/DSL runtime
+
+Later status:
+
+- Correction evidence storage is implemented separately in doc 12 as `ontology_correction_evidence`.
+- Patch/merge proposal storage is locked separately in doc 19 as `profile_change_proposals` and storage-only v1 is implemented. Apply/base-versioning remains open.

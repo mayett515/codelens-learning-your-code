@@ -209,21 +209,23 @@ This decision document locks the branch/overlay persistence model. It does not i
 - No automatic merge logic
 - No checker runtime
 - No patch suggestion table
-- No correction storage implementation
+- Correction evidence storage is implemented separately as `ontology_correction_evidence`
 - No agent/subagent runtime
 - No self-building-app runtime
 - No final relationship taxonomy decision
 - No Racket/DSL implementation
 - No MCP/adapters/source sync
 
-The `profile_branches` migration/schema/repo/backup plumbing is now implemented. Active selection, merge proposal storage, correction storage, UI, checker runtime, MCP/adapters, agent runtime, app-builder runtime, and Racket/DSL implementation are still deferred.
+The `profile_branches` migration/schema/repo/backup plumbing is now implemented. Active selection and correction evidence storage are also implemented in separate boundaries. Merge proposal storage, UI, checker runtime, MCP/adapters, agent runtime, app-builder runtime, and Racket/DSL implementation are still deferred.
 
 ## Relationship To Existing Decisions
 
 - **Doc 06** had the product model for profile branching and merge semantics. This decision (doc 13) backs that product model with a locked persistence-source decision: branches persist as overlays, not as composed profiles. The product model in doc 06 is now supported by both the runtime composition helpers (docs 10, 11) and this persistence decision.
 - **Doc 10/A2** remains true. Services receive composed `DomainProfile`, not branch ingredients. The persistence decision is consistent because the composed profile is always derived at runtime from persisted branch/overlay sources.
 - **Doc 11** remains true. The Runtime Profile Coordinator composes runtime profiles above services. The persistence decision is consistent because the coordinator reads from persisted overlays, not from stored composed profiles.
-- **Doc 12** remains true. Correction evidence stays `profileId`-only first. `branchId` and `targetLayerId` come later when branch persistence exists. This decision establishes that branch persistence will store overlays, which gives doc 12 a clear path for adding `branchId` without redesigning correction evidence.
+- **Doc 12** remains true, with the 2026-05-11 update. Correction evidence stores the active selection context where the mistake happened, not a target/apply layer. It may snapshot active project/learning/personal branch ids, but it still does not mutate branch overlays or parent profiles.
+- **Doc 18** remains true. Evidence-derived suggestions, manual ontology edits, relationship changes, and merge proposals must follow the adaptive suggestion policy: default suggest-first, risk overrides trust, and parent/base changes require explicit approval.
+- **Doc 19** remains true. Patch suggestions, relationship suggestions, branch merge proposals, and manual drafts share `profile_change_proposals`. Accepted branch-target proposals later merge `ProfilePatch` data into branch overlays through an explicit apply operation.
 - **Parent immutability within a lineage** remains true. A parent profile is immutable by default. Changes go through approved merge proposals. Forks and users can create different ground-zero base profiles later.
 
 ## Merge Model
@@ -293,26 +295,19 @@ Decision/review:
 Codex / GPT-5
 ```
 
-Doc/guard worker:
+Implementation/review:
 
 ```text
-opencode-go/glm-5.1 with --thinking high
-```
-
-TypeScript implementation worker (after this decision is locked):
-
-```text
-Codex strict review, with any worker result treated as draft until verified
+Codex directly unless the human explicitly asks for a worker/model experiment.
 ```
 
 ## Next Open Decisions
 
 After this decision:
 
-1. Branch selection and activation - how the user selects which branch ids are active for a context (deferred).
-2. Merge proposal storage and review UI - how merge proposals are stored, presented, and approved/rejected/postponed (deferred).
-3. Correction storage implementation - DB/migration/store for profileId-only `OntologyCorrectionEvidence`; branch-targeted correction fields can come later now that branch persistence exists.
-4. Profile definitions persistence / user-created base profile storage is now implemented in doc 17 / migration 014.
-5. Checker runtime and approval UI - patch suggestion generation and review.
-6. Agent/subagent execution ontology brief.
-7. Self-building-app framework brief.
+1. First correction/proposal UI surface - where users correct type/tag classification and review stored proposals.
+2. Checker runtime and approval UI - proposal generation and review over stored correction evidence.
+3. Trust setting storage - where conservative/suggest-first/adaptive settings and user-fit learning live.
+4. Proposal apply/base-versioning semantics - how accepted `ProfilePatch` changes apply to base profiles safely.
+5. Agent/subagent execution ontology brief.
+6. Self-building-app framework brief.
