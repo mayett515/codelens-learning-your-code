@@ -1,6 +1,7 @@
 export {
   insertProfileBranch,
   upsertProfileBranch,
+  updateProfileBranchIfUnchanged,
   getProfileBranchById,
   getProfileBranchesByIds,
   listProfileBranchesForParent,
@@ -42,9 +43,47 @@ export {
 export {
   insertProfileChangeProposal,
   upsertProfileChangeProposal,
+  updateProfileChangeProposalIfPending,
   getProfileChangeProposalById,
   listProfileChangeProposalsByStatus,
   listProfileChangeProposalsForBaseProfile,
   listProfileChangeProposalsForTargetBranch,
   deleteProfileChangeProposal,
 } from './profileChangeProposalRepo';
+export {
+  getProfileProposalEventById,
+  insertProfileProposalEvent,
+  listProfileProposalEventsForBaseProfile,
+  listProfileProposalEventsForProposal,
+  listProfileProposalEventsForTargetBranch,
+} from './profileProposalEventRepo';
+export {
+  ProfileChangeProposalReviewServiceError,
+  setPendingProfileChangeProposalReviewStatus,
+} from './profileChangeProposalReviewService';
+export type {
+  ProfileChangeProposalReviewServiceDependencies,
+  ProfileChangeProposalReviewServiceErrorCode,
+  ProfileChangeProposalReviewStatus,
+  SetPendingProfileChangeProposalReviewStatusInput,
+} from './profileChangeProposalReviewService';
+export { profileBranchKeys, profileProposalKeys } from './queryKeys';
+
+export {
+  BranchLocalProposalApplyServiceError,
+  applyPendingBranchLocalProfileChangeProposal,
+} from './branchLocalProposalApplyService';
+export type {
+  ApplyPendingBranchLocalProfileChangeProposalInput,
+  BranchLocalProposalApplyServiceDependencies,
+  BranchLocalProposalApplyServiceErrorCode,
+} from './branchLocalProposalApplyService';
+
+export {
+  insertProfileTrustSetting,
+  upsertProfileTrustSetting,
+  getProfileTrustSettingById,
+  getProfileTrustSettingForTarget,
+  listProfileTrustSettingsForBaseProfile,
+  deleteProfileTrustSetting,
+} from './profileTrustSettingRepo';

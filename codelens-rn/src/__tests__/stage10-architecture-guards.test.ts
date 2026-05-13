@@ -159,6 +159,7 @@ describe('Ontology correction evidence guards', () => {
       [
         'src/db/schema.ts',
         'src/db/migrations/015-ontology-correction-evidence.ts',
+        'src/db/migrations/017-ontology-correction-raw-proposed-type.ts',
         'src/db/migrations/index.ts',
         'src/features/ontology/data/schema.ts',
         'src/features/ontology/data/ontologyCorrectionEvidenceRepo.ts',
@@ -363,17 +364,23 @@ describe('Kortex overlay persistence table guards', () => {
       'src/db/migrations/013-profile-selections.ts',
       'src/db/migrations/014-profile-definitions.ts',
       'src/db/migrations/016-profile-change-proposals.ts',
+      'src/db/migrations/018-profile-trust-settings.ts',
+      'src/db/migrations/019-profile-proposal-events.ts',
       'src/db/migrations/index.ts',
       'src/features/ontology/data/schema.ts',
       'src/features/ontology/data/profileBranchRepo.ts',
       'src/features/ontology/data/profileSelectionRepo.ts',
       'src/features/ontology/data/profileDefinitionRepo.ts',
       'src/features/ontology/data/profileChangeProposalRepo.ts',
+      'src/features/ontology/data/profileProposalEventRepo.ts',
+      'src/features/ontology/data/profileTrustSettingRepo.ts',
       'src/features/ontology/data/index.ts',
       'src/features/ontology/codecs/profileBranch.ts',
       'src/features/ontology/codecs/profileSelection.ts',
       'src/features/ontology/codecs/profileDefinition.ts',
       'src/features/ontology/codecs/profileChangeProposal.ts',
+      'src/features/ontology/codecs/profileProposalEvent.ts',
+      'src/features/ontology/codecs/profileTrustSetting.ts',
       'src/features/backup/format.ts',
       'src/features/backup/export.ts',
       'src/features/backup/import.ts',
@@ -432,6 +439,36 @@ describe('Kortex overlay persistence table guards', () => {
       .filter((filePath) => {
         const content = read(filePath);
         return content.includes('profile_change_proposals');
+      })
+      .map(toRepoPath)
+      .filter((p) => {
+        if (p.startsWith('ONTOLOGY_PROFILE_REFACTOR/')) return false;
+        if (p.endsWith('.test.ts') || p.endsWith('.test.tsx') || p.includes('__tests__/')) return false;
+        return !allowedProfilePersistenceFiles.has(path.normalize(p));
+      });
+    expect(offenders).toEqual([]);
+  });
+
+  it('profile_proposal_events is only allowed in planned persistence boundary files and tests', () => {
+    const offenders = sourceFiles()
+      .filter((filePath) => {
+        const content = read(filePath);
+        return content.includes('profile_proposal_events');
+      })
+      .map(toRepoPath)
+      .filter((p) => {
+        if (p.startsWith('ONTOLOGY_PROFILE_REFACTOR/')) return false;
+        if (p.endsWith('.test.ts') || p.endsWith('.test.tsx') || p.includes('__tests__/')) return false;
+        return !allowedProfilePersistenceFiles.has(path.normalize(p));
+      });
+    expect(offenders).toEqual([]);
+  });
+
+  it('profile_trust_settings is only allowed in planned persistence boundary files and tests', () => {
+    const offenders = sourceFiles()
+      .filter((filePath) => {
+        const content = read(filePath);
+        return content.includes('profile_trust_settings');
       })
       .map(toRepoPath)
       .filter((p) => {
@@ -636,5 +673,18 @@ describe('Kortex durable doc future-direction anchor guards', () => {
     expect(doc06).toContain('Do not rush into persistence for branches.');
     expect(doc06).toContain('Only then consider storage for branches/patch suggestions.');
     expect(doc06).toContain('## What A Branch Can Change');
+  });
+
+  it('keeps first branch-local proposal apply anchors in doc 24', () => {
+    const doc24 = readDoc('24_BRANCH_LOCAL_PROPOSAL_APPLY_DECISION.md');
+
+    expect(doc24).toContain('The first proposal apply flow is explicit and branch-local.');
+    expect(doc24).toContain('Apply');
+    expect(doc24).toContain('Reject');
+    expect(doc24).toContain('Postpone');
+    expect(doc24).toContain('Ask why / why not');
+    expect(doc24).toContain('confidence = is Kortex probably right?');
+    expect(doc24).toContain('risk = how much could Kortex break if it is wrong?');
+    expect(doc24).toContain('Apply must not:');
   });
 });

@@ -2,6 +2,7 @@ import { getActiveDomainProfile, type DomainProfile } from '../../ontology';
 import { unsafeConceptId } from '../types/ids';
 import { buildExtractorSystemPrompt } from '../extractor/extractorPrompt';
 import { runExtractor, type ExtractorComplete } from '../extractor/runExtractor';
+import type { CaptureHint } from '../extractor/extractorSchema';
 import { conceptMatchPreCheck, type ConceptMatch } from './conceptMatchPreCheck';
 import type { ConceptId, LearningCaptureId } from '../types/ids';
 import type { SaveModalCandidateData } from '../types/saveModal';
@@ -10,6 +11,7 @@ const MAX_SNIPPET_LENGTH = 800;
 
 export interface SaveCandidateSource {
   selectedText: string;
+  projectId?: string | null | undefined;
   snippetLang?: string | null | undefined;
   snippetSourcePath?: string | null | undefined;
   snippetStartLine?: number | null | undefined;
@@ -43,8 +45,13 @@ export async function prepareSaveCandidates(
   });
 
   return output.candidates.map((candidate) => {
-    const linkedConceptId = candidate.conceptHint?.linkedConceptId
-      ? unsafeConceptId(candidate.conceptHint.linkedConceptId)
+    const conceptHint = normalizeConceptHintForProfile(candidate.conceptHint, profile);
+    const rawProposedTypeNodeId = rawProposedTypeNodeIdForEvidence(
+      candidate.conceptHint,
+      conceptHint,
+    );
+    const linkedConceptId = conceptHint?.linkedConceptId
+      ? unsafeConceptId(conceptHint.linkedConceptId)
       : null;
     const matchSimilarity = linkedConceptId
       ? findSimilarityForConcept(relevantConcepts, linkedConceptId)
@@ -63,16 +70,39 @@ export async function prepareSaveCandidates(
       sessionId: source.sessionId ?? null,
       derivedFromCaptureId: source.derivedFromCaptureId ?? null,
       isNewLanguageForExistingConcept:
-        candidate.conceptHint?.isNewLanguageForExistingConcept ?? false,
-      linkedConceptName: candidate.conceptHint?.linkedConceptName ?? null,
-      linkedConceptLanguages: candidate.conceptHint?.linkedConceptLanguages ?? null,
+        conceptHint?.isNewLanguageForExistingConcept ?? false,
+      linkedConceptName: conceptHint?.linkedConceptName ?? null,
+      linkedConceptLanguages: conceptHint?.linkedConceptLanguages ?? null,
       linkedConceptId,
-      extractionConfidence: candidate.conceptHint?.extractionConfidence ?? null,
+      extractionConfidence: conceptHint?.extractionConfidence ?? null,
       matchSimilarity,
-      conceptHint: candidate.conceptHint,
+      conceptHint,
+      rawProposedTypeNodeId,
       keywords: candidate.keywords.map((keyword) => keyword.trim().toLowerCase()).filter(Boolean),
     };
   });
+}
+
+function normalizeConceptHintForProfile(
+  hint: CaptureHint | null,
+  profile: DomainProfile,
+): CaptureHint | null {
+  if (!hint) return null;
+  if (profile.ontology.itemTypeNodeIds.includes(hint.proposedConceptType)) return hint;
+
+  return {
+    ...hint,
+    proposedConceptType: profile.promotion.defaultTypeNodeId,
+  };
+}
+
+function rawProposedTypeNodeIdForEvidence(
+  rawHint: CaptureHint | null,
+  normalizedHint: CaptureHint | null,
+): string | null {
+  const rawTypeNodeId = rawHint?.proposedConceptType ?? null;
+  if (!rawTypeNodeId || rawTypeNodeId === normalizedHint?.proposedConceptType) return null;
+  return rawTypeNodeId;
 }
 
 function findSimilarityForConcept(matches: ConceptMatch[], id: ConceptId): number | null {

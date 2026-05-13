@@ -41,7 +41,7 @@ function LegendBody({
       <View style={styles.body}>
         {presentTypeNodeIds.map((typeNodeId) => (
           <View key={typeNodeId} style={styles.row}>
-            <View style={[styles.swatch, { backgroundColor: CONCEPT_TYPE_COLORS[typeNodeId] }]} />
+            <View style={[styles.swatch, { backgroundColor: CONCEPT_TYPE_COLORS[typeNodeId] ?? CONCEPT_TYPE_COLORS['mechanism'] }]} />
             <Text style={styles.text}>{getOntologyNodeLabel(typeNodeId)}</Text>
           </View>
         ))}

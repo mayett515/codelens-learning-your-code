@@ -45,7 +45,7 @@ describe('coding profile', () => {
     expect(codingProfile.labels).toMatchObject({
       hubTitle: 'Learning Hub',
       itemSingular: 'Concept',
-      saveAction: 'Save Capture',
+      saveAction: 'Conceptualize',
       bodyFieldLabel: 'What clicked',
       contextFieldLabel: 'Why it mattered',
       sourceFieldLabel: 'Snippet',

@@ -37,9 +37,15 @@ The adaptive suggestion policy decision is locked (doc 18). Correction evidence 
 
 The patch/merge proposal storage decision is locked and v1 storage is implemented (doc 19). Patch suggestions, relationship suggestions, branch merge proposals, and manual drafts use one unified proposal table: `profile_change_proposals`. Product language can still say "patch suggestion" or "merge proposal", but persistence/review share one lifecycle and one review shape. Proposals store source/evidence, target layer, `ProfilePatch`, risk/confidence, and review status. Proposals do not apply themselves. Apply/merge remains an explicit later operation. Implemented scope is storage-only: types/codec/migration/schema/repo/backup/guards/tests, with no review UI, checker runtime, apply service, trust storage, auto-apply, or base-profile versioning.
 
-The Conceptualize preview/correction-surface decision is locked (doc 20). The first correction surface belongs in the Conceptualize preview before final save. The old "save as learning" action should grow toward Conceptualize: raw input -> draft learning card -> classification -> correction -> mistake-understanding evidence -> safe branch-local ontology improvement or later proposal. Every correction must preserve what Kortex proposed, what the user corrected it to, where the mistake happened, and optional boundary/reason context. Conceptualize starts as a safe correction doorway, not the full Kortex ontology editor.
+The Conceptualize preview/correction-surface decision is locked (doc 20). The first correction surface belongs in the Conceptualize preview before final save. The old "save as learning" action should grow toward Conceptualize: raw input -> draft learning card -> classification -> correction -> mistake-understanding evidence -> safe branch-local ontology improvement or later proposal. Every correction must preserve what Kortex proposed, what the user corrected it to, where the mistake happened, and optional boundary/reason context. Conceptualize starts as a safe correction doorway, not the full Kortex ontology editor. If extraction invents an unknown type id and the preview normalizes it to the profile default, correction evidence can still preserve the invalid raw model id as `rawProposedTypeNodeId`.
 
 The checker/proposal/context/apply decision is locked (doc 21). Conceptualize, checker runs, graph selection chat, repeated-mistake review, old-card backfill, and future agent/app-builder flows use one architecture: explanations are read-only, evidence records what happened, proposals are reviewable recommendations, and durable changes happen only through typed Kortex operations after revalidation. Context assembly must be branch/profile-scoped, relevance-ranked, provenance-aware, and able to preserve contradictions. Proposal apply is atomic by default; large backfills become chunked bulk jobs. Historical undo is an impact-reviewed reversal proposal, not silent time travel.
+
+The trust setting storage decision is locked and storage-only v1 is implemented (doc 23). `ProfileTrustSetting` stores user policy separately from correction evidence and proposals, scoped to one base profile or one profile branch. `profile_trust_settings` stores trust mode plus future auto-apply policy fields behind the ontology data boundary. Default behavior is still `suggest_first`. Base-profile targets cannot enable auto-apply, `manual_only` and `suggest_first` cannot enable auto-apply, and branch-local future auto-apply is limited to classification, ontology-node, and relationship proposal kinds with strict risk caps. Model-review hardening fixed `upsertProfileTrustSetting` so `scopeKey` conflicts preserve the existing `id` and `createdAt` for future audit/event references. User-fit learning is not stored in the setting row; it belongs to future event/audit projection work from doc 21. No UI, checker runtime, apply service, event/audit store, user-fit projection store, or auto-apply engine was added.
+
+The branch-local proposal review/apply decision is locked and the first pure helper, persistence-backed service, and minimal review UI slices are implemented (doc 24). The first apply flow is explicit and branch-local: user clicks Apply, Kortex revalidates the pending branch-target proposal, compiles it to typed operations, mutates only the target branch overlay, and marks the proposal accepted/applied atomically. First review actions are Apply, Reject, Postpone, and Ask why / why not. Risk and confidence stay distinct: confidence means "is Kortex probably right?", risk means "how much could this break if wrong?" User-facing risk describes blast radius, for example "low risk: branch-local only; no core change and no old notes rewritten." `branchLocalProposalApply.ts` compiles pending branch proposals into `apply_profile_patch_to_branch_overlay` operations and merges `ProfilePatch` into copied branch overlay values. `data/branchLocalProposalApplyService.ts` loads the proposal and branch in one transaction, accepts a caller-provided base profile, applies the pure helper, and uses conditional writes so branch/proposal drift fails instead of silently overwriting. The minimal UI adds a Learning Hub entry and queue/detail modal for pending proposals, wires Apply/Reject/Postpone through hooks, and keeps Ask why / why not explanation-only. Post-review hardening added missing-base-profile error mapping, explicit message tone, branch-key invalidation, non-branch Apply disablement, and stronger presentation tests. No base/core mutation, upward merge, sibling propagation, auto-apply runtime, old-card backfill, edit-then-apply, or checker runtime was added.
+
+The proposal event audit storage decision is locked and implemented (doc 25). `profile_proposal_events` stores append-only decision facts for proposal Apply/Reject/Postpone/Ask-why history. Apply writes an `applied` event inside the same transaction that updates the branch and accepts the proposal. Reject/Postpone write events inside the same transaction that reviews the proposal. If guarded branch/proposal writes fail, no event is appended. These events are the durable basis for future user-fit learning, but no user-fit projection/scoring, checker runtime, auto-apply engine, historical undo execution, base/core mutation, old-card backfill, event-history UI, agent runtime, app-builder runtime, or DSL runtime is implemented.
 
 The coordinator helper is now implemented and tested: `runtimeProfileCoordinator.ts` is the explicit above-services coordinator boundary. `composeRuntimeDomainProfile(input)` delegates to `resolveActiveDomainProfileFromActivationInput(input)`. `RuntimeProfileCoordinatorInput` aliases `ActiveDomainProfileActivationInput`. Services still receive composed `DomainProfile`; they do not call this helper directly unless their caller passes the result. No DB, UI, persistence, global store, service hidden lookup, agent runtime, app-builder runtime, or DSL runtime was added.
 
@@ -79,14 +85,19 @@ Read in this order:
 14. `ONTOLOGY_PROFILE_REFACTOR/19_PATCH_MERGE_PROPOSAL_STORAGE_DECISION.md` - locked decision + storage-only v1: unified `profile_change_proposals`, `ProfilePatch`, source/evidence, target layer, risk/confidence, review status, explicit apply later.
 15. `ONTOLOGY_PROFILE_REFACTOR/20_CONCEPTUALIZE_PREVIEW_AND_CORRECTION_SURFACE_DECISION.md` - locked decision: first correction surface is Conceptualize preview before save; every correction stores mistake-understanding evidence; Conceptualize is not the full ontology editor.
 16. `ONTOLOGY_PROFILE_REFACTOR/21_CHECKER_PROPOSAL_REVIEW_CONTEXT_AND_APPLY_DECISION.md` - locked decision: checker output kinds, proposal lifecycle/freshness, context assembly, typed apply operations, atomic/chunked apply, events, and historical reversal.
-17. `ONTOLOGY_PROFILE_REFACTOR/05_ANTI_REGRESSION_RULES.md` - hard constraints and compatibility boundaries.
-18. `ONTOLOGY_PROFILE_REFACTOR/03_CATEGORIZATION_AND_ONTOLOGY_CHECKER.md` - next product direction: correction flow and ontology checker.
-19. `ONTOLOGY_PROFILE_REFACTOR/04_REFACTOR_WITHOUT_BREAKING_APP.md` - staged implementation plan and persistence/correction ideas.
-20. `ONTOLOGY_PROFILE_REFACTOR/02_DYNAMIC_PROFILE_SCHEMA.md` - proposed future profile/correction/suggestion shapes.
-21. `ONTOLOGY_PROFILE_REFACTOR/06_PROFILE_BRANCHING_AND_MERGE.md` - profile inheritance, branching, overlays, and merge semantics.
-22. `ONTOLOGY_PROFILE_REFACTOR/README.md` - map of this refactor folder.
-23. `ONTOLOGY_PROFILE_REFACTOR/TOMORROW_START.md` - startup prompt and next-slice reminder.
-24. Root docs if persistence or architecture is touched: `ARCHITECTURE.md`, `PERSISTENCE.md`.
+17. `ONTOLOGY_PROFILE_REFACTOR/22_CONCEPTUALIZE_FIRST_IMPLEMENTATION_SCOPE_DECISION.md` - locked and implemented decision: Conceptualize saves existing type corrections immediately with evidence and creates guarded pending proposals for explicit new subtype labels.
+18. `ONTOLOGY_PROFILE_REFACTOR/23_TRUST_SETTING_STORAGE_DECISION.md` - locked decision + storage-only v1: trust settings live separately from evidence/proposals, default to suggest-first, and keep future auto-apply bounded by target/risk/kind rules.
+19. `ONTOLOGY_PROFILE_REFACTOR/24_BRANCH_LOCAL_PROPOSAL_APPLY_DECISION.md` - locked decision + first helper/service/minimal UI implementation: first apply is explicit, branch-local, revalidated, and atomic; the first review surface supports Apply / Reject / Postpone / Ask why without edit support, base/core mutation, upward merge, auto-apply, or old-card backfill.
+20. `ONTOLOGY_PROFILE_REFACTOR/25_PROPOSAL_EVENT_AUDIT_STORAGE_DECISION.md` - locked decision + implementation: append-only proposal event audit storage for Apply / Reject / Postpone / Ask why decisions; user-fit learning remains a future projection.
+21. `ONTOLOGY_PROFILE_REFACTOR/MODEL_REVIEW_2026-05-13_PROFILE_PROPOSAL_REVIEW_UI.md` - model-review report for the minimal proposal review UI, accepted fixes, rejected false positives, and reviewer quality notes.
+22. `ONTOLOGY_PROFILE_REFACTOR/05_ANTI_REGRESSION_RULES.md` - hard constraints and compatibility boundaries.
+23. `ONTOLOGY_PROFILE_REFACTOR/03_CATEGORIZATION_AND_ONTOLOGY_CHECKER.md` - next product direction: correction flow and ontology checker.
+24. `ONTOLOGY_PROFILE_REFACTOR/04_REFACTOR_WITHOUT_BREAKING_APP.md` - staged implementation plan and persistence/correction ideas.
+25. `ONTOLOGY_PROFILE_REFACTOR/02_DYNAMIC_PROFILE_SCHEMA.md` - proposed future profile/correction/suggestion shapes.
+26. `ONTOLOGY_PROFILE_REFACTOR/06_PROFILE_BRANCHING_AND_MERGE.md` - profile inheritance, branching, overlays, and merge semantics.
+27. `ONTOLOGY_PROFILE_REFACTOR/README.md` - map of this refactor folder.
+28. `ONTOLOGY_PROFILE_REFACTOR/TOMORROW_START.md` - startup prompt and next-slice reminder.
+29. Root docs if persistence or architecture is touched: `ARCHITECTURE.md`, `PERSISTENCE.md`.
 
 ## Current Changed Files
 
@@ -364,26 +375,52 @@ Worker prompts/logs for the HR/KR workflow live under `C:\pi-stuff`, not in this
 
 ## Verification Already Run
 
-Latest verified commands after profile change proposals storage v1:
+Latest verified commands after trust setting storage:
 
 ```powershell
 node node_modules\typescript\bin\tsc -p tsconfig.json --noEmit
-npm.cmd test -- --run src/db/migrations/__tests__/profile-change-proposals-migration.test.ts src/features/ontology/__tests__/profileChangeProposalCodec.test.ts src/features/backup/__tests__/profile-columns.test.ts src/__tests__/stage10-architecture-guards.test.ts
-npm.cmd test -- --run src/db/migrations/__tests__/ontology-correction-evidence-migration.test.ts src/features/ontology/__tests__/ontologyCorrectionEvidenceCodec.test.ts src/features/ontology/__tests__/corrections.test.ts src/features/backup/__tests__/profile-columns.test.ts src/__tests__/stage10-architecture-guards.test.ts
+npm.cmd test -- --run src/features/ontology/__tests__/profileTrustSettingRepo.test.ts src/features/ontology/__tests__/profileTrustSettingCodec.test.ts src/db/migrations/__tests__/profile-trust-settings-migration.test.ts src/features/backup/__tests__/profile-columns.test.ts src/__tests__/stage10-architecture-guards.test.ts
 npm.cmd test -- --run
-npm.cmd test -- --run src/__tests__/stage10-architecture-guards.test.ts
+git diff --check
 ```
 
 Latest result:
 
 ```text
 TypeScript clean
-proposal targeted tests: 121/121 passed across 4 test files
-targeted tests: 133/133 passed across 5 test files
-full suite: 691/691 passed across 70 test files
-stage10 doc/source guards after proposal storage: 53/53 passed
+targeted trust-setting repo/codec/migration/backup/guard tests: 129/129 passed across 5 test files
+full suite: 723/723 passed across 76 test files
 git diff --check clean with CRLF warnings only
 ```
+
+Latest docs-only verification after doc 24:
+
+```powershell
+npm.cmd test -- --run src/__tests__/stage10-architecture-guards.test.ts
+git diff --check
+```
+
+Result: stage10 architecture/doc guards 55/55 passed; `git diff --check` clean with CRLF warnings only.
+
+Latest proposal review UI verification:
+
+```powershell
+node node_modules\typescript\bin\tsc -p tsconfig.json --noEmit
+npm.cmd test -- --run src/features/ontology/__tests__/profileChangeProposalReviewService.test.ts src/features/ontology/__tests__/profileProposalReviewPresentation.test.ts src/features/ontology/__tests__/branchLocalProposalApplyService.test.ts src/features/ontology/__tests__/branchLocalProposalApply.test.ts src/features/ontology/__tests__/profileChangeProposalCodec.test.ts src/features/ontology/__tests__/profileBranches.test.ts src/__tests__/stage10-architecture-guards.test.ts
+npm.cmd test -- --run
+git diff --check
+```
+
+Result: TypeScript clean; targeted review/apply/proposal/branch/guard tests 101/101 passed across 7 files; full suite 749/749 passed across 80 files; `git diff --check` clean with CRLF warnings only.
+
+Latest proposal event audit storage verification:
+
+```powershell
+node node_modules\typescript\bin\tsc -p tsconfig.json --noEmit
+npm.cmd test -- --run src/db/migrations/__tests__/profile-proposal-events-migration.test.ts src/features/ontology/__tests__/profileProposalEventCodec.test.ts src/features/ontology/__tests__/branchLocalProposalApplyService.test.ts src/features/ontology/__tests__/profileChangeProposalReviewService.test.ts src/features/backup/__tests__/profile-columns.test.ts src/__tests__/stage10-architecture-guards.test.ts
+```
+
+Result: TypeScript clean; targeted proposal-event/apply/review/backup/guard tests 145/145 passed across 6 files; full suite 764/764 passed across 82 files; `git diff --check` clean with CRLF warnings only.
 
 ## Important Compatibility Boundaries
 
@@ -403,24 +440,22 @@ The label-profile cleanup is complete. Correction evidence domain groundwork and
 
 The runtime profile coordinator decision is now locked (doc 11). The brain mixer is an explicit separate layer above runtime services. Services receive composed `DomainProfile`, do not know branch groups, do not call activation input resolvers, and do not read hidden global active-profile state. Service-owned mixing, UI-screen-owned mixing, hidden global `getRuntimeProfile()` / active-profile store, and persistence-owned composed profile were all explicitly rejected.
 
-The coordinator helper module is now implemented and tested. The correction evidence persistence decision is locked and v1 storage is implemented (doc 12). The branch/overlay persistence decision is now locked (doc 13) and branch DB persistence is implemented. The profile selection and branch resolution decision is now locked (doc 14) and project-scoped selection DB persistence is implemented. The source-based ProfileRegistry v1 decision is locked and implemented for static/in-memory sources only (doc 15). The runtime activation wiring decision is locked (doc 16) and `runtimeProfileActivation.ts` is implemented/tested. The base profile persistence / user-created cores decision is locked and v1 `profile_definitions` storage is implemented (doc 17). The adaptive suggestion policy is locked (doc 18): suggestions stay separate from evidence, default mode is conservative suggest-first, personal layer is `branchKind: 'personal'`, relationship changes follow trust/risk policy, and risk overrides trust. The patch/merge proposal storage decision is locked and v1 storage is implemented (doc 19): patch suggestions and merge proposals share `profile_change_proposals`, store a `ProfilePatch`, and do not apply themselves. The Conceptualize preview/correction-surface decision is locked (doc 20): first correction surface is the Conceptualize preview before final save, and every correction stores mistake-understanding evidence. The checker/proposal/context/apply decision is locked (doc 21): checker output is explanation/evidence/proposal, proposal review includes freshness/revalidation, context assembly is a first-class layer, accepted proposals compile to typed Kortex operations, normal apply is atomic, bulk backfills are chunked, and historical undo is a reversal proposal. The domain-only `ProfileBranch`, `ProfileSelection`, `ProfileRegistry`, static/in-memory `ProfileBranchStore`, persistent profile definitions, correction evidence storage, proposal storage, and interface-based runtime activation helper seams are implemented and tested. The remaining implementation decisions are:
+The coordinator helper module is now implemented and tested. The correction evidence persistence decision is locked and v1 storage is implemented (doc 12). The branch/overlay persistence decision is now locked (doc 13) and branch DB persistence is implemented. The profile selection and branch resolution decision is now locked (doc 14) and project-scoped selection DB persistence is implemented. The source-based ProfileRegistry v1 decision is locked and implemented for static/in-memory sources only (doc 15). The runtime activation wiring decision is locked (doc 16) and `runtimeProfileActivation.ts` is implemented/tested. The base profile persistence / user-created cores decision is locked and v1 `profile_definitions` storage is implemented (doc 17). The adaptive suggestion policy is locked (doc 18): suggestions stay separate from evidence, default mode is conservative suggest-first, personal layer is `branchKind: 'personal'`, relationship changes follow trust/risk policy, and risk overrides trust. The patch/merge proposal storage decision is locked and v1 storage is implemented (doc 19): patch suggestions and merge proposals share `profile_change_proposals`, store a `ProfilePatch`, and do not apply themselves. The Conceptualize preview/correction-surface decision is locked (doc 20): first correction surface is the Conceptualize preview before final save, and every correction stores mistake-understanding evidence. The checker/proposal/context/apply decision is locked (doc 21): checker output is explanation/evidence/proposal, proposal review includes freshness/revalidation, context assembly is a first-class layer, accepted proposals compile to typed Kortex operations, normal apply is atomic, bulk backfills are chunked, and historical undo is a reversal proposal. The Conceptualize first implementation scope is locked and implemented (doc 22): existing type corrections save immediately with evidence, while new subtype creation creates guarded pending profile-change proposals instead of silent base/core or branch mutation. Unknown extracted type ids normalize to the active profile default for saving, but correction evidence can preserve the invalid raw id as `rawProposedTypeNodeId`. The trust setting storage decision is locked and v1 `profile_trust_settings` storage is implemented (doc 23): trust policy is separate from evidence/proposals and remains suggest-first by default. The branch-local proposal review/apply decision is locked and helper/service/minimal UI slices are implemented (doc 24): first apply is explicit, branch-local, revalidated, atomic, and limited to Apply / Reject / Postpone / Ask why. The proposal event audit storage decision is locked and implemented (doc 25): Apply/Reject/Postpone append `profile_proposal_events` inside the same guarded transactions as proposal/branch state changes. The domain-only `ProfileBranch`, `ProfileSelection`, `ProfileRegistry`, static/in-memory `ProfileBranchStore`, persistent profile definitions, correction evidence storage, proposal storage, trust setting storage, branch-local apply helper/service, minimal proposal review UI, proposal event audit storage, runtime activation helper seams, and first Conceptualize correction loop are implemented and tested. The remaining implementation decisions are:
 
 ```text
-1. Conceptualize first implementation scope - existing-tag correction only, or existing-tag correction plus branch-local new tag/subtag creation.
-2. Trust setting storage - where conservative/suggest-first/adaptive settings and user-fit learning live.
-3. Context assembly/event/apply implementation sequencing - which typed operation and context-pack shape ships first.
-4. Base profile versioning - how accepted operations safely target base profiles.
-5. Agent/subagent execution ontology brief.
-6. Self-building-app framework brief.
+1. User-fit projection over proposal events.
+2. Context assembly/event/apply implementation sequencing - which typed operation and context-pack shape ships first.
+3. Base profile versioning - how accepted operations safely target base profiles.
+4. Agent/subagent execution ontology brief.
+5. Self-building-app framework brief.
 ```
 
 Good next work should stay behind a human decision gate. Likely candidates:
 
 ```text
-1. Conceptualize first implementation scope decision.
-2. Trust setting storage decision.
-3. Context assembly/event/apply implementation sequencing.
-4. First typed operation/apply slice.
+1. User-fit projection over proposal events.
+2. Context assembly for checker/proposal review.
+3. Base profile versioning guard for future base/core proposals.
 ```
 
 The user also wants Kortex profile branches: a general coding child should be extendable into project, job, learning, or personal branches that can stay separate or later merge selected changes back. "Core" means immutable within a profile lineage; a fork/user can create a different ground-zero base profile later. Read `06_PROFILE_BRANCHING_AND_MERGE.md` before proposing correction/checker storage or UI.

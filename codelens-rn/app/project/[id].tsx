@@ -381,6 +381,7 @@ export default function ProjectViewerScreen() {
     setBookmarkTarget(null);
     openSaveFromSource({
       selectedText,
+      projectId,
       snippetLang: inferLanguageFromPath(currentFile.path),
       snippetSourcePath: currentFile.path,
       snippetStartLine: bookmark.startLine,
@@ -396,6 +397,7 @@ export default function ProjectViewerScreen() {
       closeMiniChat();
       openSaveFromSource({
         selectedText: context.lineRef.text,
+        projectId,
         snippetLang: context.lineRef.language,
         snippetSourcePath: context.lineRef.filePath,
         snippetStartLine: context.lineRef.startLine,

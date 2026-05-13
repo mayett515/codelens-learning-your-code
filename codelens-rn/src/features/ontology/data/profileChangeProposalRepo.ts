@@ -50,6 +50,48 @@ export async function upsertProfileChangeProposal(
     });
 }
 
+export async function updateProfileChangeProposalIfPending(
+  proposal: ProfileChangeProposal,
+  expectedUpdatedAt: number,
+  executor: DbOrTx = db,
+): Promise<boolean> {
+  const row = profileChangeProposalToRow(proposal);
+  const result = await executor
+    .update(profileChangeProposals)
+    .set({
+      proposalKind: row.proposalKind,
+      sourceKind: row.sourceKind,
+      baseProfileId: row.baseProfileId,
+      sourceBranchId: row.sourceBranchId,
+      targetKind: row.targetKind,
+      targetProfileId: row.targetProfileId,
+      targetBranchId: row.targetBranchId,
+      evidenceIdsJson: row.evidenceIdsJson,
+      patchJson: row.patchJson,
+      title: row.title,
+      summary: row.summary,
+      reason: row.reason,
+      riskScore: row.riskScore,
+      semanticConfidence: row.semanticConfidence,
+      userFitConfidence: row.userFitConfidence,
+      status: row.status,
+      supersededByProposalId: row.supersededByProposalId,
+      updatedAt: row.updatedAt,
+      reviewedAt: row.reviewedAt,
+      appliedAt: row.appliedAt,
+    })
+    .where(and(
+      eq(profileChangeProposals.id, row.id),
+      eq(profileChangeProposals.status, 'pending'),
+      eq(profileChangeProposals.updatedAt, expectedUpdatedAt),
+    ));
+
+  const affectedRows = getAffectedRows(result);
+  // Conditional writes must fail closed if a future driver stops exposing
+  // affected-row counts; guessing success would mask write conflicts.
+  return affectedRows !== undefined ? affectedRows > 0 : false;
+}
+
 export async function getProfileChangeProposalById(
   id: string,
   executor: DbOrTx = db,
@@ -105,4 +147,12 @@ export async function deleteProfileChangeProposal(
   executor: DbOrTx = db,
 ): Promise<void> {
   await executor.delete(profileChangeProposals).where(eq(profileChangeProposals.id, id));
+}
+
+function getAffectedRows(result: unknown): number | undefined {
+  if (!result || typeof result !== 'object') return undefined;
+  const record = result as Record<string, unknown>;
+  if (typeof record['rowsAffected'] === 'number') return record['rowsAffected'];
+  if (typeof record['changes'] === 'number') return record['changes'];
+  return undefined;
 }

@@ -6,6 +6,12 @@ import type { SaveCandidateSource } from '../services/prepareSaveCandidates';
 
 type Phase = 'idle' | 'extracting' | 'reviewing' | 'error';
 
+export interface CandidateCorrectionDraft {
+  correctedTypeNodeId: string | null;
+  reason: string;
+  newTypeLabel: string;
+}
+
 interface CandidateSaveStatus {
   state: CandidateSaveState;
   captureId: LearningCaptureId | null;
@@ -20,6 +26,7 @@ interface SaveLearningStore {
   source: SaveCandidateSource | null;
   phase: Phase;
   candidates: SaveModalCandidateData[];
+  correctionDrafts: Record<string, CandidateCorrectionDraft>;
   saveStates: Record<string, CandidateSaveStatus>;
   inspectingCandidateId: string | null;
   error: string | null;
@@ -32,6 +39,10 @@ interface SaveLearningStore {
   setCandidateSaveState: (
     candidateId: string,
     status: Partial<CandidateSaveStatus>,
+  ) => void;
+  setCandidateCorrection: (
+    candidateId: string,
+    patch: Partial<CandidateCorrectionDraft>,
   ) => void;
   inspectCandidate: (candidateId: string | null) => void;
   editCandidateTitle: (candidateId: string, title: string) => void;
@@ -48,6 +59,7 @@ function freshState() {
     source: null as SaveCandidateSource | null,
     phase: 'idle' as Phase,
     candidates: [] as SaveModalCandidateData[],
+    correctionDrafts: {} as Record<string, CandidateCorrectionDraft>,
     saveStates: {} as Record<string, CandidateSaveStatus>,
     inspectingCandidateId: null as string | null,
     error: null as string | null,
@@ -74,6 +86,7 @@ export const useSaveLearningStore = create<SaveLearningStore>((set) => ({
       },
       phase: 'extracting',
       candidates: [],
+      correctionDrafts: {},
       saveStates: {},
       inspectingCandidateId: null,
       error: null,
@@ -88,6 +101,7 @@ export const useSaveLearningStore = create<SaveLearningStore>((set) => ({
       source,
       phase: 'extracting',
       candidates: [],
+      correctionDrafts: {},
       saveStates: {},
       inspectingCandidateId: null,
       error: null,
@@ -100,6 +114,16 @@ export const useSaveLearningStore = create<SaveLearningStore>((set) => ({
   setCandidates: (candidates) =>
     set({
       candidates,
+      correctionDrafts: Object.fromEntries(
+        candidates.map((candidate, index) => [
+          candidateId(index),
+          {
+            correctedTypeNodeId: candidate.conceptHint?.proposedConceptType ?? null,
+            reason: '',
+            newTypeLabel: '',
+          },
+        ]),
+      ),
       saveStates: Object.fromEntries(
         candidates.map((_, index) => [
           candidateId(index),
@@ -118,6 +142,19 @@ export const useSaveLearningStore = create<SaveLearningStore>((set) => ({
             ? status.captureId ?? null
             : state.saveStates[id]?.captureId ?? null,
           error: 'error' in status ? status.error ?? null : state.saveStates[id]?.error ?? null,
+        },
+      },
+    })),
+
+  setCandidateCorrection: (id, patch) =>
+    set((state) => ({
+      correctionDrafts: {
+        ...state.correctionDrafts,
+        [id]: {
+          correctedTypeNodeId: state.correctionDrafts[id]?.correctedTypeNodeId ?? null,
+          reason: state.correctionDrafts[id]?.reason ?? '',
+          newTypeLabel: state.correctionDrafts[id]?.newTypeLabel ?? '',
+          ...patch,
         },
       },
     })),

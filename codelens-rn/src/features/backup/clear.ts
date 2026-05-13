@@ -34,7 +34,9 @@ export async function clearAllData(options?: ClearOptions): Promise<void> {
     await tx.delete(schema.profileDefinitions);
     await tx.delete(schema.profileBranches);
     await tx.delete(schema.ontologyCorrectionEvidence);
+    await tx.delete(schema.profileProposalEvents);
     await tx.delete(schema.profileChangeProposals);
+    await tx.delete(schema.profileTrustSettings);
     await tx.delete(schema.files);
     await tx.delete(schema.projects);
   });

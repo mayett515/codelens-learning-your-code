@@ -94,8 +94,13 @@ describe('parseClassificationJsonToConceptHint', () => {
     expect(parseClassificationJsonToConceptHint({ ...classification, profileId: 'photography' })).toBeNull();
   });
 
-  it('returns null when proposedTypeNodeId is not a valid concept type', () => {
-    const cj = { ...buildCaptureClassificationJson(makeHint()), proposedTypeNodeId: 'not_a_real_type' };
+  it('accepts non-empty profile-defined type node ids', () => {
+    const cj = { ...buildCaptureClassificationJson(makeHint()), proposedTypeNodeId: 'react_hook' };
+    expect(parseClassificationJsonToConceptHint(cj)?.proposedConceptType).toBe('react_hook');
+  });
+
+  it('returns null when proposedTypeNodeId is empty', () => {
+    const cj = { ...buildCaptureClassificationJson(makeHint()), proposedTypeNodeId: '' };
     expect(parseClassificationJsonToConceptHint(cj)).toBeNull();
   });
 

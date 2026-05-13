@@ -43,7 +43,7 @@ describe('Stage 3 card component guards', () => {
 
     expect(modal).toMatch(/CandidateCaptureCard/);
     expect(modal).toMatch(/prepareSaveCandidates/);
-    expect(modal).toMatch(/saveCapture/);
+    expect(modal).toMatch(/saveConceptualizedCapture/);
     expect(modal).not.toMatch(/commitLearningSession|extractConcepts|findMergeCandidates/);
     expect(modal).not.toMatch(/Save All/);
   });

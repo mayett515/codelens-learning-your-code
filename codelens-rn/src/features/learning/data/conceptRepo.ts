@@ -3,11 +3,17 @@ import { db, type DbOrTx } from '../../../db/client';
 import { concepts } from './schema';
 import { conceptRowToDomain, normalizeConceptKey, validateConceptForWrite } from '../codecs/concept';
 import { sortConceptsForHub } from './hubOrdering';
-import type { LearningConcept } from '../types/learning';
+import { CONCEPT_TYPES, type LearningConcept } from '../types/learning';
 import { isConceptId, type ConceptId } from '../types/ids';
 
 function toIso(ms: number): string {
   return new Date(ms).toISOString();
+}
+
+function toLegacyConceptType(typeNodeId: string): string {
+  return CONCEPT_TYPES.includes(typeNodeId as (typeof CONCEPT_TYPES)[number])
+    ? typeNodeId
+    : 'mental_model';
 }
 
 export async function insertLearningConcept(
@@ -27,7 +33,7 @@ export async function insertLearningConcept(
     summary: validConcept.canonicalSummary ?? '',
     normalizedKey: validConcept.normalizedKey,
     canonicalSummary: validConcept.canonicalSummary,
-    conceptType: validConcept.conceptType,
+    conceptType: toLegacyConceptType(validConcept.conceptType),
     coreConcept: validConcept.coreConcept,
     architecturalPattern: validConcept.architecturalPattern,
     programmingParadigm: validConcept.programmingParadigm,

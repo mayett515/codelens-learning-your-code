@@ -15,6 +15,9 @@ import { migration013 } from './013-profile-selections';
 import { migration014 } from './014-profile-definitions';
 import { migration015 } from './015-ontology-correction-evidence';
 import { migration016 } from './016-profile-change-proposals';
+import { migration017 } from './017-ontology-correction-raw-proposed-type';
+import { migration018 } from './018-profile-trust-settings';
+import { migration019 } from './019-profile-proposal-events';
 
 export interface Migration {
   version: number;
@@ -47,6 +50,9 @@ const MIGRATIONS: Migration[] = [
   migration014,
   migration015,
   migration016,
+  migration017,
+  migration018,
+  migration019,
 ];
 
 /*

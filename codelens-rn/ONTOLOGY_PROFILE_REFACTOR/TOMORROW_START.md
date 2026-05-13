@@ -6,7 +6,7 @@ Use this when starting the next orchestrator session.
 
 ```text
 Read ONTOLOGY_PROFILE_REFACTOR/NEXT_LLM_CONTEXT.md first.
-Then read ONTOLOGY_PROFILE_REFACTOR/07_KORTEX_CORE_AND_CHILD_CORES.md, ONTOLOGY_PROFILE_REFACTOR/08_KORTEX_LANGUAGE_LAYER_AND_ADAPTERS.md, ONTOLOGY_PROFILE_REFACTOR/09_KORTEX_OVER_EXISTING_SYSTEMS.md, ONTOLOGY_PROFILE_REFACTOR/10_ACTIVE_PROFILE_RUNTIME_SOURCE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/11_RUNTIME_PROFILE_COORDINATOR_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/13_BRANCH_OVERLAY_PERSISTENCE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/14_PROFILE_SELECTION_AND_BRANCH_RESOLUTION_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/15_PROFILE_REGISTRY_AND_PROFILE_SOURCES_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/16_RUNTIME_ACTIVATION_WIRING_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/17_BASE_PROFILE_PERSISTENCE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/18_ADAPTIVE_SUGGESTION_POLICY_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/19_PATCH_MERGE_PROPOSAL_STORAGE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/20_CONCEPTUALIZE_PREVIEW_AND_CORRECTION_SURFACE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/21_CHECKER_PROPOSAL_REVIEW_CONTEXT_AND_APPLY_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/06_PROFILE_BRANCHING_AND_MERGE.md, and ONTOLOGY_PROFILE_REFACTOR/implementation_handoff.md.
+Then read ONTOLOGY_PROFILE_REFACTOR/07_KORTEX_CORE_AND_CHILD_CORES.md, ONTOLOGY_PROFILE_REFACTOR/08_KORTEX_LANGUAGE_LAYER_AND_ADAPTERS.md, ONTOLOGY_PROFILE_REFACTOR/09_KORTEX_OVER_EXISTING_SYSTEMS.md, ONTOLOGY_PROFILE_REFACTOR/10_ACTIVE_PROFILE_RUNTIME_SOURCE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/11_RUNTIME_PROFILE_COORDINATOR_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/13_BRANCH_OVERLAY_PERSISTENCE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/14_PROFILE_SELECTION_AND_BRANCH_RESOLUTION_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/15_PROFILE_REGISTRY_AND_PROFILE_SOURCES_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/16_RUNTIME_ACTIVATION_WIRING_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/17_BASE_PROFILE_PERSISTENCE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/18_ADAPTIVE_SUGGESTION_POLICY_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/19_PATCH_MERGE_PROPOSAL_STORAGE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/20_CONCEPTUALIZE_PREVIEW_AND_CORRECTION_SURFACE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/21_CHECKER_PROPOSAL_REVIEW_CONTEXT_AND_APPLY_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/22_CONCEPTUALIZE_FIRST_IMPLEMENTATION_SCOPE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/23_TRUST_SETTING_STORAGE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/24_BRANCH_LOCAL_PROPOSAL_APPLY_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/25_PROPOSAL_EVENT_AUDIT_STORAGE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/06_PROFILE_BRANCHING_AND_MERGE.md, and ONTOLOGY_PROFILE_REFACTOR/implementation_handoff.md.
 
 We are continuing as orchestrator.
 Do not implement until we confirm the next slice.
@@ -163,33 +163,61 @@ The checker/proposal/context/apply decision is locked in doc 21:
   - historical undo is an impact-reviewed reversal proposal, not silent time travel
   - no source code, UI, checker runtime, context builder, event store, apply service, undo service, graph chat, agent runtime, app-builder runtime, or DSL runtime was added
 
+The Conceptualize first implementation scope is locked and implemented in doc 22:
+  - existing type corrections save immediately and write correction evidence
+  - explicit new subtype labels save the corrected type id and create pending profile-change proposals
+  - extractor-invented unknown type ids normalize to the active profile default for saving, but correction evidence can preserve the invalid raw id as `rawProposedTypeNodeId`
+  - no silent branch overlay mutation, base/core mutation, checker runtime, review UI, apply service, trust storage, backfill, agent runtime, app-builder runtime, or DSL runtime was added
+
+The trust setting storage decision is locked and storage-only v1 is implemented in doc 23:
+  - trust settings are user policy, separate from correction evidence and proposals
+  - `profile_trust_settings` stores one setting per base profile or profile branch target
+  - default mode is `suggest_first`
+  - base-profile targets cannot enable auto-apply
+  - `manual_only` and `suggest_first` cannot enable auto-apply
+  - branch-local future auto-apply is limited to classification, ontology-node, and relationship proposals with strict risk caps
+  - model-review hardening preserves existing `id` and `createdAt` on trust-setting upserts by `scopeKey`
+  - user-fit learning remains future event/audit projection work, not a field on the setting row
+  - no UI, checker runtime, apply service, event/audit store, user-fit projection store, or auto-apply engine was added
+
+The branch-local proposal review/apply decision is locked in doc 24:
+  - first proposal apply is explicit and branch-local
+  - first review actions are Apply, Reject, Postpone, and Ask why / why not
+  - apply revalidates the pending branch-target proposal before mutation
+  - apply compiles to typed operations, mutates only the target branch overlay, and marks the proposal accepted/applied atomically
+  - confidence means "is Kortex probably right?"
+  - risk means "how much could this break if wrong?"
+  - user-facing risk copy must describe blast radius, not just show a score
+  - edit-then-apply, auto-apply, base/core mutation, upward merge, sibling propagation, old-card backfill, historical undo, and external write-back are future seams
+  - first pure helpers are implemented in `branchLocalProposalApply.ts`
+  - helpers compile pending branch-target proposals into typed `apply_profile_patch_to_branch_overlay` operations
+  - helpers merge `ProfilePatch` into copied branch overlay values and return accepted proposal values
+  - the minimal review UI is implemented as a Learning Hub entry plus pending-proposal queue/detail modal
+  - Apply / Reject / Postpone are wired through hooks; Ask why / why not is explanation-only
+  - model-review hardening added explicit error tone, missing-base-profile mapping, non-branch Apply disablement, branch-key invalidation, and stronger presentation tests
+  - no checker runtime, event/audit store, auto-apply engine, base-profile versioning, agent runtime, app-builder runtime, or DSL runtime was added
+
 The remaining open decisions are:
-  1. Conceptualize first implementation scope - existing-tag correction only, or existing-tag correction plus branch-local new tag/subtag creation.
-  2. Trust setting storage - where conservative/suggest-first/adaptive settings and user-fit learning live.
-  3. Context assembly/event/apply implementation sequencing - which context-pack and typed-operation slice ships first.
-  4. Base profile versioning - how accepted operations safely target base profiles.
-  5. Agent/subagent execution ontology brief.
-  6. Self-building-app framework brief.
+  1. User-fit projection over proposal events.
+  2. Context assembly/event/apply implementation sequencing - which context-pack and typed-operation slice ships first.
+  3. Base profile versioning - how accepted operations safely target base profiles.
+  4. Agent/subagent execution ontology brief.
+  5. Self-building-app framework brief.
 
 Recommended next implementation slice, if the human wants code next:
 
 ```text
-Conceptualize first implementation scope decision:
-  - first correction surface is already locked as Conceptualize preview before final save
-  - decide whether it corrects only to existing tags/subtags or also creates branch-local new tags/subtags
-  - decide how stored correction evidence becomes stored proposals
-  - decide which targets are in v1: personal branch, project branch, learning branch, or base profile
-  - decide what accept/edit/reject/postpone can do in v1
-  - no invisible auto-apply
-```
+User-fit projection or context assembly slice:
+  - proposal review/apply events are now stored as append-only facts
+  - next user-fit work should derive signals from those events instead of mutating proposal/trust rows
+  - next context work should assemble branch/profile-scoped evidence/proposal context packs without applying changes
+  - keep checker runtime, auto-apply, historical undo execution, and base/core mutation out of this slice
 ```
 
 Strict boundaries:
 
-- no UI
-- no export UI
 - no checker execution
-- no profile patch storage
+- no new profile patch storage shape
 - no automatic ontology or profile mutation
 
 ## Product Direction To Preserve
@@ -339,7 +367,11 @@ The ProfileRegistry/ProfileSource v1 static source helper is implemented (doc 15
 
 The ProfileBranchStore v1 static helper is implemented. `ProfileBranchStore<TItemTypeNodeId>` lives in ontology types, and `createStaticProfileBranchStore({ branches })` lives in `profileBranchStore.ts`. This is in-memory only: it snapshots the branch array at construction, returns branch objects by reference, preserves requested id order, skips missing ids, preserves duplicate requested ids, and lists branches by parent profile in constructor order. No DB, migration, backup, persistent adapter, UI selector, global active selection, automatic merge, MCP/adapters, agent runtime, app-builder runtime, or DSL runtime was added.
 
-Latest source/test verification after the proposal persistence slice: TypeScript clean; targeted proposal migration/codec/backup/guard tests 121/121 passed across 4 files; full suite 691/691 passed across 70 files; `git diff --check` clean with CRLF warnings only.
+Latest source/test verification after trust setting storage: TypeScript clean; targeted trust-setting repo/codec/migration/backup/guard tests 129/129 passed across 5 files; full suite 723/723 passed across 76 files; `git diff --check` clean with CRLF warnings only.
+
+Latest verification after minimal proposal review UI: TypeScript clean; targeted review/apply/proposal/branch/guard tests 101/101 passed across 7 files; full suite 749/749 passed across 80 files; `git diff --check` clean with CRLF warnings only.
+
+Latest docs-only verification after doc 24: `stage10-architecture-guards.test.ts` 55/55 passed; `git diff --check` clean with CRLF warnings only.
 
 Latest doc/source guard verification after proposal storage: `stage10-architecture-guards.test.ts` 53/53 passed.
 
@@ -355,11 +387,18 @@ The Conceptualize preview/correction-surface decision is locked (doc 20). The fi
 
 The checker/proposal/context/apply decision is locked (doc 21). Explanation, evidence, and proposal are separate outputs. Proposal review includes freshness/revalidation. Context assembly is a first-class layer. Accepted proposals compile to typed Kortex operations, not raw patch writes. Normal apply is atomic, large backfills are chunked, and historical undo is an impact-reviewed reversal proposal.
 
+The Conceptualize first implementation scope is locked and implemented (doc 22). Existing type corrections save immediately with evidence. Explicit new subtype labels save the corrected type id and create guarded pending profile-change proposals. Unknown model-generated type ids normalize to the profile default for saving, with the raw invalid id preserved on correction evidence when a correction is written. No silent base/core or branch overlay mutation was added.
+
+The trust setting storage decision is locked and storage-only v1 is implemented (doc 23). Trust settings are separate user policy, not evidence and not proposals. `profile_trust_settings` stores base-profile or branch-target policy with `suggest_first` as default and strictly bounded future auto-apply fields. Model-review hardening preserves existing `id` and `createdAt` on trust-setting upserts by `scopeKey`. User-fit learning remains future event/audit projection work.
+
+The branch-local proposal review/apply decision is locked (doc 24) and the helper/service plus minimal UI slices are implemented. First apply is explicit, branch-local, revalidated, and atomic. First review actions are Apply, Reject, Postpone, and Ask why / why not. `branchLocalProposalApply.ts` compiles pending branch-target proposals into typed operations, merges `ProfilePatch` into copied branch overlay values, and returns accepted proposal values. The service commits branch/proposal updates atomically with conditional writes. The UI exposes a Learning Hub entry and queue/detail modal for pending proposals without edit support. Model-review hardening added explicit error tone, missing-base-profile mapping, non-branch Apply disablement, branch-key invalidation, and stronger presentation tests. It does not mutate base/core profiles, sibling branches, old cards, checker output, or external systems. Risk and confidence are distinct: confidence is likelihood of correctness; risk is blast radius if wrong.
+
+The proposal event audit storage decision is locked and implemented (doc 25). `profile_proposal_events` stores append-only decision facts. Apply / Reject / Postpone insert audit events inside the same guarded transactions as the branch/proposal state changes. If a conditional write conflicts, no event is written. User-fit learning remains a future projection over those events.
+
 Remaining open decisions:
 
-1. Conceptualize first implementation scope - existing-tag correction only, or existing-tag correction plus branch-local new tag/subtag creation.
-2. Trust setting storage - where conservative/suggest-first/adaptive settings and user-fit learning live.
-3. Context assembly/event/apply implementation sequencing - which context-pack and typed-operation slice ships first.
-4. Base profile versioning - how accepted operations safely target base profiles.
-5. Agent/subagent execution ontology brief.
-6. Self-building-app framework brief.
+1. User-fit projection over proposal events.
+2. Context assembly/event/apply implementation sequencing - which context-pack and typed-operation slice ships first.
+3. Base profile versioning - how accepted operations safely target base profiles.
+4. Agent/subagent execution ontology brief.
+5. Self-building-app framework brief.

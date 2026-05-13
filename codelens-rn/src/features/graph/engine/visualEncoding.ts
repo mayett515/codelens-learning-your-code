@@ -2,7 +2,8 @@ import { getActiveDomainProfile } from '@/src/features/ontology';
 import type { ConceptType } from '@/src/features/learning';
 import type { EdgeKind, EdgeVisual, GraphMode, GraphNode, NodeVisual } from '../types';
 
-export const CONCEPT_TYPE_COLORS = getActiveDomainProfile().graph.nodeColors;
+export const CONCEPT_TYPE_COLORS: Readonly<Record<string, string>> =
+  getActiveDomainProfile().graph.nodeColors;
 
 export const STRUCTURE_RADIUS = 14;
 export const STRENGTH_RADIUS_MIN = 8;

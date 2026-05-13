@@ -233,6 +233,7 @@ export const ONTOLOGY_CORRECTION_EVIDENCE_COLUMN_MAP = {
   'field': 'field',
   'previous_type_node_id': 'previousTypeNodeId',
   'corrected_type_node_id': 'correctedTypeNodeId',
+  'raw_proposed_type_node_id': 'rawProposedTypeNodeId',
   'reason': 'reason',
   'source': 'source',
   'created_at': 'createdAt',
@@ -270,6 +271,47 @@ export const PROFILE_CHANGE_PROPOSALS_JSON_COLUMNS = new Set<string>([
   'patch_json',
 ]);
 
+export const PROFILE_PROPOSAL_EVENTS_COLUMN_MAP = {
+  'id': 'id',
+  'proposal_id': 'proposalId',
+  'action': 'action',
+  'actor_kind': 'actorKind',
+  'actor_id': 'actorId',
+  'base_profile_id': 'baseProfileId',
+  'proposal_kind': 'proposalKind',
+  'target_kind': 'targetKind',
+  'target_profile_id': 'targetProfileId',
+  'target_branch_id': 'targetBranchId',
+  'status_before': 'statusBefore',
+  'status_after': 'statusAfter',
+  'proposal_updated_at_before': 'proposalUpdatedAtBefore',
+  'proposal_updated_at_after': 'proposalUpdatedAtAfter',
+  'branch_updated_at_before': 'branchUpdatedAtBefore',
+  'branch_updated_at_after': 'branchUpdatedAtAfter',
+  'reason': 'reason',
+  'details_json': 'detailsJson',
+  'created_at': 'createdAt',
+} as const satisfies Record<string, string>;
+export const PROFILE_PROPOSAL_EVENTS_JSON_COLUMNS = new Set<string>(['details_json']);
+
+export const PROFILE_TRUST_SETTINGS_COLUMN_MAP = {
+  'id': 'id',
+  'scope_key': 'scopeKey',
+  'base_profile_id': 'baseProfileId',
+  'target_kind': 'targetKind',
+  'target_profile_id': 'targetProfileId',
+  'target_branch_id': 'targetBranchId',
+  'trust_mode': 'trustMode',
+  'auto_apply_enabled': 'autoApplyEnabled',
+  'max_auto_apply_risk_score': 'maxAutoApplyRiskScore',
+  'auto_apply_proposal_kinds_json': 'autoApplyProposalKindsJson',
+  'created_at': 'createdAt',
+  'updated_at': 'updatedAt',
+} as const satisfies Record<string, string>;
+export const PROFILE_TRUST_SETTINGS_JSON_COLUMNS = new Set<string>([
+  'auto_apply_proposal_kinds_json',
+]);
+
 export const TABLE_COLUMN_MAPS: Record<string, Record<string, string>> = {
   'projects': PROJECTS_COLUMN_MAP,
   'files': FILES_COLUMN_MAP,
@@ -284,6 +326,8 @@ export const TABLE_COLUMN_MAPS: Record<string, Record<string, string>> = {
   'profile_definitions': PROFILE_DEFINITIONS_COLUMN_MAP,
   'ontology_correction_evidence': ONTOLOGY_CORRECTION_EVIDENCE_COLUMN_MAP,
   'profile_change_proposals': PROFILE_CHANGE_PROPOSALS_COLUMN_MAP,
+  'profile_proposal_events': PROFILE_PROPOSAL_EVENTS_COLUMN_MAP,
+  'profile_trust_settings': PROFILE_TRUST_SETTINGS_COLUMN_MAP,
 };
 
 export const TABLE_JSON_COLUMNS: Record<string, ReadonlySet<string>> = {
@@ -300,6 +344,8 @@ export const TABLE_JSON_COLUMNS: Record<string, ReadonlySet<string>> = {
   'profile_definitions': PROFILE_DEFINITIONS_JSON_COLUMNS,
   'ontology_correction_evidence': ONTOLOGY_CORRECTION_EVIDENCE_JSON_COLUMNS,
   'profile_change_proposals': PROFILE_CHANGE_PROPOSALS_JSON_COLUMNS,
+  'profile_proposal_events': PROFILE_PROPOSAL_EVENTS_JSON_COLUMNS,
+  'profile_trust_settings': PROFILE_TRUST_SETTINGS_JSON_COLUMNS,
 };
 
 type MissingMappedKeys<TMap extends Record<string, string>, TSchema extends Record<string, unknown>> =
@@ -334,3 +380,7 @@ type _CheckOntologyCorrectionEvidenceMissing = AssertNever<MissingMappedKeys<typ
 type _CheckOntologyCorrectionEvidenceExtra = AssertNever<ExtraMappedKeys<typeof ONTOLOGY_CORRECTION_EVIDENCE_COLUMN_MAP, typeof schema.ontologyCorrectionEvidence.$inferSelect>>;
 type _CheckProfileChangeProposalsMissing = AssertNever<MissingMappedKeys<typeof PROFILE_CHANGE_PROPOSALS_COLUMN_MAP, typeof schema.profileChangeProposals.$inferSelect>>;
 type _CheckProfileChangeProposalsExtra = AssertNever<ExtraMappedKeys<typeof PROFILE_CHANGE_PROPOSALS_COLUMN_MAP, typeof schema.profileChangeProposals.$inferSelect>>;
+type _CheckProfileProposalEventsMissing = AssertNever<MissingMappedKeys<typeof PROFILE_PROPOSAL_EVENTS_COLUMN_MAP, typeof schema.profileProposalEvents.$inferSelect>>;
+type _CheckProfileProposalEventsExtra = AssertNever<ExtraMappedKeys<typeof PROFILE_PROPOSAL_EVENTS_COLUMN_MAP, typeof schema.profileProposalEvents.$inferSelect>>;
+type _CheckProfileTrustSettingsMissing = AssertNever<MissingMappedKeys<typeof PROFILE_TRUST_SETTINGS_COLUMN_MAP, typeof schema.profileTrustSettings.$inferSelect>>;
+type _CheckProfileTrustSettingsExtra = AssertNever<ExtraMappedKeys<typeof PROFILE_TRUST_SETTINGS_COLUMN_MAP, typeof schema.profileTrustSettings.$inferSelect>>;

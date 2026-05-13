@@ -27,6 +27,8 @@ import { ReviewSessionScreen } from '../review/ui/ReviewSessionScreen';
 import { ReviewThresholdScreen } from '../review/ui/ReviewThresholdScreen';
 import { useReviewSettings } from '../review/hooks/useReviewSettings';
 import { getActiveDomainProfile } from '../../ontology';
+import { ProfileProposalReviewEntry } from '../../ontology/ui/ProfileProposalReviewEntry';
+import { ProfileProposalReviewScreen } from '../../ontology/ui/ProfileProposalReviewScreen';
 import type { ConceptId, LearningCaptureId } from '../types/ids';
 import type { LearningCapture, LearningConcept } from '../types/learning';
 
@@ -35,6 +37,7 @@ type Detail =
   | { type: 'concept'; id: ConceptId }
   | { type: 'session'; id: string }
   | { type: 'promotion'; fingerprint: string }
+  | { type: 'profileProposals' }
   | { type: 'reviewThreshold' }
   | { type: 'reviewSession'; id: ConceptId }
   | { type: 'health' }
@@ -87,6 +90,7 @@ export function LearningHubScreen() {
           onOpenCapture={(id) => setDetail({ type: 'capture', id })}
         />
         <PromotionSuggestionsSection onOpenReview={(fingerprint) => setDetail({ type: 'promotion', fingerprint })} />
+        <ProfileProposalReviewEntry onOpen={() => setDetail({ type: 'profileProposals' })} />
         <ConceptListSection concepts={concepts} onOpenConcept={(id) => setDetail({ type: 'concept', id })} />
         <SessionCardsSection sessions={sessions} onOpenSession={(id) => setDetail({ type: 'session', id })} />
         <KnowledgeHealthEntry concepts={healthConcepts} onOpen={() => setDetail({ type: 'health' })} />
@@ -154,6 +158,9 @@ export function LearningHubScreen() {
             fingerprint={detail.fingerprint}
             onComplete={(conceptId) => setDetail({ type: 'concept', id: conceptId as ConceptId })}
           />
+        ) : null}
+        {detail?.type === 'profileProposals' ? (
+          <ProfileProposalReviewScreen />
         ) : null}
         {detail?.type === 'health' ? (
           <KnowledgeHealthScreen

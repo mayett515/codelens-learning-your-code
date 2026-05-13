@@ -254,7 +254,7 @@ function mostCommonName(captures: LearningCapture[]): string {
 
 function mostCommonTypeNodeId(captures: LearningCapture[]): ConceptType {
   const profile = getActiveDomainProfile();
-  const typeOrder = [...profile.ontology.itemTypeNodeIds];
+  const typeOrder: string[] = [...profile.ontology.itemTypeNodeIds];
   const defaultType = profile.promotion.defaultTypeNodeId;
   const scored = new Map<ConceptType, number>();
   captures.forEach((capture) => {

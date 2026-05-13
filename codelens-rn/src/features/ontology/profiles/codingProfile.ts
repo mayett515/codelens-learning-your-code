@@ -195,7 +195,7 @@ export const codingProfile = {
     capturePlural: 'Captures',
     itemSingular: 'Concept',
     itemPlural: 'Concepts',
-    saveAction: 'Save Capture',
+    saveAction: 'Conceptualize',
     reviewModeTitle: 'Review Mode',
     strengthLabel: 'Strength',
     bodyFieldLabel: 'What clicked',

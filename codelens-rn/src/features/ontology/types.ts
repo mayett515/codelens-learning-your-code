@@ -179,6 +179,7 @@ export interface OntologyCorrectionEvidence {
   field: OntologyCorrectionField;
   previousTypeNodeId: string | null;
   correctedTypeNodeId: string;
+  rawProposedTypeNodeId?: string | null | undefined;
   reason?: string | null | undefined;
   source: OntologyCorrectionSource;
   createdAt: number;
@@ -349,6 +350,52 @@ export interface ProfileChangeProposal<TItemTypeNodeId extends string = string> 
   updatedAt: number;
   reviewedAt?: number | null | undefined;
   appliedAt?: number | null | undefined;
+}
+
+export type ProfileProposalEventAction =
+  | 'applied'
+  | 'rejected'
+  | 'postponed'
+  | 'asked_why';
+
+export type ProfileProposalEventActorKind = 'user' | 'system' | 'model';
+
+export interface ProfileProposalEvent {
+  id: string;
+  proposalId: string;
+  action: ProfileProposalEventAction;
+  actorKind: ProfileProposalEventActorKind;
+  actorId?: string | null | undefined;
+  baseProfileId: string;
+  proposalKind: ProfileChangeProposalKind;
+  target: ProfileChangeProposalTarget;
+  statusBefore: ProfileChangeProposalStatus;
+  statusAfter: ProfileChangeProposalStatus;
+  proposalUpdatedAtBefore: number;
+  proposalUpdatedAtAfter: number;
+  branchUpdatedAtBefore?: number | null | undefined;
+  branchUpdatedAtAfter?: number | null | undefined;
+  reason?: string | null | undefined;
+  details?: Record<string, unknown> | null | undefined;
+  createdAt: number;
+}
+
+export type ProfileTrustMode =
+  | 'manual_only'
+  | 'suggest_first'
+  | 'trusted_low_risk_auto'
+  | 'adaptive';
+
+export interface ProfileTrustSetting {
+  id: string;
+  baseProfileId: string;
+  target: ProfileChangeProposalTarget;
+  trustMode: ProfileTrustMode;
+  autoApplyEnabled: boolean;
+  maxAutoApplyRiskScore: number;
+  autoApplyProposalKinds: readonly ProfileChangeProposalKind[];
+  createdAt: number;
+  updatedAt: number;
 }
 
 // ---------------------------------------------------------------------------

@@ -127,6 +127,41 @@ describe('Stage 2 prepareSaveCandidates', () => {
     expect(capturedPrompt).not.toContain('project_runtime_node');
   });
 
+  it('falls back to the profile default when the extractor invents an unknown type id', async () => {
+    const candidates = await prepareSaveCandidates(
+      { selectedText: 'some code here' },
+      {
+        preCheck: async () => [],
+        complete: async () =>
+          JSON.stringify({
+            candidates: [
+              {
+                title: 'Test',
+                whatClicked: 'Something clicked',
+                whyItMattered: null,
+                rawSnippet: 'some code here',
+                keywords: ['test'],
+                conceptHint: {
+                  proposedName: 'Test',
+                  proposedNormalizedKey: 'test',
+                  proposedConceptType: 'hallucinated_runtime_kind',
+                  extractionConfidence: 0.5,
+                  linkedConceptId: null,
+                  linkedConceptName: null,
+                  linkedConceptLanguages: [],
+                  isNewLanguageForExistingConcept: false,
+                },
+              },
+            ],
+          }),
+      },
+    );
+
+    expect(candidates[0]?.conceptHint?.proposedConceptType)
+      .toBe(codingProfile.promotion.defaultTypeNodeId);
+    expect(candidates[0]?.rawProposedTypeNodeId).toBe('hallucinated_runtime_kind');
+  });
+
   it('includes an overlay-added ontology node in the prompt when a composed profile is passed', async () => {
     const overlayNode: OntologyNode = {
       id: 'project_runtime_node',

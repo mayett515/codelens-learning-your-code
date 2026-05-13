@@ -31,6 +31,11 @@ export type {
   ProfileChangeProposalTarget,
   ProfileChangeProposalTargetKind,
   ProfilePatch,
+  ProfileProposalEvent,
+  ProfileProposalEventAction,
+  ProfileProposalEventActorKind,
+  ProfileTrustMode,
+  ProfileTrustSetting,
 } from './types';
 
 export {
@@ -58,6 +63,18 @@ export {
   groupProfileBranchesByKind,
   profileBranchToOverlay,
 } from './profileBranches';
+export {
+  BranchLocalProposalApplyError,
+  applyBranchLocalProfileChangeProposal,
+  applyBranchLocalProfilePatchOperation,
+  compileBranchLocalProposalApplyOperation,
+} from './branchLocalProposalApply';
+export type {
+  BranchLocalProfilePatchOperation,
+  BranchLocalProposalApplyErrorCode,
+  BranchLocalProposalApplyInput,
+  BranchLocalProposalApplyResult,
+} from './branchLocalProposalApply';
 
 export type { ResolvedProfileSelection } from './profileSelection';
 export {

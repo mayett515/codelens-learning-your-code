@@ -1,11 +1,10 @@
 import { z } from 'zod';
 import { concepts } from '../data/schema';
-import { CONCEPT_TYPES } from '../types/learning';
 import { isConceptId, isLearningCaptureId, unsafeConceptId } from '../types/ids';
 import type { ConceptId, LearningCaptureId } from '../types/ids';
 import type { LearningConcept } from '../types/learning';
 
-export const ConceptTypeEnum = z.enum(CONCEPT_TYPES);
+export const ConceptTypeEnum = z.string().min(1);
 export const LanguageOrRuntimeCodec = z.array(z.string()).default([]);
 export const SurfaceFeaturesCodec = z.array(z.string()).default([]);
 export const ConceptIdArrayCodec = z.array(z.string().refine(isConceptId)).default([]);

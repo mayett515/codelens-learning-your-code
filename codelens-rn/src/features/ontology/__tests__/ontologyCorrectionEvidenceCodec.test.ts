@@ -24,6 +24,7 @@ function validEvidence(
     field: 'typeNodeId',
     previousTypeNodeId: 'mechanism',
     correctedTypeNodeId: 'pattern',
+    rawProposedTypeNodeId: null,
     reason: 'Reviewed by user',
     source: 'user',
     createdAt: 1_700_000_000_000,
@@ -47,6 +48,7 @@ describe('ontology correction evidence codec', () => {
       field: 'typeNodeId',
       previousTypeNodeId: 'mechanism',
       correctedTypeNodeId: 'pattern',
+      rawProposedTypeNodeId: null,
       reason: 'Reviewed by user',
       source: 'user',
       createdAt: 1_700_000_000_000,
@@ -78,6 +80,7 @@ describe('ontology correction evidence codec', () => {
       field: 'typeNodeId',
       previousTypeNodeId: 'mechanism',
       correctedTypeNodeId: 'pattern',
+      rawProposedTypeNodeId: 'hallucinated_runtime_kind',
       reason: null,
       source: 'user',
       createdAt: 1,
@@ -89,6 +92,7 @@ describe('ontology correction evidence codec', () => {
         projectBranchIds: ['project-branch-1'],
       },
       reason: null,
+      rawProposedTypeNodeId: 'hallucinated_runtime_kind',
       createdAt: 1,
     }));
   });

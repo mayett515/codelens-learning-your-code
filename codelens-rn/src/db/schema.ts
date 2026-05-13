@@ -103,22 +103,7 @@ export const concepts = sqliteTable('concepts', {
   summary: text('summary').notNull(),
   normalizedKey: text('normalized_key').notNull().default(''),
   canonicalSummary: text('canonical_summary'),
-  conceptType: text('concept_type', {
-    enum: [
-      'mechanism',
-      'mental_model',
-      'pattern',
-      'architecture_principle',
-      'language_feature',
-      'api_idiom',
-      'data_structure',
-      'algorithmic_idea',
-      'performance_principle',
-      'debugging_heuristic',
-      'failure_mode',
-      'testing_principle',
-    ],
-  }).notNull().default('mental_model'),
+  conceptType: text('concept_type').notNull().default('mental_model'),
   coreConcept: text('core_concept'),
   architecturalPattern: text('architectural_pattern'),
   programmingParadigm: text('programming_paradigm'),
@@ -353,6 +338,7 @@ export const ontologyCorrectionEvidence = sqliteTable('ontology_correction_evide
   field: text('field', { enum: ['typeNodeId'] }).notNull(),
   previousTypeNodeId: text('previous_type_node_id'),
   correctedTypeNodeId: text('corrected_type_node_id').notNull(),
+  rawProposedTypeNodeId: text('raw_proposed_type_node_id'),
   reason: text('reason'),
   source: text('source', { enum: ['user'] }).notNull(),
   createdAt: integer('created_at').notNull(),
@@ -395,4 +381,62 @@ export const profileChangeProposals = sqliteTable('profile_change_proposals', {
   index('idx_profile_change_proposals_target_branch').on(t.targetBranchId),
   index('idx_profile_change_proposals_status').on(t.status),
   index('idx_profile_change_proposals_updated').on(t.updatedAt),
+]);
+
+export const profileProposalEvents = sqliteTable('profile_proposal_events', {
+  id: text('id').primaryKey(),
+  proposalId: text('proposal_id').notNull(),
+  action: text('action', { enum: ['applied', 'rejected', 'postponed', 'asked_why'] }).notNull(),
+  actorKind: text('actor_kind', { enum: ['user', 'system', 'model'] }).notNull(),
+  actorId: text('actor_id'),
+  baseProfileId: text('base_profile_id').notNull(),
+  proposalKind: text('proposal_kind', {
+    enum: ['classification_patch', 'ontology_node_patch', 'relationship_patch', 'branch_merge', 'manual_draft'],
+  }).notNull(),
+  targetKind: text('target_kind', { enum: ['base_profile', 'profile_branch'] }).notNull(),
+  targetProfileId: text('target_profile_id'),
+  targetBranchId: text('target_branch_id'),
+  statusBefore: text('status_before', {
+    enum: ['pending', 'accepted', 'rejected', 'postponed', 'superseded'],
+  }).notNull(),
+  statusAfter: text('status_after', {
+    enum: ['pending', 'accepted', 'rejected', 'postponed', 'superseded'],
+  }).notNull(),
+  proposalUpdatedAtBefore: integer('proposal_updated_at_before').notNull(),
+  proposalUpdatedAtAfter: integer('proposal_updated_at_after').notNull(),
+  branchUpdatedAtBefore: integer('branch_updated_at_before'),
+  branchUpdatedAtAfter: integer('branch_updated_at_after'),
+  reason: text('reason'),
+  detailsJson: text('details_json', { mode: 'json' }).$type<unknown | null>(),
+  createdAt: integer('created_at').notNull(),
+}, (t) => [
+  index('idx_profile_proposal_events_proposal').on(t.proposalId),
+  index('idx_profile_proposal_events_base_profile').on(t.baseProfileId),
+  index('idx_profile_proposal_events_target_branch').on(t.targetBranchId),
+  index('idx_profile_proposal_events_action').on(t.action),
+  index('idx_profile_proposal_events_created').on(t.createdAt),
+]);
+
+export const profileTrustSettings = sqliteTable('profile_trust_settings', {
+  id: text('id').primaryKey(),
+  scopeKey: text('scope_key').notNull().unique(),
+  baseProfileId: text('base_profile_id').notNull(),
+  targetKind: text('target_kind', { enum: ['base_profile', 'profile_branch'] }).notNull(),
+  targetProfileId: text('target_profile_id'),
+  targetBranchId: text('target_branch_id'),
+  trustMode: text('trust_mode', {
+    enum: ['manual_only', 'suggest_first', 'trusted_low_risk_auto', 'adaptive'],
+  }).notNull(),
+  autoApplyEnabled: integer('auto_apply_enabled', { mode: 'boolean' }).notNull(),
+  maxAutoApplyRiskScore: real('max_auto_apply_risk_score').notNull(),
+  autoApplyProposalKindsJson: text('auto_apply_proposal_kinds_json', { mode: 'json' })
+    .notNull()
+    .$type<string[]>(),
+  createdAt: integer('created_at').notNull(),
+  updatedAt: integer('updated_at').notNull(),
+}, (t) => [
+  index('idx_profile_trust_settings_base_profile').on(t.baseProfileId),
+  index('idx_profile_trust_settings_target_branch').on(t.targetBranchId),
+  index('idx_profile_trust_settings_mode').on(t.trustMode),
+  index('idx_profile_trust_settings_updated').on(t.updatedAt),
 ]);

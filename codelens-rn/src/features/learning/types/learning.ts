@@ -3,7 +3,7 @@ import { CODING_CONCEPT_TYPE_NODE_IDS } from '../../ontology';
 
 export const CONCEPT_TYPES = CODING_CONCEPT_TYPE_NODE_IDS;
 
-export type ConceptType = (typeof CONCEPT_TYPES)[number];
+export type ConceptType = string;
 export type CaptureState = 'unresolved' | 'linked' | 'proposed_new';
 export type EmbeddingStatus = 'pending' | 'ready' | 'failed';
 

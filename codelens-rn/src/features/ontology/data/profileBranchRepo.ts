@@ -1,4 +1,4 @@
-import { asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
 import { db, type DbOrTx } from '../../../db/client';
 import { profileBranches } from './schema';
 import { rowToProfileBranch, profileBranchToRow } from '../codecs/profileBranch';
@@ -30,6 +30,32 @@ export async function upsertProfileBranch(
         updatedAt: row.updatedAt,
       },
     });
+}
+
+export async function updateProfileBranchIfUnchanged(
+  branch: ProfileBranch,
+  expectedUpdatedAt: number,
+  executor: DbOrTx = db,
+): Promise<boolean> {
+  const row = profileBranchToRow(branch);
+  const result = await executor
+    .update(profileBranches)
+    .set({
+      parentProfileId: row.parentProfileId,
+      branchKind: row.branchKind,
+      name: row.name,
+      overlayJson: row.overlayJson,
+      updatedAt: row.updatedAt,
+    })
+    .where(and(
+      eq(profileBranches.id, row.id),
+      eq(profileBranches.updatedAt, expectedUpdatedAt),
+    ));
+
+  const affectedRows = getAffectedRows(result);
+  // Conditional writes must fail closed if a future driver stops exposing
+  // affected-row counts; guessing success would mask write conflicts.
+  return affectedRows !== undefined ? affectedRows > 0 : false;
 }
 
 export async function getProfileBranchById(
@@ -86,4 +112,12 @@ export async function deleteProfileBranch(
   executor: DbOrTx = db,
 ): Promise<void> {
   await executor.delete(profileBranches).where(eq(profileBranches.id, id));
+}
+
+function getAffectedRows(result: unknown): number | undefined {
+  if (!result || typeof result !== 'object') return undefined;
+  const record = result as Record<string, unknown>;
+  if (typeof record['rowsAffected'] === 'number') return record['rowsAffected'];
+  if (typeof record['changes'] === 'number') return record['changes'];
+  return undefined;
 }

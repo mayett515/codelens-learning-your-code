@@ -45,6 +45,12 @@ interface SaveCaptureDeps {
   newId: () => LearningCaptureId;
 }
 
+export interface SaveCaptureAfterInsertInput {
+  captureId: LearningCaptureId;
+  candidate: SaveModalCandidateData;
+  createdAt: number;
+}
+
 const defaultEmbeddingQueue: EmbeddingQueue = {
   enqueue(input) {
     const run = async (): Promise<void> => {
@@ -92,7 +98,10 @@ const defaultDeps: SaveCaptureDeps = {
 export async function saveCapture(
   candidate: SaveModalCandidateData,
   deps: Partial<SaveCaptureDeps> = {},
-  options: { saveAsProposedNew?: boolean } = {},
+  options: {
+    saveAsProposedNew?: boolean;
+    afterInsert?: ((input: SaveCaptureAfterInsertInput, executor: DbOrTx) => Promise<void>) | undefined;
+  } = {},
 ): Promise<LearningCaptureId> {
   const resolvedDeps = { ...defaultDeps, ...deps };
   const captureId = resolvedDeps.newId();
@@ -154,6 +163,15 @@ export async function saveCapture(
         keywords: candidate.keywords,
         createdAt: now,
         updatedAt: now,
+      },
+      tx,
+    );
+
+    await options.afterInsert?.(
+      {
+        captureId,
+        candidate,
+        createdAt: now,
       },
       tx,
     );

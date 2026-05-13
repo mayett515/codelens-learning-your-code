@@ -15,6 +15,8 @@ import {
   PROFILE_DEFINITIONS_COLUMN_MAP,
   ONTOLOGY_CORRECTION_EVIDENCE_COLUMN_MAP,
   PROFILE_CHANGE_PROPOSALS_COLUMN_MAP,
+  PROFILE_PROPOSAL_EVENTS_COLUMN_MAP,
+  PROFILE_TRUST_SETTINGS_COLUMN_MAP,
   TABLE_COLUMN_MAPS,
   TABLE_JSON_COLUMNS,
 } from '../columnMaps';
@@ -535,6 +537,7 @@ describe('Column map: ontology_correction_evidence', () => {
       field: 'typeNodeId',
       previous_type_node_id: 'mechanism',
       corrected_type_node_id: 'pattern',
+      raw_proposed_type_node_id: 'hallucinated_runtime_kind',
       reason: 'Reviewed by user',
       source: 'user',
       created_at: 1000,
@@ -548,10 +551,11 @@ describe('Column map: ontology_correction_evidence', () => {
     expect(m['field']).toBe('typeNodeId');
     expect(m['previousTypeNodeId']).toBe('mechanism');
     expect(m['correctedTypeNodeId']).toBe('pattern');
+    expect(m['rawProposedTypeNodeId']).toBe('hallucinated_runtime_kind');
     expect(m['reason']).toBe('Reviewed by user');
     expect(m['source']).toBe('user');
     expect(m['createdAt']).toBe(1000);
-    expect(Object.keys(m).length).toBe(11);
+    expect(Object.keys(m).length).toBe(12);
   });
 
   it('drops unknown target/apply keys from imported rows', () => {
@@ -564,6 +568,7 @@ describe('Column map: ontology_correction_evidence', () => {
       field: 'typeNodeId',
       previous_type_node_id: 'mechanism',
       corrected_type_node_id: 'pattern',
+      raw_proposed_type_node_id: null,
       reason: null,
       source: 'user',
       created_at: 1000,
@@ -573,7 +578,7 @@ describe('Column map: ontology_correction_evidence', () => {
     const m = mapBackupRow(raw, ONTOLOGY_CORRECTION_EVIDENCE_COLUMN_MAP);
     expect('targetLayerId' in m).toBe(false);
     expect('applyToBranchId' in m).toBe(false);
-    expect(Object.keys(m).length).toBe(11);
+    expect(Object.keys(m).length).toBe(12);
   });
 });
 
@@ -648,6 +653,128 @@ describe('Column map: profile_change_proposals', () => {
     expect('activeRuntimeProfileJson' in m).toBe(false);
     expect('applyImmediately' in m).toBe(false);
     expect(Object.keys(m).length).toBe(22);
+  });
+});
+
+describe('Column map: profile_proposal_events', () => {
+  it('maps all columns including details JSON', () => {
+    const raw = {
+      id: 'event-1',
+      proposal_id: 'proposal-1',
+      action: 'applied',
+      actor_kind: 'user',
+      actor_id: null,
+      base_profile_id: 'coding',
+      proposal_kind: 'ontology_node_patch',
+      target_kind: 'profile_branch',
+      target_profile_id: null,
+      target_branch_id: 'branch-1',
+      status_before: 'pending',
+      status_after: 'accepted',
+      proposal_updated_at_before: 2,
+      proposal_updated_at_after: 3,
+      branch_updated_at_before: 2,
+      branch_updated_at_after: 3,
+      reason: null,
+      details_json: '{"operationKind":"apply_profile_patch_to_branch_overlay"}',
+      created_at: 3,
+    };
+    const m = mapBackupRow(raw, PROFILE_PROPOSAL_EVENTS_COLUMN_MAP);
+    expect(m['id']).toBe('event-1');
+    expect(m['proposalId']).toBe('proposal-1');
+    expect(m['action']).toBe('applied');
+    expect(m['actorKind']).toBe('user');
+    expect(m['baseProfileId']).toBe('coding');
+    expect(m['proposalKind']).toBe('ontology_node_patch');
+    expect(m['targetKind']).toBe('profile_branch');
+    expect(m['targetBranchId']).toBe('branch-1');
+    expect(m['statusBefore']).toBe('pending');
+    expect(m['statusAfter']).toBe('accepted');
+    expect(m['detailsJson']).toBe('{"operationKind":"apply_profile_patch_to_branch_overlay"}');
+    expect(Object.keys(m).length).toBe(19);
+  });
+
+  it('drops unknown projection keys from imported rows', () => {
+    const raw = {
+      id: 'event-1',
+      proposal_id: 'proposal-1',
+      action: 'rejected',
+      actor_kind: 'user',
+      actor_id: null,
+      base_profile_id: 'coding',
+      proposal_kind: 'classification_patch',
+      target_kind: 'profile_branch',
+      target_profile_id: null,
+      target_branch_id: 'branch-1',
+      status_before: 'pending',
+      status_after: 'rejected',
+      proposal_updated_at_before: 2,
+      proposal_updated_at_after: 3,
+      branch_updated_at_before: null,
+      branch_updated_at_after: null,
+      reason: 'Wrong family',
+      details_json: null,
+      created_at: 3,
+      projected_user_fit: 0.9,
+      undo_job_id: 'undo-1',
+    };
+    const m = mapBackupRow(raw, PROFILE_PROPOSAL_EVENTS_COLUMN_MAP);
+    expect('projectedUserFit' in m).toBe(false);
+    expect('undoJobId' in m).toBe(false);
+    expect(Object.keys(m).length).toBe(19);
+  });
+});
+
+describe('Column map: profile_trust_settings', () => {
+  it('maps all columns including auto-apply proposal kind JSON', () => {
+    const raw = {
+      id: 'trust-1',
+      scope_key: 'profile_branch:coding:personal-1',
+      base_profile_id: 'coding',
+      target_kind: 'profile_branch',
+      target_profile_id: null,
+      target_branch_id: 'personal-1',
+      trust_mode: 'trusted_low_risk_auto',
+      auto_apply_enabled: 1,
+      max_auto_apply_risk_score: 25,
+      auto_apply_proposal_kinds_json: '["classification_patch"]',
+      created_at: 1000,
+      updated_at: 2000,
+    };
+    const m = mapBackupRow(raw, PROFILE_TRUST_SETTINGS_COLUMN_MAP);
+    expect(m['id']).toBe('trust-1');
+    expect(m['scopeKey']).toBe('profile_branch:coding:personal-1');
+    expect(m['baseProfileId']).toBe('coding');
+    expect(m['targetKind']).toBe('profile_branch');
+    expect(m['targetBranchId']).toBe('personal-1');
+    expect(m['trustMode']).toBe('trusted_low_risk_auto');
+    expect(m['autoApplyEnabled']).toBe(1);
+    expect(m['maxAutoApplyRiskScore']).toBe(25);
+    expect(m['autoApplyProposalKindsJson']).toBe('["classification_patch"]');
+    expect(Object.keys(m).length).toBe(12);
+  });
+
+  it('drops unknown runtime/apply keys from imported rows', () => {
+    const raw = {
+      id: 'trust-1',
+      scope_key: 'base_profile:coding',
+      base_profile_id: 'coding',
+      target_kind: 'base_profile',
+      target_profile_id: 'coding',
+      target_branch_id: null,
+      trust_mode: 'suggest_first',
+      auto_apply_enabled: 0,
+      max_auto_apply_risk_score: 0,
+      auto_apply_proposal_kinds_json: '[]',
+      created_at: 1000,
+      updated_at: 2000,
+      apply_now: true,
+      runtime_profile_json: '{}',
+    };
+    const m = mapBackupRow(raw, PROFILE_TRUST_SETTINGS_COLUMN_MAP);
+    expect('applyNow' in m).toBe(false);
+    expect('runtimeProfileJson' in m).toBe(false);
+    expect(Object.keys(m).length).toBe(12);
   });
 });
 
@@ -815,6 +942,65 @@ describe('JSON decoding for Drizzle insert shape', () => {
     expect(mapped['patchJson']).toEqual({ addItemTypeNodeIds: ['react_hook'] });
   });
 
+  it('decodes profile_proposal_events details JSON columns', () => {
+    const mapped = mapBackupRow(
+      {
+        id: 'event-1',
+        proposal_id: 'proposal-1',
+        action: 'applied',
+        actor_kind: 'user',
+        actor_id: null,
+        base_profile_id: 'coding',
+        proposal_kind: 'ontology_node_patch',
+        target_kind: 'profile_branch',
+        target_profile_id: null,
+        target_branch_id: 'branch-1',
+        status_before: 'pending',
+        status_after: 'accepted',
+        proposal_updated_at_before: 2,
+        proposal_updated_at_after: 3,
+        branch_updated_at_before: 2,
+        branch_updated_at_after: 3,
+        reason: null,
+        details_json: '{"operationKind":"apply_profile_patch_to_branch_overlay"}',
+        created_at: 3,
+      },
+      PROFILE_PROPOSAL_EVENTS_COLUMN_MAP,
+      TABLE_JSON_COLUMNS['profile_proposal_events']!,
+    );
+    expect(mapped['detailsJson']).toEqual({
+      operationKind: 'apply_profile_patch_to_branch_overlay',
+    });
+  });
+
+  it('throws on malformed JSON in profile_proposal_events details', () => {
+    expect(() => mapBackupRow(
+      {
+        id: 'event-1',
+        proposal_id: 'proposal-1',
+        action: 'applied',
+        actor_kind: 'user',
+        actor_id: null,
+        base_profile_id: 'coding',
+        proposal_kind: 'ontology_node_patch',
+        target_kind: 'profile_branch',
+        target_profile_id: null,
+        target_branch_id: 'branch-1',
+        status_before: 'pending',
+        status_after: 'accepted',
+        proposal_updated_at_before: 2,
+        proposal_updated_at_after: 3,
+        branch_updated_at_before: 2,
+        branch_updated_at_after: 3,
+        reason: null,
+        details_json: '{',
+        created_at: 3,
+      },
+      PROFILE_PROPOSAL_EVENTS_COLUMN_MAP,
+      TABLE_JSON_COLUMNS['profile_proposal_events']!,
+    )).toThrow(/Invalid JSON in backup column details_json/);
+  });
+
   it('throws on malformed JSON in profile_change_proposals patch', () => {
     expect(() => mapBackupRow(
       {
@@ -844,6 +1030,52 @@ describe('JSON decoding for Drizzle insert shape', () => {
       PROFILE_CHANGE_PROPOSALS_COLUMN_MAP,
       TABLE_JSON_COLUMNS['profile_change_proposals']!,
     )).toThrow(/Invalid JSON in backup column patch_json/);
+  });
+
+  it('decodes profile_trust_settings auto-apply proposal kind JSON columns', () => {
+    const mapped = mapBackupRow(
+      {
+        id: 'trust-1',
+        scope_key: 'profile_branch:coding:personal-1',
+        base_profile_id: 'coding',
+        target_kind: 'profile_branch',
+        target_profile_id: null,
+        target_branch_id: 'personal-1',
+        trust_mode: 'trusted_low_risk_auto',
+        auto_apply_enabled: 1,
+        max_auto_apply_risk_score: 25,
+        auto_apply_proposal_kinds_json: '["classification_patch","relationship_patch"]',
+        created_at: 1000,
+        updated_at: 2000,
+      },
+      PROFILE_TRUST_SETTINGS_COLUMN_MAP,
+      TABLE_JSON_COLUMNS['profile_trust_settings']!,
+    );
+    expect(mapped['autoApplyProposalKindsJson']).toEqual([
+      'classification_patch',
+      'relationship_patch',
+    ]);
+  });
+
+  it('throws on malformed JSON in profile_trust_settings auto-apply kind list', () => {
+    expect(() => mapBackupRow(
+      {
+        id: 'trust-1',
+        scope_key: 'profile_branch:coding:personal-1',
+        base_profile_id: 'coding',
+        target_kind: 'profile_branch',
+        target_profile_id: null,
+        target_branch_id: 'personal-1',
+        trust_mode: 'trusted_low_risk_auto',
+        auto_apply_enabled: 1,
+        max_auto_apply_risk_score: 25,
+        auto_apply_proposal_kinds_json: '{bad json',
+        created_at: 1000,
+        updated_at: 2000,
+      },
+      PROFILE_TRUST_SETTINGS_COLUMN_MAP,
+      TABLE_JSON_COLUMNS['profile_trust_settings']!,
+    )).toThrow(/Invalid JSON in backup column auto_apply_proposal_kinds_json/);
   });
 
   it('throws on malformed JSON in ontology_correction_evidence active selection snapshot', () => {
@@ -1189,6 +1421,8 @@ describe('TABLE_COLUMN_MAPS index', () => {
     'profile_definitions',
     'ontology_correction_evidence',
     'profile_change_proposals',
+    'profile_proposal_events',
+    'profile_trust_settings',
   ];
 
   it('contains an entry for every exported table', () => {
@@ -1211,6 +1445,8 @@ describe('TABLE_COLUMN_MAPS index', () => {
     expect(TABLE_COLUMN_MAPS['profile_definitions']).toBe(PROFILE_DEFINITIONS_COLUMN_MAP);
     expect(TABLE_COLUMN_MAPS['ontology_correction_evidence']).toBe(ONTOLOGY_CORRECTION_EVIDENCE_COLUMN_MAP);
     expect(TABLE_COLUMN_MAPS['profile_change_proposals']).toBe(PROFILE_CHANGE_PROPOSALS_COLUMN_MAP);
+    expect(TABLE_COLUMN_MAPS['profile_proposal_events']).toBe(PROFILE_PROPOSAL_EVENTS_COLUMN_MAP);
+    expect(TABLE_COLUMN_MAPS['profile_trust_settings']).toBe(PROFILE_TRUST_SETTINGS_COLUMN_MAP);
   });
 
   it('every map has the expected number of columns', () => {
@@ -1225,7 +1461,9 @@ describe('TABLE_COLUMN_MAPS index', () => {
     expect(Object.keys(PROFILE_BRANCHES_COLUMN_MAP).length).toBe(7);
     expect(Object.keys(PROFILE_SELECTIONS_COLUMN_MAP).length).toBe(8);
     expect(Object.keys(PROFILE_DEFINITIONS_COLUMN_MAP).length).toBe(8);
-    expect(Object.keys(ONTOLOGY_CORRECTION_EVIDENCE_COLUMN_MAP).length).toBe(11);
+    expect(Object.keys(ONTOLOGY_CORRECTION_EVIDENCE_COLUMN_MAP).length).toBe(12);
     expect(Object.keys(PROFILE_CHANGE_PROPOSALS_COLUMN_MAP).length).toBe(22);
+    expect(Object.keys(PROFILE_PROPOSAL_EVENTS_COLUMN_MAP).length).toBe(19);
+    expect(Object.keys(PROFILE_TRUST_SETTINGS_COLUMN_MAP).length).toBe(12);
   });
 });
