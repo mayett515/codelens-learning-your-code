@@ -1,6 +1,6 @@
 # Scoped Meaning And Branch/Core Semantics Decision
 
-**Status:** Locked decision on 2026-05-13 after human/model review. Not implemented.
+**Status:** Locked decision on 2026-05-13 after human/model review. First pure guard/helper slice implemented.
 **Branch:** `refactor/ontology-profile`
 
 ## Why This Decision Exists
@@ -453,9 +453,18 @@ Category (Photography Core): broad kind of photography
 Category (Night Photography branch): sub-area inside night photography; narrows Photography Core category
 ```
 
-## What This Decision Does Not Implement
+## First Implementation Slice
 
-No source code is implemented by this decision.
+Implemented on 2026-05-13:
+
+- `narrows` is exposed in the coding relationship vocabulary.
+- Pure scoped-meaning helpers detect same-label different-id ontology meanings.
+- Pure formatting helpers can render ambiguous labels with scope provenance.
+- Stage10 guards protect the hybrid identity anchors and forbid label-only ontology target identifiers in proposal/apply paths.
+
+This is intentionally a source-level safety seam. It does not add checker runtime or mutate profile data automatically.
+
+## What This Decision Does Not Implement
 
 This decision does not add:
 

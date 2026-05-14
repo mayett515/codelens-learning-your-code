@@ -114,6 +114,18 @@ export type {
 } from './runtimeProfileActivation';
 
 export { getMetadataField, getMetadataFieldLabel, getMetadataFieldPlaceholder } from './metadata';
+export {
+  canonicalizeOntologyDisplayLabel,
+  createScopedOntologyNodeReferences,
+  findSameLabelScopedMeanings,
+  formatOntologyNodeLabelForContext,
+  formatScopedOntologyNodeLabel,
+  normalizeOntologyDisplayLabel,
+} from './scopedMeaning';
+export type {
+  SameLabelScopedMeaningGroup,
+  ScopedOntologyNodeReference,
+} from './scopedMeaning';
 export { validateOntologyCorrection } from './corrections';
 
 export function getActiveDomainProfile(): DomainProfile<CodingConceptTypeNodeId>;

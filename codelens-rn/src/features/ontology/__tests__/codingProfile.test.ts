@@ -108,6 +108,7 @@ describe('coding profile', () => {
       prerequisite: 'Prerequisite',
       related: 'Related',
       contrast: 'Contrast',
+      narrows: 'Narrows',
     });
   });
 
@@ -166,6 +167,7 @@ describe('coding profile', () => {
       prerequisite: 'Prerequisites',
       related: 'Related',
       contrast: 'Contrast',
+      narrows: 'Narrows',
     });
   });
 

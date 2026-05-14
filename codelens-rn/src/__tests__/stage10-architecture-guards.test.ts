@@ -524,6 +524,56 @@ describe('Profile registry bootstrap boundary guards', () => {
   });
 });
 
+describe('Doc 26 scoped meaning and label-targeting guards', () => {
+  it('coding profile exposes narrows but not runtime shadows semantics yet', () => {
+    const codingProfileSrc = read('src/features/ontology/profiles/codingProfile.ts');
+    expect(codingProfileSrc).toContain("'narrows'");
+    expect(codingProfileSrc).not.toContain("'shadows'");
+  });
+
+  it('proposal/apply paths do not introduce label-only ontology target identifiers', () => {
+    const guardedPathPattern = /src\/features\/(?:ontology|learning\/services)\//;
+    const forbiddenTargetingPatterns = [
+      /\btargetLabel\b/,
+      /\btargetNodeLabel\b/,
+      /\btargetOntologyLabel\b/,
+      /\bcorrectedTypeLabel\b/,
+      /\bpreviousTypeLabel\b/,
+      /\bproposedTypeLabel\b/,
+      /\bfind(?:Ontology)?NodeByLabel\b/,
+      /\bresolve(?:Ontology)?NodeByLabel\b/,
+      /\bget(?:Ontology)?NodeByLabel\b/,
+    ];
+
+    const offenders = sourceFiles()
+      .filter((filePath) => guardedPathPattern.test(toRepoPath(filePath)))
+      .filter((filePath) => {
+        const repoPath = toRepoPath(filePath);
+        if (repoPath.includes('/ui/')) return false;
+        if (repoPath.endsWith('/scopedMeaning.ts')) return false;
+        const content = read(filePath);
+        return forbiddenTargetingPatterns.some((pattern) => pattern.test(content));
+      })
+      .map(toRepoPath);
+
+    expect(offenders).toEqual([]);
+  });
+
+  it('doc 26 keeps hybrid identity, narrows, and label-only guard anchors', () => {
+    const docRoot = path.join(repoRoot, 'ONTOLOGY_PROFILE_REFACTOR');
+    const doc26 = fs.readFileSync(
+      path.join(docRoot, '26_SCOPED_MEANING_AND_BRANCH_CORE_SEMANTICS_DECISION.md'),
+      'utf8',
+    );
+
+    expect(doc26).toContain('Within one composed active profile, `nodeId` is the operational identity and must be unique.');
+    expect(doc26).toContain('Across scopes, durable references and documentation should use `(scopeId, nodeId)`');
+    expect(doc26).toContain('narrows');
+    expect(doc26).toContain('`shadows` is reserved');
+    expect(doc26).toContain('Do not store label-only ontology targets.');
+  });
+});
+
 describe('Ontology-profile naming boundary guards', () => {
   // These guards enforce that renamed fields stay renamed and legacy compat
   // boundaries stay documented. They do NOT globally ban conceptType - only

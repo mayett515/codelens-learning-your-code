@@ -225,7 +225,7 @@ export const codingProfile = {
   ontology: {
     nodes: codingOntologyNodes,
     itemTypeNodeIds: CODING_CONCEPT_TYPE_NODE_IDS,
-    relationshipTypeNodeIds: ['prerequisite', 'related', 'contrast'],
+    relationshipTypeNodeIds: ['prerequisite', 'related', 'contrast', 'narrows'],
   },
   metadataFields: [
     {
@@ -337,11 +337,13 @@ export const codingProfile = {
       prerequisite: 'Prerequisite',
       related: 'Related',
       contrast: 'Contrast',
+      narrows: 'Narrows',
     },
     relationshipSectionLabels: {
       prerequisite: 'Prerequisites',
       related: 'Related',
       contrast: 'Contrast',
+      narrows: 'Narrows',
     },
     screenTitle: 'Knowledge Graph',
     focusedScreenTitle: 'Concept Graph',
