@@ -574,6 +574,22 @@ describe('Doc 26 scoped meaning and label-targeting guards', () => {
   });
 });
 
+describe('Kordex context assembly guards', () => {
+  it('contextAssembly.ts stays a pure typed projection without runtime dependencies', () => {
+    const contextAssemblySrc = read('src/features/ontology/contextAssembly.ts');
+    const forbiddenImportPattern =
+      /from\s+['"][^'"]*(?:db\/|\/db|features\/backup|features\/learning|features\/graph|ai\/|react|react-native|expo|zustand|@tanstack)[^'"]*['"]/;
+    const forbiddenRendererPattern = /render\w*Prompt|toPrompt|SystemPrompt|formatPrompt/i;
+
+    expect(contextAssemblySrc).not.toMatch(forbiddenImportPattern);
+    expect(contextAssemblySrc).not.toMatch(forbiddenRendererPattern);
+    expect(contextAssemblySrc).not.toContain('renderContextPackToPrompt');
+    expect(contextAssemblySrc).not.toContain('prompt renderer');
+    expect(contextAssemblySrc).toContain('serializeContextPack');
+    expect(contextAssemblySrc).toContain('validateContextPack');
+  });
+});
+
 describe('Ontology-profile naming boundary guards', () => {
   // These guards enforce that renamed fields stay renamed and legacy compat
   // boundaries stay documented. They do NOT globally ban conceptType - only
