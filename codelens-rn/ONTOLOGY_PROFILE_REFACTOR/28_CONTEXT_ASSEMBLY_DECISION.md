@@ -1,6 +1,6 @@
 # Kordex Context Assembly Decision
 
-**Status:** Locked docs-only decision on 2026-05-15 after human/model review. Not implemented.
+**Status:** Locked decision on 2026-05-15 after human/model review. First pure implementation slice is implemented.
 **Branch:** `refactor/ontology-profile`
 
 ## Why This Decision Exists
@@ -43,7 +43,7 @@ The model must see that these are related or same-label meanings only when the p
 
 Kordex should use a shared, typed `ContextPack` contract for Conceptualize, checker runs, proposal review, graph selection chat, repeated-mistake introspection, old-card backfill, future agents, and future app-builder flows.
 
-The first implementation slice is deliberately narrow:
+The first implementation slice is deliberately narrow and is now implemented:
 
 ```text
 caller-supplied ordered inputs
@@ -444,8 +444,19 @@ A safe first implementation after this decision:
 
 This first implementation should not change runtime behavior until a later consumer is wired to call it.
 
+Implemented source:
+
+```text
+src/features/ontology/contextAssembly.ts
+src/features/ontology/__tests__/contextAssembly.test.ts
+src/__tests__/stage10-architecture-guards.test.ts
+```
+
+The implementation exposes typed context-pack structures, `assembleContextPack`, `validateContextPack`, `assertValidContextPack`, `serializeContextPack`, and `scopedNodeRefKey`. It remains pure and has no DB, LLM, UI, retrieval, graph engine, prompt-renderer, or apply-service dependency.
+
 ## Deferred Decisions
 
+- Context selector contract and first focused selector. Locked separately in doc 29.
 - Exact canonical hash algorithm and hash input subset.
 - Exact `EvidenceClaim` derivation helper for `crossScope`.
 - Exact proposal/event snapshot fields.

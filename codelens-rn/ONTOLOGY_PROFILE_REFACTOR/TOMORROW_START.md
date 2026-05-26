@@ -6,7 +6,7 @@ Use this when starting the next orchestrator session.
 
 ```text
 Read ONTOLOGY_PROFILE_REFACTOR/NEXT_LLM_CONTEXT.md first.
-Then read ONTOLOGY_PROFILE_REFACTOR/07_KORTEX_CORE_AND_CHILD_CORES.md, ONTOLOGY_PROFILE_REFACTOR/08_KORTEX_LANGUAGE_LAYER_AND_ADAPTERS.md, ONTOLOGY_PROFILE_REFACTOR/09_KORTEX_OVER_EXISTING_SYSTEMS.md, ONTOLOGY_PROFILE_REFACTOR/10_ACTIVE_PROFILE_RUNTIME_SOURCE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/11_RUNTIME_PROFILE_COORDINATOR_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/13_BRANCH_OVERLAY_PERSISTENCE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/14_PROFILE_SELECTION_AND_BRANCH_RESOLUTION_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/15_PROFILE_REGISTRY_AND_PROFILE_SOURCES_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/16_RUNTIME_ACTIVATION_WIRING_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/17_BASE_PROFILE_PERSISTENCE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/18_ADAPTIVE_SUGGESTION_POLICY_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/19_PATCH_MERGE_PROPOSAL_STORAGE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/20_CONCEPTUALIZE_PREVIEW_AND_CORRECTION_SURFACE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/21_CHECKER_PROPOSAL_REVIEW_CONTEXT_AND_APPLY_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/22_CONCEPTUALIZE_FIRST_IMPLEMENTATION_SCOPE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/23_TRUST_SETTING_STORAGE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/24_BRANCH_LOCAL_PROPOSAL_APPLY_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/25_PROPOSAL_EVENT_AUDIT_STORAGE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/06_PROFILE_BRANCHING_AND_MERGE.md, and ONTOLOGY_PROFILE_REFACTOR/implementation_handoff.md.
+Then read ONTOLOGY_PROFILE_REFACTOR/07_KORTEX_CORE_AND_CHILD_CORES.md, ONTOLOGY_PROFILE_REFACTOR/08_KORTEX_LANGUAGE_LAYER_AND_ADAPTERS.md, ONTOLOGY_PROFILE_REFACTOR/09_KORTEX_OVER_EXISTING_SYSTEMS.md, ONTOLOGY_PROFILE_REFACTOR/10_ACTIVE_PROFILE_RUNTIME_SOURCE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/11_RUNTIME_PROFILE_COORDINATOR_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/13_BRANCH_OVERLAY_PERSISTENCE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/14_PROFILE_SELECTION_AND_BRANCH_RESOLUTION_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/15_PROFILE_REGISTRY_AND_PROFILE_SOURCES_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/16_RUNTIME_ACTIVATION_WIRING_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/17_BASE_PROFILE_PERSISTENCE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/18_ADAPTIVE_SUGGESTION_POLICY_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/19_PATCH_MERGE_PROPOSAL_STORAGE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/20_CONCEPTUALIZE_PREVIEW_AND_CORRECTION_SURFACE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/21_CHECKER_PROPOSAL_REVIEW_CONTEXT_AND_APPLY_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/22_CONCEPTUALIZE_FIRST_IMPLEMENTATION_SCOPE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/23_TRUST_SETTING_STORAGE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/24_BRANCH_LOCAL_PROPOSAL_APPLY_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/25_PROPOSAL_EVENT_AUDIT_STORAGE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/28_CONTEXT_ASSEMBLY_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/29_CONTEXT_SELECTOR_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/31_CONCEPTUALIZE_PROMPT_BUILDER_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/32_CONCEPTUALIZE_SINGULAR_OUTPUT_AND_DIAGNOSTICS_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/33_CONCEPTUALIZE_EXTRACTOR_FLIP_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/06_PROFILE_BRANCHING_AND_MERGE.md, and ONTOLOGY_PROFILE_REFACTOR/implementation_handoff.md.
 
 We are continuing as orchestrator.
 Do not implement until we confirm the next slice.
@@ -197,21 +197,72 @@ The branch-local proposal review/apply decision is locked in doc 24:
   - model-review hardening added explicit error tone, missing-base-profile mapping, non-branch Apply disablement, branch-key invalidation, and stronger presentation tests
   - no checker runtime, event/audit store, auto-apply engine, base-profile versioning, agent runtime, app-builder runtime, or DSL runtime was added
 
+The context assembly decision is locked and the first pure implementation is done:
+  - `contextAssembly.ts` exposes typed ContextPack structures
+  - `assembleContextPack`, `validateContextPack`, `assertValidContextPack`, `serializeContextPack`, and `scopedNodeRefKey` are implemented
+  - the slice is pure: no DB, UI, LLM, retrieval, graph traversal, prompt renderer, checker runtime, apply/mutation, or runtime behavior change
+
+The context selector decision is locked and the first pure implementation is done in doc 29:
+  - one shared `ContextSelector` / `ContextSelection` contract
+  - focused task-specific selector implementations
+  - read-only ports/candidates
+  - pinned/elastic buckets
+  - bounded direct-evidence pinning: evidence tied only to elastic ontology context stays capped
+  - `contextSelector.ts` exposes the contract and one deterministic Conceptualize selector over caller-supplied ordered candidates
+  - verification: TypeScript clean; targeted selector/assembly/guard tests 95/95; full suite 812/812
+
+The Conceptualize ContextPack shadow wiring decision is locked and implemented in doc 30:
+  - the real Conceptualize flow builds and validates a ContextPack after candidates are prepared
+  - `conceptualizeContextPack.ts` maps prepared candidates plus enriched profile context into selector input and ContextPack validation
+  - `SaveAsLearningModal.tsx` calls the builder in shadow mode only
+  - invalid packs warn only
+  - prompts, model behavior, save behavior, suggestions, proposals, ontology/profile state, DB readers, vector retrieval, graph traversal, and user-fit projection remain unchanged
+  - verification: TypeScript clean; targeted Conceptualize ContextPack shadow/context selector/assembly/guard tests 102/102; full suite 816/816
+
+The Conceptualize prompt-builder decision is locked and implemented in doc 31:
+  - `conceptualizePromptBuilder.ts` consumes validated ContextPacks
+  - it renders a stable instruction shell plus compact Kordex context payload JSON
+  - it exports `ConceptualizePromptOutputSchema` and `validateConceptualizePromptOutput`
+  - unknown refs are rejected against the original pack; refs are not guessed or coerced from labels
+  - live extractor prompt/model behavior is not flipped yet
+  - no proposal/evidence writes, save behavior change, DB reader, vector retrieval, graph traversal, user-fit projection, or mutation was added
+  - verification: TypeScript clean; targeted Conceptualize prompt/context selector/assembly/guard tests 107/107; full suite 824/824
+
+The Conceptualize singular-output/diagnostics decision is locked and implemented in doc 32:
+  - public Conceptualize output is one primary placement plus confidence/noStrongMatch/suggestedNewConcept/rationale
+  - public extra tags are removed
+  - hidden `diagnostics.candidateRefs` are internal-only calibration candidates
+  - diagnostic candidate budget is derived dynamically from the ContextPack; it is not a fixed product count
+  - diagnostics are not persisted unless a later correction-evidence flow deliberately snapshots factual near-miss data
+  - no live extractor flip, correction evidence migration, save behavior change, checker runtime, proposal creation, user-fit projection, or mutation was added
+  - verification: TypeScript clean; targeted Conceptualize prompt/context selector/assembly/guard tests 115/115; full suite 832/832
+
+The Conceptualize Extractor Flip decision is locked and implemented in doc 33:
+  - the first live flip is classification-only
+  - the old extractor still owns title/whatClicked/whyItMattered/rawSnippet/keywords
+  - the new Conceptualize classifier owns ontology placement through ContextPack -> prompt builder -> model call -> strict validator -> adapter
+  - invalid Conceptualize output falls back to the old extractor placement and logs a warning
+  - `noStrongMatch` produces an unclassified candidate instead of defaulting to a generic type
+  - `suggestedNewConcept` remains a suggestion and is not mapped into `conceptHint.proposedConceptType`
+  - no diagnostic persistence, near-miss evidence snapshot, missing-concept UI, proposal creation, ontology/profile mutation, checker runtime, or user-fit projection was added
+  - verification: TypeScript clean; targeted classifier/prepare/guard tests 77/77; full suite 841/841; diff check clean with CRLF warnings only
+
 The remaining open decisions are:
-  1. User-fit projection over proposal events.
-  2. Context assembly/event/apply implementation sequencing - which context-pack and typed-operation slice ships first.
-  3. Base profile versioning - how accepted operations safely target base profiles.
-  4. Agent/subagent execution ontology brief.
-  5. Self-building-app framework brief.
+  1. Correction-evidence near-miss wiring - decide whether/how hidden diagnostic candidates are snapshotted only when a user correction happens.
+  2. Missing-concept UX - decide how noStrongMatch and suggestedNewConcept appear to the user.
+  3. User-fit projection over proposal events and future near-miss evidence.
+  4. Base profile versioning - how accepted operations safely target base profiles.
+  5. Agent/subagent execution ontology brief.
+  6. Self-building-app framework brief.
 
 Recommended next implementation slice, if the human wants code next:
 
 ```text
-User-fit projection or context assembly slice:
-  - proposal review/apply events are now stored as append-only facts
-  - next user-fit work should derive signals from those events instead of mutating proposal/trust rows
-  - next context work should assemble branch/profile-scoped evidence/proposal context packs without applying changes
-  - keep checker runtime, auto-apply, historical undo execution, and base/core mutation out of this slice
+Correction-evidence near-miss wiring or missing-concept UX decision:
+  - selector, ContextPack builder, Conceptualize shadow caller, pure prompt builder, and singular public output contract are implemented
+  - first Extractor Flip is implemented as classification-only live wiring
+  - next context work should decide whether correction evidence should snapshot hidden diagnostic candidates only on user correction, or whether noStrongMatch/suggestedNewConcept UX should be designed first
+  - keep DB-backed history readers, retrieval, graph traversal, checker runtime, automatic confidence/ranking updates, automatic missing-concept apply, user-fit projection, and base/core mutation out of either next gate
 ```
 
 Strict boundaries:
@@ -395,10 +446,22 @@ The branch-local proposal review/apply decision is locked (doc 24) and the helpe
 
 The proposal event audit storage decision is locked and implemented (doc 25). `profile_proposal_events` stores append-only decision facts. Apply / Reject / Postpone insert audit events inside the same guarded transactions as the branch/proposal state changes. If a conditional write conflicts, no event is written. User-fit learning remains a future projection over those events.
 
+The context assembly decision is locked and the first pure implementation is done (doc 28). `contextAssembly.ts` provides the shared typed ContextPack builder, validator, assertion helper, scoped ref key, and deterministic serializer. It does not import DB, UI, LLM, retrieval, graph traversal, prompt rendering, checker runtime, apply/mutation, or runtime behavior.
+
+The context selector decision is locked and implemented as a first pure slice (doc 29). Kordex uses one shared selector contract, but focused task-specific selector implementations. `contextSelector.ts` implements the shared types plus one deterministic Conceptualize selector over caller-supplied ordered candidates, using pinned/elastic buckets and bounded direct-evidence pinning.
+
+The Conceptualize ContextPack shadow wiring decision is locked and implemented in doc 30. The real Conceptualize flow now builds and validates a ContextPack after candidate preparation, but only in shadow mode: invalid packs warn, and prompt/model/save/suggestion/proposal/ontology/profile behavior is unchanged.
+
+The Conceptualize prompt-builder decision is locked and implemented in doc 31. A validated ContextPack now renders to a stable instruction shell, compact payload JSON, strict output schema, and output validator. The live extractor prompt is not flipped yet.
+
+The Conceptualize singular-output/diagnostics decision is locked and implemented in doc 32. Public extra tags are removed. Hidden `diagnostics.candidateRefs` are internal-only, dynamic policy-driven calibration candidates. They are not persisted unless a later correction-evidence flow deliberately snapshots factual near-miss data on user correction.
+
 Remaining open decisions:
 
-1. User-fit projection over proposal events.
-2. Context assembly/event/apply implementation sequencing - which context-pack and typed-operation slice ships first.
-3. Base profile versioning - how accepted operations safely target base profiles.
-4. Agent/subagent execution ontology brief.
-5. Self-building-app framework brief.
+1. Extractor flip - decide when the real extractor consumes the ContextPack prompt builder.
+2. Correction-evidence near-miss wiring - decide whether/how hidden diagnostic candidates are snapshotted only when a user correction happens.
+3. Missing-concept UX - decide how noStrongMatch and suggestedNewConcept appear to the user.
+4. User-fit projection over proposal events and future near-miss evidence.
+5. Base profile versioning - how accepted operations safely target base profiles.
+6. Agent/subagent execution ontology brief.
+7. Self-building-app framework brief.

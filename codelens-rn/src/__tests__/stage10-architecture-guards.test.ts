@@ -588,6 +588,86 @@ describe('Kordex context assembly guards', () => {
     expect(contextAssemblySrc).toContain('serializeContextPack');
     expect(contextAssemblySrc).toContain('validateContextPack');
   });
+
+  it('contextSelector.ts stays a pure read-only selector without runtime dependencies', () => {
+    const contextSelectorSrc = read('src/features/ontology/contextSelector.ts');
+    const forbiddenImportPattern =
+      /from\s+['"][^'"]*(?:db\/|\/db|features\/backup|features\/learning|features\/graph|ai\/|react|react-native|expo|zustand|@tanstack)[^'"]*['"]/;
+    const forbiddenRendererPattern = /render\w*Prompt|toPrompt|SystemPrompt|formatPrompt/i;
+    const forbiddenMutationPattern = /\bapplyProfile|applyMutation|mutateProfile\b/;
+
+    expect(contextSelectorSrc).not.toMatch(forbiddenImportPattern);
+    expect(contextSelectorSrc).not.toMatch(forbiddenRendererPattern);
+    expect(contextSelectorSrc).not.toMatch(forbiddenMutationPattern);
+    expect(contextSelectorSrc).toContain('ContextSelection');
+    expect(contextSelectorSrc).toContain('createConceptualizeContextSelector');
+  });
+
+  it('Conceptualize ContextPack shadow wiring does not render prompts, call models, or mutate ontology state', () => {
+    const shadowSrc = read('src/features/learning/services/conceptualizeContextPack.ts');
+
+    expect(shadowSrc).toContain('buildConceptualizeContextPackShadow');
+    expect(shadowSrc).toContain('assembleContextPack');
+    expect(shadowSrc).toContain('validateContextPack');
+    expect(shadowSrc).toContain('selectConceptualizeContext');
+    expect(shadowSrc).not.toMatch(/buildExtractorSystemPrompt|runExtractor|ExtractorComplete/);
+    expect(shadowSrc).not.toMatch(/insertProfileChangeProposal|insertOntologyCorrectionEvidence|saveCapture/);
+    expect(shadowSrc).not.toMatch(/render\w*Prompt|toPrompt|SystemPrompt|formatPrompt/i);
+    expect(shadowSrc).not.toMatch(/from\s+['"][^'"]*(?:db\/|\/db|ai\/|react|react-native|expo|zustand|@tanstack)[^'"]*['"]/);
+  });
+
+  it('Conceptualize prompt builder consumes ContextPack without fetching, selecting, calling models, or mutating', () => {
+    const promptBuilderSrc = read('src/features/learning/services/conceptualizePromptBuilder.ts');
+
+    expect(promptBuilderSrc).toContain('buildConceptualizePrompt');
+    expect(promptBuilderSrc).toContain('ConceptualizePromptOutputSchema');
+    expect(promptBuilderSrc).toContain('validateConceptualizePromptOutput');
+    expect(promptBuilderSrc).toContain('assertValidContextPack');
+    expect(promptBuilderSrc).toContain('diagnostics.candidateRefs');
+    expect(promptBuilderSrc).toContain('getConceptualizePublicClassification');
+    expect(promptBuilderSrc).not.toContain('additionalNodeRefs');
+    expect(promptBuilderSrc).not.toContain('maxAdditionalNodeRefs');
+    expect(promptBuilderSrc).not.toMatch(/selectConceptualizeContext|assembleContextPack|prepareSaveCandidates/);
+    expect(promptBuilderSrc).not.toMatch(/buildExtractorSystemPrompt|runExtractor|ExtractorComplete/);
+    expect(promptBuilderSrc).not.toMatch(/insertProfileChangeProposal|insertOntologyCorrectionEvidence|saveCapture/);
+    expect(promptBuilderSrc).not.toMatch(/enqueue|complete|chatCompletion|model|provider/i);
+    expect(promptBuilderSrc).not.toMatch(/from\s+['"][^'"]*(?:db\/|\/db|ai\/|react|react-native|expo|zustand|@tanstack)[^'"]*['"]/);
+  });
+
+  it('Conceptualize diagnostic internals stay out of the public learning barrel', () => {
+    const promptBuilderSrc = read('src/features/learning/services/conceptualizePromptBuilder.ts');
+    const learningIndexSrc = read('src/features/learning/index.ts');
+    const internalSymbols = [
+      'MAX_DIAGNOSTIC_CANDIDATE_REFS_HARD_CAP',
+      'ConceptualizePromptDiagnosticCandidate',
+      'ConceptualizeDiagnosticCandidatePolicy',
+      'deriveConceptualizeDiagnosticCandidatePolicy',
+    ];
+
+    for (const symbol of internalSymbols) {
+      expect(promptBuilderSrc).toContain(symbol);
+      expect(learningIndexSrc).not.toContain(symbol);
+    }
+
+    expect(promptBuilderSrc).toMatch(/\/\*\* @internal \*\/\s*export const MAX_DIAGNOSTIC_CANDIDATE_REFS_HARD_CAP/);
+    expect(promptBuilderSrc).toMatch(/\/\*\* @internal \*\/\s*export type ConceptualizePromptDiagnosticCandidate/);
+    expect(promptBuilderSrc).toMatch(/\/\*\* @internal \*\/\s*export interface ConceptualizeDiagnosticCandidatePolicy/);
+    expect(promptBuilderSrc).toMatch(/\/\*\* @internal \*\/\s*export function deriveConceptualizeDiagnosticCandidatePolicy/);
+  });
+
+  it('Extractor Flip classifier is a model/adapter seam, not a persistence or mutation seam', () => {
+    const classifierSrc = read('src/features/learning/services/conceptualizeClassification.ts');
+    const modalSrc = read('src/features/learning/ui/SaveAsLearningModal.tsx');
+
+    expect(classifierSrc).toContain('runConceptualizeClassification');
+    expect(classifierSrc).toContain('buildConceptualizePrompt');
+    expect(classifierSrc).toContain('validateConceptualizePromptOutput');
+    expect(classifierSrc).toContain('applyConceptualizeClassificationToCandidate');
+    expect(classifierSrc).toContain('buildConceptualizeContextPackShadow');
+    expect(classifierSrc).not.toMatch(/insertProfileChangeProposal|insertOntologyCorrectionEvidence|saveCapture|saveConceptualizedCapture/);
+    expect(classifierSrc).not.toMatch(/from\s+['"][^'"]*(?:db\/|\/db|features\/backup|react|react-native|expo|zustand|@tanstack)[^'"]*['"]/);
+    expect(modalSrc).not.toContain('buildConceptualizeContextPackShadow');
+  });
 });
 
 describe('Ontology-profile naming boundary guards', () => {

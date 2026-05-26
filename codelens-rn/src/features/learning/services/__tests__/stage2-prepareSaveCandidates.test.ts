@@ -3,6 +3,10 @@ import { prepareSaveCandidates } from '../prepareSaveCandidates';
 import { unsafeConceptId } from '../../types/ids';
 import { composeDomainProfile, codingProfile, type DomainProfile, type ProfileOverlay, type OntologyNode } from '../../../ontology';
 import type { ConceptMatch } from '../conceptMatchPreCheck';
+import {
+  CONCEPTUALIZE_PROMPT_OUTPUT_VERSION,
+} from '../conceptualizePromptBuilder';
+import type { ConceptualizeProfileContext } from '../conceptualizeProfileContext';
 
 vi.mock('../../../../ai/queue', () => ({
   enqueue: vi.fn(),
@@ -13,6 +17,26 @@ vi.mock('../conceptMatchPreCheck', () => ({
 }));
 
 const conceptId = unsafeConceptId('c_123456789012345678901');
+
+function conceptualizeContext(profile: DomainProfile = codingProfile): ConceptualizeProfileContext {
+  return {
+    profile,
+    baseProfile: codingProfile,
+    branches: [],
+    selectionSnapshot: { baseProfileId: codingProfile.id },
+    proposalTarget: { kind: 'base_profile', profileId: codingProfile.id },
+    compositionStamp: {
+      baseProfileId: codingProfile.id,
+      activeProfileId: profile.id,
+      branchOrder: [],
+      compositionHash: 'fnv1a32:testhash',
+    },
+    scopeLegend: {
+      activeScopeId: codingProfile.id,
+      scopes: [{ scopeId: codingProfile.id, label: codingProfile.label, kind: 'baseProfile' }],
+    },
+  };
+}
 
 describe('Stage 2 prepareSaveCandidates', () => {
   it('maps extractor output to save modal candidate data with match similarity', async () => {
@@ -160,6 +184,281 @@ describe('Stage 2 prepareSaveCandidates', () => {
     expect(candidates[0]?.conceptHint?.proposedConceptType)
       .toBe(codingProfile.promotion.defaultTypeNodeId);
     expect(candidates[0]?.rawProposedTypeNodeId).toBe('hallucinated_runtime_kind');
+  });
+
+  it('uses Conceptualize classification to replace only the ontology placement', async () => {
+    const candidates = await prepareSaveCandidates(
+      { selectedText: 'some code here' },
+      {
+        preCheck: async () => [],
+        conceptualizeContext: conceptualizeContext(),
+        complete: async () =>
+          JSON.stringify({
+            candidates: [
+              {
+                title: 'Test',
+                whatClicked: 'Something clicked',
+                whyItMattered: null,
+                rawSnippet: 'some code here',
+                keywords: ['test'],
+                conceptHint: {
+                  proposedName: 'Test',
+                  proposedNormalizedKey: 'test',
+                  proposedConceptType: 'mechanism',
+                  extractionConfidence: 0.5,
+                  linkedConceptId: null,
+                  linkedConceptName: null,
+                  linkedConceptLanguages: null,
+                  isNewLanguageForExistingConcept: false,
+                },
+              },
+            ],
+          }),
+        conceptualizeComplete: async () =>
+          JSON.stringify({
+            schemaVersion: CONCEPTUALIZE_PROMPT_OUTPUT_VERSION,
+            classification: {
+              primaryNodeRef: { scopeId: 'coding', nodeId: 'pattern' },
+              noStrongMatch: false,
+              suggestedNewConcept: null,
+              confidence: 0.86,
+              rationale: 'The capture describes a reusable coding pattern.',
+            },
+            diagnostics: {
+              candidateRefs: [
+                { ref: { scopeId: 'coding', nodeId: 'mechanism' }, rank: 2, score: 0.44 },
+              ],
+            },
+          }),
+      },
+    );
+
+    expect(candidates[0]).toMatchObject({
+      title: 'Test',
+      whatClicked: 'Something clicked',
+      rawSnippet: 'some code here',
+      extractionConfidence: 0.86,
+      rawProposedTypeNodeId: 'coding:pattern',
+    });
+    expect(candidates[0]?.conceptHint?.proposedConceptType).toBe('pattern');
+  });
+
+  it('keeps noStrongMatch as an explicit missing placement instead of inventing a fallback type', async () => {
+    const candidates = await prepareSaveCandidates(
+      { selectedText: 'some code here' },
+      {
+        preCheck: async () => [],
+        conceptualizeContext: conceptualizeContext(),
+        complete: async () =>
+          JSON.stringify({
+            candidates: [
+              {
+                title: 'Test',
+                whatClicked: 'Something clicked',
+                whyItMattered: null,
+                rawSnippet: 'some code here',
+                keywords: ['test'],
+                conceptHint: {
+                  proposedName: 'Test',
+                  proposedNormalizedKey: 'test',
+                  proposedConceptType: 'mechanism',
+                  extractionConfidence: 0.5,
+                  linkedConceptId: null,
+                  linkedConceptName: null,
+                  linkedConceptLanguages: null,
+                  isNewLanguageForExistingConcept: false,
+                },
+              },
+            ],
+          }),
+        conceptualizeComplete: async () =>
+          JSON.stringify({
+            schemaVersion: CONCEPTUALIZE_PROMPT_OUTPUT_VERSION,
+            classification: {
+              primaryNodeRef: null,
+              noStrongMatch: true,
+              suggestedNewConcept: {
+                label: 'Unmodeled Save State',
+                kind: 'subcategory',
+                parentNodeRef: { scopeId: 'coding', nodeId: 'mechanism' },
+                meaning: 'The capture needs a more specific save-state concept.',
+                reason: 'No existing node is specific enough.',
+              },
+              confidence: 0.34,
+              rationale: 'The supplied taxonomy does not contain a strong fit.',
+            },
+            diagnostics: {
+              candidateRefs: [
+                { ref: { scopeId: 'coding', nodeId: 'mechanism' }, rank: 2, score: 0.41 },
+              ],
+            },
+          }),
+      },
+    );
+
+    expect(candidates[0]?.conceptHint).toBeNull();
+    expect(candidates[0]?.rawProposedTypeNodeId).toBeNull();
+    expect(candidates[0]?.extractionConfidence).toBe(0.34);
+  });
+
+  it('passes the caller abort signal through to Conceptualize classification', async () => {
+    const controller = new AbortController();
+    let capturedSignal: AbortSignal | undefined;
+
+    await prepareSaveCandidates(
+      { selectedText: 'some code here' },
+      {
+        signal: controller.signal,
+        preCheck: async () => [],
+        conceptualizeContext: conceptualizeContext(),
+        complete: async () =>
+          JSON.stringify({
+            candidates: [
+              {
+                title: 'Test',
+                whatClicked: 'Something clicked',
+                whyItMattered: null,
+                rawSnippet: 'some code here',
+                keywords: ['test'],
+                conceptHint: {
+                  proposedName: 'Test',
+                  proposedNormalizedKey: 'test',
+                  proposedConceptType: 'mechanism',
+                  extractionConfidence: 0.5,
+                  linkedConceptId: null,
+                  linkedConceptName: null,
+                  linkedConceptLanguages: null,
+                  isNewLanguageForExistingConcept: false,
+                },
+              },
+            ],
+          }),
+        conceptualizeComplete: async (_prompt, _input, signal) => {
+          capturedSignal = signal;
+          return JSON.stringify({
+            schemaVersion: CONCEPTUALIZE_PROMPT_OUTPUT_VERSION,
+            classification: {
+              primaryNodeRef: { scopeId: 'coding', nodeId: 'pattern' },
+              noStrongMatch: false,
+              suggestedNewConcept: null,
+              confidence: 0.86,
+              rationale: 'The capture describes a reusable coding pattern.',
+            },
+            diagnostics: {
+              candidateRefs: [
+                { ref: { scopeId: 'coding', nodeId: 'mechanism' }, rank: 2, score: 0.44 },
+              ],
+            },
+          });
+        },
+      },
+    );
+
+    expect(capturedSignal).toBe(controller.signal);
+  });
+
+  it('propagates Conceptualize aborts instead of falling back to extractor placement', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const abort = new Error('The operation was aborted');
+    abort.name = 'AbortError';
+    let conceptualizeCalls = 0;
+
+    await expect(prepareSaveCandidates(
+      { selectedText: 'some code here' },
+      {
+        preCheck: async () => [],
+        conceptualizeContext: conceptualizeContext(),
+        complete: async () =>
+          JSON.stringify({
+            candidates: [
+              {
+                title: 'Test',
+                whatClicked: 'Something clicked',
+                whyItMattered: null,
+                rawSnippet: 'some code here',
+                keywords: ['test'],
+                conceptHint: {
+                  proposedName: 'Test',
+                  proposedNormalizedKey: 'test',
+                  proposedConceptType: 'mechanism',
+                  extractionConfidence: 0.5,
+                  linkedConceptId: null,
+                  linkedConceptName: null,
+                  linkedConceptLanguages: null,
+                  isNewLanguageForExistingConcept: false,
+                },
+              },
+            ],
+          }),
+        conceptualizeComplete: async () => {
+          conceptualizeCalls += 1;
+          throw abort;
+        },
+      },
+    )).rejects.toBe(abort);
+
+    expect(conceptualizeCalls).toBe(1);
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+
+  it('keeps the extractor placement when Conceptualize classification fails validation', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const conceptualizeCalls: string[] = [];
+
+    const candidates = await prepareSaveCandidates(
+      { selectedText: 'some code here' },
+      {
+        preCheck: async () => [],
+        conceptualizeContext: conceptualizeContext(),
+        complete: async () =>
+          JSON.stringify({
+            candidates: [
+              {
+                title: 'Test',
+                whatClicked: 'Something clicked',
+                whyItMattered: null,
+                rawSnippet: 'some code here',
+                keywords: ['test'],
+                conceptHint: {
+                  proposedName: 'Test',
+                  proposedNormalizedKey: 'test',
+                  proposedConceptType: 'mechanism',
+                  extractionConfidence: 0.5,
+                  linkedConceptId: null,
+                  linkedConceptName: null,
+                  linkedConceptLanguages: null,
+                  isNewLanguageForExistingConcept: false,
+                },
+              },
+            ],
+          }),
+        conceptualizeComplete: async (_prompt, input) => {
+          conceptualizeCalls.push(input);
+          return JSON.stringify({
+            schemaVersion: CONCEPTUALIZE_PROMPT_OUTPUT_VERSION,
+            classification: {
+              primaryNodeRef: { scopeId: 'coding', nodeId: 'not_real' },
+              noStrongMatch: false,
+              suggestedNewConcept: null,
+              confidence: 0.86,
+              rationale: 'Invalid ref.',
+            },
+            diagnostics: { candidateRefs: [] },
+          });
+        },
+      },
+    );
+
+    expect(conceptualizeCalls).toHaveLength(2);
+    expect(conceptualizeCalls[1]).toContain('Validation error:');
+    expect(candidates[0]?.conceptHint?.proposedConceptType).toBe('mechanism');
+    expect(candidates[0]?.extractionConfidence).toBe(0.5);
+    expect(warn).toHaveBeenCalledWith(
+      '[learning] Conceptualize classification failed; keeping extractor placement',
+      expect.any(Error),
+    );
+    warn.mockRestore();
   });
 
   it('includes an overlay-added ontology node in the prompt when a composed profile is passed', async () => {

@@ -65,6 +65,36 @@ export { conceptMatchPreCheck } from './services/conceptMatchPreCheck';
 export type { ConceptMatch } from './services/conceptMatchPreCheck';
 export { prepareSaveCandidates } from './services/prepareSaveCandidates';
 export type { SaveCandidateSource } from './services/prepareSaveCandidates';
+export {
+  ConceptualizeClassificationFailedError,
+  applyConceptualizeClassificationToCandidate,
+  classifySaveCandidateWithConceptualize,
+  runConceptualizeClassification,
+} from './services/conceptualizeClassification';
+export type {
+  ConceptualizeClassificationComplete,
+  ConceptualizeClassificationResult,
+  RunConceptualizeClassificationInput,
+} from './services/conceptualizeClassification';
+export {
+  CONCEPTUALIZE_PROMPT_OUTPUT_VERSION,
+  CONCEPTUALIZE_PROMPT_VERSION,
+  ConceptualizePromptOutputSchema,
+  buildConceptualizePrompt,
+  getConceptualizePublicClassification,
+  validateConceptualizePromptOutput,
+} from './services/conceptualizePromptBuilder';
+export type {
+  BuildConceptualizePromptInput,
+  ConceptualizePromptClassification,
+  ConceptualizePromptBuildResult,
+  ConceptualizePromptNodePayload,
+  ConceptualizePromptOutput,
+  ConceptualizePromptOutputValidationCode,
+  ConceptualizePromptOutputValidationError,
+  ConceptualizePromptOutputValidationResult,
+  ConceptualizePromptPayload,
+} from './services/conceptualizePromptBuilder';
 export { saveCapture } from './services/saveCapture';
 export { saveConceptualizedCapture } from './services/saveConceptualizedCapture';
 export type { ConceptualizeCorrectionDraft, ConceptualizeSaveContext } from './services/saveConceptualizedCapture';

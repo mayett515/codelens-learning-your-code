@@ -170,6 +170,19 @@ export type {
   ContextScopeLegendEntry,
   ScopedNodeRef,
 } from './contextAssembly';
+export {
+  createConceptualizeContextSelector,
+  selectConceptualizeContext,
+} from './contextSelector';
+export type {
+  ConceptualizeContextSelectorInput,
+  ContextSelection,
+  ContextSelectionBucket,
+  ContextSelectionReason,
+  ContextSelectionSection,
+  ContextSelectionTraceEntry,
+  ContextSelector,
+} from './contextSelector';
 export { validateOntologyCorrection } from './corrections';
 
 export function getActiveDomainProfile(): DomainProfile<CodingConceptTypeNodeId>;

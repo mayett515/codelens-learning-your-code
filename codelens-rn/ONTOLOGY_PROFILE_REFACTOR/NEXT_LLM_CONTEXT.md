@@ -9,7 +9,27 @@ repo: C:\Projects\CodeLensApp\CodeLens-v2\codelens-rn
 branch: refactor/ontology-profile
 ```
 
-The latest source slice is the A2 decision implemented: `prepareSaveCandidates` now accepts an optional `profile?: DomainProfile` through its options parameter. The service receives the finished/composed brain, not branch ingredients. Default behavior stays `getActiveDomainProfile()` with the coding profile. When a caller supplies a composed profile, it flows through to `buildExtractorSystemPrompt`. A1 (passing `ActiveDomainProfileActivationInput` into `prepareSaveCandidates`) was explicitly rejected; composition still belongs elsewhere.
+The latest source slice is doc 33: the first Conceptualize Extractor Flip is implemented as classification-only live wiring. `prepareSaveCandidates` still uses the old extractor for card text, but when a `ConceptualizeProfileContext` is supplied it now runs the new ContextPack -> prompt builder -> model call -> strict validator path for ontology placement. Invalid Conceptualize output falls back to the old extractor placement. No diagnostic persistence, near-miss evidence snapshot, missing-concept UI, proposal creation, ontology/profile mutation, checker runtime, or user-fit projection was added.
+
+Latest Kordex context state:
+
+- Doc 28 is locked and the first pure context assembly slice is implemented in `src/features/ontology/contextAssembly.ts`.
+- Context assembly now has typed `ContextPack` structures, `assembleContextPack`, `validateContextPack`, `assertValidContextPack`, `serializeContextPack`, and `scopedNodeRefKey`.
+- The implementation stays pure: no DB, UI, LLM, retrieval, graph engine, prompt renderer, checker runtime, or apply/mutation dependency.
+- Doc 29 is locked and the first pure context selector slice is implemented in `src/features/ontology/contextSelector.ts`.
+- Context selection now has a shared `ContextSelector` / `ContextSelection` contract plus one deterministic Conceptualize selector over caller-supplied ordered candidates.
+- The selector uses pinned/elastic buckets, trace entries, cap omissions, same-label ambiguity preservation, cross-scope evidence preservation, and bounded direct-evidence pinning. Evidence tied only to elastic ontology context stays capped; only cross-scope, explicit, or pinned-decision-center evidence bypasses evidence caps. There is no runtime behavior change until a caller is deliberately wired.
+- Doc 30 is locked and the first Conceptualize ContextPack shadow wiring slice is implemented in `src/features/learning/services/conceptualizeContextPack.ts`.
+- The real Conceptualize extraction flow now builds and validates a `ContextPack` in shadow mode after candidates are prepared. This is behavior-neutral: invalid packs warn only, and no prompt, model, save, suggestion, proposal, or ontology/profile mutation behavior changes.
+- Doc 31 is locked and the pure Conceptualize prompt-builder slice is implemented in `src/features/learning/services/conceptualizePromptBuilder.ts`.
+- Prompt building now consumes a validated `ContextPack` and renders a stable instruction shell, compact Kordex context payload JSON, strict output schema, and output validator. Unknown refs are rejected against the original pack. The live extractor prompt is not flipped yet.
+- Doc 32 is locked and the Conceptualize output contract is hardened in `src/features/learning/services/conceptualizePromptBuilder.ts`.
+- Public Conceptualize output is now singular: one primary placement, confidence, `noStrongMatch` / `suggestedNewConcept`, and rationale. Public `additionalNodeRefs` are removed.
+- Hidden ambiguity is represented only as `diagnostics.candidateRefs`: internal-only, dynamic policy-driven candidates for future calibration. They are not visible tags and are not persisted unless a later correction-evidence flow deliberately snapshots factual near-miss data.
+- Doc 33 is locked and the first Conceptualize Extractor Flip slice is implemented in `src/features/learning/services/conceptualizeClassification.ts` and `prepareSaveCandidates.ts`.
+- The flip is classification-only: old extractor for card fields, new Conceptualize classifier for ontology placement when validation succeeds.
+- `noStrongMatch` produces an unclassified candidate instead of defaulting; `suggestedNewConcept` remains a suggestion and is not mapped into `conceptHint.proposedConceptType`.
+- The next context decision is correction-evidence near-miss wiring versus missing-concept UX. Do not combine it with user-fit projection, vector retrieval, DB-backed history readers, graph traversal, automatic confidence/ranking updates, or automatic missing-concept apply.
 
 The runtime profile coordinator decision is now locked (doc 11). The brain mixer is an explicit separate layer above runtime services. Services receive a composed `DomainProfile` and do not know branch groups, do not call activation input resolvers, and do not read hidden global active-profile state. Alternatives rejected: service-owned mixing, UI-screen-owned mixing, hidden global `getRuntimeProfile()` / active-profile store, and persistence-owned composed profile as the current shape. The coordinator can later grow into the Kortex Runtime, but not in this slice.
 
@@ -89,61 +109,39 @@ Read in this order:
 18. `ONTOLOGY_PROFILE_REFACTOR/23_TRUST_SETTING_STORAGE_DECISION.md` - locked decision + storage-only v1: trust settings live separately from evidence/proposals, default to suggest-first, and keep future auto-apply bounded by target/risk/kind rules.
 19. `ONTOLOGY_PROFILE_REFACTOR/24_BRANCH_LOCAL_PROPOSAL_APPLY_DECISION.md` - locked decision + first helper/service/minimal UI implementation: first apply is explicit, branch-local, revalidated, and atomic; the first review surface supports Apply / Reject / Postpone / Ask why without edit support, base/core mutation, upward merge, auto-apply, or old-card backfill.
 20. `ONTOLOGY_PROFILE_REFACTOR/25_PROPOSAL_EVENT_AUDIT_STORAGE_DECISION.md` - locked decision + implementation: append-only proposal event audit storage for Apply / Reject / Postpone / Ask why decisions; user-fit learning remains a future projection.
-21. `ONTOLOGY_PROFILE_REFACTOR/MODEL_REVIEW_2026-05-13_PROFILE_PROPOSAL_REVIEW_UI.md` - model-review report for the minimal proposal review UI, accepted fixes, rejected false positives, and reviewer quality notes.
-22. `ONTOLOGY_PROFILE_REFACTOR/05_ANTI_REGRESSION_RULES.md` - hard constraints and compatibility boundaries.
-23. `ONTOLOGY_PROFILE_REFACTOR/03_CATEGORIZATION_AND_ONTOLOGY_CHECKER.md` - next product direction: correction flow and ontology checker.
-24. `ONTOLOGY_PROFILE_REFACTOR/04_REFACTOR_WITHOUT_BREAKING_APP.md` - staged implementation plan and persistence/correction ideas.
-25. `ONTOLOGY_PROFILE_REFACTOR/02_DYNAMIC_PROFILE_SCHEMA.md` - proposed future profile/correction/suggestion shapes.
-26. `ONTOLOGY_PROFILE_REFACTOR/06_PROFILE_BRANCHING_AND_MERGE.md` - profile inheritance, branching, overlays, and merge semantics.
-27. `ONTOLOGY_PROFILE_REFACTOR/README.md` - map of this refactor folder.
-28. `ONTOLOGY_PROFILE_REFACTOR/TOMORROW_START.md` - startup prompt and next-slice reminder.
-29. Root docs if persistence or architecture is touched: `ARCHITECTURE.md`, `PERSISTENCE.md`.
+21. `ONTOLOGY_PROFILE_REFACTOR/26_SCOPED_MEANING_AND_BRANCH_CORE_SEMANTICS_DECISION.md` - locked decision: labels are display/search text, node refs carry identity, and branch-local same-label meanings must mint distinct ids.
+22. `ONTOLOGY_PROFILE_REFACTOR/27_PROJECT_NAMING_KORDEX_DECISION.md` - locked decision: new strategic docs prefer Kordex naming while implementation identifiers stay generic.
+23. `ONTOLOGY_PROFILE_REFACTOR/28_CONTEXT_ASSEMBLY_DECISION.md` - locked decision + implementation: shared ContextPack builder, validator, and deterministic serializer.
+24. `ONTOLOGY_PROFILE_REFACTOR/29_CONTEXT_SELECTOR_DECISION.md` - locked decision + implementation: shared ContextSelector contract, focused task-specific selectors, read-only candidates, pinned/elastic buckets, and first Conceptualize selector.
+25. `ONTOLOGY_PROFILE_REFACTOR/30_CONCEPTUALIZE_CONTEXTPACK_SHADOW_WIRING_DECISION.md` - locked decision + implementation: real Conceptualize caller builds and validates ContextPack in shadow mode only; prompt builder/missing-concept generation/user-fit remain future gates.
+26. `ONTOLOGY_PROFILE_REFACTOR/31_CONCEPTUALIZE_PROMPT_BUILDER_DECISION.md` - locked decision + implementation: pure ContextPack -> instruction shell + compact payload JSON + output schema + output validator, with no extractor flip or mutation.
+27. `ONTOLOGY_PROFILE_REFACTOR/32_CONCEPTUALIZE_SINGULAR_OUTPUT_AND_DIAGNOSTICS_DECISION.md` - locked decision + implementation: singular public Conceptualize output plus internal dynamic diagnostic candidates; no persistence or correction-evidence wiring yet.
+28. `ONTOLOGY_PROFILE_REFACTOR/MODEL_REVIEW_2026-05-13_PROFILE_PROPOSAL_REVIEW_UI.md` - model-review report for the minimal proposal review UI, accepted fixes, rejected false positives, and reviewer quality notes.
+29. `ONTOLOGY_PROFILE_REFACTOR/05_ANTI_REGRESSION_RULES.md` - hard constraints and compatibility boundaries.
+30. `ONTOLOGY_PROFILE_REFACTOR/03_CATEGORIZATION_AND_ONTOLOGY_CHECKER.md` - next product direction: correction flow and ontology checker.
+31. `ONTOLOGY_PROFILE_REFACTOR/04_REFACTOR_WITHOUT_BREAKING_APP.md` - staged implementation plan and persistence/correction ideas.
+32. `ONTOLOGY_PROFILE_REFACTOR/02_DYNAMIC_PROFILE_SCHEMA.md` - proposed future profile/correction/suggestion shapes.
+33. `ONTOLOGY_PROFILE_REFACTOR/06_PROFILE_BRANCHING_AND_MERGE.md` - profile inheritance, branching, overlays, and merge semantics.
+34. `ONTOLOGY_PROFILE_REFACTOR/README.md` - map of this refactor folder.
+35. `ONTOLOGY_PROFILE_REFACTOR/TOMORROW_START.md` - startup prompt and next-slice reminder.
+36. Root docs if persistence or architecture is touched: `ARCHITECTURE.md`, `PERSISTENCE.md`.
 
 ## Current Changed Files
 
-Expected tracked changes in the current correction/proposal persistence slice state:
+Expected tracked changes after the context-selector docs sync:
 
 ```text
-ONTOLOGY_PROFILE_REFACTOR/12_CORRECTION_EVIDENCE_PERSISTENCE_DECISION.md
-ONTOLOGY_PROFILE_REFACTOR/13_BRANCH_OVERLAY_PERSISTENCE_DECISION.md
-ONTOLOGY_PROFILE_REFACTOR/14_PROFILE_SELECTION_AND_BRANCH_RESOLUTION_DECISION.md
-ONTOLOGY_PROFILE_REFACTOR/17_BASE_PROFILE_PERSISTENCE_DECISION.md
-ONTOLOGY_PROFILE_REFACTOR/18_ADAPTIVE_SUGGESTION_POLICY_DECISION.md
-ONTOLOGY_PROFILE_REFACTOR/19_PATCH_MERGE_PROPOSAL_STORAGE_DECISION.md
-ONTOLOGY_PROFILE_REFACTOR/20_CONCEPTUALIZE_PREVIEW_AND_CORRECTION_SURFACE_DECISION.md
-ONTOLOGY_PROFILE_REFACTOR/21_CHECKER_PROPOSAL_REVIEW_CONTEXT_AND_APPLY_DECISION.md
-ONTOLOGY_PROFILE_REFACTOR/KORTEX_DEVELOPER_EXPLAINER.md
+ONTOLOGY_PROFILE_REFACTOR/28_CONTEXT_ASSEMBLY_DECISION.md
+ONTOLOGY_PROFILE_REFACTOR/29_CONTEXT_SELECTOR_DECISION.md
 ONTOLOGY_PROFILE_REFACTOR/NEXT_LLM_CONTEXT.md
 ONTOLOGY_PROFILE_REFACTOR/README.md
 ONTOLOGY_PROFILE_REFACTOR/TOMORROW_START.md
 ONTOLOGY_PROFILE_REFACTOR/WHERE_WE_STAND.md
 ONTOLOGY_PROFILE_REFACTOR/implementation_handoff.md
-ARCHITECTURE.md
 src/__tests__/stage10-architecture-guards.test.ts
-src/db/migrations/015-ontology-correction-evidence.ts
-src/db/migrations/016-profile-change-proposals.ts
-src/db/migrations/__tests__/ontology-correction-evidence-migration.test.ts
-src/db/migrations/__tests__/profile-change-proposals-migration.test.ts
-src/db/migrations/index.ts
-src/db/schema.ts
-src/features/backup/__tests__/profile-columns.test.ts
-src/features/backup/clear.ts
-src/features/backup/columnMaps.ts
-src/features/backup/export.ts
-src/features/backup/format.ts
-src/features/backup/import.ts
-src/features/ontology/__tests__/corrections.test.ts
-src/features/ontology/__tests__/ontologyCorrectionEvidenceCodec.test.ts
-src/features/ontology/__tests__/profileChangeProposalCodec.test.ts
-src/features/ontology/codecs/profileChangeProposal.ts
-src/features/ontology/codecs/ontologyCorrectionEvidence.ts
-src/features/ontology/corrections.ts
-src/features/ontology/data/index.ts
-src/features/ontology/data/ontologyCorrectionEvidenceRepo.ts
-src/features/ontology/data/profileChangeProposalRepo.ts
-src/features/ontology/data/schema.ts
+src/features/ontology/__tests__/contextSelector.test.ts
+src/features/ontology/contextSelector.ts
 src/features/ontology/index.ts
-src/features/ontology/types.ts
 ```
 
 Expected untracked local tool folders:
@@ -375,6 +373,28 @@ Worker prompts/logs for the HR/KR workflow live under `C:\pi-stuff`, not in this
 
 ## Verification Already Run
 
+Latest Conceptualize Extractor Flip verification:
+
+```powershell
+node node_modules\typescript\bin\tsc -p tsconfig.json --noEmit
+npm.cmd test -- --run src/features/learning/services/__tests__/conceptualizeClassification.test.ts src/features/learning/services/__tests__/stage2-prepareSaveCandidates.test.ts src/__tests__/stage10-architecture-guards.test.ts
+npm.cmd test -- --run
+git diff --check -- ONTOLOGY_PROFILE_REFACTOR src
+```
+
+Result: TypeScript clean; targeted classifier/prepare/guard tests 77/77 passed across 3 files; full suite 841/841 passed across 88 files; `git diff --check -- ONTOLOGY_PROFILE_REFACTOR src` clean with CRLF warnings only.
+
+Prior Conceptualize singular-output diagnostics verification:
+
+```powershell
+node node_modules\typescript\bin\tsc -p tsconfig.json --noEmit
+npm.cmd test -- --run src/features/learning/services/__tests__/conceptualizePromptBuilder.test.ts src/features/learning/services/__tests__/conceptualizeContextPack.test.ts src/features/ontology/__tests__/contextSelector.test.ts src/features/ontology/__tests__/contextAssembly.test.ts src/__tests__/stage10-architecture-guards.test.ts
+npm.cmd test -- --run
+git diff --check -- ONTOLOGY_PROFILE_REFACTOR src
+```
+
+Result: TypeScript clean; targeted Conceptualize prompt/context selector/assembly/guard tests 115/115 passed across 5 files; full suite 832/832 passed across 87 files; `git diff --check -- ONTOLOGY_PROFILE_REFACTOR src` clean with CRLF warnings only.
+
 Latest verified commands after trust setting storage:
 
 ```powershell
@@ -436,26 +456,28 @@ Persistence and backup/import compatibility work is already complete for migrati
 
 ## Next Real Work
 
-The label-profile cleanup is complete. Correction evidence domain groundwork and v1 persistence are in place. The explicit active-profile overlay seam is in place. The A2 decision is locked and implemented: `prepareSaveCandidates` now accepts an optional composed `DomainProfile` via `options.profile` and uses it for extraction when supplied, defaulting to `getActiveDomainProfile()`. A1 (passing `ActiveDomainProfileActivationInput` into `prepareSaveCandidates`) was explicitly rejected; composition belongs elsewhere.
+The label-profile cleanup is complete. Correction evidence domain groundwork and v1 persistence are in place. The explicit active-profile overlay seam is in place. The A2 decision is locked and implemented: `prepareSaveCandidates` can receive a composed profile/context from above the service boundary. The latest doc 33 slice extends that seam: `prepareSaveCandidates` now also accepts an optional `conceptualizeContext` and uses the new Conceptualize classifier for ontology placement when validation succeeds, while the old extractor still owns card text extraction. A1 (passing `ActiveDomainProfileActivationInput` into `prepareSaveCandidates`) was explicitly rejected; composition still belongs elsewhere.
 
 The runtime profile coordinator decision is now locked (doc 11). The brain mixer is an explicit separate layer above runtime services. Services receive composed `DomainProfile`, do not know branch groups, do not call activation input resolvers, and do not read hidden global active-profile state. Service-owned mixing, UI-screen-owned mixing, hidden global `getRuntimeProfile()` / active-profile store, and persistence-owned composed profile were all explicitly rejected.
 
-The coordinator helper module is now implemented and tested. The correction evidence persistence decision is locked and v1 storage is implemented (doc 12). The branch/overlay persistence decision is now locked (doc 13) and branch DB persistence is implemented. The profile selection and branch resolution decision is now locked (doc 14) and project-scoped selection DB persistence is implemented. The source-based ProfileRegistry v1 decision is locked and implemented for static/in-memory sources only (doc 15). The runtime activation wiring decision is locked (doc 16) and `runtimeProfileActivation.ts` is implemented/tested. The base profile persistence / user-created cores decision is locked and v1 `profile_definitions` storage is implemented (doc 17). The adaptive suggestion policy is locked (doc 18): suggestions stay separate from evidence, default mode is conservative suggest-first, personal layer is `branchKind: 'personal'`, relationship changes follow trust/risk policy, and risk overrides trust. The patch/merge proposal storage decision is locked and v1 storage is implemented (doc 19): patch suggestions and merge proposals share `profile_change_proposals`, store a `ProfilePatch`, and do not apply themselves. The Conceptualize preview/correction-surface decision is locked (doc 20): first correction surface is the Conceptualize preview before final save, and every correction stores mistake-understanding evidence. The checker/proposal/context/apply decision is locked (doc 21): checker output is explanation/evidence/proposal, proposal review includes freshness/revalidation, context assembly is a first-class layer, accepted proposals compile to typed Kortex operations, normal apply is atomic, bulk backfills are chunked, and historical undo is a reversal proposal. The Conceptualize first implementation scope is locked and implemented (doc 22): existing type corrections save immediately with evidence, while new subtype creation creates guarded pending profile-change proposals instead of silent base/core or branch mutation. Unknown extracted type ids normalize to the active profile default for saving, but correction evidence can preserve the invalid raw id as `rawProposedTypeNodeId`. The trust setting storage decision is locked and v1 `profile_trust_settings` storage is implemented (doc 23): trust policy is separate from evidence/proposals and remains suggest-first by default. The branch-local proposal review/apply decision is locked and helper/service/minimal UI slices are implemented (doc 24): first apply is explicit, branch-local, revalidated, atomic, and limited to Apply / Reject / Postpone / Ask why. The proposal event audit storage decision is locked and implemented (doc 25): Apply/Reject/Postpone append `profile_proposal_events` inside the same guarded transactions as proposal/branch state changes. The domain-only `ProfileBranch`, `ProfileSelection`, `ProfileRegistry`, static/in-memory `ProfileBranchStore`, persistent profile definitions, correction evidence storage, proposal storage, trust setting storage, branch-local apply helper/service, minimal proposal review UI, proposal event audit storage, runtime activation helper seams, and first Conceptualize correction loop are implemented and tested. The remaining implementation decisions are:
+The coordinator helper module is now implemented and tested. The correction evidence persistence decision is locked and v1 storage is implemented (doc 12). The branch/overlay persistence decision is now locked (doc 13) and branch DB persistence is implemented. The profile selection and branch resolution decision is now locked (doc 14) and project-scoped selection DB persistence is implemented. The source-based ProfileRegistry v1 decision is locked and implemented for static/in-memory sources only (doc 15). The runtime activation wiring decision is locked (doc 16) and `runtimeProfileActivation.ts` is implemented/tested. The base profile persistence / user-created cores decision is locked and v1 `profile_definitions` storage is implemented (doc 17). The adaptive suggestion policy is locked (doc 18): suggestions stay separate from evidence, default mode is conservative suggest-first, personal layer is `branchKind: 'personal'`, relationship changes follow trust/risk policy, and risk overrides trust. The patch/merge proposal storage decision is locked and v1 storage is implemented (doc 19): patch suggestions and merge proposals share `profile_change_proposals`, store a `ProfilePatch`, and do not apply themselves. The Conceptualize preview/correction-surface decision is locked (doc 20): first correction surface is the Conceptualize preview before final save, and every correction stores mistake-understanding evidence. The checker/proposal/context/apply decision is locked (doc 21): checker output is explanation/evidence/proposal, proposal review includes freshness/revalidation, context assembly is a first-class layer, accepted proposals compile to typed Kortex operations, normal apply is atomic, bulk backfills are chunked, and historical undo is a reversal proposal. The Conceptualize first implementation scope is locked and implemented (doc 22): existing type corrections save immediately with evidence, while new subtype creation creates guarded pending profile-change proposals instead of silent base/core or branch mutation. Unknown extracted type ids normalize to the active profile default for saving, but correction evidence can preserve the invalid raw id as `rawProposedTypeNodeId`. The trust setting storage decision is locked and v1 `profile_trust_settings` storage is implemented (doc 23): trust policy is separate from evidence/proposals and remains suggest-first by default. The branch-local proposal review/apply decision is locked and helper/service/minimal UI slices are implemented (doc 24): first apply is explicit, branch-local, revalidated, atomic, and limited to Apply / Reject / Postpone / Ask why. The proposal event audit storage decision is locked and implemented (doc 25): Apply/Reject/Postpone append `profile_proposal_events` inside the same guarded transactions as proposal/branch state changes. The context assembly decision is locked and implemented as a pure first slice (doc 28): typed `ContextPack`, builder, validator, assertion helper, scoped ref key, and deterministic serializer. The context selector decision is locked and implemented as a pure first slice (doc 29): shared selector contract, focused task-specific selector direction, read-only candidates, pinned/elastic buckets, and one Conceptualize selector. The Conceptualize ContextPack shadow wiring decision is locked and implemented (doc 30). The Conceptualize prompt-builder decision is locked and implemented (doc 31). The Conceptualize singular output/diagnostics decision is locked and implemented (doc 32). The Conceptualize Extractor Flip is locked and implemented (doc 33): classification-only live wiring through `conceptualizeClassification.ts`, guarded fallback, no diagnostic persistence, no missing-concept UI, and no ontology/profile mutation. The domain-only `ProfileBranch`, `ProfileSelection`, `ProfileRegistry`, static/in-memory `ProfileBranchStore`, persistent profile definitions, correction evidence storage, proposal storage, trust setting storage, branch-local apply helper/service, minimal proposal review UI, proposal event audit storage, runtime activation helper seams, first Conceptualize correction loop, context assembly/selector, ContextPack builder, pure Conceptualize prompt builder, singular-output prompt contract, and classification-only Extractor Flip are implemented and tested. The remaining implementation decisions are:
 
 ```text
-1. User-fit projection over proposal events.
-2. Context assembly/event/apply implementation sequencing - which typed operation and context-pack shape ships first.
-3. Base profile versioning - how accepted operations safely target base profiles.
-4. Agent/subagent execution ontology brief.
-5. Self-building-app framework brief.
+1. Correction-evidence near-miss wiring - decide whether/how hidden diagnostic candidates are snapshotted only when a user correction happens.
+2. Missing-concept UX - decide how noStrongMatch and suggestedNewConcept appear to the user.
+3. User-fit projection over proposal events and future near-miss evidence.
+4. Base profile versioning - how accepted operations safely target base profiles.
+5. Agent/subagent execution ontology brief.
+6. Self-building-app framework brief.
 ```
 
 Good next work should stay behind a human decision gate. Likely candidates:
 
 ```text
-1. User-fit projection over proposal events.
-2. Context assembly for checker/proposal review.
-3. Base profile versioning guard for future base/core proposals.
+1. Correction-evidence near-miss wiring.
+2. Missing-concept UX.
+3. User-fit projection over proposal events.
+4. Base profile versioning guard for future base/core proposals.
 ```
 
 The user also wants Kortex profile branches: a general coding child should be extendable into project, job, learning, or personal branches that can stay separate or later merge selected changes back. "Core" means immutable within a profile lineage; a fork/user can create a different ground-zero base profile later. Read `06_PROFILE_BRANCHING_AND_MERGE.md` before proposing correction/checker storage or UI.
@@ -505,30 +527,20 @@ This is architecture direction only. Do not add app-builder runtime, code-genera
 Good next bounded slice:
 
 ```text
-Decision brief before implementation:
-- whether first correction UI belongs in capture save, promotion review, concept detail, or another surface
-- whether internal `subjectKind: 'capture' | 'item'` is the right vocabulary, or whether current app UI should keep saying concept
-- how the UI should write correction evidence without mutating the profile automatically
-- what tests prove correction UI/evidence never mutates the profile automatically
-- whether the first proposal review target should handle project overlay, learning lens, or personal correction layer first
-- correction evidence stores active context, while proposal rows store the reviewed target layer
-- how trust mode, semantic confidence, user-fit confidence, and risk score appear in proposal/review surfaces
-- whether checker proposals should be generated manually, periodically, or from a review queue
-- whether the next runtime source for overlays should be UI-driven, config-driven, or remain test-only
-- how current `relationshipTypeNodeIds` compatibility maps to future `is` / `is not` and dynamic labels
-- whether helper shapes should already look like serializable operations that a future DSL could target
-- whether future external-backed nodes need an extension point later, without implementing source adapters now
+Correction-evidence near-miss wiring or missing-concept UX decision:
+  - selector, ContextPack builder, Conceptualize shadow caller, pure prompt builder, and singular public output contract are implemented
+  - first Extractor Flip is implemented as classification-only live wiring
+  - next context work should decide whether correction evidence should snapshot hidden diagnostic candidates only on user correction, or whether noStrongMatch/suggestedNewConcept UX should be designed first
+  - keep DB-backed history readers, retrieval, graph traversal, checker runtime, automatic confidence/ranking updates, automatic missing-concept apply, user-fit projection, and base/core mutation out of either next gate
 ```
 
 Likely implementation sequence after audit:
 
-1. Reconcile Kortex Core/child-core framing with the next internal composition helper names and tests.
-2. Decide product semantics for corrections and first UI surface.
-3. Add a UI affordance where users can correct a proposed ontology/type classification.
-4. Store corrections through the implemented evidence repo, not as automatic ontology or profile mutations.
-5. Add a checker/suggestion model that proposes profile patches with evidence IDs.
-6. Add an approval UI so the user can accept, edit, reject, or postpone patch suggestions.
-7. Add patch/merge review so evidence can propose branch/local/base changes without applying them automatically.
+1. Decide correction-evidence near-miss wiring versus missing-concept UX ordering.
+2. If wiring near-miss evidence next, snapshot hidden diagnostic candidates only when a user correction happens; do not persist diagnostics from successful uncorrected saves.
+3. Add read-only candidate readers later if caller-supplied arrays become too thin.
+4. Add user-fit projection over proposal events as a later ranking input, not inside the selector contract.
+5. Add missing-concept apply and proposal revalidation/context integration after noStrongMatch UX is stable.
 
 ## Guardrails For Next Worker
 

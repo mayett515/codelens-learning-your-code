@@ -17,6 +17,7 @@ import { useSaveLearningStore } from '../state/save-learning';
 import { prepareSaveCandidates } from '../services/prepareSaveCandidates';
 import { saveConceptualizedCapture } from '../services/saveConceptualizedCapture';
 import {
+  createConceptualizeProfileContext,
   resolveConceptualizeProfileContext,
   type ConceptualizeProfileContext,
 } from '../services/conceptualizeProfileContext';
@@ -33,11 +34,13 @@ export function SaveAsLearningModal() {
   const queryClient = useQueryClient();
   const [profileContext, setProfileContext] = useState<ConceptualizeProfileContext>(() => {
     const profile = getActiveDomainProfile();
-    return {
+    return createConceptualizeProfileContext({
       profile,
+      baseProfile: profile,
+      branches: [],
       selectionSnapshot: { baseProfileId: profile.id },
       proposalTarget: { kind: 'base_profile', profileId: profile.id },
-    };
+    });
   });
   const [promotionCaptureId, setPromotionCaptureId] = useState<import('../types/ids').LearningCaptureId | null>(null);
   const profile = profileContext.profile;
@@ -60,7 +63,10 @@ export function SaveAsLearningModal() {
             chatMessageId: state.sourceMessageId,
             sessionId: state.sourceChatId,
           },
-          { signal: controller.signal, profile: context.profile },
+          {
+            signal: controller.signal,
+            conceptualizeContext: context,
+          },
         );
         if (cancelled) return;
 

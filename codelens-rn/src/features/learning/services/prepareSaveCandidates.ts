@@ -6,6 +6,11 @@ import type { CaptureHint } from '../extractor/extractorSchema';
 import { conceptMatchPreCheck, type ConceptMatch } from './conceptMatchPreCheck';
 import type { ConceptId, LearningCaptureId } from '../types/ids';
 import type { SaveModalCandidateData } from '../types/saveModal';
+import {
+  classifySaveCandidateWithConceptualize,
+  type ConceptualizeClassificationComplete,
+} from './conceptualizeClassification';
+import type { ConceptualizeProfileContext } from './conceptualizeProfileContext';
 
 const MAX_SNIPPET_LENGTH = 800;
 
@@ -26,6 +31,8 @@ export async function prepareSaveCandidates(
   options?: {
     signal?: AbortSignal | undefined;
     complete?: ExtractorComplete | undefined;
+    conceptualizeComplete?: ConceptualizeClassificationComplete | undefined;
+    conceptualizeContext?: ConceptualizeProfileContext | undefined;
     preCheck?: ((text: string) => Promise<ConceptMatch[]>) | undefined;
     profile?: DomainProfile | undefined;
   },
@@ -34,7 +41,8 @@ export async function prepareSaveCandidates(
   if (!selectedText) throw new Error('Cannot extract a capture from empty source text');
 
   const relevantConcepts = await (options?.preCheck ?? conceptMatchPreCheck)(selectedText);
-  const profile = options?.profile ?? getActiveDomainProfile();
+  const conceptualizeContext = options?.conceptualizeContext;
+  const profile = options?.profile ?? conceptualizeContext?.profile ?? getActiveDomainProfile();
   const prompt = buildExtractorSystemPrompt({
     profile,
     relevantConcepts,
@@ -44,7 +52,7 @@ export async function prepareSaveCandidates(
     complete: options?.complete,
   });
 
-  return output.candidates.map((candidate) => {
+  const candidates = output.candidates.map((candidate) => {
     const conceptHint = normalizeConceptHintForProfile(candidate.conceptHint, profile);
     const rawProposedTypeNodeId = rawProposedTypeNodeIdForEvidence(
       candidate.conceptHint,
@@ -81,6 +89,28 @@ export async function prepareSaveCandidates(
       keywords: candidate.keywords.map((keyword) => keyword.trim().toLowerCase()).filter(Boolean),
     };
   });
+
+  if (!conceptualizeContext) return candidates;
+
+  return Promise.all(candidates.map(async (candidate, index) => {
+    try {
+      return await classifySaveCandidateWithConceptualize(
+        {
+          candidateId: `candidate-${index}`,
+          candidate,
+          context: conceptualizeContext,
+        },
+        {
+          signal: options?.signal,
+          complete: options?.conceptualizeComplete,
+        },
+      );
+    } catch (error) {
+      if (isAbortError(error)) throw error;
+      console.warn('[learning] Conceptualize classification failed; keeping extractor placement', error);
+      return candidate;
+    }
+  }));
 }
 
 function normalizeConceptHintForProfile(
@@ -107,4 +137,9 @@ function rawProposedTypeNodeIdForEvidence(
 
 function findSimilarityForConcept(matches: ConceptMatch[], id: ConceptId): number | null {
   return matches.find((match) => match.concept.id === id)?.similarity ?? null;
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && error.name === 'AbortError'
+    || error instanceof Error && error.name === 'AbortError';
 }

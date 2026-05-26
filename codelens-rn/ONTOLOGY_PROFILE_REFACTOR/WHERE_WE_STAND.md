@@ -3,11 +3,150 @@
 Repo: `C:\Projects\CodeLensApp\CodeLens-v2\codelens-rn`
 Branch: `refactor/ontology-profile`
 
-This file captures the current state after implementing correction evidence persistence v1, locking the adaptive suggestion policy, implementing storage-only patch/merge proposal persistence v1, locking and implementing the first Conceptualize correction loop, adding raw-proposed-type preservation for normalized extractor mistakes, implementing storage-only trust settings, implementing the branch-local proposal apply helper/service, adding the first minimal proposal review UI, and adding proposal event/audit storage for proposal decisions.
+This file captures the current state after implementing correction evidence persistence v1, locking the adaptive suggestion policy, implementing storage-only patch/merge proposal persistence v1, locking and implementing the first Conceptualize correction loop, adding raw-proposed-type preservation for normalized extractor mistakes, implementing storage-only trust settings, implementing the branch-local proposal apply helper/service, adding the first minimal proposal review UI, adding proposal event/audit storage for proposal decisions, implementing the first pure context assembly slice, implementing the first pure context selector slice, wiring the real Conceptualize flow to build/validate a ContextPack, implementing the pure Conceptualize prompt builder/output validator, hardening Conceptualize to use a singular public output plus internal dynamic diagnostic candidates, and flipping Conceptualize classification live through a guarded classification-only adapter.
 
 ## Last Status Response
 
 Done.
+
+Codex direct slice (Conceptualize Extractor Flip):
+
+- Created `33_CONCEPTUALIZE_EXTRACTOR_FLIP_DECISION.md` with locked decision:
+  - first Extractor Flip is classification-only
+  - old extractor still owns card text extraction
+  - new Conceptualize classifier owns ontology placement through ContextPack -> prompt builder -> model call -> strict validator -> adapter
+  - invalid Conceptualize output falls back to the old extractor placement and logs a warning
+  - `noStrongMatch` stays unclassified instead of defaulting
+  - `suggestedNewConcept` remains a suggestion and is not mapped into `conceptHint.proposedConceptType`
+- Added `conceptualizeClassification.ts`:
+  - `runConceptualizeClassification`
+  - `applyConceptualizeClassificationToCandidate`
+  - `classifySaveCandidateWithConceptualize`
+  - guarded retry/failure error type
+- Updated `prepareSaveCandidates.ts`:
+  - accepts optional `conceptualizeContext`
+  - keeps old extraction for title/body/snippet/keywords
+  - applies new Conceptualize classification when validation succeeds
+  - falls back to old placement when validation/model output fails
+- Updated `SaveAsLearningModal.tsx` to pass `ConceptualizeProfileContext` into `prepareSaveCandidates` and remove the modal-owned shadow-only ContextPack call.
+- Added focused classifier/prepare tests and a stage10 guard proving the classifier is a model/adapter seam, not a persistence/mutation seam.
+- No diagnostic persistence, near-miss evidence snapshot, missing-concept UI, proposal creation, ontology/profile mutation, checker runtime, user-fit projection, graph traversal, vector retrieval, old-card backfill, auto-apply, agent runtime, app-builder runtime, or DSL runtime was added.
+- Verification so far:
+  - TypeScript clean
+  - targeted classifier/prepare/guard tests: 77/77 passed across 3 files
+  - full suite: 841/841 passed across 88 files
+  - `git diff --check -- ONTOLOGY_PROFILE_REFACTOR src` clean with CRLF warnings only
+
+Codex direct slice (Conceptualize singular output and diagnostics):
+
+- Created `32_CONCEPTUALIZE_SINGULAR_OUTPUT_AND_DIAGNOSTICS_DECISION.md` with locked decision:
+  - Conceptualize public output is one primary placement plus confidence/noStrongMatch/suggestedNewConcept/rationale
+  - visible extra tags are not part of the polished product contract
+  - hidden ambiguity candidates remain possible as internal diagnostics
+  - hidden candidates are dynamic and policy-driven from the ContextPack, not a fixed product count
+  - diagnostics are not persisted unless a later correction-evidence flow deliberately snapshots factual near-miss data
+- Updated `conceptualizePromptBuilder.ts`:
+  - removed public `additionalNodeRefs`
+  - removed caller-supplied prompt limits
+  - added `diagnostics.candidateRefs`
+  - added `deriveConceptualizeDiagnosticCandidatePolicy(pack)`
+  - added `getConceptualizePublicClassification(output)`
+  - validator checks diagnostic refs against the original pack, rejects duplicates with the public primary placement, rejects over-budget diagnostics, and rejects bad rank ordering
+- Expanded `conceptualizePromptBuilder.test.ts` for singular output, dynamic diagnostic policy, hidden candidate validation, no-strong-match validation, and unknown suggested-concept parent refs.
+- Updated stage10 guard coverage and learning barrel exports.
+- No live extractor prompt flip, model call, correction evidence migration, save behavior change, correction UI, proposal/evidence write, checker runtime, user-fit projection, automatic confidence/ranking update, DB reader, vector retrieval, graph traversal, branch overlay mutation, base/core mutation, agent runtime, app-builder runtime, or DSL runtime was added.
+- Verification so far:
+  - TypeScript clean
+  - targeted Conceptualize prompt/context selector/assembly/guard tests: 115/115 passed across 5 files
+  - full suite: 832/832 passed across 87 files
+  - `git diff --check -- ONTOLOGY_PROFILE_REFACTOR src` clean with CRLF warnings only
+
+Codex direct slice (Conceptualize prompt builder):
+
+- Created `31_CONCEPTUALIZE_PROMPT_BUILDER_DECISION.md` with locked decision:
+  - prompt builder consumes validated `ContextPack`
+  - it renders stable instruction shell + compact Kordex context payload JSON
+  - it exports a strict output schema and output validator
+  - unknown refs are rejected against the original pack
+  - live extractor prompt/model behavior is not flipped yet
+- Implemented `conceptualizePromptBuilder.ts`:
+  - `buildConceptualizePrompt({ pack })`
+  - `ConceptualizePromptOutputSchema`
+  - `validateConceptualizePromptOutput(rawOutput, pack)`
+  - deterministic payload rendering with scoped refs, scope legend, same-label siblings, evidence/proposal slots, policy, and budget report
+- Added `conceptualizePromptBuilder.test.ts`:
+  - deterministic prompt payload rendering
+  - same-label scoped meaning preservation
+  - known-ref validation
+  - unknown-ref rejection with no label coercion
+  - missing-concept suggestion representation
+  - invalid-pack rejection before rendering
+- Added stage10 guard coverage and exports from the learning barrel.
+- No live extractor prompt change, model call, proposal/evidence write, save behavior change, DB reader, vector retrieval, graph traversal, user-fit projection, missing-concept apply, branch overlay mutation, base/core mutation, checker runtime, agent runtime, app-builder runtime, or DSL runtime was added.
+- Verification so far:
+  - TypeScript clean
+  - targeted Conceptualize prompt/context selector/assembly/guard tests: 107/107 passed across 5 files
+  - full suite: 824/824 passed across 87 files
+
+Codex direct slice (Conceptualize ContextPack shadow wiring):
+
+- Created `30_CONCEPTUALIZE_CONTEXTPACK_SHADOW_WIRING_DECISION.md` with locked decision:
+  - A is split into A1 shadow wiring, A2 prompt builder, and A3 missing-concept allowance/apply
+  - A1 is the only implemented step in this slice
+  - Conceptualize may build and validate a real `ContextPack` from the real caller
+  - invalid packs warn only
+  - prompt text, model behavior, save behavior, suggestions, proposals, ontology/profile state, DB readers, vector/user-fit, and graph traversal stay unchanged
+- Implemented `conceptualizeContextPack.ts`:
+  - `buildConceptualizeContextPackShadow()`
+  - Conceptualize-specific mapping from prepared save candidates and enriched profile context into selector candidates
+  - deterministic ContextSelection -> ContextPack -> validation path
+  - suggest-first policy with no auto-apply and no base/profile silent mutation
+  - scope-aware ontology node refs so same-label core/branch nodes remain distinguishable
+- Extended `conceptualizeProfileContext.ts`:
+  - profile context now carries `baseProfile`, active `branches`, a composition stamp, and a scope legend
+  - no-project behavior still resolves the coding profile as before
+- Wired `SaveAsLearningModal.tsx` in shadow mode:
+  - after candidates are prepared, each candidate builds and validates a ContextPack
+  - failures are caught and logged with `console.warn`
+  - user-facing Conceptualize/save behavior is unchanged
+- Added `conceptualizeContextPack.test.ts` and a stage10 purity guard.
+- No prompt renderer, LLM/model call, DB reader, vector retrieval, graph traversal, checker runtime, proposal write, save mutation, missing-concept apply, user-fit projection, base/core mutation, agent runtime, app-builder runtime, or DSL runtime was added.
+- Verification so far:
+  - TypeScript clean
+  - targeted Conceptualize ContextPack shadow/context selector/assembly/guard tests: 102/102 passed across 5 files
+  - full suite: 816/816 passed across 86 files
+
+Codex direct slice (Context Selector):
+
+- Created `29_CONTEXT_SELECTOR_DECISION.md` with locked decision:
+  - one shared `ContextSelector` / `ContextSelection` contract belongs to Kordex
+  - selector implementations stay focused per task/consumer rather than becoming one GodSelector
+  - host/app adapters can own concrete read-only candidate loading behind ports
+  - selector output feeds `ContextPack` assembly; it is not a prompt renderer
+  - first implementation uses pinned/elastic buckets
+  - first implementation is one deterministic Conceptualize selector over caller-supplied ordered candidates
+- Implemented `contextSelector.ts`:
+  - shared selector/selection types
+  - `createConceptualizeContextSelector()`
+  - `selectConceptualizeContext()`
+  - deterministic pinned/elastic selection over caller-supplied candidates
+  - trace entries for pinned, elastic, and omitted candidates
+  - same-label ambiguity preservation
+  - cross-scope evidence preservation
+  - bounded direct-evidence pinning: evidence tied only to elastic ontology context stays capped; only cross-scope, explicit, or pinned-decision-center evidence bypasses evidence caps
+  - input cloning/no-mutation behavior
+- Exported selector types/helpers from the ontology root barrel.
+- Added `contextSelector.test.ts` and a stage10 purity guard.
+- No DB, UI, LLM, retrieval, graph traversal, prompt rendering, checker runtime, apply/mutation, base/core versioning, agent runtime, app-builder runtime, DSL runtime, or runtime behavior wiring was added.
+- Updated doc 28 status to reflect that the first pure context assembly slice is implemented:
+  - `contextAssembly.ts`
+  - `contextAssembly.test.ts`
+  - stage10 context assembly guard
+- Updated README, NEXT_LLM_CONTEXT, TOMORROW_START, WHERE_WE_STAND, and implementation_handoff.
+- Verification:
+  - TypeScript clean
+  - targeted context selector/assembly/guard tests: 95/95 passed across 3 files
+  - full suite: 812/812 passed across 85 files
 
 Codex direct follow-up (Conceptualize raw proposed type preservation):
 
@@ -431,7 +570,7 @@ The ontology-profile refactor has moved beyond profile labels and compatibility 
 - The Conceptualize first implementation scope is locked and implemented in doc 22: existing type corrections save immediately with evidence; new subtype creation saves the corrected type id and creates a guarded pending profile-change proposal instead of silently mutating base/core profiles or branch overlays. If extraction invented an unknown type id that was normalized to the profile default, correction evidence can preserve the invalid raw model id as `rawProposedTypeNodeId`.
 - The branch-local proposal review/apply decision is locked in doc 24 and the helper/service plus first minimal UI slices are implemented: first apply is explicit, branch-local, revalidated, and atomic; first review actions are Apply, Reject, Postpone, and Ask why / why not; risk/confidence wording explains blast radius; edit-then-apply, auto-apply, base/core mutation, upward merge, and old-card backfill stay future seams.
 - The proposal event audit storage decision is locked and implemented in doc 25: Apply/Reject/Postpone append `profile_proposal_events` inside the same guarded transactions as the proposal/branch state changes. User-fit learning remains a future projection over those events.
-- The remaining open work is: (1) user-fit projection over proposal events, (2) context assembly/event/apply implementation sequencing, (3) base profile versioning for accepted operations, (4) agent/subagent execution ontology brief, (5) self-building-app framework brief.
+- The remaining open work is: (1) extractor flip, deciding when the real extractor consumes the ContextPack prompt builder, (2) missing-concept UX for `noStrongMatch` / `suggestedNewConcept`, (3) user-fit projection over proposal events, (4) base profile versioning for accepted operations, (5) agent/subagent execution ontology brief, (6) self-building-app framework brief.
 
 ## Core Activation Files
 
@@ -823,14 +962,15 @@ Verification:
 - `stage10-architecture-guards.test.ts` all passed.
 - Full suite: 660/660 passed across 66 test files.
 
-The coordinator helper is now implemented and tested. The adaptive suggestion policy is locked as a docs-only decision, patch/merge proposal storage v1 is implemented as storage-only code, Conceptualize preview is locked as the first correction surface, the checker/proposal/context/apply architecture is locked, the first Conceptualize correction loop is implemented, trust setting storage v1 is implemented, the branch-local proposal review/apply helper/service plus minimal UI slices are implemented from doc 24, and proposal event audit storage is implemented from doc 25. The remaining open decisions require Codex plus human input:
+The coordinator helper is now implemented and tested. The adaptive suggestion policy is locked as a docs-only decision, patch/merge proposal storage v1 is implemented as storage-only code, Conceptualize preview is locked as the first correction surface, the checker/proposal/context/apply architecture is locked, the first Conceptualize correction loop is implemented, trust setting storage v1 is implemented, the branch-local proposal review/apply helper/service plus minimal UI slices are implemented from doc 24, proposal event audit storage is implemented from doc 25, the first pure context assembly slice is implemented from doc 28, the first pure context selector slice is implemented from doc 29, the first Conceptualize ContextPack shadow caller is implemented from doc 30, and the pure Conceptualize prompt builder is implemented from doc 31. The remaining open decisions require Codex plus human input:
 
 ```text
-1. User-fit projection over proposal events.
-2. Context assembly/event/apply implementation sequencing - which context-pack and typed-operation slice ships first.
-3. Base profile versioning - how accepted operations safely target base profiles.
-4. Agent/subagent execution ontology decision brief.
-5. Self-building-app framework decision brief.
+1. Extractor flip - decide when the real extractor consumes the ContextPack prompt builder.
+2. Missing-concept UX - decide how noStrongMatch and suggestedNewConcept appear to the user.
+3. User-fit projection over proposal events.
+4. Base profile versioning - how accepted operations safely target base profiles.
+5. Agent/subagent execution ontology decision brief.
+6. Self-building-app framework decision brief.
 ```
 
 Model recommendation:

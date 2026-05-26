@@ -175,6 +175,7 @@ export interface ContextGraphSection {
 }
 
 export interface ContextBudgetCaps {
+  // Caps are total section targets; pinned decision-context items survive and may exceed them.
   maxNodes: number;
   maxEvidenceClaims: number;
   maxProposals: number;
