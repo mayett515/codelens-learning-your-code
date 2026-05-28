@@ -6,6 +6,8 @@ import { usePendingProfileChangeProposals } from '../hooks/useProfileChangePropo
 import { useReviewProfileChangeProposal } from '../hooks/useReviewProfileChangeProposal';
 import type { ProfileChangeProposal } from '../types';
 import {
+  formatApplyActionLabel,
+  formatApplySuccessMessage,
   formatConfidence,
   formatProposalReviewError,
   formatRiskDescription,
@@ -31,21 +33,21 @@ export function ProfileProposalReviewScreen() {
     [proposals, selectedId],
   );
   const busy = applyMutation.isPending || reviewMutation.isPending;
-  const canApplySelected = selectedProposal?.target.kind === 'profile_branch';
+  const canApplySelected = selectedProposal?.target.kind === 'profile_branch' || selectedProposal?.target.kind === 'base_profile';
 
   async function apply(proposal: ProfileChangeProposal) {
     setMessage(null);
     setShowReason(false);
-    if (proposal.target.kind !== 'profile_branch') {
-      setMessage({ tone: 'error', text: formatProposalReviewError({ code: 'proposal_not_branch_target' }) });
+    if (proposal.target.kind !== 'profile_branch' && proposal.target.kind !== 'base_profile') {
+      setMessage({ tone: 'error', text: formatProposalReviewError({ code: 'proposal_target_not_supported' }) });
       return;
     }
     try {
       await applyMutation.mutateAsync(proposal);
-      setMessage({ tone: 'notice', text: 'Applied to branch.' });
+      setMessage({ tone: 'notice', text: formatApplySuccessMessage(proposal) });
       setSelectedId(null);
     } catch (error) {
-      setMessage({ tone: 'error', text: formatProposalReviewError(error) });
+      setMessage({ tone: 'error', text: formatProposalReviewError(error, proposal.target.kind) });
     }
   }
 
@@ -82,7 +84,7 @@ export function ProfileProposalReviewScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Profile Suggestions</Text>
-      <Text style={styles.subtitle}>Apply branch-local changes only after review.</Text>
+      <Text style={styles.subtitle}>Review branch and base profile changes before applying them.</Text>
       <View style={styles.layout}>
         <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
           {proposals.map((proposal) => (
@@ -126,8 +128,11 @@ export function ProfileProposalReviewScreen() {
               ) : null}
             </View>
           ) : null}
+          {selectedProposal.target.kind === 'base_profile' ? (
+            <Text style={styles.coreWarning}>Core changes affect derived branches. Apply only after checking the patch and reason.</Text>
+          ) : null}
           {!canApplySelected ? (
-            <Text style={styles.error}>Only branch-local proposals can be applied in this review surface.</Text>
+            <Text style={styles.error}>This proposal target cannot be applied in this review surface yet.</Text>
           ) : null}
           {message ? <Text style={message.tone === 'error' ? styles.error : styles.notice}>{message.text}</Text> : null}
           <View style={styles.actions}>
@@ -136,7 +141,7 @@ export function ProfileProposalReviewScreen() {
               onPress={() => void apply(selectedProposal)}
               disabled={busy || !canApplySelected}
             >
-              <Text style={styles.primaryActionText}>{canApplySelected ? 'Apply' : 'Apply unavailable'}</Text>
+              <Text style={styles.primaryActionText}>{canApplySelected ? formatApplyActionLabel(selectedProposal) : 'Apply unavailable'}</Text>
             </Pressable>
             <Pressable
               style={[styles.secondaryAction, busy && styles.disabledAction]}
@@ -329,6 +334,12 @@ const styles = StyleSheet.create({
   error: {
     color: colors.red,
     fontSize: fontSize.md,
+    marginTop: spacing.md,
+  },
+  coreWarning: {
+    color: colors.yellow,
+    fontSize: fontSize.md,
+    fontWeight: '700',
     marginTop: spacing.md,
   },
   actions: {

@@ -142,6 +142,7 @@ const ProfileChangeProposalSchema = z
     baseProfileId: z.string().min(1),
     sourceBranchId: z.string().min(1).nullable().optional(),
     target: ProposalTargetSchema,
+    targetProfileVersion: z.number().int().nonnegative().nullable().optional(),
     evidenceIds: z.array(z.string().min(1)),
     patch: ProfilePatchSchema,
     title: z.string().min(1),
@@ -159,7 +160,8 @@ const ProfileChangeProposalSchema = z
   })
   .strict()
   .superRefine((proposal, ctx) => {
-    validateTargetShape(proposal.target, ctx);
+    validateTargetShape(proposal, ctx);
+    validateTargetProfileVersion(proposal, ctx);
 
     if (proposal.proposalKind === 'manual_draft' && proposal.sourceKind !== 'user') {
       ctx.addIssue({
@@ -251,6 +253,23 @@ function hasValue(value: string | null | undefined): value is string {
 }
 
 function validateTargetShape(
+  proposal: z.infer<typeof ProfileChangeProposalSchema>,
+  ctx: z.RefinementCtx,
+): void {
+  const { target } = proposal;
+
+  if (target.kind === 'base_profile' && hasValue(target.profileId) && target.profileId !== proposal.baseProfileId) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'Base-profile proposal target profileId must match baseProfileId',
+      path: ['target', 'profileId'],
+    });
+  }
+
+  validateTargetFields(target, ctx);
+}
+
+function validateTargetFields(
   target: z.infer<typeof ProposalTargetSchema>,
   ctx: z.RefinementCtx,
 ): void {
@@ -270,6 +289,19 @@ function validateTargetShape(
       code: 'custom',
       message: 'Profile-branch proposals require branchId and must not set profileId',
       path: ['target'],
+    });
+  }
+}
+
+function validateTargetProfileVersion(
+  proposal: z.infer<typeof ProfileChangeProposalSchema>,
+  ctx: z.RefinementCtx,
+): void {
+  if (proposal.target.kind === 'profile_branch' && proposal.targetProfileVersion != null) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'Profile-branch proposals must not set targetProfileVersion',
+      path: ['targetProfileVersion'],
     });
   }
 }
@@ -300,6 +332,7 @@ export function rowToProfileChangeProposal(
       profileId: row.targetProfileId,
       branchId: row.targetBranchId,
     },
+    targetProfileVersion: row.targetProfileVersion,
     evidenceIds: parseProposalEvidenceIds(row.evidenceIdsJson),
     patch: parseProfilePatch(row.patchJson),
     title: row.title,
@@ -330,6 +363,7 @@ export function profileChangeProposalToRow(
     targetKind: parsed.target.kind,
     targetProfileId: parsed.target.kind === 'base_profile' ? parsed.target.profileId ?? null : null,
     targetBranchId: parsed.target.kind === 'profile_branch' ? parsed.target.branchId ?? null : null,
+    targetProfileVersion: parsed.target.kind === 'base_profile' ? parsed.targetProfileVersion ?? null : null,
     evidenceIdsJson: [...parsed.evidenceIds],
     patchJson: parsed.patch,
     title: parsed.title,

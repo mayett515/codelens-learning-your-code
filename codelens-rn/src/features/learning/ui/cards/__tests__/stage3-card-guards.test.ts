@@ -48,6 +48,19 @@ describe('Stage 3 card component guards', () => {
     expect(modal).not.toMatch(/Save All/);
   });
 
+  it('keeps missing-concept UX explicit and review-only', () => {
+    const card = read('src/features/learning/ui/cards/CandidateCaptureCard.tsx');
+    const controls = read('src/features/learning/ui/ConceptualizeCorrectionControls.tsx');
+    const store = read('src/features/learning/state/save-learning.ts');
+
+    expect(card).toMatch(/Needs type review/);
+    expect(card).toMatch(/missingConcept/);
+    expect(controls).toMatch(/No strong existing type/);
+    expect(controls).toMatch(/Use suggestion/);
+    expect(controls).toMatch(/newTypeLabel: suggested\.label/);
+    expect(store).toMatch(/newTypeLabel: ''/);
+  });
+
   describe('TypeNodeChip / ConceptTypeChip compatibility shim', () => {
     const primitivesDir = path.join(repoRoot, 'src', 'features', 'learning', 'ui', 'primitives');
 

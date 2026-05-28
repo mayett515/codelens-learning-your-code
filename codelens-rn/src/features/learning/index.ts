@@ -33,7 +33,18 @@ export {
 } from './types/ids';
 export type { LearningCaptureId, ConceptId, ConceptId as LearningConceptId, ReviewEventId } from './types/ids';
 export type { LearningCapture, LearningConcept, ConceptType, CaptureState, EmbeddingStatus, ConceptHint } from './types/learning';
-export type { SaveModalCandidateData, CandidateSaveState } from './types/saveModal';
+export type {
+  CandidateSaveState,
+  ConceptualizeMissingConceptReview,
+  ConceptualizeSuggestedNewConceptReview,
+  SaveModalCandidateData,
+} from './types/saveModal';
+export {
+  createScopedRawProposedTypeIdentity,
+  createUnresolvedRawProposedTypeIdentity,
+  rawProposedTypeIdentityToLegacyString,
+} from './types/rawProposedTypeIdentity';
+export type { RawProposedTypeIdentity } from './types/rawProposedTypeIdentity';
 export { computeStrength } from './strength/computeStrength';
 
 // Application

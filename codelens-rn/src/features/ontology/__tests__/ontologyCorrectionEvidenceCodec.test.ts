@@ -49,6 +49,7 @@ describe('ontology correction evidence codec', () => {
       previousTypeNodeId: 'mechanism',
       correctedTypeNodeId: 'pattern',
       rawProposedTypeNodeId: null,
+      nearMissCandidatesJson: null,
       reason: 'Reviewed by user',
       source: 'user',
       createdAt: 1_700_000_000_000,
@@ -81,6 +82,9 @@ describe('ontology correction evidence codec', () => {
       previousTypeNodeId: 'mechanism',
       correctedTypeNodeId: 'pattern',
       rawProposedTypeNodeId: 'hallucinated_runtime_kind',
+      nearMissCandidatesJson: JSON.stringify([
+        { scopeId: 'coding', nodeId: 'pattern', rank: 2, score: 0.69 },
+      ]),
       reason: null,
       source: 'user',
       createdAt: 1,
@@ -93,8 +97,35 @@ describe('ontology correction evidence codec', () => {
       },
       reason: null,
       rawProposedTypeNodeId: 'hallucinated_runtime_kind',
+      nearMissCandidates: [
+        { scopeId: 'coding', nodeId: 'pattern', rank: 2, score: 0.69 },
+      ],
       createdAt: 1,
     }));
+  });
+
+  it('maps correction near-miss candidates to and from the DB JSON column', () => {
+    const evidence = validEvidence({
+      nearMissCandidates: [
+        { scopeId: 'coding', nodeId: 'pattern', rank: 2, score: 0.69 },
+        { scopeId: 'coding', nodeId: 'mental_model', rank: 3 },
+      ],
+    });
+
+    const row = ontologyCorrectionEvidenceToRow(evidence);
+    expect(row.nearMissCandidatesJson).toEqual([
+      { scopeId: 'coding', nodeId: 'pattern', rank: 2, score: 0.69 },
+      { scopeId: 'coding', nodeId: 'mental_model', rank: 3 },
+    ]);
+
+    const roundTripRow: Parameters<typeof rowToOntologyCorrectionEvidence>[0] = {
+      ...row,
+      previousTypeNodeId: row.previousTypeNodeId ?? null,
+      rawProposedTypeNodeId: row.rawProposedTypeNodeId ?? null,
+      nearMissCandidatesJson: JSON.stringify(row.nearMissCandidatesJson),
+      reason: row.reason ?? null,
+    };
+    expect(rowToOntologyCorrectionEvidence(roundTripRow)).toEqual(evidence);
   });
 
   it('rejects target/apply fields so evidence does not become an implicit patch command', () => {
@@ -120,5 +151,13 @@ describe('ontology correction evidence codec', () => {
       previousTypeNodeId: 'pattern',
       correctedTypeNodeId: 'pattern',
     }))).toThrow(/previousTypeNodeId and correctedTypeNodeId must differ/);
+  });
+
+  it('rejects malformed near-miss candidate snapshots', () => {
+    expect(() => validateOntologyCorrectionEvidenceForWrite(validEvidence({
+      nearMissCandidates: [
+        { scopeId: 'coding', nodeId: 'pattern', rank: 1 },
+      ],
+    }))).toThrow();
   });
 });

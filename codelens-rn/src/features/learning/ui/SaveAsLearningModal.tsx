@@ -204,6 +204,7 @@ export function SaveAsLearningModal() {
                       isNewLanguageForExistingConcept={candidate.isNewLanguageForExistingConcept}
                       crossLanguageHint={buildCrossLanguageHint(candidate)}
                       extractionConfidence={candidate.extractionConfidence}
+                      missingConcept={candidate.conceptualizeMissingConcept ?? null}
                       saveState={saveStatus?.state ?? 'idle'}
                       onSave={() => handleSave(candidateId, index)}
                       onInspect={() => store.inspectCandidate(candidateId)}
@@ -212,6 +213,7 @@ export function SaveAsLearningModal() {
                     <ConceptualizeCorrectionControls
                       profile={profile}
                       draft={correctionDraft}
+                      missingConcept={candidate.conceptualizeMissingConcept ?? null}
                       disabled={disabled}
                       onChange={(patch) => store.setCandidateCorrection(candidateId, patch)}
                     />

@@ -160,7 +160,7 @@ This slice explicitly does **not** add:
 - automatic base/core mutation
 - proposal creation from `suggestedNewConcept`
 - checker runtime
-- user-fit projection
+- persistent learned user-fit scores
 - vector retrieval for classification context
 - graph traversal
 - old-card backfill
@@ -225,8 +225,8 @@ Correction-evidence near-miss wiring
 Missing-concept UX
   decide how noStrongMatch and suggestedNewConcept appear to the user
 
-User-fit projection
-  learn from proposal events and future near-miss evidence
+User-fit ContextPack consumption
+  doc 37 now supplies bounded advisory user-fit history to Conceptualize; checker consumption remains separate
 ```
 
 Do not fold those into the Extractor Flip retroactively.

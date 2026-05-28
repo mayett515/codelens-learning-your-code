@@ -7,6 +7,11 @@ import { conceptMatchPreCheck, type ConceptMatch } from './conceptMatchPreCheck'
 import type { ConceptId, LearningCaptureId } from '../types/ids';
 import type { SaveModalCandidateData } from '../types/saveModal';
 import {
+  createUnresolvedRawProposedTypeIdentity,
+  rawProposedTypeIdentityToLegacyString,
+  type RawProposedTypeIdentity,
+} from '../types/rawProposedTypeIdentity';
+import {
   classifySaveCandidateWithConceptualize,
   type ConceptualizeClassificationComplete,
 } from './conceptualizeClassification';
@@ -54,10 +59,13 @@ export async function prepareSaveCandidates(
 
   const candidates = output.candidates.map((candidate) => {
     const conceptHint = normalizeConceptHintForProfile(candidate.conceptHint, profile);
-    const rawProposedTypeNodeId = rawProposedTypeNodeIdForEvidence(
+    const rawProposedTypeIdentity = rawProposedTypeIdentityForEvidence(
       candidate.conceptHint,
       conceptHint,
+      profile.id,
     );
+    const rawProposedTypeNodeId =
+      rawProposedTypeIdentityToLegacyString(rawProposedTypeIdentity);
     const linkedConceptId = conceptHint?.linkedConceptId
       ? unsafeConceptId(conceptHint.linkedConceptId)
       : null;
@@ -85,6 +93,7 @@ export async function prepareSaveCandidates(
       extractionConfidence: conceptHint?.extractionConfidence ?? null,
       matchSimilarity,
       conceptHint,
+      rawProposedTypeIdentity,
       rawProposedTypeNodeId,
       keywords: candidate.keywords.map((keyword) => keyword.trim().toLowerCase()).filter(Boolean),
     };
@@ -126,13 +135,17 @@ function normalizeConceptHintForProfile(
   };
 }
 
-function rawProposedTypeNodeIdForEvidence(
+function rawProposedTypeIdentityForEvidence(
   rawHint: CaptureHint | null,
   normalizedHint: CaptureHint | null,
-): string | null {
+  activeScopeId: string | null,
+): RawProposedTypeIdentity | null {
   const rawTypeNodeId = rawHint?.proposedConceptType ?? null;
   if (!rawTypeNodeId || rawTypeNodeId === normalizedHint?.proposedConceptType) return null;
-  return rawTypeNodeId;
+  return createUnresolvedRawProposedTypeIdentity({
+    rawNodeId: rawTypeNodeId,
+    activeScopeId,
+  });
 }
 
 function findSimilarityForConcept(matches: ConceptMatch[], id: ConceptId): number | null {

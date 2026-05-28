@@ -1,4 +1,4 @@
-import { asc, eq, inArray } from 'drizzle-orm';
+import { and, asc, eq, inArray } from 'drizzle-orm';
 import { db, type DbOrTx } from '../../../db/client';
 import { profileDefinitions } from './schema';
 import { rowToProfileDefinition, profileDefinitionToRow } from '../codecs/profileDefinition';
@@ -31,6 +31,33 @@ export async function upsertProfileDefinition(
         updatedAt: row.updatedAt,
       },
     });
+}
+
+export async function updateProfileDefinitionIfUnchanged(
+  def: ProfileDefinition,
+  expectedVersion: number,
+  expectedUpdatedAt: number,
+  executor: DbOrTx = db,
+): Promise<boolean> {
+  const row = profileDefinitionToRow(def);
+  const result = await executor
+    .update(profileDefinitions)
+    .set({
+      label: row.label,
+      description: row.description,
+      version: row.version,
+      sourceKind: row.sourceKind,
+      profileJson: row.profileJson,
+      updatedAt: row.updatedAt,
+    })
+    .where(and(
+      eq(profileDefinitions.id, row.id),
+      eq(profileDefinitions.version, expectedVersion),
+      eq(profileDefinitions.updatedAt, expectedUpdatedAt),
+    ));
+
+  const affectedRows = getAffectedRows(result);
+  return affectedRows !== undefined ? affectedRows > 0 : false;
 }
 
 export async function getProfileDefinitionById(
@@ -81,4 +108,12 @@ export async function deleteProfileDefinition(
   executor: DbOrTx = db,
 ): Promise<void> {
   await executor.delete(profileDefinitions).where(eq(profileDefinitions.id, id));
+}
+
+function getAffectedRows(result: unknown): number | undefined {
+  if (!result || typeof result !== 'object') return undefined;
+  const record = result as Record<string, unknown>;
+  if (typeof record['rowsAffected'] === 'number') return record['rowsAffected'];
+  if (typeof record['changes'] === 'number') return record['changes'];
+  return undefined;
 }

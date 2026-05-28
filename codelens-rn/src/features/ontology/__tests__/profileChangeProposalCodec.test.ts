@@ -56,6 +56,7 @@ describe('profile change proposal codec', () => {
       targetKind: 'profile_branch',
       targetProfileId: null,
       targetBranchId: 'branch-1',
+      targetProfileVersion: null,
       evidenceIdsJson: ['ev-1'],
       patchJson: { addItemTypeNodeIds: ['react_hook'] },
       riskScore: 35,
@@ -73,6 +74,7 @@ describe('profile change proposal codec', () => {
       targetKind: 'profile_branch',
       targetProfileId: null,
       targetBranchId: 'branch-1',
+      targetProfileVersion: null,
       evidenceIdsJson: '["ev-1"]',
       patchJson: '{"addItemTypeNodeIds":["react_hook"]}',
       title: 'Add React hook type',
@@ -92,6 +94,38 @@ describe('profile change proposal codec', () => {
     expect(proposal.evidenceIds).toEqual(['ev-1']);
     expect(proposal.patch).toEqual({ addItemTypeNodeIds: ['react_hook'] });
     expect(proposal.target).toEqual({ kind: 'profile_branch', profileId: null, branchId: 'branch-1' });
+    expect(proposal.targetProfileVersion).toBeNull();
+  });
+
+  it('stores a target profile version for base-profile proposals', () => {
+    const row = profileChangeProposalToRow(validProposal({
+      target: {
+        kind: 'base_profile',
+        profileId: 'coding',
+      },
+      targetProfileVersion: 3,
+    }));
+
+    expect(row.targetKind).toBe('base_profile');
+    expect(row.targetProfileId).toBe('coding');
+    expect(row.targetBranchId).toBeNull();
+    expect(row.targetProfileVersion).toBe(3);
+  });
+
+  it('requires base-profile target profileId to match baseProfileId', () => {
+    expect(() => validateProfileChangeProposal(validProposal({
+      target: {
+        kind: 'base_profile',
+        profileId: 'photography',
+      },
+      targetProfileVersion: 3,
+    }))).toThrow(/target profileId must match baseProfileId/);
+  });
+
+  it('rejects target profile versions on branch-target proposals', () => {
+    expect(() => validateProfileChangeProposal(validProposal({
+      targetProfileVersion: 1,
+    }))).toThrow(/must not set targetProfileVersion/);
   });
 
   it('rejects target shapes that mix base-profile and branch targets', () => {
@@ -125,6 +159,7 @@ describe('profile change proposal codec', () => {
         kind: 'base_profile',
         profileId: 'coding',
       },
+      targetProfileVersion: 1,
       evidenceIds: [],
       patch: validPatch({ addRelationshipTypeNodeIds: ['depends_on_query_key'] }),
     }))).not.toThrow();

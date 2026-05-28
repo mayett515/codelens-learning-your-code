@@ -170,6 +170,13 @@ export interface OntologyCorrectionActiveSelectionSnapshot {
   personalBranchIds?: readonly string[] | undefined;
 }
 
+export interface OntologyCorrectionNearMissCandidate {
+  scopeId: string;
+  nodeId: string;
+  rank: number;
+  score?: number | null | undefined;
+}
+
 export interface OntologyCorrectionEvidence {
   id: string;
   profileId: string;
@@ -180,6 +187,7 @@ export interface OntologyCorrectionEvidence {
   previousTypeNodeId: string | null;
   correctedTypeNodeId: string;
   rawProposedTypeNodeId?: string | null | undefined;
+  nearMissCandidates?: readonly OntologyCorrectionNearMissCandidate[] | null | undefined;
   reason?: string | null | undefined;
   source: OntologyCorrectionSource;
   createdAt: number;
@@ -336,6 +344,7 @@ export interface ProfileChangeProposal<TItemTypeNodeId extends string = string> 
   baseProfileId: string;
   sourceBranchId?: string | null | undefined;
   target: ProfileChangeProposalTarget;
+  targetProfileVersion?: number | null | undefined;
   evidenceIds: readonly string[];
   patch: ProfilePatch<TItemTypeNodeId>;
   title: string;

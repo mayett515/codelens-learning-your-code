@@ -7,6 +7,7 @@ import type {
   ProfileTrustMode,
 } from './types';
 import { normalizeOntologyDisplayLabel } from './scopedMeaning';
+import type { UserFitNormalizedActiveSelectionSnapshot } from './userFitProjection';
 
 export type ContextPackConsumer =
   | 'conceptualize'
@@ -151,6 +152,55 @@ export interface ContextProposalEventSection {
   omittedCount: number;
 }
 
+/** Advisory derived history. User-fit can bias ranking, but never proves semantic truth or grants mutation permission. */
+export interface ContextUserFitNodeSignal {
+  signalId: string;
+  baseProfileId: string;
+  activeSelectionKey: string;
+  activeSelectionSnapshot: UserFitNormalizedActiveSelectionSnapshot;
+  nodeId: string;
+  nodeRefs: readonly ScopedNodeRef[];
+  userFitConfidence: number;
+  score: number;
+  positiveCorrectionCount: number;
+  negativeCorrectionCount: number;
+  missingConceptCorrectionCount: number;
+  nearMissHitCount: number;
+  evidenceIds: readonly string[];
+  latestAt: number;
+}
+
+export interface ContextUserFitNodeSignalInput extends ContextUserFitNodeSignal {
+  pinned?: boolean | undefined;
+}
+
+export interface ContextUserFitProposalSignal {
+  signalId: string;
+  baseProfileId: string;
+  proposalKind: ProfileChangeProposalKind;
+  target: ProfileChangeProposalTarget;
+  targetKey: string;
+  userFitConfidence: number;
+  score: number;
+  appliedCount: number;
+  rejectedCount: number;
+  postponedCount: number;
+  askedWhyCount: number;
+  eventIds: readonly string[];
+  latestAt: number;
+}
+
+export interface ContextUserFitProposalSignalInput extends ContextUserFitProposalSignal {
+  pinned?: boolean | undefined;
+}
+
+export interface ContextUserFitSection {
+  nodeSignals: readonly ContextUserFitNodeSignal[];
+  proposalSignals: readonly ContextUserFitProposalSignal[];
+  omittedNodeSignalCount: number;
+  omittedProposalSignalCount: number;
+}
+
 export interface ContextPolicy {
   trustMode: ProfileTrustMode;
   autoApplyEnabled: boolean;
@@ -180,6 +230,8 @@ export interface ContextBudgetCaps {
   maxEvidenceClaims: number;
   maxProposals: number;
   maxProposalEvents: number;
+  maxUserFitNodeSignals: number;
+  maxUserFitProposalSignals: number;
   maxGraphNeighbors: number;
 }
 
@@ -188,6 +240,8 @@ export type ContextBudgetSection =
   | 'evidence.claims'
   | 'proposals.snapshots'
   | 'proposalEvents.recentDecisionSignals'
+  | 'userFit.nodeSignals'
+  | 'userFit.proposalSignals'
   | 'graph.neighborNodeRefs';
 
 export interface ContextBudgetTruncation {
@@ -221,6 +275,7 @@ export interface ContextPack {
   evidence: ContextEvidenceSection;
   proposals: ContextProposalSection;
   proposalEvents: ContextProposalEventSection;
+  userFit: ContextUserFitSection;
   policy: ContextPolicy;
   graph?: ContextGraphSection | undefined;
   budgetReport: ContextBudgetReport;
@@ -238,6 +293,8 @@ export interface AssembleContextPackInput {
   evidenceClaims?: readonly ContextEvidenceClaimInput[] | undefined;
   proposalSnapshots?: readonly ContextProposalSnapshotInput[] | undefined;
   proposalEventSignals?: readonly ContextProposalEventSignalInput[] | undefined;
+  userFitNodeSignals?: readonly ContextUserFitNodeSignalInput[] | undefined;
+  userFitProposalSignals?: readonly ContextUserFitProposalSignalInput[] | undefined;
   policy: ContextPolicy;
   graph?: ContextGraphSectionInput | undefined;
   caps?: Partial<ContextBudgetCaps> | undefined;
@@ -271,6 +328,8 @@ export const DEFAULT_CONTEXT_BUDGET_CAPS: ContextBudgetCaps = Object.freeze({
   maxEvidenceClaims: 20,
   maxProposals: 10,
   maxProposalEvents: 20,
+  maxUserFitNodeSignals: 10,
+  maxUserFitProposalSignals: 8,
   maxGraphNeighbors: 40,
 });
 
@@ -279,6 +338,8 @@ const EMPTY_SECTION_COUNTS: Record<ContextBudgetSection, number> = {
   'evidence.claims': 0,
   'proposals.snapshots': 0,
   'proposalEvents.recentDecisionSignals': 0,
+  'userFit.nodeSignals': 0,
+  'userFit.proposalSignals': 0,
   'graph.neighborNodeRefs': 0,
 };
 
@@ -337,6 +398,30 @@ export function assembleContextPack(input: AssembleContextPackInput): ContextPac
     truncationLog,
   ).map(stripPinned);
 
+  const userFitNodeCandidates = dedupeBy(
+    (input.userFitNodeSignals ?? []).map(normalizeUserFitNodeSignalInput),
+    (signal) => signal.signalId,
+  );
+  const selectedUserFitNodeSignals = selectWithPinned(
+    userFitNodeCandidates,
+    (signal) => Boolean(signal.pinned),
+    caps.maxUserFitNodeSignals,
+    'userFit.nodeSignals',
+    truncationLog,
+  ).map(stripPinned);
+
+  const userFitProposalCandidates = dedupeBy(
+    (input.userFitProposalSignals ?? []).map(normalizeUserFitProposalSignalInput),
+    (signal) => signal.signalId,
+  );
+  const selectedUserFitProposalSignals = selectWithPinned(
+    userFitProposalCandidates,
+    (signal) => Boolean(signal.pinned),
+    caps.maxUserFitProposalSignals,
+    'userFit.proposalSignals',
+    truncationLog,
+  ).map(stripPinned);
+
   const graph = input.graph
     ? assembleGraphSection(input.graph, caps.maxGraphNeighbors, truncationLog)
     : undefined;
@@ -346,6 +431,8 @@ export function assembleContextPack(input: AssembleContextPackInput): ContextPac
   included['evidence.claims'] = selectedEvidence.length;
   included['proposals.snapshots'] = selectedProposals.length;
   included['proposalEvents.recentDecisionSignals'] = selectedProposalEvents.length;
+  included['userFit.nodeSignals'] = selectedUserFitNodeSignals.length;
+  included['userFit.proposalSignals'] = selectedUserFitProposalSignals.length;
   included['graph.neighborNodeRefs'] = graph?.neighborNodeRefs.length ?? 0;
 
   const omitted = { ...EMPTY_SECTION_COUNTS };
@@ -354,6 +441,9 @@ export function assembleContextPack(input: AssembleContextPackInput): ContextPac
   omitted['proposals.snapshots'] = proposalCandidates.length - selectedProposals.length;
   omitted['proposalEvents.recentDecisionSignals'] =
     proposalEventCandidates.length - selectedProposalEvents.length;
+  omitted['userFit.nodeSignals'] = userFitNodeCandidates.length - selectedUserFitNodeSignals.length;
+  omitted['userFit.proposalSignals'] =
+    userFitProposalCandidates.length - selectedUserFitProposalSignals.length;
   omitted['graph.neighborNodeRefs'] = graph?.omittedNeighborCount ?? 0;
 
   return {
@@ -380,6 +470,12 @@ export function assembleContextPack(input: AssembleContextPackInput): ContextPac
     proposalEvents: {
       recentDecisionSignals: selectedProposalEvents,
       omittedCount: omitted['proposalEvents.recentDecisionSignals'],
+    },
+    userFit: {
+      nodeSignals: selectedUserFitNodeSignals,
+      proposalSignals: selectedUserFitProposalSignals,
+      omittedNodeSignalCount: omitted['userFit.nodeSignals'],
+      omittedProposalSignalCount: omitted['userFit.proposalSignals'],
     },
     policy: input.policy,
     graph,
@@ -439,6 +535,32 @@ function normalizeOntologyNodeInput(node: ContextOntologyNodeInput): ContextOnto
       typeNodeRef: relationship.typeNodeRef,
       targetNodeRef: relationship.targetNodeRef,
     })),
+  };
+}
+
+function normalizeUserFitNodeSignalInput(
+  signal: ContextUserFitNodeSignalInput,
+): ContextUserFitNodeSignalInput {
+  return {
+    ...signal,
+    activeSelectionSnapshot: {
+      baseProfileId: signal.activeSelectionSnapshot.baseProfileId,
+      projectBranchIds: [...signal.activeSelectionSnapshot.projectBranchIds],
+      learningBranchIds: [...signal.activeSelectionSnapshot.learningBranchIds],
+      personalBranchIds: [...signal.activeSelectionSnapshot.personalBranchIds],
+    },
+    nodeRefs: signal.nodeRefs.map(cloneScopedNodeRef),
+    evidenceIds: [...signal.evidenceIds],
+  };
+}
+
+function normalizeUserFitProposalSignalInput(
+  signal: ContextUserFitProposalSignalInput,
+): ContextUserFitProposalSignalInput {
+  return {
+    ...signal,
+    target: cloneProfileChangeProposalTarget(signal.target),
+    eventIds: [...signal.eventIds],
   };
 }
 
@@ -630,6 +752,23 @@ function sameScopedNodeRef(a: ScopedNodeRef, b: ScopedNodeRef): boolean {
   return a.scopeId === b.scopeId && a.nodeId === b.nodeId;
 }
 
+function cloneScopedNodeRef(ref: ScopedNodeRef): ScopedNodeRef {
+  return {
+    scopeId: ref.scopeId,
+    nodeId: ref.nodeId,
+  };
+}
+
+function cloneProfileChangeProposalTarget(
+  target: ProfileChangeProposalTarget,
+): ProfileChangeProposalTarget {
+  return {
+    kind: target.kind,
+    ...(target.profileId === undefined ? {} : { profileId: target.profileId }),
+    ...(target.branchId === undefined ? {} : { branchId: target.branchId }),
+  };
+}
+
 function validateCompositionStamp(
   pack: ContextPack,
   errors: ContextPackValidationError[],
@@ -730,6 +869,11 @@ function validateScopedRefs(pack: ContextPack, errors: ContextPackValidationErro
   });
   pack.graph?.neighborNodeRefs.forEach((ref, index) => {
     check(ref, `graph.neighborNodeRefs[${index}]`);
+  });
+  pack.userFit.nodeSignals.forEach((signal, signalIndex) => {
+    signal.nodeRefs.forEach((ref, refIndex) => {
+      check(ref, `userFit.nodeSignals[${signalIndex}].nodeRefs[${refIndex}]`);
+    });
   });
 }
 

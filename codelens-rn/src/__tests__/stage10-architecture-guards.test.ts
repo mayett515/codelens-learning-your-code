@@ -160,9 +160,12 @@ describe('Ontology correction evidence guards', () => {
         'src/db/schema.ts',
         'src/db/migrations/015-ontology-correction-evidence.ts',
         'src/db/migrations/017-ontology-correction-raw-proposed-type.ts',
+        'src/db/migrations/020-ontology-correction-near-miss-candidates.ts',
+        'src/db/migrations/021-user-fit-history-recency-indexes.ts',
         'src/db/migrations/index.ts',
         'src/features/ontology/data/schema.ts',
         'src/features/ontology/data/ontologyCorrectionEvidenceRepo.ts',
+        'src/features/ontology/data/userFitHistoryRepo.ts',
         'src/features/ontology/data/index.ts',
         'src/features/ontology/codecs/ontologyCorrectionEvidence.ts',
         'src/features/backup/format.ts',
@@ -174,13 +177,41 @@ describe('Ontology correction evidence guards', () => {
     );
 
     const offenders = sourceFiles()
-      .filter((filePath) => read(filePath).includes('ontology_correction_evidence'))
+      .filter((filePath) => {
+        const content = read(filePath);
+        return content.includes('ontology_correction_evidence') || /\bontologyCorrectionEvidence\b/.test(content);
+      })
       .map(toRepoPath)
       .filter((p) => {
         if (p.endsWith('.test.ts') || p.endsWith('.test.tsx') || p.includes('__tests__/')) return false;
         return !allowedFiles.has(path.normalize(p));
-      });
+    });
     expect(offenders).toEqual([]);
+  });
+
+  it('near-miss correction candidates stay factual evidence, not public tags or mutations', () => {
+    const typesSrc = read('src/features/ontology/types.ts');
+    const classifierSrc = read('src/features/learning/services/conceptualizeClassification.ts');
+    const saveModalSrc = read('src/features/learning/types/saveModal.ts');
+    const correctionSaveSrc = read('src/features/learning/services/saveConceptualizedCapture.ts');
+    const uncorrectedSaveSrc = read('src/features/learning/services/saveCapture.ts');
+    const promptBuilderSrc = read('src/features/learning/services/conceptualizePromptBuilder.ts');
+    const publicClassificationBody = promptBuilderSrc.match(
+      /export function getConceptualizePublicClassification[\s\S]*?\n}/,
+    )?.[0] ?? '';
+
+    expect(typesSrc).toContain('export interface OntologyCorrectionNearMissCandidate');
+    expect(typesSrc).toContain('nearMissCandidates?: readonly OntologyCorrectionNearMissCandidate[]');
+    expect(saveModalSrc).toContain('conceptualizeNearMissCandidates?: readonly OntologyCorrectionNearMissCandidate[]');
+    expect(classifierSrc).toContain('diagnosticCandidates: result.output.diagnostics.candidateRefs');
+    expect(classifierSrc).toContain('conceptualizeNearMissCandidates');
+    expect(correctionSaveSrc).toContain('nearMissCandidates: resolved.nearMissCandidates');
+    expect(promptBuilderSrc).toContain('diagnostics.candidateRefs');
+    expect(promptBuilderSrc).not.toContain('nearMissCandidates');
+    expect(publicClassificationBody).toContain('return output.classification;');
+    expect(publicClassificationBody).not.toMatch(/diagnostics|candidateRefs|nearMiss/i);
+    expect(uncorrectedSaveSrc).not.toMatch(/nearMissCandidates|conceptualizeNearMissCandidates/);
+    expect(correctionSaveSrc).not.toMatch(/insertProfileChangeProposal\([^)]*nearMissCandidates/s);
   });
 
   it('no automatic profile mutation helper exists in src/features/ontology/corrections.ts', () => {
@@ -366,6 +397,8 @@ describe('Kortex overlay persistence table guards', () => {
       'src/db/migrations/016-profile-change-proposals.ts',
       'src/db/migrations/018-profile-trust-settings.ts',
       'src/db/migrations/019-profile-proposal-events.ts',
+      'src/db/migrations/021-user-fit-history-recency-indexes.ts',
+      'src/db/migrations/022-profile-change-proposal-target-version.ts',
       'src/db/migrations/index.ts',
       'src/features/ontology/data/schema.ts',
       'src/features/ontology/data/profileBranchRepo.ts',
@@ -374,6 +407,7 @@ describe('Kortex overlay persistence table guards', () => {
       'src/features/ontology/data/profileChangeProposalRepo.ts',
       'src/features/ontology/data/profileProposalEventRepo.ts',
       'src/features/ontology/data/profileTrustSettingRepo.ts',
+      'src/features/ontology/data/userFitHistoryRepo.ts',
       'src/features/ontology/data/index.ts',
       'src/features/ontology/codecs/profileBranch.ts',
       'src/features/ontology/codecs/profileSelection.ts',
@@ -453,7 +487,7 @@ describe('Kortex overlay persistence table guards', () => {
     const offenders = sourceFiles()
       .filter((filePath) => {
         const content = read(filePath);
-        return content.includes('profile_proposal_events');
+        return content.includes('profile_proposal_events') || /\bprofileProposalEvents\b/.test(content);
       })
       .map(toRepoPath)
       .filter((p) => {
@@ -587,6 +621,8 @@ describe('Kordex context assembly guards', () => {
     expect(contextAssemblySrc).not.toContain('prompt renderer');
     expect(contextAssemblySrc).toContain('serializeContextPack');
     expect(contextAssemblySrc).toContain('validateContextPack');
+    expect(contextAssemblySrc).toContain('ContextUserFitSection');
+    expect(contextAssemblySrc).toContain('userFit: ContextUserFitSection');
   });
 
   it('contextSelector.ts stays a pure read-only selector without runtime dependencies', () => {
@@ -601,6 +637,9 @@ describe('Kordex context assembly guards', () => {
     expect(contextSelectorSrc).not.toMatch(forbiddenMutationPattern);
     expect(contextSelectorSrc).toContain('ContextSelection');
     expect(contextSelectorSrc).toContain('createConceptualizeContextSelector');
+    expect(contextSelectorSrc).toContain('createCheckerContextSelector');
+    expect(contextSelectorSrc).toContain('selectCheckerContext');
+    expect(contextSelectorSrc).toContain("selectContext(input, 'checker')");
   });
 
   it('Conceptualize ContextPack shadow wiring does not render prompts, call models, or mutate ontology state', () => {
@@ -610,6 +649,8 @@ describe('Kordex context assembly guards', () => {
     expect(shadowSrc).toContain('assembleContextPack');
     expect(shadowSrc).toContain('validateContextPack');
     expect(shadowSrc).toContain('selectConceptualizeContext');
+    expect(shadowSrc).toContain('userFitActiveSelectionScopeKey');
+    expect(shadowSrc).not.toContain('loadUserFitProjectionFacts');
     expect(shadowSrc).not.toMatch(/buildExtractorSystemPrompt|runExtractor|ExtractorComplete/);
     expect(shadowSrc).not.toMatch(/insertProfileChangeProposal|insertOntologyCorrectionEvidence|saveCapture/);
     expect(shadowSrc).not.toMatch(/render\w*Prompt|toPrompt|SystemPrompt|formatPrompt/i);
@@ -625,6 +666,7 @@ describe('Kordex context assembly guards', () => {
     expect(promptBuilderSrc).toContain('assertValidContextPack');
     expect(promptBuilderSrc).toContain('diagnostics.candidateRefs');
     expect(promptBuilderSrc).toContain('getConceptualizePublicClassification');
+    expect(promptBuilderSrc).toContain('userFit.nodeSignals');
     expect(promptBuilderSrc).not.toContain('additionalNodeRefs');
     expect(promptBuilderSrc).not.toContain('maxAdditionalNodeRefs');
     expect(promptBuilderSrc).not.toMatch(/selectConceptualizeContext|assembleContextPack|prepareSaveCandidates/);
@@ -667,6 +709,148 @@ describe('Kordex context assembly guards', () => {
     expect(classifierSrc).not.toMatch(/insertProfileChangeProposal|insertOntologyCorrectionEvidence|saveCapture|saveConceptualizedCapture/);
     expect(classifierSrc).not.toMatch(/from\s+['"][^'"]*(?:db\/|\/db|features\/backup|react|react-native|expo|zustand|@tanstack)[^'"]*['"]/);
     expect(modalSrc).not.toContain('buildConceptualizeContextPackShadow');
+  });
+
+  it('missing-concept UX is explicit review metadata, not automatic ontology apply', () => {
+    const saveModalTypesSrc = read('src/features/learning/types/saveModal.ts');
+    const classifierSrc = read('src/features/learning/services/conceptualizeClassification.ts');
+    const storeSrc = read('src/features/learning/state/save-learning.ts');
+    const cardSrc = read('src/features/learning/ui/cards/CandidateCaptureCard.tsx');
+    const correctionControlsSrc = read('src/features/learning/ui/ConceptualizeCorrectionControls.tsx');
+
+    expect(saveModalTypesSrc).toContain('export interface ConceptualizeMissingConceptReview');
+    expect(saveModalTypesSrc).toContain("status: 'no_strong_match'");
+    expect(classifierSrc).toContain('conceptualizeMissingConcept: toMissingConceptReview(classification, pack)');
+    expect(classifierSrc).not.toMatch(/suggestedNewConcept[\s\S]{0,200}proposedConceptType/);
+    expect(storeSrc).toContain("newTypeLabel: ''");
+    expect(cardSrc).toContain('Needs type review');
+    expect(correctionControlsSrc).toContain('Use suggestion');
+    expect(correctionControlsSrc).toContain('newTypeLabel: suggested.label');
+    expect(correctionControlsSrc).not.toMatch(/insertProfileChangeProposal|saveConceptualizedCapture|saveCapture/);
+  });
+
+  it('raw proposed type identity stays structured with a legacy string projection only', () => {
+    const saveModalSrc = read('src/features/learning/types/saveModal.ts');
+    const identitySrc = read('src/features/learning/types/rawProposedTypeIdentity.ts');
+    const prepareSrc = read('src/features/learning/services/prepareSaveCandidates.ts');
+    const classifierSrc = read('src/features/learning/services/conceptualizeClassification.ts');
+    const correctionSaveSrc = read('src/features/learning/services/saveConceptualizedCapture.ts');
+
+    expect(saveModalSrc).toContain('rawProposedTypeIdentity?: RawProposedTypeIdentity');
+    expect(identitySrc).toContain("kind: 'scoped_ref'");
+    expect(identitySrc).toContain("kind: 'unresolved_raw'");
+    expect(identitySrc).toContain('rawProposedTypeIdentityToLegacyString');
+    expect(prepareSrc).toContain('createUnresolvedRawProposedTypeIdentity');
+    expect(prepareSrc).toContain('rawProposedTypeIdentityToLegacyString');
+    expect(classifierSrc).toContain('createScopedRawProposedTypeIdentity');
+    expect(classifierSrc).toContain('rawProposedTypeIdentityToLegacyString');
+    expect(correctionSaveSrc).toContain('rawProposedTypeIdentityToLegacyString(candidate.rawProposedTypeIdentity)');
+    expect(correctionSaveSrc).not.toContain('normalizeNullableText(candidate.rawProposedTypeNodeId)');
+  });
+
+  it('user-fit projection stays a pure bounded projection over supplied facts', () => {
+    const projectionSrc = read('src/features/ontology/userFitProjection.ts');
+    const ontologyIndexSrc = read('src/features/ontology/index.ts');
+
+    expect(projectionSrc).toContain('projectUserFitSignals');
+    expect(projectionSrc).toContain('correctionEvidence?: readonly OntologyCorrectionEvidence[]');
+    expect(projectionSrc).toContain('proposalEvents?: readonly ProfileProposalEvent[]');
+    expect(projectionSrc).toContain('omittedNodeSignalCount');
+    expect(projectionSrc).toContain('omittedProposalSignalCount');
+    expect(projectionSrc).toContain('userFitActiveSelectionScopeKey');
+    expect(projectionSrc).toContain('activeSelectionSnapshot: UserFitNormalizedActiveSelectionSnapshot');
+    expect(projectionSrc).toContain('nearMissHitCount');
+    expect(projectionSrc).toContain('missingConceptCorrectionCount');
+    expect(ontologyIndexSrc).toContain('projectUserFitSignals');
+    expect(ontologyIndexSrc).toContain('userFitActiveSelectionScopeKey');
+    expect(ontologyIndexSrc).toContain('UserFitProjection');
+
+    expect(projectionSrc).not.toMatch(/from\s+['"][^'"]*(?:db\/|\/db|features\/backup|features\/learning|features\/graph|ai\/|react|react-native|expo|zustand|@tanstack)[^'"]*['"]/);
+    expect(projectionSrc).not.toMatch(/ontologyCorrectionEvidenceRepo|profileProposalEventRepo/);
+    expect(projectionSrc).not.toMatch(/\basync\b|\bPromise\b/);
+    expect(projectionSrc).not.toMatch(/insertProfileChangeProposal|insertOntologyCorrectionEvidence|saveCapture|saveConceptualizedCapture/);
+    expect(projectionSrc).not.toMatch(/\b(applyProfilePatch|applyBranchLocal|mutateProfile|autoApply|runExtractor|buildConceptualizePrompt|enqueue|complete)\b/);
+
+    const boundedWeights = [
+      'MISSING_CONCEPT_POSITIVE_WEIGHT',
+      'NEAR_MISS_POSITIVE_WEIGHT',
+      'POSTPONED_NEGATIVE_WEIGHT',
+    ];
+    for (const constantName of boundedWeights) {
+      const match = projectionSrc.match(new RegExp(`const ${constantName} = ([0-9.]+);`));
+      expect(match).toBeTruthy();
+      expect(Number(match![1])).toBeGreaterThanOrEqual(0);
+      expect(Number(match![1])).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it('user-fit history reader stays a data-layer facts loader, not a projection or runtime seam', () => {
+    const historyRepoSrc = read('src/features/ontology/data/userFitHistoryRepo.ts');
+    const ontologyDataIndexSrc = read('src/features/ontology/data/index.ts');
+    const ontologyRootIndexSrc = read('src/features/ontology/index.ts');
+
+    expect(historyRepoSrc).toContain('loadUserFitProjectionFacts');
+    expect(historyRepoSrc).toContain('DEFAULT_USER_FIT_CORRECTION_EVIDENCE_LIMIT');
+    expect(historyRepoSrc).toContain('DEFAULT_USER_FIT_PROPOSAL_EVENT_LIMIT');
+    expect(historyRepoSrc).toContain('ontologyCorrectionEvidence');
+    expect(historyRepoSrc).toContain('profileProposalEvents');
+    expect(ontologyDataIndexSrc).toContain('loadUserFitProjectionFacts');
+    expect(ontologyRootIndexSrc).not.toContain('loadUserFitProjectionFacts');
+
+    expect(historyRepoSrc).not.toMatch(/projectUserFitSignals|userFitProjection/);
+    expect(historyRepoSrc).not.toMatch(/insertProfileChangeProposal|insertOntologyCorrectionEvidence|saveCapture|saveConceptualizedCapture/);
+    expect(historyRepoSrc).not.toMatch(/\b(applyProfilePatch|applyBranchLocal|mutateProfile|autoApply|runExtractor|buildConceptualizePrompt|enqueue|complete)\b/);
+    expect(historyRepoSrc).not.toMatch(/from\s+['"][^'"]*(?:features\/backup|features\/learning|features\/graph|ai\/|react|react-native|expo|zustand|@tanstack)[^'"]*['"]/);
+  });
+
+  it('base profile versioning guard stays pure and apply-free', () => {
+    const versioningSrc = read('src/features/ontology/baseProfileVersioning.ts');
+    const ontologyIndexSrc = read('src/features/ontology/index.ts');
+
+    expect(versioningSrc).toContain('assertBaseProfileProposalTargetsCurrentVersion');
+    expect(versioningSrc).toContain('target_profile_version_missing');
+    expect(versioningSrc).toContain('target_profile_version_stale');
+    expect(ontologyIndexSrc).toContain('assertBaseProfileProposalTargetsCurrentVersion');
+
+    expect(versioningSrc).not.toMatch(/from\s+['"][^'"]*(?:db\/|\/db|features\/backup|features\/learning|features\/graph|ai\/|react|react-native|expo|zustand|@tanstack)[^'"]*['"]/);
+    expect(versioningSrc).not.toMatch(/\basync\b|\bPromise\b/);
+    expect(versioningSrc).not.toMatch(/\b(insert|update|delete|transaction|saveCapture|saveConceptualizedCapture)\b/);
+    expect(versioningSrc).not.toMatch(/\b(applyProfilePatch|applyBranchLocal|mutateProfile|autoApply|runExtractor|buildConceptualizePrompt|enqueue|complete)\b/);
+  });
+
+  it('base profile apply helper stays a pure patch compiler, not a data/UI seam', () => {
+    const applySrc = read('src/features/ontology/baseProfileProposalApply.ts');
+    const ontologyIndexSrc = read('src/features/ontology/index.ts');
+
+    expect(applySrc).toContain('compileBaseProfileProposalApplyOperation');
+    expect(applySrc).toContain('applyBaseProfileChangeProposal');
+    expect(applySrc).toContain('assertBaseProfileProposalTargetsCurrentVersion');
+    expect(applySrc).toContain('composeDomainProfile');
+    expect(applySrc).toContain('apply_profile_patch_to_base_profile');
+    expect(ontologyIndexSrc).toContain('compileBaseProfileProposalApplyOperation');
+    expect(ontologyIndexSrc).toContain('applyBaseProfileChangeProposal');
+
+    expect(applySrc).not.toMatch(/from\s+['"][^'"]*(?:db\/|\/db|features\/backup|features\/learning|features\/graph|ai\/|react|react-native|expo|zustand|@tanstack)[^'"]*['"]/);
+    expect(applySrc).not.toMatch(/\basync\b|\bPromise\b/);
+    expect(applySrc).not.toMatch(/\b(insert|update|delete|transaction|saveCapture|saveConceptualizedCapture)\b/);
+    expect(applySrc).not.toMatch(/\b(autoApply|runExtractor|buildConceptualizePrompt|enqueue|complete)\b/);
+  });
+
+  it('base profile apply service stays behind the ontology data boundary', () => {
+    const serviceSrc = read('src/features/ontology/data/baseProfileProposalApplyService.ts');
+    const ontologyDataIndexSrc = read('src/features/ontology/data/index.ts');
+    const ontologyRootIndexSrc = read('src/features/ontology/index.ts');
+
+    expect(serviceSrc).toContain('applyPendingBaseProfileChangeProposal');
+    expect(serviceSrc).toContain('updateProfileDefinitionIfUnchanged');
+    expect(serviceSrc).toContain('updateProfileChangeProposalIfPending');
+    expect(serviceSrc).toContain('insertProfileProposalEvent');
+    expect(serviceSrc).toContain('transaction');
+    expect(ontologyDataIndexSrc).toContain('applyPendingBaseProfileChangeProposal');
+    expect(ontologyRootIndexSrc).not.toContain('applyPendingBaseProfileChangeProposal');
+
+    expect(serviceSrc).not.toMatch(/from\s+['"][^'"]*(?:features\/backup|features\/learning|features\/graph|ai\/|react|react-native|expo|zustand|@tanstack)[^'"]*['"]/);
+    expect(serviceSrc).not.toMatch(/\b(autoApply|runExtractor|buildConceptualizePrompt|enqueue|complete)\b/);
   });
 });
 

@@ -5,6 +5,8 @@
 
 **Follow-up:** `32_CONCEPTUALIZE_SINGULAR_OUTPUT_AND_DIAGNOSTICS_DECISION.md` updates the output contract. Public `additionalNodeRefs` are removed; hidden `diagnostics.candidateRefs` are internal calibration data only.
 
+**Follow-up:** `37_USER_FIT_PROJECTION_DECISION.md` adds bounded `userFit` payload rendering. User-fit is advisory correction history, not semantic truth and not mutation authority.
+
 ## Locked Decision
 
 The next Conceptualize context slice is **A2: pure prompt builder and output validator**.
@@ -62,6 +64,7 @@ The model needs both:
 
 - strict scoped refs such as `coding:mechanism` or `night-photo:sensor_noise`
 - compact meanings, use rules, "do not use when" boundaries, examples, and same-label disambiguation
+- bounded user-fit history when present, so prior user corrections can bias a close call without becoming ontology truth
 
 Refs alone are too opaque. Prose alone causes category drift. Hybrid prompt data gives the model a readable map while keeping scoped refs as the only contract.
 
@@ -133,7 +136,7 @@ This slice explicitly does **not** add:
 - DB-backed candidate readers
 - vector retrieval
 - graph traversal
-- user-fit projection
+- persistent learned user-fit scores
 - missing-concept apply
 - proposal creation
 - correction evidence writes

@@ -9,11 +9,14 @@ import {
   type ProfileBranch,
   type ProfileChangeProposalTarget,
   type ProfileRegistry,
+  projectUserFitSignals,
+  type UserFitProjection,
 } from '../../ontology';
 import {
   getProfileBranchesByIds,
   getProjectProfileSelectionByProjectId,
   listProfileBranchesForParent,
+  loadUserFitProjectionFacts,
   loadDefaultProfileRegistry,
 } from '../../ontology/data';
 
@@ -25,6 +28,7 @@ export interface ConceptualizeProfileContext {
   proposalTarget: ProfileChangeProposalTarget;
   compositionStamp: ContextCompositionStamp;
   scopeLegend: ContextScopeLegend;
+  userFitProjection?: UserFitProjection | undefined;
 }
 
 export interface ResolveConceptualizeProfileContextDeps {
@@ -32,6 +36,7 @@ export interface ResolveConceptualizeProfileContextDeps {
   getSelectionByProjectId: typeof getProjectProfileSelectionByProjectId;
   getBranchesByIds: typeof getProfileBranchesByIds;
   listBranchesForParent: typeof listProfileBranchesForParent;
+  loadUserFitFacts: typeof loadUserFitProjectionFacts;
 }
 
 const defaultDeps: ResolveConceptualizeProfileContextDeps = {
@@ -39,6 +44,7 @@ const defaultDeps: ResolveConceptualizeProfileContextDeps = {
   getSelectionByProjectId: getProjectProfileSelectionByProjectId,
   getBranchesByIds: getProfileBranchesByIds,
   listBranchesForParent: listProfileBranchesForParent,
+  loadUserFitFacts: loadUserFitProjectionFacts,
 };
 
 export async function resolveConceptualizeProfileContext(
@@ -48,18 +54,20 @@ export async function resolveConceptualizeProfileContext(
   },
 ): Promise<ConceptualizeProfileContext> {
   const projectId = input?.projectId?.trim();
+  const deps = { ...defaultDeps, ...input?.deps };
   if (!projectId) {
     const profile = getActiveDomainProfile();
+    const userFitProjection = await loadUserFitProjection(profile.id, deps);
     return createConceptualizeProfileContext({
       profile,
       baseProfile: profile,
       branches: [],
       selectionSnapshot: { baseProfileId: profile.id },
       proposalTarget: { kind: 'base_profile', profileId: profile.id },
+      userFitProjection,
     });
   }
 
-  const deps = { ...defaultDeps, ...input?.deps };
   const registry = await deps.loadRegistry();
   const result = await resolveRuntimeProfileForProject({
     projectId,
@@ -90,6 +98,7 @@ export async function resolveConceptualizeProfileContext(
     branches: result.branches,
     selectionSnapshot,
     proposalTarget: chooseProposalTarget(result.selection.baseProfileId, result.branches),
+    userFitProjection: await loadUserFitProjection(result.selection.baseProfileId, deps),
   });
 }
 
@@ -99,12 +108,48 @@ export function createConceptualizeProfileContext(input: {
   branches: readonly ProfileBranch[];
   selectionSnapshot: OntologyCorrectionActiveSelectionSnapshot;
   proposalTarget: ProfileChangeProposalTarget;
+  userFitProjection?: UserFitProjection | undefined;
 }): ConceptualizeProfileContext {
   return {
     ...input,
+    userFitProjection: input.userFitProjection ?? emptyUserFitProjection(input.baseProfile.id),
     branches: [...input.branches],
     compositionStamp: buildCompositionStamp(input.baseProfile, input.profile, input.branches),
     scopeLegend: buildScopeLegend(input.baseProfile, input.branches),
+  };
+}
+
+async function loadUserFitProjection(
+  baseProfileId: string,
+  deps: ResolveConceptualizeProfileContextDeps,
+): Promise<UserFitProjection> {
+  try {
+    const facts = await deps.loadUserFitFacts({ baseProfileId });
+    return projectUserFitSignals({
+      baseProfileId,
+      correctionEvidence: facts.correctionEvidence,
+      proposalEvents: facts.proposalEvents,
+    });
+  } catch {
+    // User-fit is advisory context. If history cannot be loaded, Conceptualize
+    // should still classify from the current ontology instead of blocking save.
+    return emptyUserFitProjection(baseProfileId);
+  }
+}
+
+function emptyUserFitProjection(baseProfileId: string): UserFitProjection {
+  return {
+    baseProfileId,
+    nodeSignals: [],
+    proposalSignals: [],
+    summary: {
+      correctionEvidenceCount: 0,
+      proposalEventCount: 0,
+      missingConceptCorrectionCount: 0,
+      nearMissHitCount: 0,
+      omittedNodeSignalCount: 0,
+      omittedProposalSignalCount: 0,
+    },
   };
 }
 

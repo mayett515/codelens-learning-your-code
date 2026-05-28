@@ -16,6 +16,15 @@ const ActiveSelectionSnapshotSchema = z
   })
   .strict();
 
+const NearMissCandidateSchema = z
+  .object({
+    scopeId: z.string().min(1),
+    nodeId: z.string().min(1),
+    rank: z.number().int().min(2),
+    score: z.number().min(0).max(1).nullable().optional(),
+  })
+  .strict();
+
 const OntologyCorrectionEvidenceSchema = z
   .object({
     id: z.string().min(1),
@@ -27,6 +36,7 @@ const OntologyCorrectionEvidenceSchema = z
     previousTypeNodeId: z.string().min(1).nullable(),
     correctedTypeNodeId: z.string().min(1),
     rawProposedTypeNodeId: z.string().min(1).nullable().optional(),
+    nearMissCandidates: z.array(NearMissCandidateSchema).nullable().optional(),
     reason: z.string().nullable().optional(),
     source: z.literal('user'),
     createdAt: z.number().int().nonnegative(),
@@ -86,6 +96,7 @@ export function rowToOntologyCorrectionEvidence(
     previousTypeNodeId: row.previousTypeNodeId,
     correctedTypeNodeId: row.correctedTypeNodeId,
     rawProposedTypeNodeId: row.rawProposedTypeNodeId,
+    nearMissCandidates: parseJsonColumn(row.nearMissCandidatesJson, 'near_miss_candidates_json'),
     reason: row.reason,
     source: row.source,
     createdAt: row.createdAt,
@@ -106,6 +117,7 @@ export function ontologyCorrectionEvidenceToRow(
     previousTypeNodeId: validated.previousTypeNodeId,
     correctedTypeNodeId: validated.correctedTypeNodeId,
     rawProposedTypeNodeId: validated.rawProposedTypeNodeId ?? null,
+    nearMissCandidatesJson: validated.nearMissCandidates ?? null,
     reason: validated.reason ?? null,
     source: validated.source,
     createdAt: validated.createdAt,

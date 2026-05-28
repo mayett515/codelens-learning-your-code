@@ -5,10 +5,12 @@ import {
 } from '../../ontology';
 import { colors, fontSize, spacing } from '../../../ui/theme';
 import type { CandidateCorrectionDraft } from '../state/save-learning';
+import type { ConceptualizeMissingConceptReview } from '../types/saveModal';
 
 interface ConceptualizeCorrectionControlsProps {
   profile: DomainProfile;
   draft: CandidateCorrectionDraft;
+  missingConcept?: ConceptualizeMissingConceptReview | null;
   disabled?: boolean;
   onChange: (patch: Partial<CandidateCorrectionDraft>) => void;
 }
@@ -16,11 +18,47 @@ interface ConceptualizeCorrectionControlsProps {
 export function ConceptualizeCorrectionControls({
   profile,
   draft,
+  missingConcept,
   disabled = false,
   onChange,
 }: ConceptualizeCorrectionControlsProps) {
+  const suggested = missingConcept?.suggestedNewConcept ?? null;
+  const suggestedParentTypeNodeId = suggested?.parentNodeRef
+    && profile.ontology.itemTypeNodeIds.includes(suggested.parentNodeRef.nodeId)
+    ? suggested.parentNodeRef.nodeId
+    : null;
+  const canUseSuggestedAsSubtype = !!suggested && (
+    suggested.kind === 'category' || suggested.kind === 'subcategory'
+  );
+
   return (
     <View style={styles.container}>
+      {missingConcept ? (
+        <View style={styles.missingPanel}>
+          <Text style={styles.missingTitle}>No strong existing type</Text>
+          <Text style={styles.missingBody}>
+            {suggested
+              ? `${suggested.label}${suggested.parentLabel ? ` under ${suggested.parentLabel}` : ''}`
+              : 'Choose an existing type or create a new subtype before saving if this should become structured knowledge.'}
+          </Text>
+          {suggested ? (
+            <Text style={styles.missingReason}>{suggested.reason}</Text>
+          ) : null}
+          {canUseSuggestedAsSubtype ? (
+            <Pressable
+              style={[styles.suggestionButton, disabled && styles.suggestionButtonDisabled]}
+              disabled={disabled}
+              onPress={() => onChange({
+                correctedTypeNodeId: suggestedParentTypeNodeId ?? draft.correctedTypeNodeId,
+                newTypeLabel: suggested.label,
+                reason: suggested.reason,
+              })}
+            >
+              <Text style={styles.suggestionButtonText}>Use suggestion</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
       <Text style={styles.label}>Type</Text>
       <View style={styles.typeGrid}>
         {profile.ontology.itemTypeNodeIds.map((typeNodeId) => {
@@ -68,6 +106,45 @@ const styles = StyleSheet.create({
     marginTop: -spacing.sm,
     marginBottom: spacing.md,
     gap: spacing.sm,
+  },
+  missingPanel: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    backgroundColor: colors.surfaceLight,
+    padding: spacing.sm,
+    gap: spacing.xs,
+  },
+  missingTitle: {
+    color: colors.text,
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+  },
+  missingBody: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+  },
+  missingReason: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    fontStyle: 'italic',
+  },
+  suggestionButton: {
+    alignSelf: 'flex-start',
+    minHeight: 36,
+    justifyContent: 'center',
+    borderRadius: 8,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.xs,
+  },
+  suggestionButtonDisabled: {
+    opacity: 0.5,
+  },
+  suggestionButtonText: {
+    color: colors.text,
+    fontSize: fontSize.sm,
+    fontWeight: '700',
   },
   label: {
     color: colors.textSecondary,

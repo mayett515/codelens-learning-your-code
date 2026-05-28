@@ -11,10 +11,15 @@ import {
   type ContextProposalEventSignalInput,
   type ContextProposalSnapshotInput,
   type ContextSelectionTraceEntry,
+  type ContextUserFitNodeSignalInput,
+  type ContextUserFitProposalSignalInput,
   type DomainProfile,
   type OntologyNode,
   type ProfileBranch,
   type ScopedNodeRef,
+  type UserFitNodeSignal,
+  type UserFitProposalSignal,
+  userFitActiveSelectionScopeKey,
 } from '../../ontology';
 import type { SaveModalCandidateData } from '../types/saveModal';
 import type { ConceptualizeProfileContext } from './conceptualizeProfileContext';
@@ -24,6 +29,8 @@ const CONCEPTUALIZE_SHADOW_CONTEXT_CAPS = Object.freeze({
   maxEvidenceClaims: 8,
   maxProposals: 6,
   maxProposalEvents: 8,
+  maxUserFitNodeSignals: 6,
+  maxUserFitProposalSignals: 4,
   maxGraphNeighbors: 8,
 });
 
@@ -59,6 +66,8 @@ export function buildConceptualizeContextPackShadow(
 ): ConceptualizeContextPackShadowResult {
   const ontologyNodes = buildOntologyNodeCandidates(input.context);
   const focalNodeRefs = candidateNodeRefs(input.candidate, ontologyNodes, input.context.scopeLegend.activeScopeId);
+  const userFitNodeSignals = buildUserFitNodeSignals(input.context, ontologyNodes);
+  const userFitProposalSignals = buildUserFitProposalSignals(input.context);
   const selection = selectConceptualizeContext({
     focal: {
       kind: 'capture',
@@ -71,8 +80,11 @@ export function buildConceptualizeContextPackShadow(
     evidenceClaims: input.evidenceClaims,
     proposalSnapshots: input.proposalSnapshots,
     proposalEventSignals: input.proposalEventSignals,
+    userFitNodeSignals,
+    userFitProposalSignals,
     graph: input.graph,
     caps: CONCEPTUALIZE_SHADOW_CONTEXT_CAPS,
+    requiredNodeRefs: userFitNodeSignals.flatMap((signal) => signal.nodeRefs),
   });
 
   const pack = assembleContextPack({
@@ -86,6 +98,8 @@ export function buildConceptualizeContextPackShadow(
     evidenceClaims: selection.evidenceClaims,
     proposalSnapshots: selection.proposalSnapshots,
     proposalEventSignals: selection.proposalEventSignals,
+    userFitNodeSignals: selection.userFitNodeSignals,
+    userFitProposalSignals: selection.userFitProposalSignals,
     graph: selection.graph,
     policy: CONCEPTUALIZE_SHADOW_POLICY,
     caps: selection.caps,
@@ -95,6 +109,117 @@ export function buildConceptualizeContextPackShadow(
     pack,
     validation: validateContextPack(pack),
     selectionTrace: selection.trace,
+  };
+}
+
+function buildUserFitNodeSignals(
+  context: ConceptualizeProfileContext,
+  ontologyNodes: readonly ContextOntologyNodeInput[],
+): ContextUserFitNodeSignalInput[] {
+  const projection = context.userFitProjection;
+  if (!projection) return [];
+
+  const activeSelectionKey = userFitActiveSelectionScopeKey(context.selectionSnapshot);
+  const signals: ContextUserFitNodeSignalInput[] = [];
+
+  for (const signal of projection.nodeSignals) {
+    if (signal.baseProfileId !== context.baseProfile.id) continue;
+    // Only use corrections from this exact active selection; branch-local user fit
+    // must not leak into the base/core or sibling branches.
+    if (signal.scopeId !== activeSelectionKey) continue;
+
+    const nodeRefs = userFitNodeRefs(signal, ontologyNodes, context.scopeLegend.activeScopeId);
+    if (nodeRefs.length === 0) continue;
+
+    signals.push({
+      signalId: `node:${signal.scopeId}:${signal.nodeId}`,
+      baseProfileId: signal.baseProfileId,
+      activeSelectionKey: signal.scopeId,
+      activeSelectionSnapshot: signal.activeSelectionSnapshot,
+      nodeId: signal.nodeId,
+      nodeRefs,
+      userFitConfidence: signal.userFitConfidence,
+      score: signal.score,
+      positiveCorrectionCount: signal.positiveCorrectionCount,
+      negativeCorrectionCount: signal.negativeCorrectionCount,
+      missingConceptCorrectionCount: signal.missingConceptCorrectionCount,
+      nearMissHitCount: signal.nearMissHitCount,
+      evidenceIds: signal.evidenceIds,
+      latestAt: signal.latestAt,
+    });
+
+    if (signals.length >= CONCEPTUALIZE_SHADOW_CONTEXT_CAPS.maxUserFitNodeSignals) break;
+  }
+
+  return signals;
+}
+
+function buildUserFitProposalSignals(
+  context: ConceptualizeProfileContext,
+): ContextUserFitProposalSignalInput[] {
+  const projection = context.userFitProjection;
+  if (!projection) return [];
+
+  const activeProposalTargetKeys = userFitProposalTargetKeysForActiveSelection(context);
+  return projection.proposalSignals
+    .filter((signal) =>
+      signal.baseProfileId === context.baseProfile.id &&
+      activeProposalTargetKeys.has(signal.targetKey))
+    .slice(0, CONCEPTUALIZE_SHADOW_CONTEXT_CAPS.maxUserFitProposalSignals)
+    .map((signal) => toContextUserFitProposalSignal(signal));
+}
+
+function userFitProposalTargetKeysForActiveSelection(
+  context: ConceptualizeProfileContext,
+): Set<string> {
+  const branchIds = [
+    ...(context.selectionSnapshot.projectBranchIds ?? []),
+    ...(context.selectionSnapshot.learningBranchIds ?? []),
+    ...(context.selectionSnapshot.personalBranchIds ?? []),
+  ];
+
+  if (branchIds.length === 0) {
+    return new Set([`base_profile:${context.baseProfile.id}`]);
+  }
+
+  return new Set(branchIds.map((branchId) => `profile_branch:${branchId}`));
+}
+
+function userFitNodeRefs(
+  signal: UserFitNodeSignal,
+  ontologyNodes: readonly ContextOntologyNodeInput[],
+  activeScopeId: string,
+): ScopedNodeRef[] {
+  const active = ontologyNodes.find((node) =>
+    node.ref.scopeId === activeScopeId && node.ref.nodeId === signal.nodeId);
+  if (active) return [cloneScopedNodeRef(active.ref)];
+
+  return ontologyNodes
+    .filter((node) => node.ref.nodeId === signal.nodeId)
+    .map((node) => cloneScopedNodeRef(node.ref));
+}
+
+function toContextUserFitProposalSignal(
+  signal: UserFitProposalSignal,
+): ContextUserFitProposalSignalInput {
+  return {
+    signalId: `proposal:${signal.proposalKind}:${signal.targetKey}`,
+    baseProfileId: signal.baseProfileId,
+    proposalKind: signal.proposalKind,
+    target: {
+      kind: signal.target.kind,
+      ...(signal.target.profileId === undefined ? {} : { profileId: signal.target.profileId }),
+      ...(signal.target.branchId === undefined ? {} : { branchId: signal.target.branchId }),
+    },
+    targetKey: signal.targetKey,
+    userFitConfidence: signal.userFitConfidence,
+    score: signal.score,
+    appliedCount: signal.appliedCount,
+    rejectedCount: signal.rejectedCount,
+    postponedCount: signal.postponedCount,
+    askedWhyCount: signal.askedWhyCount,
+    eventIds: signal.eventIds,
+    latestAt: signal.latestAt,
   };
 }
 

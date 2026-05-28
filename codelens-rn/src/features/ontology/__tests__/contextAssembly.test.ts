@@ -534,6 +534,83 @@ describe('context assembly', () => {
     expect(pack.proposalEvents.recentDecisionSignals.map((event) => event.eventId)).toEqual(['event-b']);
   });
 
+  it('keeps user-fit signals as bounded advisory context', () => {
+    const pack = assembleContextPack(baseInput({
+      userFitNodeSignals: [
+        {
+          signalId: 'node:react:closure',
+          baseProfileId: 'coding',
+          activeSelectionKey: 'base:coding|project:react|learning:-|personal:-',
+          activeSelectionSnapshot: {
+            baseProfileId: 'coding',
+            projectBranchIds: ['react'],
+            learningBranchIds: [],
+            personalBranchIds: [],
+          },
+          nodeId: 'closure',
+          nodeRefs: [ref('react', 'closure')],
+          userFitConfidence: 0.82,
+          score: 0.64,
+          positiveCorrectionCount: 3,
+          negativeCorrectionCount: 0,
+          missingConceptCorrectionCount: 1,
+          nearMissHitCount: 1,
+          evidenceIds: ['evidence-2', 'evidence-1'],
+          latestAt: 20,
+        },
+        {
+          signalId: 'node:react:effect',
+          baseProfileId: 'coding',
+          activeSelectionKey: 'base:coding|project:react|learning:-|personal:-',
+          activeSelectionSnapshot: {
+            baseProfileId: 'coding',
+            projectBranchIds: ['react'],
+            learningBranchIds: [],
+            personalBranchIds: [],
+          },
+          nodeId: 'effect',
+          nodeRefs: [ref('react', 'effect')],
+          userFitConfidence: 0.2,
+          score: -0.6,
+          positiveCorrectionCount: 0,
+          negativeCorrectionCount: 2,
+          missingConceptCorrectionCount: 0,
+          nearMissHitCount: 0,
+          evidenceIds: ['evidence-3'],
+          latestAt: 18,
+        },
+      ],
+      userFitProposalSignals: [
+        {
+          signalId: 'proposal:classification_patch:profile_branch:react',
+          baseProfileId: 'coding',
+          proposalKind: 'classification_patch',
+          target: { kind: 'profile_branch', branchId: 'react' },
+          targetKey: 'profile_branch:react',
+          userFitConfidence: 0.75,
+          score: 0.5,
+          appliedCount: 2,
+          rejectedCount: 0,
+          postponedCount: 0,
+          askedWhyCount: 1,
+          eventIds: ['event-2', 'event-1'],
+          latestAt: 30,
+        },
+      ],
+      caps: {
+        maxUserFitNodeSignals: 1,
+        maxUserFitProposalSignals: 1,
+      },
+    }));
+
+    expect(pack.userFit.nodeSignals.map((signal) => signal.signalId)).toEqual(['node:react:closure']);
+    expect(pack.userFit.nodeSignals[0]?.nodeRefs).toEqual([ref('react', 'closure')]);
+    expect(pack.userFit.proposalSignals.map((signal) => signal.signalId))
+      .toEqual(['proposal:classification_patch:profile_branch:react']);
+    expect(pack.userFit.omittedNodeSignalCount).toBe(1);
+    expect(pack.budgetReport.omitted['userFit.nodeSignals']).toBe(1);
+  });
+
   it('computes omitted counts after deduplication instead of counting duplicate inputs as drops', () => {
     const pack = assembleContextPack(baseInput({
       evidenceClaims: [

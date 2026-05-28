@@ -22,6 +22,7 @@ export type {
   OntologyCorrectionActiveSelectionSnapshot,
   OntologyCorrectionEvidence,
   OntologyCorrectionField,
+  OntologyCorrectionNearMissCandidate,
   OntologyCorrectionSource,
   OntologyCorrectionSubjectKind,
   ProfileChangeProposal,
@@ -63,6 +64,26 @@ export {
   groupProfileBranchesByKind,
   profileBranchToOverlay,
 } from './profileBranches';
+export {
+  BaseProfileVersioningError,
+  assertBaseProfileProposalTargetsCurrentVersion,
+} from './baseProfileVersioning';
+export type {
+  AssertBaseProfileProposalTargetVersionInput,
+  BaseProfileVersioningErrorCode,
+} from './baseProfileVersioning';
+export {
+  BaseProfileProposalApplyError,
+  applyBaseProfileChangeProposal,
+  applyBaseProfilePatchOperation,
+  compileBaseProfileProposalApplyOperation,
+} from './baseProfileProposalApply';
+export type {
+  BaseProfilePatchOperation,
+  BaseProfileProposalApplyErrorCode,
+  BaseProfileProposalApplyInput,
+  BaseProfileProposalApplyResult,
+} from './baseProfileProposalApply';
 export {
   BranchLocalProposalApplyError,
   applyBranchLocalProfileChangeProposal,
@@ -168,13 +189,21 @@ export type {
   ContextSameLabelSiblingGroup,
   ContextScopeLegend,
   ContextScopeLegendEntry,
+  ContextUserFitNodeSignal,
+  ContextUserFitNodeSignalInput,
+  ContextUserFitProposalSignal,
+  ContextUserFitProposalSignalInput,
+  ContextUserFitSection,
   ScopedNodeRef,
 } from './contextAssembly';
 export {
+  createCheckerContextSelector,
   createConceptualizeContextSelector,
+  selectCheckerContext,
   selectConceptualizeContext,
 } from './contextSelector';
 export type {
+  CheckerContextSelectorInput,
   ConceptualizeContextSelectorInput,
   ContextSelection,
   ContextSelectionBucket,
@@ -182,7 +211,20 @@ export type {
   ContextSelectionSection,
   ContextSelectionTraceEntry,
   ContextSelector,
+  SharedContextSelectorInput,
 } from './contextSelector';
+export {
+  profileChangeProposalTargetKey,
+  projectUserFitSignals,
+  userFitActiveSelectionScopeKey,
+} from './userFitProjection';
+export type {
+  UserFitNodeSignal,
+  UserFitNormalizedActiveSelectionSnapshot,
+  UserFitProjection,
+  UserFitProjectionInput,
+  UserFitProposalSignal,
+} from './userFitProjection';
 export { validateOntologyCorrection } from './corrections';
 
 export function getActiveDomainProfile(): DomainProfile<CodingConceptTypeNodeId>;

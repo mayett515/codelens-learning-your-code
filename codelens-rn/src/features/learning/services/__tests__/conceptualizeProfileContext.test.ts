@@ -4,6 +4,7 @@ import {
   createProfileRegistry,
   createStaticProfileSource,
   type DomainProfile,
+  type OntologyCorrectionEvidence,
   type ProfileBranch,
   type ProfileRegistry,
 } from '../../../ontology';
@@ -53,6 +54,7 @@ function branch(
 function depsFor(input: {
   selection?: ProjectProfileSelection | null | undefined;
   branches?: readonly ProfileBranch<string>[] | undefined;
+  correctionEvidence?: readonly OntologyCorrectionEvidence[] | undefined;
 }): ResolveConceptualizeProfileContextDeps {
   const branchesById = new Map((input.branches ?? []).map((b) => [b.id, b]));
   return {
@@ -65,6 +67,10 @@ function depsFor(input: {
       }),
     listBranchesForParent: async (parentProfileId) =>
       (input.branches ?? []).filter((b) => b.parentProfileId === parentProfileId),
+    loadUserFitFacts: async () => ({
+      correctionEvidence: input.correctionEvidence ?? [],
+      proposalEvents: [],
+    }),
   };
 }
 
@@ -75,6 +81,7 @@ describe('resolveConceptualizeProfileContext', () => {
     expect(context.profile.id).toBe('coding');
     expect(context.selectionSnapshot).toEqual({ baseProfileId: 'coding' });
     expect(context.proposalTarget).toEqual({ kind: 'base_profile', profileId: 'coding' });
+    expect(context.userFitProjection?.baseProfileId).toBe('coding');
   });
 
   it('resolves a project runtime profile and targets the most personal selected branch', async () => {
@@ -134,5 +141,74 @@ describe('resolveConceptualizeProfileContext', () => {
     expect(context.profile).toBe(baseProfile);
     expect(context.selectionSnapshot).toEqual({ baseProfileId: 'coding' });
     expect(context.proposalTarget).toEqual({ kind: 'base_profile', profileId: 'coding' });
+  });
+
+  it('projects bounded correction history into advisory user-fit context', async () => {
+    const selection: ProjectProfileSelection = {
+      id: 'selection-1',
+      projectId: 'project-1',
+      selection: { baseProfileId: 'coding' },
+      createdAt: 1,
+      updatedAt: 1,
+    };
+
+    const context = await resolveConceptualizeProfileContext({
+      projectId: 'project-1',
+      deps: depsFor({
+        selection,
+        correctionEvidence: [
+          {
+            id: 'evidence-1',
+            profileId: 'coding',
+            activeSelectionSnapshot: { baseProfileId: 'coding' },
+            subjectKind: 'capture',
+            subjectId: 'capture-1',
+            field: 'typeNodeId',
+            previousTypeNodeId: 'pitfall',
+            correctedTypeNodeId: 'mechanism',
+            reason: 'The note was about runtime behavior.',
+            source: 'user',
+            createdAt: 10,
+          },
+        ],
+      }),
+    });
+
+    expect(context.userFitProjection?.nodeSignals.map((signal) => signal.nodeId))
+      .toEqual(['mechanism', 'pitfall']);
+  });
+
+  it('falls back to empty advisory user-fit when history loading fails', async () => {
+    const selection: ProjectProfileSelection = {
+      id: 'selection-1',
+      projectId: 'project-1',
+      selection: { baseProfileId: 'coding' },
+      createdAt: 1,
+      updatedAt: 1,
+    };
+    const context = await resolveConceptualizeProfileContext({
+      projectId: 'project-1',
+      deps: {
+        ...depsFor({ selection }),
+        loadUserFitFacts: async () => {
+          throw new Error('history unavailable');
+        },
+      },
+    });
+
+    expect(context.profile).toBe(baseProfile);
+    expect(context.userFitProjection).toEqual({
+      baseProfileId: 'coding',
+      nodeSignals: [],
+      proposalSignals: [],
+      summary: {
+        correctionEvidenceCount: 0,
+        proposalEventCount: 0,
+        missingConceptCorrectionCount: 0,
+        nearMissHitCount: 0,
+        omittedNodeSignalCount: 0,
+        omittedProposalSignalCount: 0,
+      },
+    });
   });
 });

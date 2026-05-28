@@ -183,6 +183,12 @@ describe('Stage 2 prepareSaveCandidates', () => {
 
     expect(candidates[0]?.conceptHint?.proposedConceptType)
       .toBe(codingProfile.promotion.defaultTypeNodeId);
+    expect(candidates[0]?.rawProposedTypeIdentity).toEqual({
+      kind: 'unresolved_raw',
+      rawNodeId: 'hallucinated_runtime_kind',
+      source: 'extractor',
+      activeScopeId: 'coding',
+    });
     expect(candidates[0]?.rawProposedTypeNodeId).toBe('hallucinated_runtime_kind');
   });
 
@@ -238,6 +244,12 @@ describe('Stage 2 prepareSaveCandidates', () => {
       whatClicked: 'Something clicked',
       rawSnippet: 'some code here',
       extractionConfidence: 0.86,
+      rawProposedTypeIdentity: {
+        kind: 'scoped_ref',
+        scopeId: 'coding',
+        nodeId: 'pattern',
+        source: 'conceptualize',
+      },
       rawProposedTypeNodeId: 'coding:pattern',
     });
     expect(candidates[0]?.conceptHint?.proposedConceptType).toBe('pattern');
@@ -297,8 +309,17 @@ describe('Stage 2 prepareSaveCandidates', () => {
     );
 
     expect(candidates[0]?.conceptHint).toBeNull();
+    expect(candidates[0]?.rawProposedTypeIdentity).toBeNull();
     expect(candidates[0]?.rawProposedTypeNodeId).toBeNull();
     expect(candidates[0]?.extractionConfidence).toBe(0.34);
+    expect(candidates[0]?.conceptualizeMissingConcept).toMatchObject({
+      status: 'no_strong_match',
+      confidence: 0.34,
+      suggestedNewConcept: {
+        label: 'Unmodeled Save State',
+        parentLabel: 'Mechanism',
+      },
+    });
   });
 
   it('passes the caller abort signal through to Conceptualize classification', async () => {

@@ -227,6 +227,63 @@ describe('Conceptualize prompt builder', () => {
     });
   });
 
+  it('renders user-fit as advisory history without turning it into ontology truth', () => {
+    const pack = assembleContextPack(packInput({
+      userFitNodeSignals: [
+        {
+          signalId: 'node:night-photo:sensor_noise',
+          baseProfileId: 'photography',
+          activeSelectionKey: 'base:photography|project:night-photo|learning:-|personal:-',
+          activeSelectionSnapshot: {
+            baseProfileId: 'photography',
+            projectBranchIds: ['night-photo'],
+            learningBranchIds: [],
+            personalBranchIds: [],
+          },
+          nodeId: 'sensor_noise',
+          nodeRefs: [ref('night-photo', 'sensor_noise')],
+          userFitConfidence: 0.82,
+          score: 0.64,
+          positiveCorrectionCount: 3,
+          negativeCorrectionCount: 0,
+          missingConceptCorrectionCount: 1,
+          nearMissHitCount: 1,
+          evidenceIds: ['evidence-1'],
+          latestAt: 456,
+        },
+      ],
+      caps: {
+        maxNodes: 3,
+        maxEvidenceClaims: 1,
+        maxProposals: 1,
+        maxProposalEvents: 1,
+        maxUserFitNodeSignals: 1,
+        maxUserFitProposalSignals: 1,
+        maxGraphNeighbors: 1,
+      },
+    }));
+
+    const result = buildConceptualizePrompt({ pack });
+
+    expect(result.instructionShell).toContain('Use userFit.nodeSignals as user correction history, not semantic truth');
+    expect(result.dataPayload.userFit.nodeSignals).toEqual([
+      {
+        signalId: 'node:night-photo:sensor_noise',
+        activeSelectionKey: 'base:photography|project:night-photo|learning:-|personal:-',
+        nodeId: 'sensor_noise',
+        nodeRefKeys: ['night-photo:sensor_noise'],
+        confidence: 0.82,
+        score: 0.64,
+        positiveCorrectionCount: 3,
+        negativeCorrectionCount: 0,
+        missingConceptCorrectionCount: 1,
+        nearMissHitCount: 1,
+        evidenceIds: ['evidence-1'],
+        latestAt: 456,
+      },
+    ]);
+  });
+
   it('preserves same-label scoped categories so the model cannot flatten branch meaning into the core label', () => {
     const pack = assembleContextPack(packInput());
     const result = buildConceptualizePrompt({ pack });

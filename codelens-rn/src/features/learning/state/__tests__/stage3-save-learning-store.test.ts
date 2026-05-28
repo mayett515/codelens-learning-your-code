@@ -76,4 +76,33 @@ describe('save learning store', () => {
       error: null,
     });
   });
+
+  it('does not auto-fill a new subtype from missing-concept suggestions', () => {
+    useSaveLearningStore.getState().reset();
+    useSaveLearningStore.getState().setCandidates([
+      {
+        ...candidate,
+        extractionConfidence: 0.36,
+        conceptualizeMissingConcept: {
+          status: 'no_strong_match',
+          confidence: 0.36,
+          rationale: 'No existing type is specific enough.',
+          suggestedNewConcept: {
+            label: 'Hook Snapshot',
+            kind: 'subcategory',
+            parentNodeRef: { scopeId: 'coding', nodeId: 'mechanism' },
+            parentLabel: 'Mechanism',
+            meaning: 'A specific hook timing snapshot.',
+            reason: 'The existing mechanism node is too broad.',
+          },
+        },
+      },
+    ]);
+
+    expect(useSaveLearningStore.getState().correctionDrafts['candidate-0']).toMatchObject({
+      correctedTypeNodeId: null,
+      reason: '',
+      newTypeLabel: '',
+    });
+  });
 });

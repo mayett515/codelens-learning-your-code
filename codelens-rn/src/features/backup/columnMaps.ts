@@ -234,12 +234,14 @@ export const ONTOLOGY_CORRECTION_EVIDENCE_COLUMN_MAP = {
   'previous_type_node_id': 'previousTypeNodeId',
   'corrected_type_node_id': 'correctedTypeNodeId',
   'raw_proposed_type_node_id': 'rawProposedTypeNodeId',
+  'near_miss_candidates_json': 'nearMissCandidatesJson',
   'reason': 'reason',
   'source': 'source',
   'created_at': 'createdAt',
 } as const satisfies Record<string, string>;
 export const ONTOLOGY_CORRECTION_EVIDENCE_JSON_COLUMNS = new Set<string>([
   'active_selection_snapshot_json',
+  'near_miss_candidates_json',
 ]);
 
 export const PROFILE_CHANGE_PROPOSALS_COLUMN_MAP = {
@@ -251,6 +253,7 @@ export const PROFILE_CHANGE_PROPOSALS_COLUMN_MAP = {
   'target_kind': 'targetKind',
   'target_profile_id': 'targetProfileId',
   'target_branch_id': 'targetBranchId',
+  'target_profile_version': 'targetProfileVersion',
   'evidence_ids_json': 'evidenceIdsJson',
   'patch_json': 'patchJson',
   'title': 'title',

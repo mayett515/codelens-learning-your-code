@@ -2,17 +2,24 @@ import { enqueue } from '../../../ai/queue';
 import {
   scopedNodeRefKey,
   type ContextPack,
-  type ScopedNodeRef,
 } from '../../ontology';
 import { normalizeConceptKey } from '../codecs/concept';
 import type { CaptureHint } from '../extractor/extractorSchema';
-import type { SaveModalCandidateData } from '../types/saveModal';
+import type {
+  ConceptualizeMissingConceptReview,
+  SaveModalCandidateData,
+} from '../types/saveModal';
+import {
+  createScopedRawProposedTypeIdentity,
+  rawProposedTypeIdentityToLegacyString,
+} from '../types/rawProposedTypeIdentity';
 import { buildConceptualizeContextPackShadow } from './conceptualizeContextPack';
 import type { ConceptualizeProfileContext } from './conceptualizeProfileContext';
 import {
   buildConceptualizePrompt,
   getConceptualizePublicClassification,
   validateConceptualizePromptOutput,
+  type ConceptualizePromptDiagnosticCandidate,
   type ConceptualizePromptBuildResult,
   type ConceptualizePromptClassification,
   type ConceptualizePromptOutput,
@@ -125,6 +132,7 @@ export async function classifySaveCandidateWithConceptualize(
     context: input.context,
     pack: result.pack,
     classification: getConceptualizePublicClassification(result.output),
+    diagnosticCandidates: result.output.diagnostics.candidateRefs,
   });
 }
 
@@ -133,8 +141,10 @@ export function applyConceptualizeClassificationToCandidate(input: {
   context: ConceptualizeProfileContext;
   pack: ContextPack;
   classification: ConceptualizePromptClassification;
+  diagnosticCandidates?: readonly ConceptualizePromptDiagnosticCandidate[] | undefined;
 }): SaveModalCandidateData {
-  const { candidate, context, pack, classification } = input;
+  const { candidate, context, pack, classification, diagnosticCandidates } = input;
+  const conceptualizeNearMissCandidates = toNearMissCandidates(diagnosticCandidates);
 
   if (classification.noStrongMatch || !classification.primaryNodeRef) {
     return {
@@ -146,7 +156,10 @@ export function applyConceptualizeClassificationToCandidate(input: {
       isNewLanguageForExistingConcept: false,
       extractionConfidence: classification.confidence,
       conceptHint: null,
+      rawProposedTypeIdentity: null,
       rawProposedTypeNodeId: null,
+      conceptualizeMissingConcept: toMissingConceptReview(classification, pack),
+      conceptualizeNearMissCandidates,
     };
   }
 
@@ -169,6 +182,10 @@ export function applyConceptualizeClassificationToCandidate(input: {
   const previousTypeNodeId = candidate.conceptHint?.proposedConceptType ?? null;
   const clearLink = previousTypeNodeId !== typeNodeId;
   const conceptHint = withConceptualizeType(candidate, typeNodeId, classification.confidence, clearLink);
+  const rawProposedTypeIdentity = createScopedRawProposedTypeIdentity(
+    classification.primaryNodeRef,
+    'conceptualize',
+  );
 
   return {
     ...candidate,
@@ -179,7 +196,62 @@ export function applyConceptualizeClassificationToCandidate(input: {
     isNewLanguageForExistingConcept: clearLink ? false : candidate.isNewLanguageForExistingConcept,
     extractionConfidence: classification.confidence,
     conceptHint,
-    rawProposedTypeNodeId: fullScopedRawTypeNodeId(classification.primaryNodeRef),
+    rawProposedTypeIdentity,
+    rawProposedTypeNodeId: rawProposedTypeIdentityToLegacyString(rawProposedTypeIdentity),
+    conceptualizeMissingConcept: null,
+    conceptualizeNearMissCandidates,
+  };
+}
+
+function toMissingConceptReview(
+  classification: ConceptualizePromptClassification,
+  pack: ContextPack,
+): ConceptualizeMissingConceptReview {
+  const suggested = classification.suggestedNewConcept;
+  const parentNodeRef = suggested?.parentNodeRef ?? null;
+  const parentLabel = parentNodeRef
+    ? pack.ontology.nodes.find((node) => scopedNodeRefKey(node.ref) === scopedNodeRefKey(parentNodeRef))?.label ?? null
+    : null;
+
+  return {
+    status: 'no_strong_match',
+    confidence: classification.confidence,
+    rationale: classification.rationale,
+    suggestedNewConcept: suggested
+      ? {
+          label: suggested.label,
+          kind: suggested.kind,
+          parentNodeRef: parentNodeRef ? { ...parentNodeRef } : null,
+          parentLabel,
+          meaning: suggested.meaning,
+          reason: suggested.reason,
+        }
+      : null,
+  };
+}
+
+function toNearMissCandidates(
+  candidates: readonly ConceptualizePromptDiagnosticCandidate[] | undefined,
+): SaveModalCandidateData['conceptualizeNearMissCandidates'] {
+  if (!candidates || candidates.length === 0) return null;
+  return candidates.map((candidate) => ({
+    ...toNearMissCandidate(candidate),
+  }));
+}
+
+function toNearMissCandidate(
+  candidate: ConceptualizePromptDiagnosticCandidate,
+): NonNullable<SaveModalCandidateData['conceptualizeNearMissCandidates']>[number] {
+  if (candidate.rank < 2) {
+    throw new ConceptualizeClassificationFailedError(
+      `Conceptualize diagnostic candidate rank must be >= 2, received ${candidate.rank}.`,
+    );
+  }
+  return {
+    scopeId: candidate.ref.scopeId,
+    nodeId: candidate.ref.nodeId,
+    rank: candidate.rank,
+    ...(candidate.score === undefined ? {} : { score: candidate.score }),
   };
 }
 
@@ -202,10 +274,6 @@ function withConceptualizeType(
       ? false
       : hint?.isNewLanguageForExistingConcept ?? candidate.isNewLanguageForExistingConcept,
   };
-}
-
-function fullScopedRawTypeNodeId(ref: ScopedNodeRef): string {
-  return scopedNodeRefKey(ref);
 }
 
 function parseJson(raw: string): unknown {

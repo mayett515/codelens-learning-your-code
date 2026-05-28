@@ -3,12 +3,15 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   assembleContextPack,
+  createCheckerContextSelector,
   createConceptualizeContextSelector,
   scopedNodeRefKey,
+  selectCheckerContext,
   selectConceptualizeContext,
   validateContextPack,
 } from '../index';
 import type {
+  CheckerContextSelectorInput,
   ConceptualizeContextSelectorInput,
   ContextOntologyNodeInput,
   ContextPolicy,
@@ -71,6 +74,25 @@ function baseInput(overrides: Partial<ConceptualizeContextSelectorInput> = {}): 
       maxProposalEvents: 1,
       maxGraphNeighbors: 1,
     },
+    ...overrides,
+  };
+}
+
+function checkerInput(overrides: Partial<CheckerContextSelectorInput> = {}): CheckerContextSelectorInput {
+  return {
+    ...baseInput(),
+    focal: {
+      kind: 'checkerRun',
+      id: 'checker-run-1',
+      summary: 'Review branch-local classification drift',
+      nodeRefs: [ref('react-project', 'effect')],
+      sourceIds: ['checker-run-1'],
+    },
+    ontologyNodes: [
+      node('react-project', 'effect', 'Effect'),
+      node('react-project', 'closure', 'Closure'),
+      node('coding-core', 'effect', 'Effect'),
+    ],
     ...overrides,
   };
 }
@@ -140,6 +162,151 @@ describe('context selector', () => {
       errors: [],
     });
     expect(pack.ontology.sameLabelSiblings).toHaveLength(1);
+  });
+
+  it('feeds selected checker context into the existing ContextPack assembler with advisory user-fit', () => {
+    const selector = createCheckerContextSelector();
+    const selection = selector.select(checkerInput({
+      userFitNodeSignals: [
+        {
+          signalId: 'node:react-project:effect',
+          baseProfileId: 'coding',
+          activeSelectionKey: 'base:coding|project:react-project|learning:-|personal:-',
+          activeSelectionSnapshot: {
+            baseProfileId: 'coding',
+            projectBranchIds: ['react-project'],
+            learningBranchIds: [],
+            personalBranchIds: [],
+          },
+          nodeId: 'effect',
+          nodeRefs: [ref('react-project', 'effect')],
+          userFitConfidence: 0.82,
+          score: 0.64,
+          positiveCorrectionCount: 4,
+          negativeCorrectionCount: 0,
+          missingConceptCorrectionCount: 1,
+          nearMissHitCount: 1,
+          evidenceIds: ['evidence-2', 'evidence-1'],
+          latestAt: 40,
+        },
+        {
+          signalId: 'node:react-project:closure',
+          baseProfileId: 'coding',
+          activeSelectionKey: 'base:coding|project:react-project|learning:-|personal:-',
+          activeSelectionSnapshot: {
+            baseProfileId: 'coding',
+            projectBranchIds: ['react-project'],
+            learningBranchIds: [],
+            personalBranchIds: [],
+          },
+          nodeId: 'closure',
+          nodeRefs: [ref('react-project', 'closure')],
+          userFitConfidence: 0.3,
+          score: -0.4,
+          positiveCorrectionCount: 0,
+          negativeCorrectionCount: 2,
+          missingConceptCorrectionCount: 0,
+          nearMissHitCount: 0,
+          evidenceIds: ['evidence-3'],
+          latestAt: 30,
+        },
+      ],
+      userFitProposalSignals: [
+        {
+          signalId: 'proposal:classification_patch:profile_branch:react-project',
+          baseProfileId: 'coding',
+          proposalKind: 'classification_patch',
+          target: { kind: 'profile_branch', branchId: 'react-project' },
+          targetKey: 'profile_branch:react-project',
+          userFitConfidence: 0.76,
+          score: 0.52,
+          appliedCount: 2,
+          rejectedCount: 0,
+          postponedCount: 0,
+          askedWhyCount: 1,
+          eventIds: ['event-2', 'event-1'],
+          latestAt: 50,
+        },
+        {
+          signalId: 'proposal:ontology_node_patch:base_profile:coding',
+          baseProfileId: 'coding',
+          proposalKind: 'ontology_node_patch',
+          target: { kind: 'base_profile', profileId: 'coding' },
+          targetKey: 'base_profile:coding',
+          userFitConfidence: 0.25,
+          score: -0.5,
+          appliedCount: 0,
+          rejectedCount: 2,
+          postponedCount: 0,
+          askedWhyCount: 0,
+          eventIds: ['event-3'],
+          latestAt: 20,
+        },
+      ],
+      caps: {
+        maxNodes: 1,
+        maxUserFitNodeSignals: 1,
+        maxUserFitProposalSignals: 1,
+      },
+    }));
+
+    expect(selection.consumer).toBe('checker');
+    expect(selection.focal.kind).toBe('checkerRun');
+    expect(selection.userFitNodeSignals.map((signal) => signal.signalId))
+      .toEqual(['node:react-project:effect']);
+    expect(selection.userFitProposalSignals.map((signal) => signal.signalId))
+      .toEqual(['proposal:classification_patch:profile_branch:react-project']);
+    expect(selection.trace).toEqual(expect.arrayContaining([
+      {
+        candidateId: 'node:react-project:closure',
+        section: 'userFit',
+        bucket: 'omitted',
+        reason: 'cap',
+      },
+      {
+        candidateId: 'proposal:ontology_node_patch:base_profile:coding',
+        section: 'userFit',
+        bucket: 'omitted',
+        reason: 'cap',
+      },
+    ]));
+
+    const pack = assembleContextPack({
+      packId: 'checker-pack-1',
+      createdAt: 200,
+      consumer: selection.consumer,
+      focal: selection.focal,
+      compositionStamp: {
+        baseProfileId: 'coding',
+        activeProfileId: 'coding-react-runtime',
+        branchOrder: [{ branchId: 'react-project', kind: 'project' }],
+        compositionHash: 'hash-checker-1',
+      },
+      scopeLegend: {
+        activeScopeId: 'react-project',
+        scopes: [
+          { scopeId: 'coding', label: 'Coding Core', kind: 'baseProfile' },
+          { scopeId: 'react-project', label: 'React Project', kind: 'branch' },
+        ],
+      },
+      ontologyNodes: selection.ontologyNodes,
+      evidenceClaims: selection.evidenceClaims,
+      proposalSnapshots: selection.proposalSnapshots,
+      proposalEventSignals: selection.proposalEventSignals,
+      userFitNodeSignals: selection.userFitNodeSignals,
+      userFitProposalSignals: selection.userFitProposalSignals,
+      policy,
+      caps: selection.caps,
+    });
+
+    expect(validateContextPack(pack)).toEqual({
+      valid: true,
+      errors: [],
+    });
+    expect(pack.consumer).toBe('checker');
+    expect(pack.userFit.nodeSignals.map((signal) => signal.signalId))
+      .toEqual(['node:react-project:effect']);
+    expect(pack.userFit.omittedNodeSignalCount).toBe(0);
   });
 
   it('keeps same-label ambiguity siblings when the selected node is elastic', () => {
@@ -560,6 +727,30 @@ describe('context selector', () => {
     expect(selection.evidenceClaims).toEqual([]);
     expect(selection.proposalSnapshots).toEqual([]);
     expect(selection.proposalEventSignals).toEqual([]);
+    expect(selection.userFitNodeSignals).toEqual([]);
+    expect(selection.userFitProposalSignals).toEqual([]);
+    expect(selection.graph).toBeUndefined();
+    expect(selection.caps).toBeUndefined();
+    expect(selection.trace).toEqual([]);
+  });
+
+  it('handles minimal checker input with empty optional context', () => {
+    const selection = selectCheckerContext({
+      focal: {
+        kind: 'checkerRun',
+        id: 'checker-empty',
+        summary: '',
+      },
+    });
+
+    expect(selection.consumer).toBe('checker');
+    expect(selection.focal.kind).toBe('checkerRun');
+    expect(selection.ontologyNodes).toEqual([]);
+    expect(selection.evidenceClaims).toEqual([]);
+    expect(selection.proposalSnapshots).toEqual([]);
+    expect(selection.proposalEventSignals).toEqual([]);
+    expect(selection.userFitNodeSignals).toEqual([]);
+    expect(selection.userFitProposalSignals).toEqual([]);
     expect(selection.graph).toBeUndefined();
     expect(selection.caps).toBeUndefined();
     expect(selection.trace).toEqual([]);

@@ -1,10 +1,12 @@
 import { nanoid } from 'nanoid';
 import type { DbOrTx } from '../../../db/client';
 import {
+  getOntologyNode,
   getOntologyNodeLabel,
   type DomainProfile,
   type OntologyCorrectionActiveSelectionSnapshot,
   type OntologyCorrectionEvidence,
+  type OntologyCorrectionNearMissCandidate,
   type OntologyNode,
   type ProfileChangeProposal,
   type ProfileChangeProposalTarget,
@@ -16,6 +18,7 @@ import {
 import { normalizeConceptKey } from '../codecs/concept';
 import type { LearningCaptureId } from '../types/ids';
 import type { ConceptHint } from '../types/learning';
+import { rawProposedTypeIdentityToLegacyString } from '../types/rawProposedTypeIdentity';
 import type { SaveModalCandidateData } from '../types/saveModal';
 import { saveCapture, type SaveCaptureAfterInsertInput } from './saveCapture';
 
@@ -45,6 +48,7 @@ interface ResolvedConceptualizeCorrection {
   previousTypeNodeId: string | null;
   correctedTypeNodeId: string | null;
   rawProposedTypeNodeId: string | null;
+  nearMissCandidates: readonly OntologyCorrectionNearMissCandidate[] | null;
   reason: string | null;
   proposedNode: OntologyNode | null;
 }
@@ -95,7 +99,11 @@ export function resolveConceptualizeCorrection(
   now: () => number = Date.now,
 ): ResolvedConceptualizeCorrection {
   const previousTypeNodeId = candidate.conceptHint?.proposedConceptType ?? null;
-  const rawProposedTypeNodeId = normalizeNullableText(candidate.rawProposedTypeNodeId);
+  const rawProposedTypeNodeId = normalizeNullableText(
+    rawProposedTypeIdentityToLegacyString(candidate.rawProposedTypeIdentity)
+      ?? candidate.rawProposedTypeNodeId,
+  );
+  const nearMissCandidates = normalizeNearMissCandidates(candidate.conceptualizeNearMissCandidates);
   const reason = normalizeNullableText(correction?.reason);
   const newTypeLabel = normalizeNullableText(correction?.newTypeLabel);
   const selectedTypeNodeId = normalizeNullableText(correction?.correctedTypeNodeId);
@@ -108,14 +116,20 @@ export function resolveConceptualizeCorrection(
         previousTypeNodeId,
         correctedTypeNodeId: newTypeNodeId,
         rawProposedTypeNodeId,
+        nearMissCandidates,
         reason,
         proposedNode: null,
       };
     }
+    assertNewTypeNodeIdAvailable(profile, newTypeNodeId);
 
     const proposedNode = buildProposedTypeNode({
       label: newTypeLabel,
-      parentTypeNodeId: selectedTypeNodeId ?? previousTypeNodeId,
+      parentTypeNodeId: resolveNewTypeParentTypeNodeId({
+        profile,
+        selectedTypeNodeId,
+        previousTypeNodeId,
+      }),
       previousTypeNodeId,
       reason,
       profile,
@@ -127,6 +141,7 @@ export function resolveConceptualizeCorrection(
       previousTypeNodeId,
       correctedTypeNodeId: proposedNode.id,
       rawProposedTypeNodeId,
+      nearMissCandidates,
       reason,
       proposedNode,
     };
@@ -138,6 +153,7 @@ export function resolveConceptualizeCorrection(
       previousTypeNodeId,
       correctedTypeNodeId: previousTypeNodeId,
       rawProposedTypeNodeId,
+      nearMissCandidates,
       reason,
       proposedNode: null,
     };
@@ -149,6 +165,7 @@ export function resolveConceptualizeCorrection(
     previousTypeNodeId,
     correctedTypeNodeId: selectedTypeNodeId,
     rawProposedTypeNodeId,
+    nearMissCandidates,
     reason,
     proposedNode: null,
   };
@@ -176,6 +193,7 @@ async function persistConceptualizeCorrection(input: {
     previousTypeNodeId: resolved.previousTypeNodeId,
     correctedTypeNodeId: resolved.correctedTypeNodeId,
     rawProposedTypeNodeId: resolved.rawProposedTypeNodeId,
+    nearMissCandidates: resolved.nearMissCandidates,
     reason: resolved.reason,
     source: 'user',
     createdAt: input.input.createdAt,
@@ -212,6 +230,7 @@ function buildNewTypeProposal(input: {
     baseProfileId: input.context.profile.id,
     sourceBranchId: targetIsBranch ? input.context.proposalTarget.branchId ?? null : null,
     target: input.context.proposalTarget,
+    targetProfileVersion: targetIsBranch ? null : input.context.profile.version,
     evidenceIds: [input.evidenceId],
     patch: {
       addOntologyNodes: [input.node],
@@ -281,9 +300,7 @@ function buildProposedTypeNode(input: {
   now: number;
 }): OntologyNode {
   const id = makeTypeNodeId(input.label);
-  const parentId = input.parentTypeNodeId && input.profile.ontology.itemTypeNodeIds.includes(input.parentTypeNodeId)
-    ? input.parentTypeNodeId
-    : null;
+  const parentId = input.parentTypeNodeId;
   const previousLabel = input.previousTypeNodeId
     ? getOntologyNodeLabel(input.previousTypeNodeId, input.profile)
     : null;
@@ -334,7 +351,47 @@ function assertKnownTypeNode(profile: DomainProfile, typeNodeId: string): void {
   }
 }
 
+function resolveNewTypeParentTypeNodeId(input: {
+  profile: DomainProfile;
+  selectedTypeNodeId: string | null;
+  previousTypeNodeId: string | null;
+}): string | null {
+  if (input.selectedTypeNodeId) {
+    assertKnownParentTypeNode(input.profile, input.selectedTypeNodeId);
+    return input.selectedTypeNodeId;
+  }
+
+  return input.previousTypeNodeId && input.profile.ontology.itemTypeNodeIds.includes(input.previousTypeNodeId)
+    ? input.previousTypeNodeId
+    : null;
+}
+
+function assertKnownParentTypeNode(profile: DomainProfile, typeNodeId: string): void {
+  if (!profile.ontology.itemTypeNodeIds.includes(typeNodeId)) {
+    throw new Error(`Unknown parent type node id: ${typeNodeId}`);
+  }
+}
+
+function assertNewTypeNodeIdAvailable(profile: DomainProfile, typeNodeId: string): void {
+  const existingNode = getOntologyNode(typeNodeId, profile);
+  if (existingNode) {
+    throw new Error(`Cannot create type node id that already exists outside item types: ${typeNodeId}`);
+  }
+}
+
 function normalizeNullableText(value: string | null | undefined): string | null {
   const trimmed = value?.trim() ?? '';
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function normalizeNearMissCandidates(
+  candidates: readonly OntologyCorrectionNearMissCandidate[] | null | undefined,
+): readonly OntologyCorrectionNearMissCandidate[] | null {
+  if (!candidates || candidates.length === 0) return null;
+  return candidates.map((candidate) => ({
+    scopeId: candidate.scopeId,
+    nodeId: candidate.nodeId,
+    rank: candidate.rank,
+    ...(candidate.score === undefined ? {} : { score: candidate.score }),
+  }));
 }

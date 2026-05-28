@@ -1,6 +1,27 @@
 import type { z } from 'zod';
+import type { OntologyCorrectionNearMissCandidate } from '../../ontology/types';
 import type { CaptureHintSchema } from '../extractor/extractorSchema';
 import type { ConceptId, LearningCaptureId } from './ids';
+import type { RawProposedTypeIdentity } from './rawProposedTypeIdentity';
+
+export interface ConceptualizeSuggestedNewConceptReview {
+  label: string;
+  kind: 'category' | 'subcategory' | 'tag' | 'relationshipType';
+  parentNodeRef: {
+    scopeId: string;
+    nodeId: string;
+  } | null;
+  parentLabel: string | null;
+  meaning: string;
+  reason: string;
+}
+
+export interface ConceptualizeMissingConceptReview {
+  status: 'no_strong_match';
+  confidence: number;
+  rationale: string;
+  suggestedNewConcept: ConceptualizeSuggestedNewConceptReview | null;
+}
 
 export interface SaveModalCandidateData {
   title: string;
@@ -21,7 +42,10 @@ export interface SaveModalCandidateData {
   extractionConfidence: number | null;
   matchSimilarity: number | null;
   conceptHint: z.infer<typeof CaptureHintSchema> | null;
+  rawProposedTypeIdentity?: RawProposedTypeIdentity | null | undefined;
   rawProposedTypeNodeId?: string | null | undefined;
+  conceptualizeMissingConcept?: ConceptualizeMissingConceptReview | null | undefined;
+  conceptualizeNearMissCandidates?: readonly OntologyCorrectionNearMissCandidate[] | null | undefined;
   keywords: string[];
 }
 

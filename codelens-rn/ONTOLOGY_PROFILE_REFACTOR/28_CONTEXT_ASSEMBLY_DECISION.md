@@ -133,6 +133,7 @@ interface ContextPack {
   evidence: EvidenceContextSection;
   proposals: ProposalContextSection;
   proposalEvents: ProposalEventContextSection;
+  userFit: UserFitContextSection;
 
   policy: ContextPolicy;
   graph?: GraphContextSection;
@@ -221,6 +222,34 @@ interface ProposalEventContextSection {
   omittedCount: number;
 }
 
+interface UserFitContextSection {
+  nodeSignals: UserFitNodeSignal[];
+  proposalSignals: UserFitProposalSignal[];
+  omittedNodeSignalCount: number;
+  omittedProposalSignalCount: number;
+}
+
+interface UserFitNodeSignal {
+  signalId: string;
+  activeSelectionKey: string;
+  nodeId: string;
+  nodeRefs: ScopedNodeRef[];
+  userFitConfidence: number;
+  score: number;
+  positiveCorrectionCount: number;
+  negativeCorrectionCount: number;
+  latestAt: number;
+}
+
+interface UserFitProposalSignal {
+  signalId: string;
+  proposalKind: string;
+  targetKey: string;
+  userFitConfidence: number;
+  score: number;
+  latestAt: number;
+}
+
 interface ContextPolicy {
   trustMode: 'manual' | 'suggest' | 'autoApplyLowRisk';
   autoApplyEnabled: boolean;
@@ -244,6 +273,8 @@ interface ContextBudgetReport {
     maxEvidenceClaims: number;
     maxProposals: number;
     maxProposalEvents: number;
+    maxUserFitNodeSignals: number;
+    maxUserFitProposalSignals: number;
     maxGraphNeighbors: number;
   };
   included: Record<string, number>;
@@ -346,6 +377,7 @@ Include:
 - proposal snapshots relevant to the focal object or target nodes (pending proposals are a common example)
 - aggregated proposal signals
 - recent proposal decision signals when caller supplies them
+- bounded user-fit signals when caller supplies them; these are advisory correction history, not semantic truth
 - structured policy and allowed/forbidden operation rules
 - caller-supplied graph neighborhood when present
 - deterministic budget report
@@ -358,6 +390,7 @@ Exclude unless a later consumer explicitly requests it:
 - all raw captures/cards
 - all raw correction evidence
 - full proposal event history
+- persistent learned user-fit scores
 - unrelated branches or base profiles
 - full graph neighborhoods
 - hub-node expansion beyond caps
@@ -383,11 +416,12 @@ Pinned items must survive caps:
 - task-named ontology nodes
 - same-label sibling nodes for any included ambiguous label
 - evidence claims marked `crossScope: true` when they are required to evaluate core/base mutation policy
+- user-fit signals explicitly pinned by the caller
 - structured policy
 
 Everything else is included in caller order until the section cap is reached.
 
-No semantic ranking, token optimization, embedding lookup, recency scoring, graph scoring, or user-fit reranking belongs in this slice.
+No semantic ranking, token optimization, embedding lookup, recency scoring, graph scoring, or user-fit reranking belongs in ContextPack assembly.
 
 Those can be later ranking/projection layers that feed ordered inputs into the same pack contract.
 

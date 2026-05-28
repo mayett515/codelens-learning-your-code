@@ -2,7 +2,11 @@ import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-nati
 import { colors, fontSize, spacing } from '../../../../ui/theme';
 import { TypeNodeChip } from '../primitives/TypeNodeChip';
 import type { ConceptType } from '../../types/learning';
-import type { CandidateSaveState } from '../../types/saveModal';
+import type {
+  CandidateSaveState,
+  ConceptualizeMissingConceptReview,
+  ConceptualizeSuggestedNewConceptReview,
+} from '../../types/saveModal';
 
 interface CandidateCaptureCardProps {
   candidateId: string;
@@ -14,6 +18,7 @@ interface CandidateCaptureCardProps {
   isNewLanguageForExistingConcept?: boolean;
   crossLanguageHint?: string | null;
   extractionConfidence?: number | null;
+  missingConcept?: ConceptualizeMissingConceptReview | null;
   saveState: CandidateSaveState;
   onSave: () => void;
   onInspect: () => void;
@@ -28,6 +33,7 @@ export function CandidateCaptureCard({
   linkedConceptName,
   crossLanguageHint,
   extractionConfidence,
+  missingConcept,
   saveState,
   onSave,
   onInspect,
@@ -46,6 +52,16 @@ export function CandidateCaptureCard({
       </View>
       <Text style={styles.clicked} numberOfLines={1}>{whatClicked}</Text>
       <Text style={styles.snippet} numberOfLines={3}>{rawSnippet}</Text>
+      {missingConcept ? (
+        <View style={styles.missingBox}>
+          <Text style={styles.missingTitle}>Needs type review</Text>
+          <Text style={styles.missingText} numberOfLines={2}>
+            {missingConcept.suggestedNewConcept
+              ? `Suggested new ${formatSuggestedKind(missingConcept.suggestedNewConcept.kind)}: ${missingConcept.suggestedNewConcept.label}`
+              : 'No existing type was a strong enough match.'}
+          </Text>
+        </View>
+      ) : null}
       <View style={styles.metaColumn}>
         {linkedConceptName ? (
           <Text style={styles.metaText} numberOfLines={1}>Related: {linkedConceptName}</Text>
@@ -128,6 +144,25 @@ const styles = StyleSheet.create({
     color: colors.yellow,
     fontSize: fontSize.sm,
   },
+  missingBox: {
+    borderWidth: 1,
+    borderColor: colors.yellow,
+    borderRadius: 8,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    marginTop: spacing.sm,
+    backgroundColor: 'rgba(234,179,8,0.10)',
+  },
+  missingTitle: {
+    color: colors.yellow,
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+  },
+  missingText: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    marginTop: 2,
+  },
   actions: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
@@ -162,3 +197,14 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
   },
 });
+
+function formatSuggestedKind(kind: ConceptualizeSuggestedNewConceptReview['kind']): string {
+  switch (kind) {
+    case 'relationshipType':
+      return 'relationship';
+    case 'subcategory':
+      return 'subtype';
+    default:
+      return kind;
+  }
+}

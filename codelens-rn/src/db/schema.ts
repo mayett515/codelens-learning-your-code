@@ -339,6 +339,7 @@ export const ontologyCorrectionEvidence = sqliteTable('ontology_correction_evide
   previousTypeNodeId: text('previous_type_node_id'),
   correctedTypeNodeId: text('corrected_type_node_id').notNull(),
   rawProposedTypeNodeId: text('raw_proposed_type_node_id'),
+  nearMissCandidatesJson: text('near_miss_candidates_json', { mode: 'json' }).$type<unknown | null>(),
   reason: text('reason'),
   source: text('source', { enum: ['user'] }).notNull(),
   createdAt: integer('created_at').notNull(),
@@ -346,6 +347,8 @@ export const ontologyCorrectionEvidence = sqliteTable('ontology_correction_evide
   index('idx_ontology_correction_evidence_profile').on(t.profileId),
   index('idx_ontology_correction_evidence_subject').on(t.subjectKind, t.subjectId),
   index('idx_ontology_correction_evidence_created').on(t.createdAt),
+  // Migration creates this with DESC ordering on created_at/id for bounded recency reads.
+  index('idx_ontology_correction_evidence_profile_created').on(t.profileId, t.createdAt, t.id),
 ]);
 
 export const profileChangeProposals = sqliteTable('profile_change_proposals', {
@@ -359,6 +362,7 @@ export const profileChangeProposals = sqliteTable('profile_change_proposals', {
   targetKind: text('target_kind', { enum: ['base_profile', 'profile_branch'] }).notNull(),
   targetProfileId: text('target_profile_id'),
   targetBranchId: text('target_branch_id'),
+  targetProfileVersion: integer('target_profile_version'),
   evidenceIdsJson: text('evidence_ids_json', { mode: 'json' }).notNull().$type<string[]>(),
   patchJson: text('patch_json', { mode: 'json' }).notNull().$type<unknown>(),
   title: text('title').notNull(),
@@ -379,6 +383,7 @@ export const profileChangeProposals = sqliteTable('profile_change_proposals', {
   index('idx_profile_change_proposals_base_profile').on(t.baseProfileId),
   index('idx_profile_change_proposals_source_branch').on(t.sourceBranchId),
   index('idx_profile_change_proposals_target_branch').on(t.targetBranchId),
+  index('idx_profile_change_proposals_target_profile_version').on(t.targetProfileId, t.targetProfileVersion),
   index('idx_profile_change_proposals_status').on(t.status),
   index('idx_profile_change_proposals_updated').on(t.updatedAt),
 ]);
@@ -415,6 +420,8 @@ export const profileProposalEvents = sqliteTable('profile_proposal_events', {
   index('idx_profile_proposal_events_target_branch').on(t.targetBranchId),
   index('idx_profile_proposal_events_action').on(t.action),
   index('idx_profile_proposal_events_created').on(t.createdAt),
+  // Migration creates this with DESC ordering on created_at/id for bounded recency reads.
+  index('idx_profile_proposal_events_base_profile_created').on(t.baseProfileId, t.createdAt, t.id),
 ]);
 
 export const profileTrustSettings = sqliteTable('profile_trust_settings', {

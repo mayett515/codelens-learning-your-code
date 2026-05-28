@@ -6,7 +6,7 @@ Use this when starting the next orchestrator session.
 
 ```text
 Read ONTOLOGY_PROFILE_REFACTOR/NEXT_LLM_CONTEXT.md first.
-Then read ONTOLOGY_PROFILE_REFACTOR/07_KORTEX_CORE_AND_CHILD_CORES.md, ONTOLOGY_PROFILE_REFACTOR/08_KORTEX_LANGUAGE_LAYER_AND_ADAPTERS.md, ONTOLOGY_PROFILE_REFACTOR/09_KORTEX_OVER_EXISTING_SYSTEMS.md, ONTOLOGY_PROFILE_REFACTOR/10_ACTIVE_PROFILE_RUNTIME_SOURCE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/11_RUNTIME_PROFILE_COORDINATOR_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/13_BRANCH_OVERLAY_PERSISTENCE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/14_PROFILE_SELECTION_AND_BRANCH_RESOLUTION_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/15_PROFILE_REGISTRY_AND_PROFILE_SOURCES_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/16_RUNTIME_ACTIVATION_WIRING_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/17_BASE_PROFILE_PERSISTENCE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/18_ADAPTIVE_SUGGESTION_POLICY_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/19_PATCH_MERGE_PROPOSAL_STORAGE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/20_CONCEPTUALIZE_PREVIEW_AND_CORRECTION_SURFACE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/21_CHECKER_PROPOSAL_REVIEW_CONTEXT_AND_APPLY_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/22_CONCEPTUALIZE_FIRST_IMPLEMENTATION_SCOPE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/23_TRUST_SETTING_STORAGE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/24_BRANCH_LOCAL_PROPOSAL_APPLY_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/25_PROPOSAL_EVENT_AUDIT_STORAGE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/28_CONTEXT_ASSEMBLY_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/29_CONTEXT_SELECTOR_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/31_CONCEPTUALIZE_PROMPT_BUILDER_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/32_CONCEPTUALIZE_SINGULAR_OUTPUT_AND_DIAGNOSTICS_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/33_CONCEPTUALIZE_EXTRACTOR_FLIP_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/06_PROFILE_BRANCHING_AND_MERGE.md, and ONTOLOGY_PROFILE_REFACTOR/implementation_handoff.md.
+Then read ONTOLOGY_PROFILE_REFACTOR/07_KORTEX_CORE_AND_CHILD_CORES.md, ONTOLOGY_PROFILE_REFACTOR/08_KORTEX_LANGUAGE_LAYER_AND_ADAPTERS.md, ONTOLOGY_PROFILE_REFACTOR/09_KORTEX_OVER_EXISTING_SYSTEMS.md, ONTOLOGY_PROFILE_REFACTOR/10_ACTIVE_PROFILE_RUNTIME_SOURCE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/11_RUNTIME_PROFILE_COORDINATOR_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/13_BRANCH_OVERLAY_PERSISTENCE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/14_PROFILE_SELECTION_AND_BRANCH_RESOLUTION_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/15_PROFILE_REGISTRY_AND_PROFILE_SOURCES_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/16_RUNTIME_ACTIVATION_WIRING_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/17_BASE_PROFILE_PERSISTENCE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/18_ADAPTIVE_SUGGESTION_POLICY_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/19_PATCH_MERGE_PROPOSAL_STORAGE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/20_CONCEPTUALIZE_PREVIEW_AND_CORRECTION_SURFACE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/21_CHECKER_PROPOSAL_REVIEW_CONTEXT_AND_APPLY_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/22_CONCEPTUALIZE_FIRST_IMPLEMENTATION_SCOPE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/23_TRUST_SETTING_STORAGE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/24_BRANCH_LOCAL_PROPOSAL_APPLY_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/25_PROPOSAL_EVENT_AUDIT_STORAGE_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/28_CONTEXT_ASSEMBLY_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/29_CONTEXT_SELECTOR_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/31_CONCEPTUALIZE_PROMPT_BUILDER_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/32_CONCEPTUALIZE_SINGULAR_OUTPUT_AND_DIAGNOSTICS_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/33_CONCEPTUALIZE_EXTRACTOR_FLIP_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/34_RAW_PROPOSED_TYPE_IDENTITY_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/35_CORRECTION_EVIDENCE_NEAR_MISS_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/36_MISSING_CONCEPT_UX_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/37_USER_FIT_PROJECTION_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/38_BASE_PROFILE_VERSIONING_DECISION.md, ONTOLOGY_PROFILE_REFACTOR/06_PROFILE_BRANCHING_AND_MERGE.md, and ONTOLOGY_PROFILE_REFACTOR/implementation_handoff.md.
 
 We are continuing as orchestrator.
 Do not implement until we confirm the next slice.
@@ -21,6 +21,47 @@ Summarize:
 ## Expected Next Slice
 
 ```text
+The base profile versioning target contract, base apply service, and explicit base/core review UI wiring are locked and implemented (doc 38):
+  - base-targeted `ProfileChangeProposal` rows can snapshot `targetProfileVersion`
+  - new base-targeted Conceptualize proposals fill `targetProfileVersion` from the active profile version
+  - branch-targeted proposals must not set `targetProfileVersion`; branch-local apply still uses branch `updatedAt` guards
+  - `assertBaseProfileProposalTargetsCurrentVersion(input)` is the pure guard base/core apply code calls before mutation
+  - the guard rejects non-base targets, base id mismatches, missing target versions, and stale target versions
+  - `baseProfileProposalApply.ts` compiles/applies `apply_profile_patch_to_base_profile` operations and creates the next `ProfileDefinition` version
+  - `applyPendingBaseProfileChangeProposal(input)` writes the next profile definition, accepted proposal, and proposal event in one transaction
+  - `useApplyProfileChangeProposal` routes branch targets to branch-local apply and base targets to `applyPendingBaseProfileChangeProposal`
+  - the review screen shows base/core blast-radius copy and an explicit `Apply to core` action
+  - no automatic base/core mutation, profile version-history table, stale proposal refresh, checker runtime, auto-apply, agent runtime, app-builder runtime, or DSL runtime was added
+  - latest verification: TypeScript clean; focused review/apply tests 118/118 across 8 files; full suite 932/932 across 98 files; diff check clean with CRLF warnings only
+  - next bounded implementation slice: richer missing-concept edit/apply flows
+
+The user-fit projection decision is locked and implemented (doc 37):
+  - `projectUserFitSignals(input)` projects caller-supplied correction evidence and proposal events into bounded node/proposal signals
+  - `loadUserFitProjectionFacts(input)` loads bounded recent correction/proposal facts for one base profile behind the ontology data boundary
+  - Conceptualize now receives matching current-scope user-fit signals through `ContextPack.userFit` and the prompt payload as advisory correction history
+  - the pure checker selector can now feed the same bounded advisory `ContextPack.userFit` section into future checker ContextPacks
+  - node user-fit is scoped to the active profile selection where the correction happened, so plain `coding` and `coding + react-project` remain separate
+  - missing-concept corrections and near-miss hits become weak positive user-fit evidence
+  - matching near-miss hits fold into the active correction scope instead of creating a second diagnostic-candidate scope
+  - applied/rejected/postponed/asked-why proposal events become proposal user-fit evidence
+  - postponed is mild negative; asked-why is neutral
+  - no learned-score persistence, projection caching, trust setting update, proposal creation, checker runtime/model call, auto-apply, UI behavior change, or ontology/profile mutation was added
+  - latest focused verification: TypeScript clean; checker/context assembly/guard tests 107/107
+
+The missing-concept UX decision is locked and implemented (doc 36):
+  - `noStrongMatch` appears as explicit review metadata on the candidate
+  - `suggestedNewConcept` is shown as a suggestion and can be copied into manual new-subtype fields
+  - manual new-subtype saves now revalidate explicit parent ids and reject non-item node-id collisions before writing evidence/proposals
+  - no automatic missing-concept apply, automatic proposal creation, ontology/profile mutation, checker runtime, DB-backed history readers, confidence update, retrieval, graph traversal, auto-apply, or old-card backfill was added
+  - latest focused verification: TypeScript clean; conceptualize-correction/architecture-guard tests 82/82; full suite 899/899
+
+The raw proposed type identity and correction-evidence near-miss decisions are locked and implemented (docs 34 and 35):
+  - the save flow carries `rawProposedTypeIdentity` as the canonical in-memory shape
+  - hidden Conceptualize `diagnostics.candidateRefs` are copied into save candidate memory as `conceptualizeNearMissCandidates`
+  - near-miss candidates persist only when a user correction writes `OntologyCorrectionEvidence`
+  - correction evidence stores optional `ontology_correction_evidence.near_miss_candidates_json`
+  - successful uncorrected saves do not persist diagnostics
+
 The A2 decision for prepareSaveCandidates is locked and implemented.
 The runtime profile coordinator decision is now locked (doc 11):
   - explicit Runtime Profile Coordinator / Brain Mixer layer above services
@@ -224,7 +265,7 @@ The Conceptualize prompt-builder decision is locked and implemented in doc 31:
   - it renders a stable instruction shell plus compact Kordex context payload JSON
   - it exports `ConceptualizePromptOutputSchema` and `validateConceptualizePromptOutput`
   - unknown refs are rejected against the original pack; refs are not guessed or coerced from labels
-  - live extractor prompt/model behavior is not flipped yet
+  - at this prompt-builder slice, live extractor prompt/model behavior had not been flipped; doc 33 later wires classification live
   - no proposal/evidence writes, save behavior change, DB reader, vector retrieval, graph traversal, user-fit projection, or mutation was added
   - verification: TypeScript clean; targeted Conceptualize prompt/context selector/assembly/guard tests 107/107; full suite 824/824
 
@@ -247,22 +288,28 @@ The Conceptualize Extractor Flip decision is locked and implemented in doc 33:
   - no diagnostic persistence, near-miss evidence snapshot, missing-concept UI, proposal creation, ontology/profile mutation, checker runtime, or user-fit projection was added
   - verification: TypeScript clean; targeted classifier/prepare/guard tests 77/77; full suite 841/841; diff check clean with CRLF warnings only
 
+The missing-concept UX decision is locked and implemented in doc 36:
+  - `noStrongMatch` now appears as explicit review metadata
+  - `suggestedNewConcept` is shown as a suggestion and can be copied into manual new-subtype fields
+  - the store does not auto-fill `newTypeLabel`
+  - saving without a selected existing type or filled new subtype remains unresolved
+  - no automatic proposal creation, ontology/profile mutation, checker runtime, user-fit projection, retrieval, graph traversal, confidence update, auto-apply, or old-card backfill was added
+  - verification: TypeScript clean; focused missing-concept tests 106/106; full suite 866/866; diff check clean with CRLF warnings only
+
 The remaining open decisions are:
-  1. Correction-evidence near-miss wiring - decide whether/how hidden diagnostic candidates are snapshotted only when a user correction happens.
-  2. Missing-concept UX - decide how noStrongMatch and suggestedNewConcept appear to the user.
-  3. User-fit projection over proposal events and future near-miss evidence.
-  4. Base profile versioning - how accepted operations safely target base profiles.
-  5. Agent/subagent execution ontology brief.
-  6. Self-building-app framework brief.
+  1. Richer missing-concept edit/apply flows after base/core apply is reviewable.
+  2. Agent/subagent execution ontology brief.
+  3. Self-building-app framework brief.
 
 Recommended next implementation slice, if the human wants code next:
 
 ```text
-Correction-evidence near-miss wiring or missing-concept UX decision:
-  - selector, ContextPack builder, Conceptualize shadow caller, pure prompt builder, and singular public output contract are implemented
-  - first Extractor Flip is implemented as classification-only live wiring
-  - next context work should decide whether correction evidence should snapshot hidden diagnostic candidates only on user correction, or whether noStrongMatch/suggestedNewConcept UX should be designed first
-  - keep DB-backed history readers, retrieval, graph traversal, checker runtime, automatic confidence/ranking updates, automatic missing-concept apply, user-fit projection, and base/core mutation out of either next gate
+Richer missing-concept edit/apply flows:
+  - branch-local and base/core proposal apply are now both explicit review actions
+  - manual missing-concept proposals are revalidated before creation
+  - decide how edited labels, parents, reasons, and target layers become proposal drafts or accepted apply operations
+  - preserve the evidence-first correction record and keep suggestions behind user intent
+  - keep retrieval, graph traversal, automatic confidence/ranking updates, auto-apply, external write-back, and old-card rewrites out of this gate
 ```
 
 Strict boundaries:
@@ -450,18 +497,26 @@ The context assembly decision is locked and the first pure implementation is don
 
 The context selector decision is locked and implemented as a first pure slice (doc 29). Kordex uses one shared selector contract, but focused task-specific selector implementations. `contextSelector.ts` implements the shared types plus one deterministic Conceptualize selector over caller-supplied ordered candidates, using pinned/elastic buckets and bounded direct-evidence pinning.
 
-The Conceptualize ContextPack shadow wiring decision is locked and implemented in doc 30. The real Conceptualize flow now builds and validates a ContextPack after candidate preparation, but only in shadow mode: invalid packs warn, and prompt/model/save/suggestion/proposal/ontology/profile behavior is unchanged.
+The Conceptualize ContextPack shadow wiring decision is locked and implemented in doc 30. The real Conceptualize flow builds and validates a ContextPack after candidate preparation. This started as shadow-only and is now reused by the classification-only Extractor Flip and user-fit ContextPack wiring.
 
-The Conceptualize prompt-builder decision is locked and implemented in doc 31. A validated ContextPack now renders to a stable instruction shell, compact payload JSON, strict output schema, and output validator. The live extractor prompt is not flipped yet.
+The Conceptualize prompt-builder decision is locked and implemented in doc 31. A validated ContextPack now renders to a stable instruction shell, compact payload JSON including bounded advisory user-fit history, strict output schema, and output validator.
 
 The Conceptualize singular-output/diagnostics decision is locked and implemented in doc 32. Public extra tags are removed. Hidden `diagnostics.candidateRefs` are internal-only, dynamic policy-driven calibration candidates. They are not persisted unless a later correction-evidence flow deliberately snapshots factual near-miss data on user correction.
 
+The Conceptualize Extractor Flip decision is locked and implemented in doc 33. The real save flow uses the new ContextPack prompt/validator for ontology placement when it validates, while the old extractor still owns card text. Invalid Conceptualize output falls back to the old extractor placement.
+
+The raw proposed type identity decision is locked and implemented in doc 34. Save candidates carry structured scoped/unresolved proposed-type identity in memory and project to the legacy string only at the current correction-evidence compatibility boundary.
+
+The correction-evidence near-miss decision is locked and implemented in doc 35. Hidden diagnostic candidates are snapshotted only on user correction evidence as inert scoped refs in `near_miss_candidates_json`.
+
+The missing-concept UX decision is locked and implemented in doc 36. `noStrongMatch` appears as explicit review metadata; `suggestedNewConcept` is shown and can be copied into manual new-subtype fields, but is not auto-filled, auto-applied, or mapped into `conceptHint.proposedConceptType`. Manual new-subtype saves now revalidate explicit parent ids and reject non-item node-id collisions before writing evidence/proposals.
+
+The user-fit projection decision is locked and implemented in doc 37. Correction evidence and proposal events project into bounded advisory user-fit signals, scoped to the active profile selection where the correction happened. Conceptualize consumes matching current-scope signals through `ContextPack.userFit`, and the checker selector can consume the same section when a future checker caller supplies candidates. No learned-score persistence, trust mutation, checker runtime, auto-apply, retrieval, graph traversal, or ontology/profile mutation was added.
+
+The base profile versioning, base apply helper/service, and explicit base/core review UI wiring are locked and implemented in doc 38. Base-targeted proposals snapshot `targetProfileVersion`, base/core apply rejects missing or stale target versions, patch revalidation runs before mutation, successful apply creates the next persisted profile definition version, and the proposal review UI exposes this through an explicit `Apply to core` action. No auto-apply, stale refresh flow, edit-then-apply, branch merge apply, profile version-history UI, old-card backfill, checker runtime, historical undo, agent runtime, app-builder runtime, or DSL runtime was added.
+
 Remaining open decisions:
 
-1. Extractor flip - decide when the real extractor consumes the ContextPack prompt builder.
-2. Correction-evidence near-miss wiring - decide whether/how hidden diagnostic candidates are snapshotted only when a user correction happens.
-3. Missing-concept UX - decide how noStrongMatch and suggestedNewConcept appear to the user.
-4. User-fit projection over proposal events and future near-miss evidence.
-5. Base profile versioning - how accepted operations safely target base profiles.
-6. Agent/subagent execution ontology brief.
-7. Self-building-app framework brief.
+1. Richer missing-concept edit/apply flows after base/core apply is reviewable.
+2. Agent/subagent execution ontology brief.
+3. Self-building-app framework brief.

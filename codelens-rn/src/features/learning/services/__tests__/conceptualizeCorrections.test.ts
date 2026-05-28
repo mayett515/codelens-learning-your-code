@@ -1,7 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { DbOrTx } from '../../../../db/client';
 import { codingProfile } from '../../../ontology';
-import type { DomainProfile, OntologyCorrectionEvidence, ProfileChangeProposal } from '../../../ontology';
+import type {
+  DomainProfile,
+  OntologyCorrectionEvidence,
+  OntologyNode,
+  ProfileChangeProposal,
+} from '../../../ontology';
 import { unsafeLearningCaptureId } from '../../types/ids';
 import type { SaveModalCandidateData } from '../../types/saveModal';
 import {
@@ -154,7 +159,16 @@ describe('Conceptualize correction save', () => {
 
     await saveConceptualizedCapture(
       candidate({
-        rawProposedTypeNodeId: 'hallucinated_runtime_kind',
+        rawProposedTypeIdentity: {
+          kind: 'unresolved_raw',
+          rawNodeId: 'hallucinated_runtime_kind',
+          source: 'extractor',
+          activeScopeId: 'coding',
+        },
+        conceptualizeNearMissCandidates: [
+          { scopeId: 'coding', nodeId: 'pattern', rank: 2, score: 0.69 },
+        ],
+        rawProposedTypeNodeId: 'legacy_should_be_ignored',
         conceptHint: {
           ...candidate().conceptHint!,
           proposedConceptType: 'mental_model',
@@ -173,6 +187,38 @@ describe('Conceptualize correction save', () => {
       previousTypeNodeId: 'mental_model',
       correctedTypeNodeId: 'pattern',
       rawProposedTypeNodeId: 'hallucinated_runtime_kind',
+      nearMissCandidates: [
+        { scopeId: 'coding', nodeId: 'pattern', rank: 2, score: 0.69 },
+      ],
+    });
+  });
+
+  it('prefers structured scoped raw identity over the legacy string projection', async () => {
+    const d = saveDeps();
+
+    await saveConceptualizedCapture(
+      candidate({
+        rawProposedTypeIdentity: {
+          kind: 'scoped_ref',
+          scopeId: 'coding',
+          nodeId: 'pattern',
+          source: 'conceptualize',
+        },
+        rawProposedTypeNodeId: 'legacy_wrong',
+      }),
+      {
+        profile,
+        selectionSnapshot: { baseProfileId: 'coding' },
+        proposalTarget: { kind: 'base_profile', profileId: 'coding' },
+      },
+      { correctedTypeNodeId: 'pattern', reason: 'Conceptualize picked this scoped node' },
+      { deps: d.deps },
+    );
+
+    expect(d.evidence[0]).toMatchObject({
+      previousTypeNodeId: 'mechanism',
+      correctedTypeNodeId: 'pattern',
+      rawProposedTypeNodeId: 'coding:pattern',
     });
   });
 
@@ -180,7 +226,11 @@ describe('Conceptualize correction save', () => {
     const d = saveDeps();
 
     await saveConceptualizedCapture(
-      candidate(),
+      candidate({
+        conceptualizeNearMissCandidates: [
+          { scopeId: 'coding', nodeId: 'pattern', rank: 2, score: 0.69 },
+        ],
+      }),
       {
         profile,
         selectionSnapshot: { baseProfileId: 'coding' },
@@ -190,6 +240,31 @@ describe('Conceptualize correction save', () => {
       { deps: d.deps },
     );
 
+    expect(d.evidence).toEqual([]);
+    expect(d.proposals).toEqual([]);
+  });
+
+  it('does not persist near-miss diagnostics when the user saves without a correction', async () => {
+    const d = saveDeps();
+
+    await saveConceptualizedCapture(
+      candidate({
+        conceptualizeNearMissCandidates: [
+          { scopeId: 'coding', nodeId: 'pattern', rank: 2, score: 0.69 },
+        ],
+      }),
+      {
+        profile,
+        selectionSnapshot: { baseProfileId: 'coding' },
+        proposalTarget: { kind: 'base_profile', profileId: 'coding' },
+      },
+      null,
+      { deps: d.deps },
+    );
+
+    expect(d.saved[0].conceptualizeNearMissCandidates).toEqual([
+      { scopeId: 'coding', nodeId: 'pattern', rank: 2, score: 0.69 },
+    ]);
     expect(d.evidence).toEqual([]);
     expect(d.proposals).toEqual([]);
   });
@@ -223,6 +298,7 @@ describe('Conceptualize correction save', () => {
       proposalKind: 'ontology_node_patch',
       sourceKind: 'user',
       target: { kind: 'profile_branch', branchId: 'personal-branch' },
+      targetProfileVersion: null,
       status: 'pending',
       patch: {
         addItemTypeNodeIds: ['react_hook_lifecycle'],
@@ -234,6 +310,118 @@ describe('Conceptualize correction save', () => {
       parentId: 'pattern',
       status: 'suggested',
       createdBy: 'user',
+    });
+  });
+
+  it('snapshots the current profile version on base-targeted new subtype proposals', async () => {
+    const d = saveDeps();
+
+    await saveConceptualizedCapture(
+      candidate(),
+      {
+        profile,
+        selectionSnapshot: { baseProfileId: 'coding' },
+        proposalTarget: { kind: 'base_profile', profileId: 'coding' },
+      },
+      {
+        newTypeLabel: 'Mechanism lifecycle',
+        reason: 'Create this in the base profile after review.',
+      },
+      { deps: d.deps },
+    );
+
+    expect(d.proposals[0]).toMatchObject({
+      target: { kind: 'base_profile', profileId: 'coding' },
+      targetProfileVersion: profile.version,
+      riskScore: 70,
+    });
+  });
+
+  it('rejects a new subtype label that collides with an existing non-item node id', () => {
+    const relationshipNode: OntologyNode = {
+      id: 'react_hook_lifecycle',
+      label: 'React hook lifecycle',
+      kind: 'relationshipType',
+      parentId: null,
+      meaning: 'Existing relationship namespace entry.',
+      useWhen: [],
+      doNotUseWhen: [],
+      examples: [],
+      relatedNodeIds: [],
+      contrastNodeIds: [],
+      status: 'active',
+      createdBy: 'system',
+      createdAt: 1,
+      updatedAt: 1,
+    };
+    const profileWithCollision: DomainProfile<string> = {
+      ...profile,
+      ontology: {
+        ...profile.ontology,
+        nodes: [...profile.ontology.nodes, relationshipNode],
+      },
+    };
+
+    expect(() =>
+      resolveConceptualizeCorrection(
+        candidate(),
+        profileWithCollision,
+        { newTypeLabel: 'React hook lifecycle' },
+      ),
+    ).toThrow(/already exists outside item types/);
+  });
+
+  it('rejects stale explicit parent ids when creating a new subtype proposal', () => {
+    expect(() =>
+      resolveConceptualizeCorrection(
+        candidate(),
+        profile,
+        {
+          correctedTypeNodeId: 'not_in_profile',
+          newTypeLabel: 'React hook lifecycle',
+        },
+      ),
+    ).toThrow(/Unknown parent type node id/);
+  });
+
+  it('uses a valid previous type id as the implicit parent for a new subtype proposal', () => {
+    const result = resolveConceptualizeCorrection(
+      candidate(),
+      profile,
+      {
+        newTypeLabel: 'Mechanism lifecycle',
+        reason: 'This narrows the existing mechanism type.',
+      },
+    );
+
+    expect(result.correctedTypeNodeId).toBe('mechanism_lifecycle');
+    expect(result.proposedNode).toMatchObject({
+      id: 'mechanism_lifecycle',
+      kind: 'subcategory',
+      parentId: 'mechanism',
+    });
+  });
+
+  it('creates a top-level proposal when only the previous type id is stale', () => {
+    const result = resolveConceptualizeCorrection(
+      candidate({
+        conceptHint: {
+          ...candidate().conceptHint!,
+          proposedConceptType: 'stale_model_type',
+        },
+      }),
+      profile,
+      {
+        newTypeLabel: 'React hook lifecycle',
+        reason: 'The previous extracted type is no longer in this profile.',
+      },
+    );
+
+    expect(result.correctedTypeNodeId).toBe('react_hook_lifecycle');
+    expect(result.proposedNode).toMatchObject({
+      id: 'react_hook_lifecycle',
+      kind: 'category',
+      parentId: null,
     });
   });
 

@@ -538,6 +538,7 @@ describe('Column map: ontology_correction_evidence', () => {
       previous_type_node_id: 'mechanism',
       corrected_type_node_id: 'pattern',
       raw_proposed_type_node_id: 'hallucinated_runtime_kind',
+      near_miss_candidates_json: '[{"scopeId":"coding","nodeId":"pattern","rank":2,"score":0.69}]',
       reason: 'Reviewed by user',
       source: 'user',
       created_at: 1000,
@@ -552,10 +553,11 @@ describe('Column map: ontology_correction_evidence', () => {
     expect(m['previousTypeNodeId']).toBe('mechanism');
     expect(m['correctedTypeNodeId']).toBe('pattern');
     expect(m['rawProposedTypeNodeId']).toBe('hallucinated_runtime_kind');
+    expect(m['nearMissCandidatesJson']).toBe('[{"scopeId":"coding","nodeId":"pattern","rank":2,"score":0.69}]');
     expect(m['reason']).toBe('Reviewed by user');
     expect(m['source']).toBe('user');
     expect(m['createdAt']).toBe(1000);
-    expect(Object.keys(m).length).toBe(12);
+    expect(Object.keys(m).length).toBe(13);
   });
 
   it('drops unknown target/apply keys from imported rows', () => {
@@ -569,6 +571,7 @@ describe('Column map: ontology_correction_evidence', () => {
       previous_type_node_id: 'mechanism',
       corrected_type_node_id: 'pattern',
       raw_proposed_type_node_id: null,
+      near_miss_candidates_json: null,
       reason: null,
       source: 'user',
       created_at: 1000,
@@ -578,7 +581,7 @@ describe('Column map: ontology_correction_evidence', () => {
     const m = mapBackupRow(raw, ONTOLOGY_CORRECTION_EVIDENCE_COLUMN_MAP);
     expect('targetLayerId' in m).toBe(false);
     expect('applyToBranchId' in m).toBe(false);
-    expect(Object.keys(m).length).toBe(12);
+    expect(Object.keys(m).length).toBe(13);
   });
 });
 
@@ -593,6 +596,7 @@ describe('Column map: profile_change_proposals', () => {
       target_kind: 'profile_branch',
       target_profile_id: null,
       target_branch_id: 'branch-1',
+      target_profile_version: null,
       evidence_ids_json: '["ev-1"]',
       patch_json: '{"addItemTypeNodeIds":["react_hook"]}',
       title: 'Add React hook type',
@@ -615,11 +619,12 @@ describe('Column map: profile_change_proposals', () => {
     expect(m['baseProfileId']).toBe('coding');
     expect(m['targetKind']).toBe('profile_branch');
     expect(m['targetBranchId']).toBe('branch-1');
+    expect(m['targetProfileVersion']).toBeNull();
     expect(m['evidenceIdsJson']).toBe('["ev-1"]');
     expect(m['patchJson']).toBe('{"addItemTypeNodeIds":["react_hook"]}');
     expect(m['riskScore']).toBe(35);
     expect(m['status']).toBe('pending');
-    expect(Object.keys(m).length).toBe(22);
+    expect(Object.keys(m).length).toBe(23);
   });
 
   it('drops unknown apply/runtime keys from imported rows', () => {
@@ -632,6 +637,7 @@ describe('Column map: profile_change_proposals', () => {
       target_kind: 'profile_branch',
       target_profile_id: null,
       target_branch_id: 'branch-1',
+      target_profile_version: null,
       evidence_ids_json: '[]',
       patch_json: '{"addItemTypeNodeIds":["react_hook"]}',
       title: 'Add React hook type',
@@ -652,7 +658,7 @@ describe('Column map: profile_change_proposals', () => {
     const m = mapBackupRow(raw, PROFILE_CHANGE_PROPOSALS_COLUMN_MAP);
     expect('activeRuntimeProfileJson' in m).toBe(false);
     expect('applyImmediately' in m).toBe(false);
-    expect(Object.keys(m).length).toBe(22);
+    expect(Object.keys(m).length).toBe(23);
   });
 });
 
@@ -896,6 +902,7 @@ describe('JSON decoding for Drizzle insert shape', () => {
         field: 'typeNodeId',
         previous_type_node_id: 'mechanism',
         corrected_type_node_id: 'pattern',
+        near_miss_candidates_json: '[{"scopeId":"coding","nodeId":"pattern","rank":2,"score":0.69}]',
         reason: null,
         source: 'user',
         created_at: 1000,
@@ -907,6 +914,9 @@ describe('JSON decoding for Drizzle insert shape', () => {
       baseProfileId: 'coding',
       projectBranchIds: ['pb-1'],
     });
+    expect(mapped['nearMissCandidatesJson']).toEqual([
+      { scopeId: 'coding', nodeId: 'pattern', rank: 2, score: 0.69 },
+    ]);
   });
 
   it('decodes profile_change_proposals evidence and patch JSON columns', () => {
@@ -1096,6 +1106,28 @@ describe('JSON decoding for Drizzle insert shape', () => {
       ONTOLOGY_CORRECTION_EVIDENCE_COLUMN_MAP,
       TABLE_JSON_COLUMNS['ontology_correction_evidence']!,
     )).toThrow(/Invalid JSON in backup column active_selection_snapshot_json/);
+  });
+
+  it('throws on malformed JSON in ontology_correction_evidence near-miss candidates', () => {
+    expect(() => mapBackupRow(
+      {
+        id: 'ev-1',
+        profile_id: 'coding',
+        active_selection_snapshot_json: '{"baseProfileId":"coding"}',
+        subject_kind: 'item',
+        subject_id: 'concept-1',
+        field: 'typeNodeId',
+        previous_type_node_id: 'mechanism',
+        corrected_type_node_id: 'pattern',
+        raw_proposed_type_node_id: null,
+        near_miss_candidates_json: '{bad json',
+        reason: null,
+        source: 'user',
+        created_at: 1000,
+      },
+      ONTOLOGY_CORRECTION_EVIDENCE_COLUMN_MAP,
+      TABLE_JSON_COLUMNS['ontology_correction_evidence']!,
+    )).toThrow(/Invalid JSON in backup column near_miss_candidates_json/);
   });
 
   it('throws on malformed JSON in profile_definitions profile_json', () => {
@@ -1461,8 +1493,8 @@ describe('TABLE_COLUMN_MAPS index', () => {
     expect(Object.keys(PROFILE_BRANCHES_COLUMN_MAP).length).toBe(7);
     expect(Object.keys(PROFILE_SELECTIONS_COLUMN_MAP).length).toBe(8);
     expect(Object.keys(PROFILE_DEFINITIONS_COLUMN_MAP).length).toBe(8);
-    expect(Object.keys(ONTOLOGY_CORRECTION_EVIDENCE_COLUMN_MAP).length).toBe(12);
-    expect(Object.keys(PROFILE_CHANGE_PROPOSALS_COLUMN_MAP).length).toBe(22);
+    expect(Object.keys(ONTOLOGY_CORRECTION_EVIDENCE_COLUMN_MAP).length).toBe(13);
+    expect(Object.keys(PROFILE_CHANGE_PROPOSALS_COLUMN_MAP).length).toBe(23);
     expect(Object.keys(PROFILE_PROPOSAL_EVENTS_COLUMN_MAP).length).toBe(19);
     expect(Object.keys(PROFILE_TRUST_SETTINGS_COLUMN_MAP).length).toBe(12);
   });

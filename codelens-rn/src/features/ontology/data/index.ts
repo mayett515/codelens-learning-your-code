@@ -19,6 +19,7 @@ export {
 export {
   insertProfileDefinition,
   upsertProfileDefinition,
+  updateProfileDefinitionIfUnchanged,
   getProfileDefinitionById,
   getProfileDefinitionsByIds,
   listProfileDefinitions,
@@ -57,6 +58,17 @@ export {
   listProfileProposalEventsForProposal,
   listProfileProposalEventsForTargetBranch,
 } from './profileProposalEventRepo';
+
+export {
+  DEFAULT_USER_FIT_CORRECTION_EVIDENCE_LIMIT,
+  DEFAULT_USER_FIT_PROPOSAL_EVENT_LIMIT,
+  loadUserFitProjectionFacts,
+} from './userFitHistoryRepo';
+export type {
+  LoadUserFitProjectionFactsInput,
+  UserFitProjectionFacts,
+} from './userFitHistoryRepo';
+
 export {
   ProfileChangeProposalReviewServiceError,
   setPendingProfileChangeProposalReviewStatus,
@@ -78,6 +90,16 @@ export type {
   BranchLocalProposalApplyServiceDependencies,
   BranchLocalProposalApplyServiceErrorCode,
 } from './branchLocalProposalApplyService';
+
+export {
+  BaseProfileProposalApplyServiceError,
+  applyPendingBaseProfileChangeProposal,
+} from './baseProfileProposalApplyService';
+export type {
+  ApplyPendingBaseProfileChangeProposalInput,
+  BaseProfileProposalApplyServiceDependencies,
+  BaseProfileProposalApplyServiceErrorCode,
+} from './baseProfileProposalApplyService';
 
 export {
   insertProfileTrustSetting,

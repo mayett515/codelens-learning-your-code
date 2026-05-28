@@ -121,6 +121,12 @@ describe('Conceptualize classification flip', () => {
     expect(mapped.conceptHint?.proposedConceptType).toBe('pattern');
     expect(mapped.conceptHint?.extractionConfidence).toBe(0.83);
     expect(mapped.extractionConfidence).toBe(0.83);
+    expect(mapped.rawProposedTypeIdentity).toEqual({
+      kind: 'scoped_ref',
+      scopeId: 'coding',
+      nodeId: 'pattern',
+      source: 'conceptualize',
+    });
     expect(mapped.rawProposedTypeNodeId).toBe('coding:pattern');
     expect(mapped.linkedConceptName).toBeNull();
     expect(mapped.matchSimilarity).toBeNull();
@@ -154,6 +160,12 @@ describe('Conceptualize classification flip', () => {
       proposedNormalizedKey: 'closure keeps outer state',
       proposedConceptType: 'pattern',
       extractionConfidence: 0.83,
+    });
+    expect(mapped.rawProposedTypeIdentity).toEqual({
+      kind: 'scoped_ref',
+      scopeId: 'coding',
+      nodeId: 'pattern',
+      source: 'conceptualize',
     });
     expect(mapped.rawProposedTypeNodeId).toBe('coding:pattern');
   });
@@ -232,9 +244,23 @@ describe('Conceptualize classification flip', () => {
     });
 
     expect(mapped.conceptHint).toBeNull();
+    expect(mapped.rawProposedTypeIdentity).toBeNull();
     expect(mapped.rawProposedTypeNodeId).toBeNull();
     expect(mapped.extractionConfidence).toBe(0.36);
     expect(mapped.linkedConceptName).toBeNull();
+    expect(mapped.conceptualizeMissingConcept).toEqual({
+      status: 'no_strong_match',
+      confidence: 0.36,
+      rationale: 'The capture describes a reusable pattern.',
+      suggestedNewConcept: {
+        label: 'Hook Snapshot',
+        kind: 'subcategory',
+        parentNodeRef: { scopeId: 'coding', nodeId: 'mechanism' },
+        parentLabel: 'Mechanism',
+        meaning: 'A specific hook timing snapshot.',
+        reason: 'The existing mechanism node is too broad.',
+      },
+    });
   });
 
   it('runs the prompt builder and validator with a retry before returning a classification', async () => {
@@ -345,9 +371,96 @@ describe('Conceptualize classification flip', () => {
     );
 
     expect(mapped.conceptHint).toBeNull();
+    expect(mapped.rawProposedTypeIdentity).toBeNull();
     expect(mapped.rawProposedTypeNodeId).toBeNull();
     expect(mapped).not.toHaveProperty('suggestedNewConcept');
     expect(mapped).not.toHaveProperty('diagnostics');
+    expect(mapped.conceptualizeMissingConcept).toMatchObject({
+      status: 'no_strong_match',
+      suggestedNewConcept: {
+        label: 'Hook Snapshot',
+        parentLabel: 'Mechanism',
+      },
+    });
+    expect(mapped.conceptualizeNearMissCandidates).toEqual([
+      { scopeId: 'coding', nodeId: 'mechanism', rank: 2, score: 0.52 },
+    ]);
+  });
+
+  it('clears stale missing-concept review state after a strong match', () => {
+    const sourceCandidate = candidate({
+      conceptualizeMissingConcept: {
+        status: 'no_strong_match',
+        confidence: 0.2,
+        rationale: 'Old missing state',
+        suggestedNewConcept: null,
+      },
+    });
+    const pack = buildConceptualizeContextPackShadow({
+      candidateId: 'candidate-0',
+      candidate: sourceCandidate,
+      context: context(),
+      now: () => 123,
+    }).pack;
+
+    const mapped = applyConceptualizeClassificationToCandidate({
+      candidate: sourceCandidate,
+      context: context(),
+      pack,
+      classification: classification(),
+    });
+
+    expect(mapped.conceptHint?.proposedConceptType).toBe('pattern');
+    expect(mapped.conceptualizeMissingConcept).toBeNull();
+  });
+
+  it('keeps hidden diagnostic candidates as internal near-miss correction context', async () => {
+    const mapped = await classifySaveCandidateWithConceptualize(
+      {
+        candidateId: 'candidate-0',
+        candidate: candidate(),
+        context: context(),
+      },
+      {
+        complete: async () =>
+          JSON.stringify({
+            schemaVersion: CONCEPTUALIZE_PROMPT_OUTPUT_VERSION,
+            classification: classification(),
+            diagnostics: {
+              candidateRefs: [
+                { ref: { scopeId: 'coding', nodeId: 'mechanism' }, rank: 2, score: 0.45 },
+                { ref: { scopeId: 'coding', nodeId: 'mental_model' }, rank: 3 },
+              ],
+            },
+          }),
+      },
+    );
+
+    expect(mapped.conceptualizeNearMissCandidates).toEqual([
+      { scopeId: 'coding', nodeId: 'mechanism', rank: 2, score: 0.45 },
+      { scopeId: 'coding', nodeId: 'mental_model', rank: 3 },
+    ]);
+    expect(mapped).not.toHaveProperty('diagnostics');
+  });
+
+  it('defensively rejects diagnostic candidates that try to reuse primary rank', () => {
+    const sourceCandidate = candidate();
+    const pack = buildConceptualizeContextPackShadow({
+      candidateId: 'candidate-0',
+      candidate: sourceCandidate,
+      context: context(),
+      now: () => 123,
+    }).pack;
+
+    expect(() => applyConceptualizeClassificationToCandidate({
+      candidate: sourceCandidate,
+      context: context(),
+      pack,
+      classification: classification(),
+      diagnosticCandidates: [
+        { ref: { scopeId: 'coding', nodeId: 'mechanism' }, rank: 1, score: 0.45 },
+      ],
+    })).toThrow(/diagnostic candidate rank must be >= 2/);
   });
 
   it('throws when the classifier repeatedly violates the scoped ref contract', async () => {

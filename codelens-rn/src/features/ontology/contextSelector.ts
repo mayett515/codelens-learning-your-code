@@ -1,5 +1,6 @@
 import { scopedNodeRefKey } from './contextAssembly';
 import { normalizeOntologyDisplayLabel } from './scopedMeaning';
+import type { ProfileChangeProposalTarget } from './types';
 import type {
   ContextBudgetCaps,
   ContextEvidenceClaimInput,
@@ -9,6 +10,8 @@ import type {
   ContextPackConsumer,
   ContextProposalEventSignalInput,
   ContextProposalSnapshotInput,
+  ContextUserFitNodeSignalInput,
+  ContextUserFitProposalSignalInput,
   ScopedNodeRef,
 } from './contextAssembly';
 
@@ -17,6 +20,7 @@ export type ContextSelectionSection =
   | 'evidence'
   | 'proposals'
   | 'proposalEvents'
+  | 'userFit'
   | 'graph';
 
 export type ContextSelectionBucket = 'pinned' | 'elastic' | 'omitted';
@@ -46,6 +50,8 @@ export interface ContextSelection {
   evidenceClaims: readonly ContextEvidenceClaimInput[];
   proposalSnapshots: readonly ContextProposalSnapshotInput[];
   proposalEventSignals: readonly ContextProposalEventSignalInput[];
+  userFitNodeSignals: readonly ContextUserFitNodeSignalInput[];
+  userFitProposalSignals: readonly ContextUserFitProposalSignalInput[];
   graph?: ContextGraphSectionInput | undefined;
   caps?: Partial<ContextBudgetCaps> | undefined;
   trace: readonly ContextSelectionTraceEntry[];
@@ -55,12 +61,14 @@ export interface ContextSelector<TInput> {
   select(input: TInput): ContextSelection;
 }
 
-export interface ConceptualizeContextSelectorInput {
+export interface SharedContextSelectorInput {
   focal: ContextFocal;
   ontologyNodes?: readonly ContextOntologyNodeInput[] | undefined;
   evidenceClaims?: readonly ContextEvidenceClaimInput[] | undefined;
   proposalSnapshots?: readonly ContextProposalSnapshotInput[] | undefined;
   proposalEventSignals?: readonly ContextProposalEventSignalInput[] | undefined;
+  userFitNodeSignals?: readonly ContextUserFitNodeSignalInput[] | undefined;
+  userFitProposalSignals?: readonly ContextUserFitProposalSignalInput[] | undefined;
   graph?: ContextGraphSectionInput | undefined;
   caps?: Partial<ContextBudgetCaps> | undefined;
   requiredNodeRefs?: readonly ScopedNodeRef[] | undefined;
@@ -69,14 +77,37 @@ export interface ConceptualizeContextSelectorInput {
   pinnedProposalEventIds?: readonly string[] | undefined;
 }
 
+export interface ConceptualizeContextSelectorInput extends SharedContextSelectorInput {}
+
+export interface CheckerContextSelectorInput extends SharedContextSelectorInput {}
+
 export function createConceptualizeContextSelector(): ContextSelector<ConceptualizeContextSelectorInput> {
   return {
     select: selectConceptualizeContext,
   };
 }
 
+export function createCheckerContextSelector(): ContextSelector<CheckerContextSelectorInput> {
+  return {
+    select: selectCheckerContext,
+  };
+}
+
 export function selectConceptualizeContext(
   input: ConceptualizeContextSelectorInput,
+): ContextSelection {
+  return selectContext(input, 'conceptualize');
+}
+
+export function selectCheckerContext(
+  input: CheckerContextSelectorInput,
+): ContextSelection {
+  return selectContext(input, 'checker');
+}
+
+function selectContext(
+  input: SharedContextSelectorInput,
+  consumer: ContextPackConsumer,
 ): ContextSelection {
   const trace: ContextSelectionTraceEntry[] = [];
   const focalNodeRefKeys = new Set((input.focal.nodeRefs ?? []).map(scopedNodeRefKey));
@@ -97,7 +128,7 @@ export function selectConceptualizeContext(
   }
 
   return {
-    consumer: 'conceptualize',
+    consumer,
     focal: cloneFocal(input.focal),
     ontologyNodes,
     evidenceClaims: selectEvidenceClaims(
@@ -117,6 +148,16 @@ export function selectConceptualizeContext(
       input.proposalEventSignals ?? [],
       input.caps?.maxProposalEvents,
       new Set(input.pinnedProposalEventIds ?? []),
+      trace,
+    ),
+    userFitNodeSignals: selectUserFitNodeSignals(
+      input.userFitNodeSignals ?? [],
+      input.caps?.maxUserFitNodeSignals,
+      trace,
+    ),
+    userFitProposalSignals: selectUserFitProposalSignals(
+      input.userFitProposalSignals ?? [],
+      input.caps?.maxUserFitProposalSignals,
       trace,
     ),
     graph: selectGraph(input.graph, input.caps?.maxGraphNeighbors, trace),
@@ -288,6 +329,58 @@ function selectProposalEventSignals(
     cloneIncluded: (event, pinned) => ({
       ...event,
       pinned,
+    }),
+    trace,
+  });
+}
+
+function selectUserFitNodeSignals(
+  candidates: readonly ContextUserFitNodeSignalInput[],
+  cap: number | undefined,
+  trace: ContextSelectionTraceEntry[],
+): ContextUserFitNodeSignalInput[] {
+  return selectWithCap({
+    candidates: dedupeBy(candidates, (signal) => signal.signalId),
+    cap,
+    section: 'userFit',
+    getId: (signal) => signal.signalId,
+    isPinned: (signal) => Boolean(signal.pinned),
+    reasonForPinned: () => 'directReference',
+    reasonForElastic: () => 'recent',
+    cloneIncluded: (signal, pinned) => ({
+      ...signal,
+      pinned,
+      activeSelectionSnapshot: {
+        baseProfileId: signal.activeSelectionSnapshot.baseProfileId,
+        projectBranchIds: [...signal.activeSelectionSnapshot.projectBranchIds],
+        learningBranchIds: [...signal.activeSelectionSnapshot.learningBranchIds],
+        personalBranchIds: [...signal.activeSelectionSnapshot.personalBranchIds],
+      },
+      nodeRefs: signal.nodeRefs.map(cloneScopedNodeRef),
+      evidenceIds: [...signal.evidenceIds],
+    }),
+    trace,
+  });
+}
+
+function selectUserFitProposalSignals(
+  candidates: readonly ContextUserFitProposalSignalInput[],
+  cap: number | undefined,
+  trace: ContextSelectionTraceEntry[],
+): ContextUserFitProposalSignalInput[] {
+  return selectWithCap({
+    candidates: dedupeBy(candidates, (signal) => signal.signalId),
+    cap,
+    section: 'userFit',
+    getId: (signal) => signal.signalId,
+    isPinned: (signal) => Boolean(signal.pinned),
+    reasonForPinned: () => 'directReference',
+    reasonForElastic: () => 'recent',
+    cloneIncluded: (signal, pinned) => ({
+      ...signal,
+      pinned,
+      target: cloneProfileChangeProposalTarget(signal.target),
+      eventIds: [...signal.eventIds],
     }),
     trace,
   });
@@ -477,6 +570,16 @@ function cloneScopedNodeRef(ref: ScopedNodeRef): ScopedNodeRef {
 
 function sameScopedNodeRef(a: ScopedNodeRef, b: ScopedNodeRef): boolean {
   return a.scopeId === b.scopeId && a.nodeId === b.nodeId;
+}
+
+function cloneProfileChangeProposalTarget(
+  target: ProfileChangeProposalTarget,
+): ProfileChangeProposalTarget {
+  return {
+    kind: target.kind,
+    ...(target.profileId === undefined ? {} : { profileId: target.profileId }),
+    ...(target.branchId === undefined ? {} : { branchId: target.branchId }),
+  };
 }
 
 function dedupeBy<T>(items: readonly T[], getKey: (item: T) => string): T[] {

@@ -18,6 +18,9 @@ import { migration016 } from './016-profile-change-proposals';
 import { migration017 } from './017-ontology-correction-raw-proposed-type';
 import { migration018 } from './018-profile-trust-settings';
 import { migration019 } from './019-profile-proposal-events';
+import { migration020 } from './020-ontology-correction-near-miss-candidates';
+import { migration021 } from './021-user-fit-history-recency-indexes';
+import { migration022 } from './022-profile-change-proposal-target-version';
 
 export interface Migration {
   version: number;
@@ -53,6 +56,9 @@ const MIGRATIONS: Migration[] = [
   migration017,
   migration018,
   migration019,
+  migration020,
+  migration021,
+  migration022,
 ];
 
 /*

@@ -5,6 +5,8 @@
 
 This document narrows doc 21 and doc 19 into the first concrete proposal review/apply shape.
 
+**Later extension:** Doc 38 adds the separate guarded base/core apply path. The base/core exclusions in this document describe the first branch-local apply seam only; they are not a permanent ban on explicit version-guarded base/core Apply.
+
 The first implementation adds pure branch-local typed operation/helpers, a minimal persistence-backed service that loads a pending branch proposal, applies the pure helper, and commits the branch/proposal updates atomically, plus a minimal review queue/detail UI. Proposal event/audit storage was added later in doc 25. Checker runtime, auto-apply engine, base-profile versioning, edit-then-apply, and branch-merge runtime are still outside this document.
 
 ## Locked Decision
@@ -99,6 +101,8 @@ The first apply flow does not handle:
 
 These are still valid future directions. They are deliberately outside the first apply seam.
 
+Doc 38 implements one of those future directions as an explicit base/core path with target-profile versioning, patch revalidation, transaction guards, and separate UI copy. Branch-local apply remains the shape defined by this document.
+
 ## Review Actions
 
 The first review actions should be:
@@ -190,6 +194,8 @@ Apply must not:
 - mutate sibling branches
 - auto-promote changes upward
 
+For this section, "Apply" means the branch-local operation implemented by doc 24. Base/core Apply is a later explicit operation defined by doc 38 and must not reuse this branch-local operation by widening its target.
+
 ## Trust Settings
 
 Trust settings can be read by future review/apply code, but this decision does not enable auto-apply.
@@ -266,6 +272,7 @@ That is not part of this first branch-local apply flow.
 - **Doc 21:** accepted proposals compile to typed Kortex operations after revalidation.
 - **Doc 23:** trust settings store user policy but do not run auto-apply.
 - **Doc 13:** parent/base profiles stay clean until an approved merge path exists.
+- **Doc 38:** base/core Apply is now allowed only through its separate version-guarded base-profile operation/service/UI path.
 
 ## Implemented Slices And Next Work
 

@@ -90,6 +90,8 @@ export interface ConceptualizeDiagnosticCandidatePolicy {
     sameLabelAmbiguityCount: number;
     correctionEvidenceCount: number;
     proposalSnapshotCount: number;
+    userFitNodeSignalCount: number;
+    userFitProposalSignalCount: number;
     branchDepth: number;
     trustMode: ContextPack['policy']['trustMode'];
   };
@@ -158,6 +160,38 @@ export interface ConceptualizePromptPayload {
       reason?: string | undefined;
     }>;
     omittedCount: number;
+  };
+  userFit: {
+    nodeSignals: ReadonlyArray<{
+      signalId: string;
+      activeSelectionKey: string;
+      nodeId: string;
+      nodeRefKeys: readonly string[];
+      confidence: number;
+      score: number;
+      positiveCorrectionCount: number;
+      negativeCorrectionCount: number;
+      missingConceptCorrectionCount: number;
+      nearMissHitCount: number;
+      evidenceIds: readonly string[];
+      latestAt: number;
+    }>;
+    proposalSignals: ReadonlyArray<{
+      signalId: string;
+      proposalKind: string;
+      targetKind: string;
+      targetKey: string;
+      confidence: number;
+      score: number;
+      appliedCount: number;
+      rejectedCount: number;
+      postponedCount: number;
+      askedWhyCount: number;
+      eventIds: readonly string[];
+      latestAt: number;
+    }>;
+    omittedNodeSignalCount: number;
+    omittedProposalSignalCount: number;
   };
   policy: {
     trustMode: ContextPack['policy']['trustMode'];
@@ -426,6 +460,38 @@ function buildPromptPayload(
       })),
       omittedCount: pack.proposalEvents.omittedCount,
     },
+    userFit: {
+      nodeSignals: pack.userFit.nodeSignals.map((signal) => ({
+        signalId: signal.signalId,
+        activeSelectionKey: signal.activeSelectionKey,
+        nodeId: signal.nodeId,
+        nodeRefKeys: signal.nodeRefs.map(scopedNodeRefKey),
+        confidence: signal.userFitConfidence,
+        score: signal.score,
+        positiveCorrectionCount: signal.positiveCorrectionCount,
+        negativeCorrectionCount: signal.negativeCorrectionCount,
+        missingConceptCorrectionCount: signal.missingConceptCorrectionCount,
+        nearMissHitCount: signal.nearMissHitCount,
+        evidenceIds: [...signal.evidenceIds],
+        latestAt: signal.latestAt,
+      })),
+      proposalSignals: pack.userFit.proposalSignals.map((signal) => ({
+        signalId: signal.signalId,
+        proposalKind: signal.proposalKind,
+        targetKind: signal.target.kind,
+        targetKey: signal.targetKey,
+        confidence: signal.userFitConfidence,
+        score: signal.score,
+        appliedCount: signal.appliedCount,
+        rejectedCount: signal.rejectedCount,
+        postponedCount: signal.postponedCount,
+        askedWhyCount: signal.askedWhyCount,
+        eventIds: [...signal.eventIds],
+        latestAt: signal.latestAt,
+      })),
+      omittedNodeSignalCount: pack.userFit.omittedNodeSignalCount,
+      omittedProposalSignalCount: pack.userFit.omittedProposalSignalCount,
+    },
     policy: {
       trustMode: pack.policy.trustMode,
       autoApplyEnabled: pack.policy.autoApplyEnabled,
@@ -451,9 +517,16 @@ function buildDiagnosticCandidatePolicy(pack: ContextPack): ConceptualizeDiagnos
   );
   const correctionEvidenceCount = pack.evidence.claims.filter((claim) => claim.correctedNodeRef).length;
   const proposalSnapshotCount = pack.proposals.snapshots.length;
+  const userFitNodeSignalCount = pack.userFit.nodeSignals.length;
+  const userFitProposalSignalCount = pack.userFit.proposalSignals.length;
   const branchDepth = pack.compositionStamp.branchOrder.length;
   const baseCandidateBudget = pack.policy.trustMode === 'manual_only' ? 1 : 2;
-  const ambiguityPressure = sameLabelAmbiguityCount + correctionEvidenceCount + proposalSnapshotCount + Math.max(0, branchDepth - 1);
+  const ambiguityPressure =
+    sameLabelAmbiguityCount +
+    correctionEvidenceCount +
+    proposalSnapshotCount +
+    userFitNodeSignalCount +
+    Math.max(0, branchDepth - 1);
   const pressureBudget = Math.min(4, ambiguityPressure);
   const maxCandidateRefs = Math.min(
     eligibleCandidateCount,
@@ -473,6 +546,8 @@ function buildDiagnosticCandidatePolicy(pack: ContextPack): ConceptualizeDiagnos
       sameLabelAmbiguityCount,
       correctionEvidenceCount,
       proposalSnapshotCount,
+      userFitNodeSignalCount,
+      userFitProposalSignalCount,
       branchDepth,
       trustMode: pack.policy.trustMode,
     },
@@ -488,6 +563,7 @@ function buildInstructionShell(
     'Return JSON only, matching ConceptualizePromptOutputSchema.',
     'Use scoped refs from ontology.allowedNodeRefKeys. Do not invent, pluralize, rename, or coerce refs.',
     'Use ontology.nodes[].meaning, useWhen, doNotUseWhen, examples, and sameLabelSiblings to choose between close categories.',
+    'Use userFit.nodeSignals as user correction history, not semantic truth; prefer it only when it points to an allowed scoped ref that still fits the capture.',
     'classification is the single public Conceptualize result: choose one primaryNodeRef when there is a strong match.',
     'Do not return public extra tags or visible alternative placements.',
     `diagnostics.candidateRefs is internal calibration data only. Policy allows up to ${diagnosticCandidatePolicy.maxCandidateRefs} close alternatives for this ContextPack; use fewer or none when the decision is clear.`,
