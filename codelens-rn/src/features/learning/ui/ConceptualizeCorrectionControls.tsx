@@ -51,6 +51,7 @@ export function ConceptualizeCorrectionControls({
               onPress={() => onChange({
                 correctedTypeNodeId: suggestedParentTypeNodeId ?? draft.correctedTypeNodeId,
                 newTypeLabel: suggested.label,
+                newTypeMeaning: suggested.meaning,
                 reason: suggested.reason,
               })}
             >
@@ -87,6 +88,15 @@ export function ConceptualizeCorrectionControls({
         onChangeText={(value) => onChange({ newTypeLabel: value })}
         placeholder="New subtype"
         placeholderTextColor={colors.textSecondary}
+      />
+      <TextInput
+        editable={!disabled}
+        style={[styles.input, styles.reasonInput]}
+        value={draft.newTypeMeaning}
+        onChangeText={(value) => onChange({ newTypeMeaning: value })}
+        placeholder="Meaning / use when"
+        placeholderTextColor={colors.textSecondary}
+        multiline
       />
       <TextInput
         editable={!disabled}

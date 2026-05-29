@@ -313,6 +313,94 @@ describe('Conceptualize correction save', () => {
     });
   });
 
+  it('uses edited missing-concept draft meaning and preserves suggestion provenance on proposals', async () => {
+    const d = saveDeps();
+
+    await saveConceptualizedCapture(
+      candidate({
+        conceptualizeMissingConcept: {
+          status: 'no_strong_match',
+          confidence: 0.42,
+          rationale: 'No existing item type is specific enough.',
+          suggestedNewConcept: {
+            label: 'Hook Snapshot',
+            kind: 'subcategory',
+            parentNodeRef: { scopeId: 'coding', nodeId: 'mechanism' },
+            parentLabel: 'Mechanism',
+            meaning: 'Captures one hook timing snapshot.',
+            reason: 'The mechanism type is too broad for this capture.',
+          },
+        },
+      }),
+      {
+        profile,
+        selectionSnapshot: { baseProfileId: 'coding' },
+        proposalTarget: { kind: 'base_profile', profileId: 'coding' },
+      },
+      {
+        correctedTypeNodeId: 'pattern',
+        newTypeLabel: 'Hook lifecycle',
+        newTypeMeaning: 'Use when a capture explains how hook timing changes over renders.',
+        reason: 'The useful bucket is lifecycle, not one snapshot.',
+      },
+      { deps: d.deps },
+    );
+
+    expect(d.proposals[0].patch.addOntologyNodes?.[0]).toMatchObject({
+      id: 'hook_lifecycle',
+      label: 'Hook lifecycle',
+      parentId: 'pattern',
+      meaning: 'Use when a capture explains how hook timing changes over renders.',
+      useWhen: ['Use when a capture explains how hook timing changes over renders.'],
+    });
+    expect(d.proposals[0].reason).toContain('The useful bucket is lifecycle, not one snapshot.');
+    expect(d.proposals[0].reason).toContain('Original suggested concept: Hook Snapshot under Mechanism.');
+    expect(d.proposals[0].reason).toContain('Original suggested meaning: Captures one hook timing snapshot.');
+    expect(d.proposals[0].reason).toContain('Original suggested reason: The mechanism type is too broad for this capture.');
+    expect(d.proposals[0].reason).toContain('User-edited fields: label, parent, meaning, reason.');
+  });
+
+  it('uses missing-concept suggestion meaning when the user only copies the suggestion', async () => {
+    const d = saveDeps();
+
+    await saveConceptualizedCapture(
+      candidate({
+        conceptualizeMissingConcept: {
+          status: 'no_strong_match',
+          confidence: 0.42,
+          rationale: 'No existing item type is specific enough.',
+          suggestedNewConcept: {
+            label: 'Hook Snapshot',
+            kind: 'subcategory',
+            parentNodeRef: { scopeId: 'coding', nodeId: 'mechanism' },
+            parentLabel: 'Mechanism',
+            meaning: 'Captures one hook timing snapshot.',
+            reason: 'The mechanism type is too broad for this capture.',
+          },
+        },
+      }),
+      {
+        profile,
+        selectionSnapshot: { baseProfileId: 'coding' },
+        proposalTarget: { kind: 'base_profile', profileId: 'coding' },
+      },
+      {
+        correctedTypeNodeId: 'mechanism',
+        newTypeLabel: 'Hook Snapshot',
+        reason: 'The mechanism type is too broad for this capture.',
+      },
+      { deps: d.deps },
+    );
+
+    expect(d.proposals[0].patch.addOntologyNodes?.[0]).toMatchObject({
+      id: 'hook_snapshot',
+      label: 'Hook Snapshot',
+      parentId: 'mechanism',
+      meaning: 'Captures one hook timing snapshot.',
+    });
+    expect(d.proposals[0].reason).toContain('User-edited fields: none.');
+  });
+
   it('snapshots the current profile version on base-targeted new subtype proposals', async () => {
     const d = saveDeps();
 

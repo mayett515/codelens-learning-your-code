@@ -19,13 +19,17 @@ import { normalizeConceptKey } from '../codecs/concept';
 import type { LearningCaptureId } from '../types/ids';
 import type { ConceptHint } from '../types/learning';
 import { rawProposedTypeIdentityToLegacyString } from '../types/rawProposedTypeIdentity';
-import type { SaveModalCandidateData } from '../types/saveModal';
+import type {
+  ConceptualizeSuggestedNewConceptReview,
+  SaveModalCandidateData,
+} from '../types/saveModal';
 import { saveCapture, type SaveCaptureAfterInsertInput } from './saveCapture';
 
 export interface ConceptualizeCorrectionDraft {
   correctedTypeNodeId?: string | null | undefined;
   reason?: string | null | undefined;
   newTypeLabel?: string | null | undefined;
+  newTypeMeaning?: string | null | undefined;
 }
 
 export interface ConceptualizeSaveContext {
@@ -51,6 +55,18 @@ interface ResolvedConceptualizeCorrection {
   nearMissCandidates: readonly OntologyCorrectionNearMissCandidate[] | null;
   reason: string | null;
   proposedNode: OntologyNode | null;
+  missingConceptDraftProvenance: MissingConceptDraftProvenance | null;
+}
+
+type MissingConceptDraftEditedField = 'label' | 'parent' | 'meaning' | 'reason';
+
+interface MissingConceptDraftProvenance {
+  originalSuggestedLabel: string;
+  originalSuggestedParentNodeId: string | null;
+  originalSuggestedParentLabel: string | null;
+  originalSuggestedMeaning: string;
+  originalSuggestedReason: string;
+  editedFields: readonly MissingConceptDraftEditedField[];
 }
 
 const defaultDeps: SaveConceptualizedCaptureDeps = {
@@ -106,7 +122,9 @@ export function resolveConceptualizeCorrection(
   const nearMissCandidates = normalizeNearMissCandidates(candidate.conceptualizeNearMissCandidates);
   const reason = normalizeNullableText(correction?.reason);
   const newTypeLabel = normalizeNullableText(correction?.newTypeLabel);
+  const newTypeMeaning = normalizeNullableText(correction?.newTypeMeaning);
   const selectedTypeNodeId = normalizeNullableText(correction?.correctedTypeNodeId);
+  const suggestedNewConcept = candidate.conceptualizeMissingConcept?.suggestedNewConcept ?? null;
 
   if (newTypeLabel) {
     const newTypeNodeId = makeTypeNodeId(newTypeLabel);
@@ -119,18 +137,22 @@ export function resolveConceptualizeCorrection(
         nearMissCandidates,
         reason,
         proposedNode: null,
+        missingConceptDraftProvenance: null,
       };
     }
     assertNewTypeNodeIdAvailable(profile, newTypeNodeId);
 
+    const parentTypeNodeId = resolveNewTypeParentTypeNodeId({
+      profile,
+      selectedTypeNodeId,
+      previousTypeNodeId,
+    });
+    const meaning = newTypeMeaning ?? suggestedNewConcept?.meaning ?? null;
     const proposedNode = buildProposedTypeNode({
       label: newTypeLabel,
-      parentTypeNodeId: resolveNewTypeParentTypeNodeId({
-        profile,
-        selectedTypeNodeId,
-        previousTypeNodeId,
-      }),
+      parentTypeNodeId,
       previousTypeNodeId,
+      meaning,
       reason,
       profile,
       now: now(),
@@ -144,6 +166,13 @@ export function resolveConceptualizeCorrection(
       nearMissCandidates,
       reason,
       proposedNode,
+      missingConceptDraftProvenance: buildMissingConceptDraftProvenance({
+        suggested: suggestedNewConcept,
+        label: newTypeLabel,
+        parentTypeNodeId,
+        meaning: proposedNode.meaning,
+        reason,
+      }),
     };
   }
 
@@ -156,6 +185,7 @@ export function resolveConceptualizeCorrection(
       nearMissCandidates,
       reason,
       proposedNode: null,
+      missingConceptDraftProvenance: null,
     };
   }
 
@@ -168,6 +198,7 @@ export function resolveConceptualizeCorrection(
     nearMissCandidates,
     reason,
     proposedNode: null,
+    missingConceptDraftProvenance: null,
   };
 }
 
@@ -209,6 +240,7 @@ async function persistConceptualizeCorrection(input: {
     node: resolved.proposedNode,
     context,
     reason: resolved.reason,
+    missingConceptDraftProvenance: resolved.missingConceptDraftProvenance,
     now: input.input.createdAt,
   });
   await deps.insertProposal(proposal, tx);
@@ -220,6 +252,7 @@ function buildNewTypeProposal(input: {
   node: OntologyNode;
   context: ConceptualizeSaveContext;
   reason: string | null;
+  missingConceptDraftProvenance: MissingConceptDraftProvenance | null;
   now: number;
 }): ProfileChangeProposal {
   const targetIsBranch = input.context.proposalTarget.kind === 'profile_branch';
@@ -238,7 +271,10 @@ function buildNewTypeProposal(input: {
     },
     title: `Add ${input.node.label} type`,
     summary: `Create ${input.node.label} as an item type from Conceptualize correction.`,
-    reason: input.reason ?? 'The user created this type while correcting a Conceptualize draft.',
+    reason: formatNewTypeProposalReason({
+      userReason: input.reason,
+      provenance: input.missingConceptDraftProvenance,
+    }),
     riskScore: targetIsBranch ? 25 : 70,
     semanticConfidence: null,
     userFitConfidence: 1,
@@ -295,6 +331,7 @@ function buildProposedTypeNode(input: {
   label: string;
   parentTypeNodeId: string | null;
   previousTypeNodeId: string | null;
+  meaning: string | null;
   reason: string | null;
   profile: DomainProfile;
   now: number;
@@ -310,8 +347,8 @@ function buildProposedTypeNode(input: {
     label: input.label,
     kind: parentId ? 'subcategory' : 'category',
     parentId,
-    meaning: input.reason ?? `User-created item type for ${input.label}.`,
-    useWhen: [input.reason ?? `Use when an item belongs to ${input.label}.`],
+    meaning: input.meaning ?? input.reason ?? `User-created item type for ${input.label}.`,
+    useWhen: [input.meaning ?? input.reason ?? `Use when an item belongs to ${input.label}.`],
     doNotUseWhen: previousLabel && input.previousTypeNodeId
       ? [{
           id: `boundary_${id}_not_${input.previousTypeNodeId}`,
@@ -329,6 +366,56 @@ function buildProposedTypeNode(input: {
     createdAt: input.now,
     updatedAt: input.now,
   };
+}
+
+function buildMissingConceptDraftProvenance(input: {
+  suggested: ConceptualizeSuggestedNewConceptReview | null;
+  label: string;
+  parentTypeNodeId: string | null;
+  meaning: string;
+  reason: string | null;
+}): MissingConceptDraftProvenance | null {
+  const suggested = input.suggested;
+  if (!suggested) return null;
+
+  const originalParentNodeId = suggested.parentNodeRef?.nodeId ?? null;
+  const editedFields: MissingConceptDraftEditedField[] = [];
+  if (input.label.trim() !== suggested.label.trim()) editedFields.push('label');
+  if (input.parentTypeNodeId !== originalParentNodeId) editedFields.push('parent');
+  if (input.meaning.trim() !== suggested.meaning.trim()) editedFields.push('meaning');
+  if ((input.reason ?? '').trim() !== suggested.reason.trim()) editedFields.push('reason');
+
+  return {
+    originalSuggestedLabel: suggested.label,
+    originalSuggestedParentNodeId: originalParentNodeId,
+    originalSuggestedParentLabel: suggested.parentLabel,
+    originalSuggestedMeaning: suggested.meaning,
+    originalSuggestedReason: suggested.reason,
+    editedFields,
+  };
+}
+
+function formatNewTypeProposalReason(input: {
+  userReason: string | null;
+  provenance: MissingConceptDraftProvenance | null;
+}): string {
+  const primaryReason = input.userReason
+    ?? 'The user created this type while correcting a Conceptualize draft.';
+  if (!input.provenance) return primaryReason;
+
+  const parent = input.provenance.originalSuggestedParentLabel
+    ?? input.provenance.originalSuggestedParentNodeId
+    ?? 'none';
+  const edited = input.provenance.editedFields.length > 0
+    ? input.provenance.editedFields.join(', ')
+    : 'none';
+  return [
+    primaryReason,
+    `Original suggested concept: ${input.provenance.originalSuggestedLabel} under ${parent}.`,
+    `Original suggested meaning: ${input.provenance.originalSuggestedMeaning}`,
+    `Original suggested reason: ${input.provenance.originalSuggestedReason}`,
+    `User-edited fields: ${edited}.`,
+  ].join('\n');
 }
 
 function makeTypeNodeId(label: string): string {

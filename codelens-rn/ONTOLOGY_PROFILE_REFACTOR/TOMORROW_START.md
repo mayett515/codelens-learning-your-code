@@ -515,8 +515,10 @@ The user-fit projection decision is locked and implemented in doc 37. Correction
 
 The base profile versioning, base apply helper/service, and explicit base/core review UI wiring are locked and implemented in doc 38. Base-targeted proposals snapshot `targetProfileVersion`, base/core apply rejects missing or stale target versions, patch revalidation runs before mutation, successful apply creates the next persisted profile definition version, and the proposal review UI exposes this through an explicit `Apply to core` action. No auto-apply, stale refresh flow, edit-then-apply, branch merge apply, profile version-history UI, old-card backfill, checker runtime, historical undo, agent runtime, app-builder runtime, or DSL runtime was added.
 
+The first richer missing-concept edit/apply slice is implemented in doc 39. Missing-concept drafts now have editable meaning, `Use suggestion` copies suggested label/meaning/reason/valid parent, and proposal reasons preserve the original suggestion plus edited-field provenance. No direct Conceptualize Apply, target switching UI, stale refresh, superseding persistence, old-card backfill, checker runtime, auto-apply, graph/vector retrieval, trust-setting update, agent runtime, app-builder runtime, or DSL runtime was added.
+
 Remaining open decisions:
 
-1. Richer missing-concept edit/apply flows after base/core apply is reviewable.
+1. Continue richer missing-concept edit/apply toward target switching or explicit apply only after a fresh bounded decision.
 2. Agent/subagent execution ontology brief.
 3. Self-building-app framework brief.

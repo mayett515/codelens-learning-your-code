@@ -10,6 +10,7 @@ export interface CandidateCorrectionDraft {
   correctedTypeNodeId: string | null;
   reason: string;
   newTypeLabel: string;
+  newTypeMeaning: string;
 }
 
 interface CandidateSaveStatus {
@@ -121,6 +122,7 @@ export const useSaveLearningStore = create<SaveLearningStore>((set) => ({
             correctedTypeNodeId: candidate.conceptHint?.proposedConceptType ?? null,
             reason: '',
             newTypeLabel: '',
+            newTypeMeaning: '',
           },
         ]),
       ),
@@ -154,6 +156,7 @@ export const useSaveLearningStore = create<SaveLearningStore>((set) => ({
           correctedTypeNodeId: state.correctionDrafts[id]?.correctedTypeNodeId ?? null,
           reason: state.correctionDrafts[id]?.reason ?? '',
           newTypeLabel: state.correctionDrafts[id]?.newTypeLabel ?? '',
+          newTypeMeaning: state.correctionDrafts[id]?.newTypeMeaning ?? '',
           ...patch,
         },
       },

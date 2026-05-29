@@ -58,7 +58,9 @@ describe('Stage 3 card component guards', () => {
     expect(controls).toMatch(/No strong existing type/);
     expect(controls).toMatch(/Use suggestion/);
     expect(controls).toMatch(/newTypeLabel: suggested\.label/);
+    expect(controls).toMatch(/newTypeMeaning: suggested\.meaning/);
     expect(store).toMatch(/newTypeLabel: ''/);
+    expect(store).toMatch(/newTypeMeaning: ''/);
   });
 
   describe('TypeNodeChip / ConceptTypeChip compatibility shim', () => {

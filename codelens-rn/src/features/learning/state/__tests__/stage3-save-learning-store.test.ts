@@ -47,6 +47,7 @@ describe('save learning store', () => {
       correctedTypeNodeId: 'mechanism',
       reason: '',
       newTypeLabel: '',
+      newTypeMeaning: '',
     });
 
     useSaveLearningStore
@@ -57,6 +58,7 @@ describe('save learning store', () => {
       correctedTypeNodeId: 'pattern',
       reason: 'Reusable shape',
       newTypeLabel: '',
+      newTypeMeaning: '',
     });
   });
 
@@ -103,6 +105,7 @@ describe('save learning store', () => {
       correctedTypeNodeId: null,
       reason: '',
       newTypeLabel: '',
+      newTypeMeaning: '',
     });
   });
 });

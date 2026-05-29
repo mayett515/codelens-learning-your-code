@@ -9,7 +9,7 @@ repo: C:\Projects\CodeLensApp\CodeLens-v2\codelens-rn
 branch: refactor/ontology-profile
 ```
 
-The latest source slice wires explicit base/core Apply into the existing proposal review UI on top of the versioned base-profile apply service. Branch-targeted proposals still use `applyPendingBranchLocalProfileChangeProposal()`. Base-targeted proposals now use `applyPendingBaseProfileChangeProposal()` from `useApplyProfileChangeProposal`, with stronger base/core risk copy, `Apply to core` action text, base-version/stale/conflict error messages, and the same shared Reject/Postpone/Ask why review surface. No auto-apply, stale refresh flow, edit-then-apply, branch merge apply, old-card backfill, checker runtime, historical undo, agent runtime, app-builder runtime, or DSL runtime was added.
+The latest source slice adds the first richer missing-concept draft implementation from doc 39. Correction drafts now carry editable `newTypeMeaning`; `Use suggestion` copies the suggested label, meaning, reason, and valid parent; new subtype proposal nodes use edited meaning before suggestion/reason fallback; and missing-concept proposal reasons preserve the original suggested label, parent, meaning, reason, and edited-field provenance. No direct Apply from Conceptualize, target-layer switching UI, stale refresh, superseding persistence, old-card backfill, checker runtime, auto-apply, graph/vector retrieval, trust-setting update, agent runtime, app-builder runtime, or DSL runtime was added.
 
 Latest Kordex context state:
 
@@ -45,6 +45,8 @@ Latest Kordex context state:
 - Base-profile proposals can carry the profile version they were created against. The pure version guard rejects non-base targets, base id mismatches, missing versions, and stale versions. Branch proposals stay on branch `updatedAt` guards and reject non-null `targetProfileVersion`.
 - Base-profile apply now exists as a helper/service for persisted `ProfileDefinition` rows: version guard -> patch revalidation -> next profile definition version -> accepted proposal -> proposal event.
 - The proposal review UI can now explicitly apply base/core proposals through the base apply service.
+- Doc 39 is locked and the first missing-concept draft slice is implemented in the save-learning store, Conceptualize correction controls, and `saveConceptualizedCapture.ts`.
+- Missing-concept drafts carry editable meaning and proposal provenance. Suggestions are still review-time metadata only; the store does not auto-fill them, and no direct Conceptualize Apply or target switching UI exists yet.
 
 The runtime profile coordinator decision is now locked (doc 11). The brain mixer is an explicit separate layer above runtime services. Services receive a composed `DomainProfile` and do not know branch groups, do not call activation input resolvers, and do not read hidden global active-profile state. Alternatives rejected: service-owned mixing, UI-screen-owned mixing, hidden global `getRuntimeProfile()` / active-profile store, and persistence-owned composed profile as the current shape. The coordinator can later grow into the Kortex Runtime, but not in this slice.
 

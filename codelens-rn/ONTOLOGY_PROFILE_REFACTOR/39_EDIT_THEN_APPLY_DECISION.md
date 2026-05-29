@@ -157,3 +157,40 @@ Start with the smallest durable edit/apply slice:
 5. Add focused tests for validation failures, target switching, base-version requirements, and no hidden mutation from model output.
 
 Do not add stale refresh, superseding persistence, or historical undo in the same slice unless the schema already supports them cleanly.
+
+## Implementation Update - Draft Meaning And Provenance
+
+The first implementation slice keeps the existing Conceptualize save/proposal path and makes missing-concept drafts richer and more auditable.
+
+Updated:
+
+- `src/features/learning/state/save-learning.ts`
+- `src/features/learning/ui/ConceptualizeCorrectionControls.tsx`
+- `src/features/learning/ui/SaveAsLearningModal.tsx`
+- `src/features/learning/services/saveConceptualizedCapture.ts`
+- `src/features/learning/services/__tests__/conceptualizeCorrections.test.ts`
+- `src/features/learning/state/__tests__/stage3-save-learning-store.test.ts`
+- `src/features/learning/ui/cards/__tests__/stage3-card-guards.test.ts`
+
+Behavior:
+
+- Correction drafts now carry editable `newTypeMeaning`.
+- `Use suggestion` copies the suggested label, meaning, reason, and valid parent into the editable draft.
+- The store still does not auto-fill missing-concept suggestions when candidates are loaded.
+- New subtype proposal nodes use the edited meaning when present, otherwise the original `suggestedNewConcept.meaning`, otherwise the user reason/fallback text.
+- When a missing-concept suggestion is edited into a proposal, the proposal reason preserves the original suggested label, parent, meaning, reason, and which fields the user changed.
+
+Still not added:
+
+- direct Apply from the Conceptualize modal
+- target-layer switching UI
+- stale proposal refresh/rebase
+- superseding persistence
+- old-card backfill
+- checker runtime
+- auto-apply
+- graph/vector retrieval
+- trust-setting updates
+- agent runtime
+- app-builder runtime
+- DSL runtime

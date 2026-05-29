@@ -189,6 +189,7 @@ export function SaveAsLearningModal() {
                   correctedTypeNodeId: candidate.conceptHint?.proposedConceptType ?? null,
                   reason: '',
                   newTypeLabel: '',
+                  newTypeMeaning: '',
                 };
                 const conceptType = correctionDraft.correctedTypeNodeId ?? candidate.conceptHint?.proposedConceptType ?? null;
                 const disabled = saveStatus?.state === 'saving' || saveStatus?.state === 'saved';
