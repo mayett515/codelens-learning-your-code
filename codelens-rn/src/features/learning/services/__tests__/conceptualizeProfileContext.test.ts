@@ -10,6 +10,7 @@ import {
 } from '../../../ontology';
 import type { ProjectProfileSelection } from '../../../ontology/types';
 import {
+  getConceptualizeProposalTargetSummary,
   resolveConceptualizeProfileContext,
   type ResolveConceptualizeProfileContextDeps,
 } from '../conceptualizeProfileContext';
@@ -122,6 +123,13 @@ describe('resolveConceptualizeProfileContext', () => {
       kind: 'profile_branch',
       branchId: 'personal-b',
     });
+    expect(getConceptualizeProposalTargetSummary(context)).toEqual({
+      targetKind: 'profile_branch',
+      label: 'Propose in personal-b',
+      body: expect.stringContaining('sibling branches'),
+    });
+    expect(getConceptualizeProposalTargetSummary(context).body)
+      .toContain(context.baseProfile.label);
   });
 
   it('targets the base profile when a project has no selected branches', async () => {
@@ -141,6 +149,37 @@ describe('resolveConceptualizeProfileContext', () => {
     expect(context.profile).toBe(baseProfile);
     expect(context.selectionSnapshot).toEqual({ baseProfileId: 'coding' });
     expect(context.proposalTarget).toEqual({ kind: 'base_profile', profileId: 'coding' });
+    expect(getConceptualizeProposalTargetSummary(context)).toEqual({
+      targetKind: 'base_profile',
+      label: `Propose in ${context.baseProfile.label}`,
+      body: expect.stringContaining('version checks'),
+    });
+    expect(getConceptualizeProposalTargetSummary(context).body)
+      .toContain('Apply to core');
+  });
+
+  it('falls back to the branch id when proposal target branch labels are blank', async () => {
+    const branches = [
+      { ...branch('project-branch', 'project'), name: ' ' },
+    ];
+    const selection: ProjectProfileSelection = {
+      id: 'selection-1',
+      projectId: 'project-1',
+      selection: {
+        baseProfileId: 'coding',
+        projectBranchIds: ['project-branch'],
+      },
+      createdAt: 1,
+      updatedAt: 1,
+    };
+
+    const context = await resolveConceptualizeProfileContext({
+      projectId: 'project-1',
+      deps: depsFor({ selection, branches }),
+    });
+
+    expect(getConceptualizeProposalTargetSummary(context).label)
+      .toBe('Propose in project-branch');
   });
 
   it('projects bounded correction history into advisory user-fit context', async () => {

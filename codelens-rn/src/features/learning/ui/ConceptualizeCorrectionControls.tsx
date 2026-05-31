@@ -4,6 +4,7 @@ import {
   type DomainProfile,
 } from '../../ontology';
 import { colors, fontSize, spacing } from '../../../ui/theme';
+import type { ConceptualizeProposalTargetSummary } from '../services/conceptualizeProfileContext';
 import type { CandidateCorrectionDraft } from '../state/save-learning';
 import type { ConceptualizeMissingConceptReview } from '../types/saveModal';
 
@@ -11,6 +12,7 @@ interface ConceptualizeCorrectionControlsProps {
   profile: DomainProfile;
   draft: CandidateCorrectionDraft;
   missingConcept?: ConceptualizeMissingConceptReview | null;
+  proposalTargetSummary?: ConceptualizeProposalTargetSummary | null;
   disabled?: boolean;
   onChange: (patch: Partial<CandidateCorrectionDraft>) => void;
 }
@@ -19,6 +21,7 @@ export function ConceptualizeCorrectionControls({
   profile,
   draft,
   missingConcept,
+  proposalTargetSummary,
   disabled = false,
   onChange,
 }: ConceptualizeCorrectionControlsProps) {
@@ -29,6 +32,9 @@ export function ConceptualizeCorrectionControls({
     : null;
   const canUseSuggestedAsSubtype = !!suggested && (
     suggested.kind === 'category' || suggested.kind === 'subcategory'
+  );
+  const showProposalTarget = !!proposalTargetSummary && (
+    !!missingConcept || draft.newTypeLabel.trim().length > 0
   );
 
   return (
@@ -58,6 +64,13 @@ export function ConceptualizeCorrectionControls({
               <Text style={styles.suggestionButtonText}>Use suggestion</Text>
             </Pressable>
           ) : null}
+        </View>
+      ) : null}
+      {showProposalTarget ? (
+        <View style={styles.targetPanel}>
+          <Text style={styles.targetEyebrow}>Proposal target</Text>
+          <Text style={styles.targetTitle}>{proposalTargetSummary.label}</Text>
+          <Text style={styles.targetBody}>{proposalTargetSummary.body}</Text>
         </View>
       ) : null}
       <Text style={styles.label}>Type</Text>
@@ -138,6 +151,28 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: fontSize.sm,
     fontStyle: 'italic',
+  },
+  targetPanel: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    padding: spacing.sm,
+    gap: spacing.xs,
+  },
+  targetEyebrow: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+  },
+  targetTitle: {
+    color: colors.text,
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+  },
+  targetBody: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
   },
   suggestionButton: {
     alignSelf: 'flex-start',

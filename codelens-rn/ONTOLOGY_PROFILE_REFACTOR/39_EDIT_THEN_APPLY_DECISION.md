@@ -2,7 +2,7 @@
 
 Date: 2026-05-28
 
-Status: locked docs-only decision.
+Status: locked decision; first draft meaning/provenance implementation slice is complete.
 
 ## Decision
 
@@ -179,11 +179,13 @@ Behavior:
 - The store still does not auto-fill missing-concept suggestions when candidates are loaded.
 - New subtype proposal nodes use the edited meaning when present, otherwise the original `suggestedNewConcept.meaning`, otherwise the user reason/fallback text.
 - When a missing-concept suggestion is edited into a proposal, the proposal reason preserves the original suggested label, parent, meaning, reason, and which fields the user changed.
+- Conceptualize correction controls now show the current proposal target with blast-radius copy when the candidate is a missing-concept review or the user starts a new subtype draft.
+- The readout is display-only in this slice. It reflects the already-locked target rule: active branch/local first; base/core only explicit and version-guarded; no silent widening.
 
 Still not added:
 
 - direct Apply from the Conceptualize modal
-- target-layer switching UI
+- target-layer switching controls
 - stale proposal refresh/rebase
 - superseding persistence
 - old-card backfill

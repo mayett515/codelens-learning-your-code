@@ -18,6 +18,7 @@ import { prepareSaveCandidates } from '../services/prepareSaveCandidates';
 import { saveConceptualizedCapture } from '../services/saveConceptualizedCapture';
 import {
   createConceptualizeProfileContext,
+  getConceptualizeProposalTargetSummary,
   resolveConceptualizeProfileContext,
   type ConceptualizeProfileContext,
 } from '../services/conceptualizeProfileContext';
@@ -44,6 +45,7 @@ export function SaveAsLearningModal() {
   });
   const [promotionCaptureId, setPromotionCaptureId] = useState<import('../types/ids').LearningCaptureId | null>(null);
   const profile = profileContext.profile;
+  const proposalTargetSummary = getConceptualizeProposalTargetSummary(profileContext);
 
   useEffect(() => {
     if (!store.visible || store.phase !== 'extracting') return;
@@ -215,6 +217,7 @@ export function SaveAsLearningModal() {
                       profile={profile}
                       draft={correctionDraft}
                       missingConcept={candidate.conceptualizeMissingConcept ?? null}
+                      proposalTargetSummary={proposalTargetSummary}
                       disabled={disabled}
                       onChange={(patch) => store.setCandidateCorrection(candidateId, patch)}
                     />

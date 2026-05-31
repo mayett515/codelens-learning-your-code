@@ -54,6 +54,8 @@ This file explains how the root architecture docs and this refactor folder shoul
 - If persistence schema changes for profiles or ontology, update `PERSISTENCE.md`, `ARCHITECTURE.md`, and `04_REFACTOR_WITHOUT_BREAKING_APP.md`.
 - If a phase completes, update `current_state.md`.
 - Do not let old handoff/session notes become canonical. Promote durable decisions into root docs or this folder.
+- Before proposing a new architecture decision, first check the numbered decision docs and classify the topic as `already locked`, `partially implemented`, `open implementation gap`, or `actually undecided`. Do not re-open locked behavior unless the human explicitly asks to reconsider it.
+- After classifying a topic as already locked, do not start a new code slice from an ambiguous continuation like "continue" alone. Ask for explicit implementation approval unless the human has already clearly requested code.
 </update_rules>
 
 ## End-State Consolidation

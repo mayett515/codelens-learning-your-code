@@ -31,6 +31,12 @@ export interface ConceptualizeProfileContext {
   userFitProjection?: UserFitProjection | undefined;
 }
 
+export interface ConceptualizeProposalTargetSummary {
+  targetKind: ProfileChangeProposalTarget['kind'];
+  label: string;
+  body: string;
+}
+
 export interface ResolveConceptualizeProfileContextDeps {
   loadRegistry: () => Promise<ProfileRegistry>;
   getSelectionByProjectId: typeof getProjectProfileSelectionByProjectId;
@@ -116,6 +122,31 @@ export function createConceptualizeProfileContext(input: {
     branches: [...input.branches],
     compositionStamp: buildCompositionStamp(input.baseProfile, input.profile, input.branches),
     scopeLegend: buildScopeLegend(input.baseProfile, input.branches),
+  };
+}
+
+export function getConceptualizeProposalTargetSummary(
+  context: ConceptualizeProfileContext,
+): ConceptualizeProposalTargetSummary {
+  if (context.proposalTarget.kind === 'profile_branch') {
+    const branch = context.branches.find((candidate) =>
+      candidate.id === context.proposalTarget.branchId);
+    const branchName = branch?.name.trim();
+    const branchLabel = branchName ? branchName : context.proposalTarget.branchId;
+    return {
+      targetKind: 'profile_branch',
+      label: `Propose in ${branchLabel}`,
+      body: `This creates a pending branch-local proposal. It does not change ${context.baseProfile.label}, sibling branches, or old cards unless you explicitly apply or merge later.`,
+    };
+  }
+
+  const baseLabel = context.proposalTarget.profileId === context.baseProfile.id
+    ? context.baseProfile.label
+    : context.proposalTarget.profileId;
+  return {
+    targetKind: 'base_profile',
+    label: `Propose in ${baseLabel}`,
+    body: 'This creates a pending base/core proposal with version checks. It will not apply automatically; review uses Apply to core.',
   };
 }
 

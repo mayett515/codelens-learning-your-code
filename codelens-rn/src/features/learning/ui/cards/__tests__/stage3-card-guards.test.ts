@@ -51,6 +51,7 @@ describe('Stage 3 card component guards', () => {
   it('keeps missing-concept UX explicit and review-only', () => {
     const card = read('src/features/learning/ui/cards/CandidateCaptureCard.tsx');
     const controls = read('src/features/learning/ui/ConceptualizeCorrectionControls.tsx');
+    const modal = read('src/features/learning/ui/SaveAsLearningModal.tsx');
     const store = read('src/features/learning/state/save-learning.ts');
 
     expect(card).toMatch(/Needs type review/);
@@ -59,6 +60,9 @@ describe('Stage 3 card component guards', () => {
     expect(controls).toMatch(/Use suggestion/);
     expect(controls).toMatch(/newTypeLabel: suggested\.label/);
     expect(controls).toMatch(/newTypeMeaning: suggested\.meaning/);
+    expect(controls).toMatch(/Proposal target/);
+    expect(controls).toMatch(/proposalTargetSummary\.body/);
+    expect(modal).toMatch(/getConceptualizeProposalTargetSummary/);
     expect(store).toMatch(/newTypeLabel: ''/);
     expect(store).toMatch(/newTypeMeaning: ''/);
   });
