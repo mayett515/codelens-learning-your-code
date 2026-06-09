@@ -2,7 +2,7 @@
 
 Date: 2026-05-28
 
-Status: locked decision; first draft meaning/provenance implementation slice is complete.
+Status: locked decision; first draft meaning/provenance, target readout, and proposal-review handoff slices are complete.
 
 ## Decision
 
@@ -181,10 +181,13 @@ Behavior:
 - When a missing-concept suggestion is edited into a proposal, the proposal reason preserves the original suggested label, parent, meaning, reason, and which fields the user changed.
 - Conceptualize correction controls now show the current proposal target with blast-radius copy when the candidate is a missing-concept review or the user starts a new subtype draft.
 - The readout is display-only in this slice. It reflects the already-locked target rule: active branch/local first; base/core only explicit and version-guarded; no silent widening.
+- Saving a draft that creates a profile-change proposal now returns that pending proposal to the modal.
+- Saved candidate cards with a created proposal show `Review proposal`, which opens the existing proposal review surface with that proposal selected.
+- Apply still happens only through the doc 24/doc 38 review/apply services. Conceptualize does not apply directly and does not mutate ontology/profile state outside the guarded proposal path.
 
 Still not added:
 
-- direct Apply from the Conceptualize modal
+- one-click direct Apply from the Conceptualize modal
 - target-layer switching controls
 - stale proposal refresh/rebase
 - superseding persistence

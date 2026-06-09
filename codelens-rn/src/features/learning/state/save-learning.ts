@@ -16,6 +16,7 @@ export interface CandidateCorrectionDraft {
 interface CandidateSaveStatus {
   state: CandidateSaveState;
   captureId: LearningCaptureId | null;
+  profileProposalId: string | null;
   error: string | null;
 }
 
@@ -129,7 +130,7 @@ export const useSaveLearningStore = create<SaveLearningStore>((set) => ({
       saveStates: Object.fromEntries(
         candidates.map((_, index) => [
           candidateId(index),
-          { state: 'idle', captureId: null, error: null },
+          { state: 'idle', captureId: null, profileProposalId: null, error: null },
         ]),
       ),
     }),
@@ -143,6 +144,9 @@ export const useSaveLearningStore = create<SaveLearningStore>((set) => ({
           captureId: 'captureId' in status
             ? status.captureId ?? null
             : state.saveStates[id]?.captureId ?? null,
+          profileProposalId: 'profileProposalId' in status
+            ? status.profileProposalId ?? null
+            : state.saveStates[id]?.profileProposalId ?? null,
           error: 'error' in status ? status.error ?? null : state.saveStates[id]?.error ?? null,
         },
       },

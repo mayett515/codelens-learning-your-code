@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { useSaveLearningStore } from '../save-learning';
 import type { SaveModalCandidateData } from '../../types/saveModal';
+import { unsafeLearningCaptureId } from '../../types/ids';
 
 const candidate: SaveModalCandidateData = {
   title: 'Closure keeps state',
@@ -76,6 +77,25 @@ describe('save learning store', () => {
     expect(useSaveLearningStore.getState().saveStates['candidate-0']).toMatchObject({
       state: 'saving',
       error: null,
+    });
+  });
+
+  it('tracks created profile proposals separately from saved captures', () => {
+    useSaveLearningStore.getState().reset();
+    useSaveLearningStore.getState().setCandidates([candidate]);
+
+    useSaveLearningStore
+      .getState()
+      .setCandidateSaveState('candidate-0', {
+        state: 'saved',
+        captureId: unsafeLearningCaptureId('lc_111111111111111111111'),
+        profileProposalId: 'proposal-1',
+        error: null,
+      });
+
+    expect(useSaveLearningStore.getState().saveStates['candidate-0']).toMatchObject({
+      state: 'saved',
+      profileProposalId: 'proposal-1',
     });
   });
 

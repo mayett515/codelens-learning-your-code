@@ -12,6 +12,7 @@ import type { SaveModalCandidateData } from '../../types/saveModal';
 import {
   resolveConceptualizeCorrection,
   saveConceptualizedCapture,
+  saveConceptualizedCaptureWithResult,
 } from '../saveConceptualizedCapture';
 import type { SaveCaptureAfterInsertInput } from '../saveCapture';
 
@@ -310,6 +311,32 @@ describe('Conceptualize correction save', () => {
       parentId: 'pattern',
       status: 'suggested',
       createdBy: 'user',
+    });
+  });
+
+  it('returns the created profile proposal for explicit review handoff', async () => {
+    const d = saveDeps();
+
+    const result = await saveConceptualizedCaptureWithResult(
+      candidate(),
+      {
+        profile,
+        selectionSnapshot: { baseProfileId: 'coding', personalBranchIds: ['personal-branch'] },
+        proposalTarget: { kind: 'profile_branch', branchId: 'personal-branch' },
+      },
+      {
+        correctedTypeNodeId: 'pattern',
+        newTypeLabel: 'React hook lifecycle',
+        reason: 'Review this as a branch-local profile proposal.',
+      },
+      { deps: d.deps },
+    );
+
+    expect(result.captureId).toBe(captureId);
+    expect(result.profileProposal).toMatchObject({
+      id: 'proposal-1',
+      target: { kind: 'profile_branch', branchId: 'personal-branch' },
+      status: 'pending',
     });
   });
 

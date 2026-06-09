@@ -13,9 +13,10 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { captureKeys, conceptKeys } from '../data/query-keys';
 import { retrievalKeys } from '../retrieval/data/queryKeys';
+import { profileProposalKeys } from '../../ontology/data/queryKeys';
 import { useSaveLearningStore } from '../state/save-learning';
 import { prepareSaveCandidates } from '../services/prepareSaveCandidates';
-import { saveConceptualizedCapture } from '../services/saveConceptualizedCapture';
+import { saveConceptualizedCaptureWithResult } from '../services/saveConceptualizedCapture';
 import {
   createConceptualizeProfileContext,
   getConceptualizeProposalTargetSummary,
@@ -27,6 +28,7 @@ import { CandidateCaptureCard } from './cards/CandidateCaptureCard';
 import { CaptureCardFull } from './cards/CaptureCardFull';
 import { ConceptualizeCorrectionControls } from './ConceptualizeCorrectionControls';
 import { getActiveDomainProfile } from '../../ontology';
+import { ProfileProposalReviewScreen } from '../../ontology/ui/ProfileProposalReviewScreen';
 import { colors, fontSize, spacing } from '../../../ui/theme';
 import type { ConceptType } from '../types/learning';
 
@@ -44,6 +46,7 @@ export function SaveAsLearningModal() {
     });
   });
   const [promotionCaptureId, setPromotionCaptureId] = useState<import('../types/ids').LearningCaptureId | null>(null);
+  const [reviewProposalId, setReviewProposalId] = useState<string | null>(null);
   const profile = profileContext.profile;
   const proposalTargetSummary = getConceptualizeProposalTargetSummary(profileContext);
 
@@ -103,17 +106,26 @@ export function SaveAsLearningModal() {
 
     current.setCandidateSaveState(candidateId, { state: 'saving', error: null });
     try {
-      const captureId = await saveConceptualizedCapture(
+      const result = await saveConceptualizedCaptureWithResult(
         candidate,
         profileContext,
         current.correctionDrafts[candidateId],
       );
+      const proposalId = result.profileProposal?.id ?? null;
       useSaveLearningStore
         .getState()
-        .setCandidateSaveState(candidateId, { state: 'saved', captureId, error: null });
+        .setCandidateSaveState(candidateId, {
+          state: 'saved',
+          captureId: result.captureId,
+          profileProposalId: proposalId,
+          error: null,
+        });
       queryClient.invalidateQueries({ queryKey: captureKeys.all });
       queryClient.invalidateQueries({ queryKey: conceptKeys.all });
       queryClient.invalidateQueries({ queryKey: retrievalKeys.all() });
+      if (proposalId) {
+        queryClient.invalidateQueries({ queryKey: profileProposalKeys.all() });
+      }
     } catch (error) {
       useSaveLearningStore.getState().setCandidateSaveState(candidateId, {
         state: 'failed',
@@ -128,18 +140,27 @@ export function SaveAsLearningModal() {
     if (!candidate) return;
     current.setCandidateSaveState(candidateId, { state: 'saving', error: null });
     try {
-      const captureId = await saveConceptualizedCapture(
+      const result = await saveConceptualizedCaptureWithResult(
         candidate,
         profileContext,
         current.correctionDrafts[candidateId],
         { saveAsProposedNew: true },
       );
+      const proposalId = result.profileProposal?.id ?? null;
       useSaveLearningStore
         .getState()
-        .setCandidateSaveState(candidateId, { state: 'saved', captureId, error: null });
-      setPromotionCaptureId(captureId);
+        .setCandidateSaveState(candidateId, {
+          state: 'saved',
+          captureId: result.captureId,
+          profileProposalId: proposalId,
+          error: null,
+        });
+      setPromotionCaptureId(result.captureId);
       queryClient.invalidateQueries({ queryKey: captureKeys.all });
       queryClient.invalidateQueries({ queryKey: retrievalKeys.all() });
+      if (proposalId) {
+        queryClient.invalidateQueries({ queryKey: profileProposalKeys.all() });
+      }
     } catch (error) {
       useSaveLearningStore.getState().setCandidateSaveState(candidateId, {
         state: 'failed',
@@ -187,6 +208,7 @@ export function SaveAsLearningModal() {
               {store.candidates.map((candidate, index) => {
                 const candidateId = `candidate-${index}`;
                 const saveStatus = store.saveStates[candidateId];
+                const profileProposalId = saveStatus?.profileProposalId ?? null;
                 const correctionDraft = store.correctionDrafts[candidateId] ?? {
                   correctedTypeNodeId: candidate.conceptHint?.proposedConceptType ?? null,
                   reason: '',
@@ -209,8 +231,12 @@ export function SaveAsLearningModal() {
                       extractionConfidence={candidate.extractionConfidence}
                       missingConcept={candidate.conceptualizeMissingConcept ?? null}
                       saveState={saveStatus?.state ?? 'idle'}
+                      profileProposalId={profileProposalId}
                       onSave={() => handleSave(candidateId, index)}
                       onInspect={() => store.inspectCandidate(candidateId)}
+                      onReviewProposal={profileProposalId
+                        ? () => setReviewProposalId(profileProposalId)
+                        : undefined}
                       onMakeConcept={() => handleMakeConcept(candidateId, index)}
                     />
                     <ConceptualizeCorrectionControls
@@ -289,6 +315,18 @@ export function SaveAsLearningModal() {
                 setPromotionCaptureId(null);
                 store.close();
               }}
+            />
+          </Modal>
+        ) : null}
+        {reviewProposalId ? (
+          <Modal
+            animationType="slide"
+            visible={!!reviewProposalId}
+            onRequestClose={() => setReviewProposalId(null)}
+          >
+            <ProfileProposalReviewScreen
+              initialProposalId={reviewProposalId}
+              onClose={() => setReviewProposalId(null)}
             />
           </Modal>
         ) : null}

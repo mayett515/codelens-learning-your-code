@@ -47,6 +47,11 @@ export interface SaveConceptualizedCaptureDeps {
   newProposalId: () => string;
 }
 
+export interface SaveConceptualizedCaptureResult {
+  captureId: LearningCaptureId;
+  profileProposal: ProfileChangeProposal | null;
+}
+
 interface ResolvedConceptualizeCorrection {
   candidate: SaveModalCandidateData;
   previousTypeNodeId: string | null;
@@ -87,12 +92,31 @@ export async function saveConceptualizedCapture(
     deps?: Partial<SaveConceptualizedCaptureDeps> | undefined;
   },
 ): Promise<LearningCaptureId> {
+  const result = await saveConceptualizedCaptureWithResult(
+    candidate,
+    context,
+    correction,
+    options,
+  );
+  return result.captureId;
+}
+
+export async function saveConceptualizedCaptureWithResult(
+  candidate: SaveModalCandidateData,
+  context: ConceptualizeSaveContext,
+  correction?: ConceptualizeCorrectionDraft | null,
+  options?: {
+    saveAsProposedNew?: boolean | undefined;
+    deps?: Partial<SaveConceptualizedCaptureDeps> | undefined;
+  },
+): Promise<SaveConceptualizedCaptureResult> {
   const deps = { ...defaultDeps, ...options?.deps };
   const resolved = resolveConceptualizeCorrection(candidate, context.profile, correction, deps.now);
+  let profileProposal: ProfileChangeProposal | null = null;
 
   const saveOptions: Parameters<typeof saveCapture>[2] = {
     afterInsert: async (input, tx) => {
-      await persistConceptualizeCorrection({
+      profileProposal = await persistConceptualizeCorrection({
         resolved,
         input,
         context,
@@ -105,7 +129,8 @@ export async function saveConceptualizedCapture(
     saveOptions.saveAsProposedNew = options.saveAsProposedNew;
   }
 
-  return deps.save(resolved.candidate, {}, saveOptions);
+  const captureId = await deps.save(resolved.candidate, {}, saveOptions);
+  return { captureId, profileProposal };
 }
 
 export function resolveConceptualizeCorrection(
@@ -208,10 +233,10 @@ async function persistConceptualizeCorrection(input: {
   context: ConceptualizeSaveContext;
   tx: DbOrTx;
   deps: SaveConceptualizedCaptureDeps;
-}): Promise<void> {
+}): Promise<ProfileChangeProposal | null> {
   const { resolved, context, tx, deps } = input;
-  if (!resolved.correctedTypeNodeId) return;
-  if (resolved.previousTypeNodeId === resolved.correctedTypeNodeId && !resolved.proposedNode) return;
+  if (!resolved.correctedTypeNodeId) return null;
+  if (resolved.previousTypeNodeId === resolved.correctedTypeNodeId && !resolved.proposedNode) return null;
 
   const evidenceId = deps.newEvidenceId();
   const evidence: OntologyCorrectionEvidence = {
@@ -232,7 +257,7 @@ async function persistConceptualizeCorrection(input: {
 
   await deps.insertEvidence(evidence, tx);
 
-  if (!resolved.proposedNode) return;
+  if (!resolved.proposedNode) return null;
 
   const proposal = buildNewTypeProposal({
     proposalId: deps.newProposalId(),
@@ -244,6 +269,7 @@ async function persistConceptualizeCorrection(input: {
     now: input.input.createdAt,
   });
   await deps.insertProposal(proposal, tx);
+  return proposal;
 }
 
 function buildNewTypeProposal(input: {

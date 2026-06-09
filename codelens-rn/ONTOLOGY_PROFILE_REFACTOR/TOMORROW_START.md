@@ -298,7 +298,7 @@ The missing-concept UX decision is locked and implemented in doc 36:
   - verification: TypeScript clean; focused missing-concept tests 106/106; full suite 866/866; diff check clean with CRLF warnings only
 
 The remaining open decision/implementation gaps are:
-  1. Continue doc 39 richer missing-concept edit/apply implementation. The target rule is already locked: active branch/local first, base/core only explicit and version-guarded, no silent widening.
+  1. Continue doc 39 richer missing-concept edit/apply implementation toward target switching, one-click direct Apply, superseding, and stale refresh. The target rule is already locked: active branch/local first, base/core only explicit and version-guarded, no silent widening.
   2. Agent/subagent execution ontology brief.
   3. Self-building-app framework brief.
 
@@ -308,7 +308,7 @@ Recommended next implementation slice, if the human wants code next:
 Richer missing-concept edit/apply flows:
   - branch-local and base/core proposal apply are now both explicit review actions
   - manual missing-concept proposals are revalidated before creation
-  - implement how edited labels, parents, reasons, and explicitly selected target layers become proposal drafts or accepted apply operations
+  - implement how explicitly selected target layers become proposal drafts or accepted apply operations
   - do not re-decide target defaults: Conceptualize starts active branch/local first, and base/core remains explicit/version-guarded
   - preserve the evidence-first correction record and keep suggestions behind user intent
   - keep retrieval, graph traversal, automatic confidence/ranking updates, auto-apply, external write-back, and old-card rewrites out of this gate
@@ -517,10 +517,10 @@ The user-fit projection decision is locked and implemented in doc 37. Correction
 
 The base profile versioning, base apply helper/service, and explicit base/core review UI wiring are locked and implemented in doc 38. Base-targeted proposals snapshot `targetProfileVersion`, base/core apply rejects missing or stale target versions, patch revalidation runs before mutation, successful apply creates the next persisted profile definition version, and the proposal review UI exposes this through an explicit `Apply to core` action. No auto-apply, stale refresh flow, edit-then-apply, branch merge apply, profile version-history UI, old-card backfill, checker runtime, historical undo, agent runtime, app-builder runtime, or DSL runtime was added.
 
-The first richer missing-concept edit/apply slices are implemented in doc 39. Missing-concept drafts now have editable meaning, `Use suggestion` copies suggested label/meaning/reason/valid parent, proposal reasons preserve the original suggestion plus edited-field provenance, and Conceptualize correction controls show a read-only target/blast-radius summary. No direct Conceptualize Apply, target switching controls, stale refresh, superseding persistence, old-card backfill, checker runtime, auto-apply, graph/vector retrieval, trust-setting update, agent runtime, app-builder runtime, or DSL runtime was added.
+The first richer missing-concept edit/apply slices are implemented in doc 39. Missing-concept drafts now have editable meaning, `Use suggestion` copies suggested label/meaning/reason/valid parent, proposal reasons preserve the original suggestion plus edited-field provenance, Conceptualize correction controls show a read-only target/blast-radius summary, and saved drafts that create pending proposals can open the existing proposal review/apply surface with that proposal selected. No one-click direct Conceptualize Apply, target switching controls, stale refresh, superseding persistence, old-card backfill, checker runtime, auto-apply, graph/vector retrieval, trust-setting update, agent runtime, app-builder runtime, or DSL runtime was added.
 
 Remaining open decisions:
 
-1. Continue richer missing-concept edit/apply toward target switching or explicit apply only after a fresh bounded decision.
+1. Continue richer missing-concept edit/apply toward target switching, one-click direct Apply, superseding, or stale refresh only after a fresh bounded decision.
 2. Agent/subagent execution ontology brief.
 3. Self-building-app framework brief.

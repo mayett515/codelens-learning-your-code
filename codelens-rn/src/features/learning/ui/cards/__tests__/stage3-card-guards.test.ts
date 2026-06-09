@@ -56,6 +56,8 @@ describe('Stage 3 card component guards', () => {
 
     expect(card).toMatch(/Needs type review/);
     expect(card).toMatch(/missingConcept/);
+    expect(card).toMatch(/Review proposal/);
+    expect(card).toMatch(/profileProposalId/);
     expect(controls).toMatch(/No strong existing type/);
     expect(controls).toMatch(/Use suggestion/);
     expect(controls).toMatch(/newTypeLabel: suggested\.label/);
@@ -63,8 +65,12 @@ describe('Stage 3 card component guards', () => {
     expect(controls).toMatch(/Proposal target/);
     expect(controls).toMatch(/proposalTargetSummary\.body/);
     expect(modal).toMatch(/getConceptualizeProposalTargetSummary/);
+    expect(modal).toMatch(/saveConceptualizedCaptureWithResult/);
+    expect(modal).toMatch(/ProfileProposalReviewScreen/);
+    expect(modal).toMatch(/profileProposalKeys\.all/);
     expect(store).toMatch(/newTypeLabel: ''/);
     expect(store).toMatch(/newTypeMeaning: ''/);
+    expect(store).toMatch(/profileProposalId/);
   });
 
   describe('TypeNodeChip / ConceptTypeChip compatibility shim', () => {

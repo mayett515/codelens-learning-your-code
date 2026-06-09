@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { colors, fontSize, spacing } from '../../../ui/theme';
 import { useApplyProfileChangeProposal } from '../hooks/useApplyProfileChangeProposal';
@@ -20,18 +20,33 @@ type ReviewMessage = {
   text: string;
 };
 
-export function ProfileProposalReviewScreen() {
+interface ProfileProposalReviewScreenProps {
+  initialProposalId?: string | null;
+  onClose?: (() => void) | undefined;
+}
+
+export function ProfileProposalReviewScreen({
+  initialProposalId,
+  onClose,
+}: ProfileProposalReviewScreenProps = {}) {
   const { data: proposals = [], isLoading } = usePendingProfileChangeProposals();
   const applyMutation = useApplyProfileChangeProposal();
   const reviewMutation = useReviewProfileChangeProposal();
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(initialProposalId ?? null);
   const [showReason, setShowReason] = useState(false);
   const [message, setMessage] = useState<ReviewMessage | null>(null);
 
-  const selectedProposal = useMemo(
-    () => proposals.find((proposal) => proposal.id === selectedId) ?? proposals[0],
-    [proposals, selectedId],
-  );
+  useEffect(() => {
+    setSelectedId(initialProposalId ?? null);
+  }, [initialProposalId]);
+
+  const selectedProposal = useMemo(() => {
+    const selected = selectedId
+      ? proposals.find((proposal) => proposal.id === selectedId)
+      : undefined;
+    if (selected) return selected;
+    return selectedId ? undefined : proposals[0];
+  }, [proposals, selectedId]);
   const busy = applyMutation.isPending || reviewMutation.isPending;
   const canApplySelected = selectedProposal?.target.kind === 'profile_branch' || selectedProposal?.target.kind === 'base_profile';
 
@@ -66,7 +81,7 @@ export function ProfileProposalReviewScreen() {
   if (isLoading) {
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>Profile Suggestions</Text>
+        <ReviewHeader onClose={onClose} />
         <Text style={styles.muted}>Loading suggestions...</Text>
       </View>
     );
@@ -75,15 +90,19 @@ export function ProfileProposalReviewScreen() {
   if (!selectedProposal) {
     return (
       <View style={styles.container}>
-        <Text style={styles.title}>Profile Suggestions</Text>
-        <Text style={styles.muted}>No pending suggestions.</Text>
+        <ReviewHeader onClose={onClose} />
+        <Text style={styles.muted}>
+          {selectedId
+            ? 'That proposal is no longer pending. Refresh the suggestion list and review the latest state.'
+            : 'No pending suggestions.'}
+        </Text>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Profile Suggestions</Text>
+      <ReviewHeader onClose={onClose} />
       <Text style={styles.subtitle}>Review branch and base profile changes before applying them.</Text>
       <View style={styles.layout}>
         <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
@@ -164,6 +183,19 @@ export function ProfileProposalReviewScreen() {
   );
 }
 
+function ReviewHeader({ onClose }: { onClose?: (() => void) | undefined }) {
+  return (
+    <View style={styles.headerRow}>
+      <Text style={styles.title}>Profile Suggestions</Text>
+      {onClose ? (
+        <Pressable onPress={onClose} hitSlop={8}>
+          <Text style={styles.closeText}>Close</Text>
+        </Pressable>
+      ) : null}
+    </View>
+  );
+}
+
 function ProposalListItem({
   proposal,
   selected,
@@ -206,6 +238,17 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: fontSize.xxl,
     fontWeight: '800',
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  closeText: {
+    color: colors.textSecondary,
+    fontSize: fontSize.md,
+    fontWeight: '700',
   },
   subtitle: {
     color: colors.textSecondary,

@@ -20,9 +20,11 @@ interface CandidateCaptureCardProps {
   extractionConfidence?: number | null;
   missingConcept?: ConceptualizeMissingConceptReview | null;
   saveState: CandidateSaveState;
+  profileProposalId?: string | null | undefined;
   onSave: () => void;
   onInspect: () => void;
-  onMakeConcept?: () => void;
+  onReviewProposal?: (() => void) | undefined;
+  onMakeConcept?: (() => void) | undefined;
 }
 
 export function CandidateCaptureCard({
@@ -35,8 +37,10 @@ export function CandidateCaptureCard({
   extractionConfidence,
   missingConcept,
   saveState,
+  profileProposalId,
   onSave,
   onInspect,
+  onReviewProposal,
   onMakeConcept,
 }: CandidateCaptureCardProps) {
   const isSaving = saveState === 'saving';
@@ -74,6 +78,11 @@ export function CandidateCaptureCard({
         ) : null}
       </View>
       <View style={styles.actions}>
+        {isSaved && profileProposalId && onReviewProposal ? (
+          <Pressable style={styles.inspectButton} onPress={onReviewProposal}>
+            <Text style={styles.inspectText}>Review proposal</Text>
+          </Pressable>
+        ) : null}
         {canMakeConcept && onMakeConcept ? (
           <Pressable style={styles.inspectButton} onPress={onMakeConcept}>
             <Text style={styles.inspectText}>Make concept</Text>
