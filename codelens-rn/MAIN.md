@@ -26,25 +26,20 @@ Master map of docs for the React Native rewrite. If another agent (Claude / Code
    - Purpose: Human-readable version of the same architecture agreement and tradeoffs.
    - Include when: onboarding collaborators or sanity-checking architecture decisions.
 
-3. [inspiredlinks.md](inspiredlinks.md)
-   - Purpose: Curated external inspiration links we agreed to learn from.
-   - Include when: architecture discussion, TS/RN best-practice reviews, or refactor planning.
-
-4. [ONTOLOGY_PROFILE_REFACTOR/README.md](ONTOLOGY_PROFILE_REFACTOR/README.md)
+3. [ONTOLOGY_PROFILE_REFACTOR/README.md](ONTOLOGY_PROFILE_REFACTOR/README.md)
    - Purpose: Strategic plan for moving hardcoded coding-learning assumptions into a dynamic profile/ontology layer while preserving the current coding app.
    - Include when: touching learning taxonomy, concept/capture schema, extractor prompts, cards, promotion, retrieval formatting, graph visual encoding, or forkability/product-profile planning.
 
-5. [ONTOLOGY_PROFILE_REFACTOR/05_ANTI_REGRESSION_RULES.md](ONTOLOGY_PROFILE_REFACTOR/05_ANTI_REGRESSION_RULES.md)
+4. [ONTOLOGY_PROFILE_REFACTOR/05_ANTI_REGRESSION_RULES.md](ONTOLOGY_PROFILE_REFACTOR/05_ANTI_REGRESSION_RULES.md)
    - Purpose: Hard anti-regression rules for the profile/ontology refactor.
    - Include when: implementing any part of the ontology/profile refactor.
 
 ## Session Notes (Not Canonical)
 
 Dated handoff notes from specific work sessions. Useful for context, not for architecture.
+Older one-off prompt/review handoffs were removed from the active doc set. Use git history if that archival context is needed.
 
 - [current_state.md](current_state.md) — Phase tracker. What's done, what's next. Update after every phase checkpoint.
-- [currentproblems_sql.md](currentproblems_sql.md) — 2026-04-15 debugging brief written for Gemini re: the Drizzle/op-sqlite integration. Superseded by `PERSISTENCE.md`; keep for history.
-- [forfuturesql_architecturalstuff.md](forfuturesql_architecturalstuff.md) — 2026-04-15 Gemini's fix notes. Content promoted into `PERSISTENCE.md`; keep for history.
 
 ## Prompt Bundles (Copy/Paste)
 
