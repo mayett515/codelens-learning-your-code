@@ -157,6 +157,7 @@ export function projectUserFitSignals(
 
   for (const event of input.proposalEvents ?? []) {
     if (event.baseProfileId !== input.baseProfileId) continue;
+    if (event.action === 'superseded') continue;
 
     const targetKey = profileChangeProposalTargetKey(event.target);
     const key = `${event.baseProfileId}:${event.proposalKind}:${targetKey}`;

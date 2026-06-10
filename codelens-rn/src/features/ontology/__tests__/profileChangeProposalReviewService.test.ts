@@ -11,6 +11,7 @@ vi.mock('../../../db/client', () => ({
 
 import {
   ProfileChangeProposalReviewServiceError,
+  recordPendingProfileChangeProposalAskedWhy,
   setPendingProfileChangeProposalReviewStatus,
   type ProfileChangeProposalReviewServiceDependencies,
 } from '../data/profileChangeProposalReviewService';
@@ -298,5 +299,126 @@ describe('setPendingProfileChangeProposalReviewStatus', () => {
 
     expectServiceErrorCode(caught, 'proposal_write_conflict');
     expect(calls).toEqual(['getProposal', 'saveProposal:2']);
+  });
+});
+
+describe('recordPendingProfileChangeProposalAskedWhy', () => {
+  const tx = { kind: 'tx' } as unknown as DbOrTx;
+
+  it('records an asked-why event without changing proposal status', async () => {
+    const calls: string[] = [];
+    let savedEvent: ProfileProposalEvent | undefined;
+    const deps: ProfileChangeProposalReviewServiceDependencies = {
+      transaction: async (callback) => {
+        calls.push('transaction');
+        return callback(tx);
+      },
+      getProposalById: async (id, executor) => {
+        calls.push(`getProposal:${id}`);
+        expect(executor).toBe(tx);
+        return makeProposal();
+      },
+      saveProposalIfPending: async () => {
+        calls.push('saveProposal');
+        return true;
+      },
+      insertEvent: async (event, executor) => {
+        calls.push(`insertEvent:${event.id}:${event.action}`);
+        expect(executor).toBe(tx);
+        savedEvent = event;
+      },
+      newEventId: () => 'event-asked-why',
+    };
+
+    const result = await recordPendingProfileChangeProposalAskedWhy({
+      proposalId: 'proposal-1',
+      now: 3,
+      reason: 'User opened the proposal reason.',
+      deps,
+    });
+
+    expect(result).toBe(savedEvent);
+    expect(calls).toEqual([
+      'transaction',
+      'getProposal:proposal-1',
+      'insertEvent:event-asked-why:asked_why',
+    ]);
+    expect(result).toEqual({
+      id: 'event-asked-why',
+      proposalId: 'proposal-1',
+      action: 'asked_why',
+      actorKind: 'user',
+      actorId: null,
+      baseProfileId: 'coding',
+      proposalKind: 'ontology_node_patch',
+      target: {
+        kind: 'profile_branch',
+        branchId: 'branch-1',
+      },
+      statusBefore: 'pending',
+      statusAfter: 'pending',
+      proposalUpdatedAtBefore: 2,
+      proposalUpdatedAtAfter: 2,
+      branchUpdatedAtBefore: null,
+      branchUpdatedAtAfter: null,
+      reason: 'User opened the proposal reason.',
+      details: null,
+      createdAt: 3,
+    });
+  });
+
+  it('fails before writing for reviewed proposals', async () => {
+    const calls: string[] = [];
+    const deps: ProfileChangeProposalReviewServiceDependencies = {
+      transaction: async (callback) => callback(tx),
+      getProposalById: async () => {
+        calls.push('getProposal');
+        return makeProposal({ status: 'rejected', reviewedAt: 3 });
+      },
+      saveProposalIfPending: async () => true,
+      insertEvent: async () => {
+        calls.push('insertEvent');
+      },
+      newEventId: () => 'event-asked-why',
+    };
+
+    let caught: unknown;
+    try {
+      await recordPendingProfileChangeProposalAskedWhy({
+        proposalId: 'proposal-1',
+        now: 4,
+        deps,
+      });
+    } catch (error) {
+      caught = error;
+    }
+
+    expectServiceErrorCode(caught, 'proposal_not_pending');
+    expect(calls).toEqual(['getProposal']);
+  });
+
+  it('rejects asked-why timestamps older than the proposal', async () => {
+    const deps: ProfileChangeProposalReviewServiceDependencies = {
+      transaction: async (callback) => callback(tx),
+      getProposalById: async () => makeProposal({ updatedAt: 10 }),
+      saveProposalIfPending: async () => true,
+      insertEvent: async () => {
+        throw new Error('event should not be inserted');
+      },
+      newEventId: () => 'event-asked-why',
+    };
+
+    let caught: unknown;
+    try {
+      await recordPendingProfileChangeProposalAskedWhy({
+        proposalId: 'proposal-1',
+        now: 9,
+        deps,
+      });
+    } catch (error) {
+      caught = error;
+    }
+
+    expectServiceErrorCode(caught, 'proposal_review_time_invalid');
   });
 });

@@ -365,7 +365,8 @@ export type ProfileProposalEventAction =
   | 'applied'
   | 'rejected'
   | 'postponed'
-  | 'asked_why';
+  | 'asked_why'
+  | 'superseded';
 
 export type ProfileProposalEventActorKind = 'user' | 'system' | 'model';
 

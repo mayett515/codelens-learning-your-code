@@ -108,6 +108,25 @@ describe('profile proposal event codec', () => {
     }))).not.toThrow();
   });
 
+  it('allows superseded events with replacement details', () => {
+    const row = profileProposalEventToRow(validEvent({
+      action: 'superseded',
+      statusBefore: 'pending',
+      statusAfter: 'superseded',
+      branchUpdatedAtBefore: null,
+      branchUpdatedAtAfter: null,
+      details: {
+        supersededByProposalId: 'proposal-2',
+      },
+    }));
+
+    expect(row.action).toBe('superseded');
+    expect(row.statusAfter).toBe('superseded');
+    expect(row.detailsJson).toEqual({
+      supersededByProposalId: 'proposal-2',
+    });
+  });
+
   it('rejects decision events without a status transition', () => {
     expect(() => validateProfileProposalEvent(validEvent({
       statusBefore: 'pending',
@@ -120,6 +139,11 @@ describe('profile proposal event codec', () => {
       action: 'rejected',
       statusAfter: 'accepted',
     }))).toThrow(/Rejected proposal events must transition to rejected status/);
+
+    expect(() => validateProfileProposalEvent(validEvent({
+      action: 'superseded',
+      statusAfter: 'rejected',
+    }))).toThrow(/Superseded proposal events must transition to superseded status/);
   });
 
   it('rejects target shapes that mix base-profile and branch targets', () => {

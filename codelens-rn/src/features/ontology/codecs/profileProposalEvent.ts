@@ -34,7 +34,7 @@ const ProfileProposalEventSchema = z
   .object({
     id: z.string().min(1),
     proposalId: z.string().min(1),
-    action: z.enum(['applied', 'rejected', 'postponed', 'asked_why']),
+    action: z.enum(['applied', 'rejected', 'postponed', 'asked_why', 'superseded']),
     actorKind: z.enum(['user', 'system', 'model']),
     actorId: z.string().min(1).nullable().optional(),
     baseProfileId: z.string().min(1),
@@ -94,6 +94,14 @@ const ProfileProposalEventSchema = z
       ctx.addIssue({
         code: 'custom',
         message: 'Postponed proposal events must transition to postponed status',
+        path: ['statusAfter'],
+      });
+    }
+
+    if (event.action === 'superseded' && event.statusAfter !== 'superseded') {
+      ctx.addIssue({
+        code: 'custom',
+        message: 'Superseded proposal events must transition to superseded status',
         path: ['statusAfter'],
       });
     }

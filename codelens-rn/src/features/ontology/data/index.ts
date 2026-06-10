@@ -71,14 +71,26 @@ export type {
 
 export {
   ProfileChangeProposalReviewServiceError,
+  recordPendingProfileChangeProposalAskedWhy,
   setPendingProfileChangeProposalReviewStatus,
 } from './profileChangeProposalReviewService';
 export type {
   ProfileChangeProposalReviewServiceDependencies,
   ProfileChangeProposalReviewServiceErrorCode,
   ProfileChangeProposalReviewStatus,
+  RecordPendingProfileChangeProposalAskedWhyInput,
   SetPendingProfileChangeProposalReviewStatusInput,
 } from './profileChangeProposalReviewService';
+
+export {
+  ProfileChangeProposalLifecycleServiceError,
+  supersedePendingProfileChangeProposal,
+} from './profileChangeProposalLifecycleService';
+export type {
+  ProfileChangeProposalLifecycleServiceDependencies,
+  ProfileChangeProposalLifecycleServiceErrorCode,
+  SupersedePendingProfileChangeProposalInput,
+} from './profileChangeProposalLifecycleService';
 export { profileBranchKeys, profileProposalKeys } from './queryKeys';
 
 export {

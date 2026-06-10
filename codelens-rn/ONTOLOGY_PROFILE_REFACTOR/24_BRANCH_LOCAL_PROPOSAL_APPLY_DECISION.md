@@ -119,7 +119,7 @@ Meaning:
 - **Apply:** revalidate and apply the branch-local patch.
 - **Reject:** keep the proposal as rejected so future user-fit can learn.
 - **Postpone:** keep it pending/deferred without applying.
-- **Ask why / why not:** explanation-only; no mutation.
+- **Ask why / why not:** explanation-only for proposal/branch state, but records an `asked_why` audit event; no proposal status, branch, base/core, evidence, or ontology mutation.
 
 ## Edit Then Apply
 
@@ -351,7 +351,7 @@ Implemented behavior:
 - lists pending proposals and shows target, kind, risk blast-radius language, semantic confidence, user-fit confidence, patch summary, reason, and evidence ids
 - wires Apply to `applyPendingBranchLocalProfileChangeProposal()` through a React Query hook that resolves the base profile above the data service
 - wires Reject and Postpone through a tiny data-layer review-status service with pending/status conditional writes
-- keeps Ask why / why not explanation-only with no mutation
+- keeps Ask why / why not explanation-only for state changes while recording an `asked_why` audit event
 - maps branch/proposal conflict and pure apply errors to user-facing messages
 - keeps UI out of base/core mutation, upward merge, old-card backfill, edit-then-apply, auto-apply, checker runtime, and event-history presentation
 
@@ -379,7 +379,7 @@ Follow-up slice implemented after this document:
 
 ```text
 Doc 25 added proposal event/audit storage.
-Apply / Reject / Postpone now append profile_proposal_events inside the same guarded transactions as the proposal/branch state changes.
+Apply / Reject / Postpone now append profile_proposal_events inside the same guarded transactions as the proposal/branch state changes. Ask why appends an `asked_why` event without changing proposal status or branch/base state.
 ```
 
 The next code slice should be one of:

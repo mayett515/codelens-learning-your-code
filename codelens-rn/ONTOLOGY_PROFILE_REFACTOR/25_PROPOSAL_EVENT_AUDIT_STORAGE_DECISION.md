@@ -12,7 +12,7 @@ proposal row = current proposal state
 proposal event = what decision happened, when, by whom, and against what target
 ```
 
-This is the durable audit seam for future user-fit learning. User-fit confidence is not calculated in this slice; later code can project acceptance/rejection/postpone/ask-why patterns from these events.
+This is the durable audit seam for future user-fit learning and proposal lifecycle history. User-fit confidence is not calculated in this slice; later code can project acceptance/rejection/postpone/ask-why patterns from these events while keeping superseding as audit history.
 
 `profile_proposal_events` intentionally does not use DB foreign keys to proposal or branch rows. These rows are durable audit facts and may outlive the proposal or branch they describe; future readers should treat orphaned event references as accepted history, not corruption.
 
@@ -27,7 +27,7 @@ profile_proposal_events
 Each event records:
 
 - proposal id
-- action: `applied`, `rejected`, `postponed`, or `asked_why`
+- action: `applied`, `rejected`, `postponed`, `asked_why`, or `superseded`
 - actor kind/id
 - base profile id
 - proposal kind
@@ -51,6 +51,10 @@ marks the proposal accepted/applied
 ```
 
 Reject and Postpone now write `rejected` / `postponed` events inside the same transaction that marks the proposal reviewed.
+
+Ask why now writes an `asked_why` event when the review surface opens the proposal reason. It does not change proposal status, branch state, base/core state, or evidence; status before/after both remain `pending`.
+
+Superseding now writes a `superseded` event inside the same transaction that marks the old pending proposal superseded and links it to the replacement proposal.
 
 If the guarded write fails because the proposal or branch changed, no event is appended.
 
@@ -79,7 +83,7 @@ This slice does not implement:
 - user-fit projection/scoring
 - checker runtime
 - auto-apply engine
-- edit-then-apply
+- full edit-then-apply UI
 - historical undo execution
 - base/core profile mutation
 - upward merge
@@ -104,6 +108,7 @@ src/features/ontology/codecs/profileProposalEvent.ts
 src/features/ontology/data/profileProposalEventRepo.ts
 src/features/ontology/data/branchLocalProposalApplyService.ts
 src/features/ontology/data/profileChangeProposalReviewService.ts
+src/features/ontology/data/profileChangeProposalLifecycleService.ts
 src/features/backup/format.ts
 src/features/backup/export.ts
 src/features/backup/import.ts
@@ -122,11 +127,42 @@ npm.cmd test -- --run src/db/migrations/__tests__/profile-proposal-events-migrat
 
 Result: TypeScript clean; focused proposal-event/apply/review/backup/guard tests 145/145 passed across 6 files; full suite 764/764 passed across 82 files; `git diff --check` clean with CRLF warnings only.
 
+## Implementation Update - Superseding Events
+
+Superseding support is now implemented as an audit-preserving lifecycle transition:
+
+- migration 023 rebuilds `profile_proposal_events` so `action = 'superseded'` is valid
+- backup `SCHEMA_VERSION` is now 23
+- `ProfileProposalEventAction` and its codec accept `superseded`
+- `supersedePendingProfileChangeProposal(input)` marks an old pending proposal as `superseded`, sets `supersededByProposalId`, and appends a `superseded` event in one transaction
+- the replacement proposal must already exist, still be pending, and belong to the same base profile
+- superseded events remain audit history and are not treated as positive/negative user-fit preference
+
+## Implementation Update - Ask Why Events
+
+Ask why support is now wired to the same event table without changing proposal state:
+
+- `recordPendingProfileChangeProposalAskedWhy(input)` appends an `asked_why` event for a pending proposal
+- the event preserves `pending -> pending` status and keeps proposal timestamps unchanged
+- `useAskWhyProfileChangeProposal()` calls the service from the review surface when the reason is opened
+- `ProfileProposalReviewScreen` de-duplicates repeated opens for the same proposal during one screen session
+- `asked_why` events can inform future user-fit/review analytics, but they are neutral and do not become positive/negative preference by themselves
+
+Latest verification after superseding and Ask why event wiring:
+
+```powershell
+node node_modules\typescript\bin\tsc -p tsconfig.json --noEmit
+npm.cmd test -- --run src/db/migrations/__tests__/profile-proposal-events-migration.test.ts src/db/migrations/__tests__/profile-proposal-event-superseded-action-migration.test.ts src/features/ontology/__tests__/profileProposalEventCodec.test.ts src/features/ontology/__tests__/profileChangeProposalLifecycleService.test.ts src/features/ontology/__tests__/profileChangeProposalReviewService.test.ts src/features/ontology/__tests__/profileChangeProposalCodec.test.ts src/features/ontology/__tests__/userFitProjection.test.ts src/features/backup/__tests__/profile-columns.test.ts src/__tests__/stage10-architecture-guards.test.ts
+npm.cmd test -- --run src/features/ontology/__tests__/profileChangeProposalReviewService.test.ts src/features/ontology/__tests__/profileProposalEventCodec.test.ts src/features/ontology/__tests__/userFitProjection.test.ts src/features/ontology/__tests__/profileProposalReviewPresentation.test.ts src/__tests__/stage10-architecture-guards.test.ts
+npm.cmd test -- --run
+```
+
+Result: TypeScript clean; focused proposal lifecycle/event/backup/guard tests 185/185 passed across 9 files; focused Ask-why/review/projection/guard tests 107/107 passed across 5 files; full suite 948/948 passed across 100 files.
+
 ## Next Work
 
 Good next bounded choices:
 
-1. Query/read UI for proposal event history on the review surface.
-2. User-fit projection over proposal events.
-3. Context-pack assembly for checker/proposal review.
-4. Base-profile versioning before any base/core apply target can mutate a parent profile.
+1. Wire edit flows to create the replacement proposal and call the superseding service.
+2. Add stale refresh/rebase behavior before checker proposal volume grows.
+3. Query/read UI for proposal event history on the review surface.

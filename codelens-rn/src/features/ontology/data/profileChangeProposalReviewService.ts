@@ -48,6 +48,15 @@ export interface SetPendingProfileChangeProposalReviewStatusInput {
   deps?: Partial<ProfileChangeProposalReviewServiceDependencies>;
 }
 
+export interface RecordPendingProfileChangeProposalAskedWhyInput {
+  proposalId: string;
+  now: number;
+  actorKind?: ProfileProposalEventActorKind | undefined;
+  actorId?: string | null | undefined;
+  reason?: string | null | undefined;
+  deps?: Partial<ProfileChangeProposalReviewServiceDependencies>;
+}
+
 function resolveDeps(
   deps: Partial<ProfileChangeProposalReviewServiceDependencies> | undefined,
 ): ProfileChangeProposalReviewServiceDependencies {
@@ -125,6 +134,59 @@ export async function setPendingProfileChangeProposalReviewStatus(
     }, tx);
 
     return reviewedProposal;
+  });
+}
+
+export async function recordPendingProfileChangeProposalAskedWhy(
+  input: RecordPendingProfileChangeProposalAskedWhyInput,
+): Promise<ProfileProposalEvent> {
+  const deps = resolveDeps(input.deps);
+
+  return deps.transaction(async (tx) => {
+    const proposal = await deps.getProposalById(input.proposalId, tx);
+    if (!proposal) {
+      throw new ProfileChangeProposalReviewServiceError(
+        'proposal_not_found',
+        `Profile change proposal ${input.proposalId} was not found.`,
+      );
+    }
+
+    if (proposal.status !== 'pending') {
+      throw new ProfileChangeProposalReviewServiceError(
+        'proposal_not_pending',
+        `Only pending proposals can record ask-why review events. Proposal ${proposal.id} has status ${proposal.status}.`,
+      );
+    }
+
+    if (input.now < proposal.createdAt || input.now < proposal.updatedAt) {
+      throw new ProfileChangeProposalReviewServiceError(
+        'proposal_review_time_invalid',
+        `Review time ${input.now} is older than proposal ${proposal.id} timestamps.`,
+      );
+    }
+
+    const event: ProfileProposalEvent = {
+      id: deps.newEventId(),
+      proposalId: proposal.id,
+      action: 'asked_why',
+      actorKind: input.actorKind ?? 'user',
+      actorId: input.actorId ?? null,
+      baseProfileId: proposal.baseProfileId,
+      proposalKind: proposal.proposalKind,
+      target: proposal.target,
+      statusBefore: proposal.status,
+      statusAfter: proposal.status,
+      proposalUpdatedAtBefore: proposal.updatedAt,
+      proposalUpdatedAtAfter: proposal.updatedAt,
+      branchUpdatedAtBefore: null,
+      branchUpdatedAtAfter: null,
+      reason: input.reason ?? null,
+      details: null,
+      createdAt: input.now,
+    };
+
+    await deps.insertEvent(event, tx);
+    return event;
   });
 }
 

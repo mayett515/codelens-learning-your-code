@@ -11,6 +11,7 @@ Then read ONTOLOGY_PROFILE_REFACTOR/07_KORTEX_CORE_AND_CHILD_CORES.md, ONTOLOGY_
 We are continuing as orchestrator.
 Do not implement until we confirm the next slice.
 Before suggesting a fresh architecture decision, check the numbered docs and say whether the topic is already locked, partially implemented, an open implementation gap, or actually undecided.
+Also read ONTOLOGY_PROFILE_REFACTOR/FABLE_STRATEGIC_REVIEW_2026-06-09/00-system-index.md as review guidance only. Numbered decision docs remain the source of truth.
 
 Summarize:
 - current state
@@ -20,6 +21,8 @@ Summarize:
 ```
 
 ## Expected Next Slice
+
+The Fable strategic review pack is now captured under `FABLE_STRATEGIC_REVIEW_2026-06-09/`. Treat it as advisory review guidance, not a new authority over the numbered decision docs. Its recommended next gate order is: proposal lifecycle superseding/stale refresh, then manual checker runtime, then minimal branch/profile selection UI.
 
 ```text
 The base profile versioning target contract, base apply service, and explicit base/core review UI wiring are locked and implemented (doc 38):
@@ -235,7 +238,7 @@ The branch-local proposal review/apply decision is locked in doc 24:
   - helpers compile pending branch-target proposals into typed `apply_profile_patch_to_branch_overlay` operations
   - helpers merge `ProfilePatch` into copied branch overlay values and return accepted proposal values
   - the minimal review UI is implemented as a Learning Hub entry plus pending-proposal queue/detail modal
-  - Apply / Reject / Postpone are wired through hooks; Ask why / why not is explanation-only
+  - Apply / Reject / Postpone are wired through hooks; Ask why / why not records audit history without changing proposal/profile state
   - model-review hardening added explicit error tone, missing-base-profile mapping, non-branch Apply disablement, branch-key invalidation, and stronger presentation tests
   - no checker runtime, event/audit store, auto-apply engine, base-profile versioning, agent runtime, app-builder runtime, or DSL runtime was added
 
@@ -298,7 +301,7 @@ The missing-concept UX decision is locked and implemented in doc 36:
   - verification: TypeScript clean; focused missing-concept tests 106/106; full suite 866/866; diff check clean with CRLF warnings only
 
 The remaining open decision/implementation gaps are:
-  1. Continue doc 39 richer missing-concept edit/apply implementation toward target switching, one-click direct Apply, superseding, and stale refresh. The target rule is already locked: active branch/local first, base/core only explicit and version-guarded, no silent widening.
+  1. Continue doc 39 richer missing-concept edit/apply implementation toward target switching, one-click direct Apply, UI edit-flow wiring into superseding, and stale refresh. The target rule is already locked: active branch/local first, base/core only explicit and version-guarded, no silent widening.
   2. Agent/subagent execution ontology brief.
   3. Self-building-app framework brief.
 
@@ -491,9 +494,9 @@ The Conceptualize first implementation scope is locked and implemented (doc 22).
 
 The trust setting storage decision is locked and storage-only v1 is implemented (doc 23). Trust settings are separate user policy, not evidence and not proposals. `profile_trust_settings` stores base-profile or branch-target policy with `suggest_first` as default and strictly bounded future auto-apply fields. Model-review hardening preserves existing `id` and `createdAt` on trust-setting upserts by `scopeKey`. User-fit learning remains future event/audit projection work.
 
-The branch-local proposal review/apply decision is locked (doc 24) and the helper/service plus minimal UI slices are implemented. First apply is explicit, branch-local, revalidated, and atomic. First review actions are Apply, Reject, Postpone, and Ask why / why not. `branchLocalProposalApply.ts` compiles pending branch-target proposals into typed operations, merges `ProfilePatch` into copied branch overlay values, and returns accepted proposal values. The service commits branch/proposal updates atomically with conditional writes. The UI exposes a Learning Hub entry and queue/detail modal for pending proposals without edit support. Model-review hardening added explicit error tone, missing-base-profile mapping, non-branch Apply disablement, branch-key invalidation, and stronger presentation tests. It does not mutate base/core profiles, sibling branches, old cards, checker output, or external systems. Risk and confidence are distinct: confidence is likelihood of correctness; risk is blast radius if wrong.
+The branch-local proposal review/apply decision is locked (doc 24) and the helper/service plus minimal UI slices are implemented. First apply is explicit, branch-local, revalidated, and atomic. First review actions are Apply, Reject, Postpone, and Ask why / why not. `branchLocalProposalApply.ts` compiles pending branch-target proposals into typed operations, merges `ProfilePatch` into copied branch overlay values, and returns accepted proposal values. The service commits branch/proposal updates atomically with conditional writes. The UI exposes a Learning Hub entry and queue/detail modal for pending proposals without edit support. Ask why records audit history without changing proposal status, branch/base state, evidence, or ontology. Model-review hardening added explicit error tone, missing-base-profile mapping, non-branch Apply disablement, branch-key invalidation, and stronger presentation tests. It does not mutate base/core profiles, sibling branches, old cards, checker output, or external systems. Risk and confidence are distinct: confidence is likelihood of correctness; risk is blast radius if wrong.
 
-The proposal event audit storage decision is locked and implemented (doc 25). `profile_proposal_events` stores append-only decision facts. Apply / Reject / Postpone insert audit events inside the same guarded transactions as the branch/proposal state changes. If a conditional write conflicts, no event is written. User-fit learning remains a future projection over those events.
+The proposal event audit storage decision is locked and implemented (doc 25). `profile_proposal_events` stores append-only decision/lifecycle facts. Apply / Reject / Postpone / Ask-why / Superseded insert audit events inside the same guarded transaction or review action boundary. Ask why preserves pending status and profile state. If a conditional write conflicts, no event is written. Superseded and Ask-why events are audit history, not user-fit preference.
 
 The context assembly decision is locked and the first pure implementation is done (doc 28). `contextAssembly.ts` provides the shared typed ContextPack builder, validator, assertion helper, scoped ref key, and deterministic serializer. It does not import DB, UI, LLM, retrieval, graph traversal, prompt rendering, checker runtime, apply/mutation, or runtime behavior.
 
@@ -517,10 +520,10 @@ The user-fit projection decision is locked and implemented in doc 37. Correction
 
 The base profile versioning, base apply helper/service, and explicit base/core review UI wiring are locked and implemented in doc 38. Base-targeted proposals snapshot `targetProfileVersion`, base/core apply rejects missing or stale target versions, patch revalidation runs before mutation, successful apply creates the next persisted profile definition version, and the proposal review UI exposes this through an explicit `Apply to core` action. No auto-apply, stale refresh flow, edit-then-apply, branch merge apply, profile version-history UI, old-card backfill, checker runtime, historical undo, agent runtime, app-builder runtime, or DSL runtime was added.
 
-The first richer missing-concept edit/apply slices are implemented in doc 39. Missing-concept drafts now have editable meaning, `Use suggestion` copies suggested label/meaning/reason/valid parent, proposal reasons preserve the original suggestion plus edited-field provenance, Conceptualize correction controls show a read-only target/blast-radius summary, and saved drafts that create pending proposals can open the existing proposal review/apply surface with that proposal selected. No one-click direct Conceptualize Apply, target switching controls, stale refresh, superseding persistence, old-card backfill, checker runtime, auto-apply, graph/vector retrieval, trust-setting update, agent runtime, app-builder runtime, or DSL runtime was added.
+The first richer missing-concept edit/apply slices are implemented in doc 39. Missing-concept drafts now have editable meaning, `Use suggestion` copies suggested label/meaning/reason/valid parent, proposal reasons preserve the original suggestion plus edited-field provenance, Conceptualize correction controls show a read-only target/blast-radius summary, and saved drafts that create pending proposals can open the existing proposal review/apply surface with that proposal selected. Superseding lifecycle persistence is now implemented: old pending proposals can be marked `superseded`, linked to an already-created pending replacement proposal, and recorded with a `superseded` proposal event. No one-click direct Conceptualize Apply, target switching controls, stale refresh/rebase, UI edit-flow wiring into the superseding service, old-card backfill, checker runtime, auto-apply, graph/vector retrieval, trust-setting update, agent runtime, app-builder runtime, or DSL runtime was added.
 
 Remaining open decisions:
 
-1. Continue richer missing-concept edit/apply toward target switching, one-click direct Apply, superseding, or stale refresh only after a fresh bounded decision.
+1. Continue proposal lifecycle/edit flow toward stale refresh/rebase or UI wiring that creates replacement proposals and calls the superseding service.
 2. Agent/subagent execution ontology brief.
 3. Self-building-app framework brief.

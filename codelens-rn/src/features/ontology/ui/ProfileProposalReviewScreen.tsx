@@ -3,7 +3,10 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { colors, fontSize, spacing } from '../../../ui/theme';
 import { useApplyProfileChangeProposal } from '../hooks/useApplyProfileChangeProposal';
 import { usePendingProfileChangeProposals } from '../hooks/useProfileChangeProposals';
-import { useReviewProfileChangeProposal } from '../hooks/useReviewProfileChangeProposal';
+import {
+  useAskWhyProfileChangeProposal,
+  useReviewProfileChangeProposal,
+} from '../hooks/useReviewProfileChangeProposal';
 import type { ProfileChangeProposal } from '../types';
 import {
   formatApplyActionLabel,
@@ -32,8 +35,10 @@ export function ProfileProposalReviewScreen({
   const { data: proposals = [], isLoading } = usePendingProfileChangeProposals();
   const applyMutation = useApplyProfileChangeProposal();
   const reviewMutation = useReviewProfileChangeProposal();
+  const askWhyMutation = useAskWhyProfileChangeProposal();
   const [selectedId, setSelectedId] = useState<string | null>(initialProposalId ?? null);
   const [showReason, setShowReason] = useState(false);
+  const [askedWhyProposalIds, setAskedWhyProposalIds] = useState<ReadonlySet<string>>(() => new Set());
   const [message, setMessage] = useState<ReviewMessage | null>(null);
 
   useEffect(() => {
@@ -47,7 +52,7 @@ export function ProfileProposalReviewScreen({
     if (selected) return selected;
     return selectedId ? undefined : proposals[0];
   }, [proposals, selectedId]);
-  const busy = applyMutation.isPending || reviewMutation.isPending;
+  const busy = applyMutation.isPending || reviewMutation.isPending || askWhyMutation.isPending;
   const canApplySelected = selectedProposal?.target.kind === 'profile_branch' || selectedProposal?.target.kind === 'base_profile';
 
   async function apply(proposal: ProfileChangeProposal) {
@@ -73,6 +78,27 @@ export function ProfileProposalReviewScreen({
       await reviewMutation.mutateAsync({ proposalId: proposal.id, status });
       setMessage({ tone: 'notice', text: status === 'rejected' ? 'Rejected.' : 'Postponed.' });
       setSelectedId(null);
+    } catch (error) {
+      setMessage({ tone: 'error', text: formatProposalReviewError(error) });
+    }
+  }
+
+  async function toggleReason(proposal: ProfileChangeProposal) {
+    setMessage(null);
+    if (showReason) {
+      setShowReason(false);
+      return;
+    }
+
+    setShowReason(true);
+    if (askedWhyProposalIds.has(proposal.id)) return;
+
+    try {
+      await askWhyMutation.mutateAsync({
+        proposalId: proposal.id,
+        reason: 'User opened the proposal reason from the review surface.',
+      });
+      setAskedWhyProposalIds((ids) => new Set(ids).add(proposal.id));
     } catch (error) {
       setMessage({ tone: 'error', text: formatProposalReviewError(error) });
     }
@@ -134,7 +160,11 @@ export function ProfileProposalReviewScreen({
           {summarizePatch(selectedProposal.patch).map((line) => (
             <Text key={line} style={styles.patchLine}>{line}</Text>
           ))}
-          <Pressable style={styles.whyButton} onPress={() => setShowReason((value) => !value)}>
+          <Pressable
+            style={[styles.whyButton, busy && styles.disabledAction]}
+            onPress={() => void toggleReason(selectedProposal)}
+            disabled={busy}
+          >
             <Text style={styles.whyButtonText}>{showReason ? 'Hide reason' : 'Ask why / why not'}</Text>
           </Pressable>
           {showReason ? (

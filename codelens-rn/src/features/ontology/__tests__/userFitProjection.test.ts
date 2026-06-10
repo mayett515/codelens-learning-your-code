@@ -242,6 +242,23 @@ describe('user-fit projection', () => {
     ]);
   });
 
+  it('counts superseded proposal events as history without treating them as user-fit preference', () => {
+    const projection = projectUserFitSignals({
+      baseProfileId: 'coding',
+      proposalEvents: [
+        proposalEvent({
+          id: 'superseded',
+          action: 'superseded',
+          statusAfter: 'superseded',
+          createdAt: 120,
+        }),
+      ],
+    });
+
+    expect(projection.summary.proposalEventCount).toBe(1);
+    expect(projection.proposalSignals).toEqual([]);
+  });
+
   it('caps output while reporting omitted signal counts', () => {
     const projection = projectUserFitSignals({
       baseProfileId: 'coding',

@@ -399,6 +399,7 @@ describe('Kortex overlay persistence table guards', () => {
       'src/db/migrations/019-profile-proposal-events.ts',
       'src/db/migrations/021-user-fit-history-recency-indexes.ts',
       'src/db/migrations/022-profile-change-proposal-target-version.ts',
+      'src/db/migrations/023-profile-proposal-event-superseded-action.ts',
       'src/db/migrations/index.ts',
       'src/features/ontology/data/schema.ts',
       'src/features/ontology/data/profileBranchRepo.ts',

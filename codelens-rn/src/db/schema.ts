@@ -391,7 +391,7 @@ export const profileChangeProposals = sqliteTable('profile_change_proposals', {
 export const profileProposalEvents = sqliteTable('profile_proposal_events', {
   id: text('id').primaryKey(),
   proposalId: text('proposal_id').notNull(),
-  action: text('action', { enum: ['applied', 'rejected', 'postponed', 'asked_why'] }).notNull(),
+  action: text('action', { enum: ['applied', 'rejected', 'postponed', 'asked_why', 'superseded'] }).notNull(),
   actorKind: text('actor_kind', { enum: ['user', 'system', 'model'] }).notNull(),
   actorId: text('actor_id'),
   baseProfileId: text('base_profile_id').notNull(),

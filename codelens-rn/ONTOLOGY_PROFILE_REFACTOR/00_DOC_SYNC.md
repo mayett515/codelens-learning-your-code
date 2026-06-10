@@ -35,6 +35,29 @@ This file explains how the root architecture docs and this refactor folder shoul
 - `15_PROFILE_REGISTRY_AND_PROFILE_SOURCES_DECISION.md` locks source-based base profile resolution through ProfileRegistry.
 - `16_RUNTIME_ACTIVATION_WIRING_DECISION.md` locks the application/coordinator runtime activation wiring seam.
 - `17_BASE_PROFILE_PERSISTENCE_DECISION.md` locks user-created base profiles as their own future persistence source, separate from branches.
+- `18_ADAPTIVE_SUGGESTION_POLICY_DECISION.md` locks suggest-first adaptive behavior, trust/risk separation, personal layer semantics, and explicit approval for risky/base/core changes.
+- `19_PATCH_MERGE_PROPOSAL_STORAGE_DECISION.md` locks unified profile change proposal storage for patch suggestions, manual drafts, and merge proposals.
+- `20_CONCEPTUALIZE_PREVIEW_AND_CORRECTION_SURFACE_DECISION.md` locks Conceptualize preview as the first correction doorway before final save.
+- `21_CHECKER_PROPOSAL_REVIEW_CONTEXT_AND_APPLY_DECISION.md` locks the shared architecture for Conceptualize, checker proposals, graph chat, context assembly, typed apply, audit events, and historical reversal.
+- `22_CONCEPTUALIZE_FIRST_IMPLEMENTATION_SCOPE_DECISION.md` locks existing type correction and guarded new-subtype proposal scope.
+- `23_TRUST_SETTING_STORAGE_DECISION.md` locks separate trust setting storage without current auto-apply.
+- `24_BRANCH_LOCAL_PROPOSAL_APPLY_DECISION.md` locks explicit branch-local proposal apply.
+- `25_PROPOSAL_EVENT_AUDIT_STORAGE_DECISION.md` locks append-only proposal decision/lifecycle event facts, including ask-why and superseded audit events.
+- `26_SCOPED_MEANING_AND_BRANCH_CORE_SEMANTICS_DECISION.md` locks scoped node identity and label/meaning boundaries.
+- `27_PROJECT_NAMING_KORDEX_DECISION.md` locks Kordex naming direction while leaving generic implementation identifiers.
+- `28_CONTEXT_ASSEMBLY_DECISION.md` locks shared ContextPack assembly and validation.
+- `29_CONTEXT_SELECTOR_DECISION.md` locks shared context selection contracts with focused task selectors.
+- `30_CONCEPTUALIZE_CONTEXTPACK_SHADOW_WIRING_DECISION.md` locks behavior-neutral Conceptualize ContextPack shadow wiring.
+- `31_CONCEPTUALIZE_PROMPT_BUILDER_DECISION.md` locks prompt building over validated ContextPack.
+- `32_CONCEPTUALIZE_SINGULAR_OUTPUT_AND_DIAGNOSTICS_DECISION.md` locks singular public output and internal-only diagnostics.
+- `33_CONCEPTUALIZE_EXTRACTOR_FLIP_DECISION.md` locks the classification-only live Conceptualize extractor flip with guarded fallback.
+- `34_RAW_PROPOSED_TYPE_IDENTITY_DECISION.md` locks structured raw proposed type identity.
+- `35_CORRECTION_EVIDENCE_NEAR_MISS_DECISION.md` locks near-miss diagnostics as inert evidence only when a correction is written.
+- `36_MISSING_CONCEPT_UX_DECISION.md` locks missing-concept review UX and no auto-fill/auto-apply.
+- `37_USER_FIT_PROJECTION_DECISION.md` locks bounded derived user-fit projection from evidence/events.
+- `38_BASE_PROFILE_VERSIONING_DECISION.md` locks base/core proposal version guards and explicit apply path.
+- `39_EDIT_THEN_APPLY_DECISION.md` locks richer draft/edit/proposal handoff behavior without direct Conceptualize apply.
+- `FABLE_STRATEGIC_REVIEW_2026-06-09/` preserves Claude Fable's strategic review as guidance only; it does not override numbered decisions.
 - `architecture_contract_for_profile_refactor.md` is the local adjusted LLM contract for this refactor.
 - `architecture_guide_for_profile_refactor_humans.md` is the local adjusted human guide.
 - `modules_architecture.md` is a draft future module/foldering architecture guide.
@@ -116,6 +139,7 @@ whatwe_agreedonthearchitecture_humans.md
 ARCHITECTURE.md
 PERSISTENCE.md
 ONTOLOGY_PROFILE_REFACTOR/README.md
+ONTOLOGY_PROFILE_REFACTOR/NEXT_LLM_CONTEXT.md
 ONTOLOGY_PROFILE_REFACTOR/07_KORTEX_CORE_AND_CHILD_CORES.md
 ONTOLOGY_PROFILE_REFACTOR/08_KORTEX_LANGUAGE_LAYER_AND_ADAPTERS.md
 ONTOLOGY_PROFILE_REFACTOR/09_KORTEX_OVER_EXISTING_SYSTEMS.md
@@ -123,6 +147,16 @@ ONTOLOGY_PROFILE_REFACTOR/humanreadable.md
 ONTOLOGY_PROFILE_REFACTOR/04_REFACTOR_WITHOUT_BREAKING_APP.md
 ONTOLOGY_PROFILE_REFACTOR/05_ANTI_REGRESSION_RULES.md
 ```
+
+For current strategic orientation and next-gate sanity checking, read:
+
+```text
+ONTOLOGY_PROFILE_REFACTOR/FABLE_STRATEGIC_REVIEW_2026-06-09/00-system-index.md
+ONTOLOGY_PROFILE_REFACTOR/FABLE_STRATEGIC_REVIEW_2026-06-09/05-next-gates.md
+ONTOLOGY_PROFILE_REFACTOR/FABLE_STRATEGIC_REVIEW_2026-06-09/07-anti-regression-contract.md
+```
+
+The Fable review pack is review guidance. It can help prioritize and spot risk, but numbered decision docs remain the source of truth.
 
 For a smaller planning-only discussion, read:
 
@@ -134,4 +168,5 @@ ONTOLOGY_PROFILE_REFACTOR/09_KORTEX_OVER_EXISTING_SYSTEMS.md
 ONTOLOGY_PROFILE_REFACTOR/humanreadable.md
 ONTOLOGY_PROFILE_REFACTOR/01_BIG_PLAN.md
 ONTOLOGY_PROFILE_REFACTOR/03_CATEGORIZATION_AND_ONTOLOGY_CHECKER.md
+ONTOLOGY_PROFILE_REFACTOR/FABLE_STRATEGIC_REVIEW_2026-06-09/01-kordex-architecture-review.md
 ```

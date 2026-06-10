@@ -21,6 +21,7 @@ import { migration019 } from './019-profile-proposal-events';
 import { migration020 } from './020-ontology-correction-near-miss-candidates';
 import { migration021 } from './021-user-fit-history-recency-indexes';
 import { migration022 } from './022-profile-change-proposal-target-version';
+import { migration023 } from './023-profile-proposal-event-superseded-action';
 
 export interface Migration {
   version: number;
@@ -59,6 +60,7 @@ const MIGRATIONS: Migration[] = [
   migration020,
   migration021,
   migration022,
+  migration023,
 ];
 
 /*

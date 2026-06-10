@@ -2,7 +2,7 @@
 
 Date: 2026-05-28
 
-Status: locked decision; first draft meaning/provenance, target readout, and proposal-review handoff slices are complete.
+Status: locked decision; first draft meaning/provenance, target readout, proposal-review handoff, and superseding lifecycle slices are complete.
 
 ## Decision
 
@@ -77,7 +77,7 @@ old pending proposal
   -> new pending proposal with edited patch and supersedesProposalId
 ```
 
-If the current schema cannot represent `supersedesProposalId` yet, the first implementation may keep the edited draft in local UI state and create a fresh pending proposal on save/apply. It must still preserve enough source/evidence metadata to explain where the edited proposal came from.
+The current durable implementation can mark the old proposal as `superseded` and link it through `supersededByProposalId` after the replacement pending proposal exists. The replacement proposal remains the reviewed draft; the old row stays as history.
 
 Rejected, applied, or stale proposals must not be edited in place.
 
@@ -156,7 +156,7 @@ Start with the smallest durable edit/apply slice:
 4. Route explicit Apply through doc 24 or doc 38 based on target.
 5. Add focused tests for validation failures, target switching, base-version requirements, and no hidden mutation from model output.
 
-Do not add stale refresh, superseding persistence, or historical undo in the same slice unless the schema already supports them cleanly.
+Do not add stale refresh or historical undo in the same slice unless the schema already supports them cleanly.
 
 ## Implementation Update - Draft Meaning And Provenance
 
@@ -190,7 +190,6 @@ Still not added:
 - one-click direct Apply from the Conceptualize modal
 - target-layer switching controls
 - stale proposal refresh/rebase
-- superseding persistence
 - old-card backfill
 - checker runtime
 - auto-apply
@@ -199,3 +198,39 @@ Still not added:
 - agent runtime
 - app-builder runtime
 - DSL runtime
+
+## Implementation Update - Superseding Lifecycle
+
+The first durable superseding slice is implemented behind the ontology data boundary.
+
+Updated:
+
+- `src/db/migrations/023-profile-proposal-event-superseded-action.ts`
+- `src/db/schema.ts`
+- `src/features/backup/format.ts`
+- `src/features/ontology/types.ts`
+- `src/features/ontology/codecs/profileProposalEvent.ts`
+- `src/features/ontology/data/profileChangeProposalLifecycleService.ts`
+- `src/features/ontology/data/index.ts`
+- `src/features/ontology/userFitProjection.ts`
+- `src/__tests__/stage10-architecture-guards.test.ts`
+- focused migration/codec/service/projection tests
+
+Behavior:
+
+- `profile_proposal_events.action` now accepts `superseded`.
+- `supersedePendingProfileChangeProposal(input)` loads the old proposal and replacement proposal in one transaction.
+- The old proposal must still be `pending`.
+- The replacement proposal must exist, still be `pending`, and belong to the same base profile.
+- The service marks the old proposal `superseded`, sets `supersededByProposalId`, stamps `reviewedAt`/`updatedAt`, and writes a `superseded` audit event.
+- Conditional writes still fail closed if the old proposal changed before the lifecycle transition.
+- Superseded events stay out of user-fit preference scoring; they are audit/lifecycle history, not evidence that the user liked or disliked a proposal kind.
+
+Still not added:
+
+- UI edit flow wiring to create the replacement proposal and call the superseding service
+- stale proposal refresh/rebase
+- one-click direct Apply from the Conceptualize modal
+- old-card backfill
+- checker runtime
+- auto-apply
