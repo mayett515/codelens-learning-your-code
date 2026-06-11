@@ -143,6 +143,7 @@ const ProfileChangeProposalSchema = z
     sourceBranchId: z.string().min(1).nullable().optional(),
     target: ProposalTargetSchema,
     targetProfileVersion: z.number().int().nonnegative().nullable().optional(),
+    targetBranchUpdatedAt: z.number().int().nonnegative().nullable().optional(),
     evidenceIds: z.array(z.string().min(1)),
     patch: ProfilePatchSchema,
     title: z.string().min(1),
@@ -162,6 +163,7 @@ const ProfileChangeProposalSchema = z
   .superRefine((proposal, ctx) => {
     validateTargetShape(proposal, ctx);
     validateTargetProfileVersion(proposal, ctx);
+    validateTargetBranchUpdatedAt(proposal, ctx);
 
     if (proposal.proposalKind === 'manual_draft' && proposal.sourceKind !== 'user') {
       ctx.addIssue({
@@ -306,6 +308,19 @@ function validateTargetProfileVersion(
   }
 }
 
+function validateTargetBranchUpdatedAt(
+  proposal: z.infer<typeof ProfileChangeProposalSchema>,
+  ctx: z.RefinementCtx,
+): void {
+  if (proposal.target.kind === 'base_profile' && proposal.targetBranchUpdatedAt != null) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'Base-profile proposals must not set targetBranchUpdatedAt',
+      path: ['targetBranchUpdatedAt'],
+    });
+  }
+}
+
 export function parseProfilePatch(raw: unknown): ProfilePatch {
   return ProfilePatchSchema.parse(parseJsonColumn(raw, 'patch_json')) as unknown as ProfilePatch;
 }
@@ -333,6 +348,7 @@ export function rowToProfileChangeProposal(
       branchId: row.targetBranchId,
     },
     targetProfileVersion: row.targetProfileVersion,
+    targetBranchUpdatedAt: row.targetBranchUpdatedAt,
     evidenceIds: parseProposalEvidenceIds(row.evidenceIdsJson),
     patch: parseProfilePatch(row.patchJson),
     title: row.title,
@@ -364,6 +380,7 @@ export function profileChangeProposalToRow(
     targetProfileId: parsed.target.kind === 'base_profile' ? parsed.target.profileId ?? null : null,
     targetBranchId: parsed.target.kind === 'profile_branch' ? parsed.target.branchId ?? null : null,
     targetProfileVersion: parsed.target.kind === 'base_profile' ? parsed.targetProfileVersion ?? null : null,
+    targetBranchUpdatedAt: parsed.target.kind === 'profile_branch' ? parsed.targetBranchUpdatedAt ?? null : null,
     evidenceIdsJson: [...parsed.evidenceIds],
     patchJson: parsed.patch,
     title: parsed.title,

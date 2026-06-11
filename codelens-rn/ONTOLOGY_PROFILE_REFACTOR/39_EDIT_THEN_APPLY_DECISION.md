@@ -2,7 +2,7 @@
 
 Date: 2026-05-28
 
-Status: locked decision; first draft meaning/provenance, target readout, proposal-review handoff, and superseding lifecycle slices are complete.
+Status: locked decision; first draft meaning/provenance, target readout, proposal-review handoff, superseding lifecycle, superseding hook-boundary, proposal event-history readout, and edited replacement service/hook slices are complete.
 
 ## Decision
 
@@ -78,6 +78,8 @@ old pending proposal
 ```
 
 The current durable implementation can mark the old proposal as `superseded` and link it through `supersededByProposalId` after the replacement pending proposal exists. The replacement proposal remains the reviewed draft; the old row stays as history.
+
+The current hook boundary exposes `supersedeProfileChangeProposal()` / `useSupersedeProfileChangeProposal()` for the future editor UI. That boundary assumes the replacement proposal already exists; it does not create or edit replacement proposal content by itself.
 
 Rejected, applied, or stale proposals must not be edited in place.
 
@@ -212,6 +214,7 @@ Updated:
 - `src/features/ontology/codecs/profileProposalEvent.ts`
 - `src/features/ontology/data/profileChangeProposalLifecycleService.ts`
 - `src/features/ontology/data/index.ts`
+- `src/features/ontology/hooks/useReviewProfileChangeProposal.ts`
 - `src/features/ontology/userFitProjection.ts`
 - `src/__tests__/stage10-architecture-guards.test.ts`
 - focused migration/codec/service/projection tests
@@ -225,12 +228,47 @@ Behavior:
 - The service marks the old proposal `superseded`, sets `supersededByProposalId`, stamps `reviewedAt`/`updatedAt`, and writes a `superseded` audit event.
 - Conditional writes still fail closed if the old proposal changed before the lifecycle transition.
 - Superseded events stay out of user-fit preference scoring; they are audit/lifecycle history, not evidence that the user liked or disliked a proposal kind.
+- `supersedeProfileChangeProposal()` and `useSupersedeProfileChangeProposal()` expose the lifecycle service to future UI edit flows without creating a proposal editor yet.
+- Regression tests cover self-supersede attempts, already-superseded old proposals, and replacement timestamps newer than the lifecycle timestamp.
 
 Still not added:
 
-- UI edit flow wiring to create the replacement proposal and call the superseding service
+- UI edit flow wiring to create the replacement proposal and call the superseding hook/service
 - stale proposal refresh/rebase
 - one-click direct Apply from the Conceptualize modal
+- old-card backfill
+- checker runtime
+- auto-apply
+
+## Implementation Update - Edited Replacement Service
+
+The first durable edit-replacement primitive is implemented behind the ontology data boundary.
+
+Updated:
+
+- `src/features/ontology/data/profileChangeProposalEditService.ts`
+- `src/features/ontology/hooks/useEditProfileChangeProposal.ts`
+- `src/features/ontology/data/index.ts`
+- `src/__tests__/stage10-architecture-guards.test.ts`
+- focused service/hook tests
+
+Behavior:
+
+- `createEditedProfileChangeProposalReplacement(input)` loads an existing pending proposal in a transaction.
+- The edited replacement preserves the original target and evidence, switches the replacement source to `user`, writes the edited `ProfilePatch`, and snapshots the current target basis:
+  - branch targets receive the current branch `updatedAt` as `targetBranchUpdatedAt`
+  - base/core targets receive the current profile definition version as `targetProfileVersion`
+- The replacement patch is dry-run through the existing branch-local or base-profile apply compiler before anything is written.
+- If validation passes, the service inserts the replacement pending proposal and reuses `supersedePendingProfileChangeProposal()` inside the same transaction to mark the old proposal `superseded` and append the audit event.
+- The hook boundary `editProfileChangeProposal()` / `useEditProfileChangeProposal()` adds user actor metadata/current time and invalidates proposal, event, and freshness query keys.
+
+Still not added:
+
+- visible proposal editor UI
+- target-layer switching controls
+- direct Apply from the edit flow
+- automatic target widening
+- branch/base mutation during edit
 - old-card backfill
 - checker runtime
 - auto-apply

@@ -4,6 +4,18 @@ export const profileProposalKeys = {
   pending: () => profileProposalKeys.byStatus('pending'),
 } as const;
 
+export const profileProposalEventKeys = {
+  all: () => ['ontology', 'profile-proposal-events'] as const,
+  byProposal: (proposalId: string) => [...profileProposalEventKeys.all(), 'proposal', proposalId] as const,
+} as const;
+
+export const profileProposalFreshnessKeys = {
+  all: () => ['ontology', 'profile-proposal-freshness'] as const,
+  empty: () => [...profileProposalFreshnessKeys.all(), 'empty'] as const,
+  byProposal: (proposalId: string, proposalUpdatedAt: number) =>
+    [...profileProposalFreshnessKeys.all(), 'proposal', proposalId, proposalUpdatedAt] as const,
+} as const;
+
 export const profileBranchKeys = {
   all: () => ['ontology', 'profile-branches'] as const,
   byParentProfile: (parentProfileId: string) => [...profileBranchKeys.all(), 'parent', parentProfileId] as const,

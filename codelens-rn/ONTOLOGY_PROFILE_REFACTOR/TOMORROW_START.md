@@ -22,13 +22,13 @@ Summarize:
 
 ## Expected Next Slice
 
-The Fable strategic review pack is now captured under `FABLE_STRATEGIC_REVIEW_2026-06-09/`. Treat it as advisory review guidance, not a new authority over the numbered decision docs. Its recommended next gate order is: proposal lifecycle superseding/stale refresh, then manual checker runtime, then minimal branch/profile selection UI.
+The Fable strategic review pack is now captured under `FABLE_STRATEGIC_REVIEW_2026-06-09/`. Treat it as advisory review guidance, not a new authority over the numbered decision docs. Its recommended next gate order is: proposal lifecycle superseding/stale refresh, then manual checker runtime, then minimal branch/profile selection UI. Doc 40 now locks stale refresh as derived freshness plus replacement-pending-proposal superseding, not a new proposal status.
 
 ```text
 The base profile versioning target contract, base apply service, and explicit base/core review UI wiring are locked and implemented (doc 38):
   - base-targeted `ProfileChangeProposal` rows can snapshot `targetProfileVersion`
   - new base-targeted Conceptualize proposals fill `targetProfileVersion` from the active profile version
-  - branch-targeted proposals must not set `targetProfileVersion`; branch-local apply still uses branch `updatedAt` guards
+  - branch-targeted proposals must not set `targetProfileVersion`; they now carry nullable `targetBranchUpdatedAt` snapshots for freshness evaluation
   - `assertBaseProfileProposalTargetsCurrentVersion(input)` is the pure guard base/core apply code calls before mutation
   - the guard rejects non-base targets, base id mismatches, missing target versions, and stale target versions
   - `baseProfileProposalApply.ts` compiles/applies `apply_profile_patch_to_base_profile` operations and creates the next `ProfileDefinition` version
@@ -301,20 +301,22 @@ The missing-concept UX decision is locked and implemented in doc 36:
   - verification: TypeScript clean; focused missing-concept tests 106/106; full suite 866/866; diff check clean with CRLF warnings only
 
 The remaining open decision/implementation gaps are:
-  1. Continue doc 39 richer missing-concept edit/apply implementation toward target switching, one-click direct Apply, UI edit-flow wiring into superseding, and stale refresh. The target rule is already locked: active branch/local first, base/core only explicit and version-guarded, no silent widening.
-  2. Agent/subagent execution ontology brief.
-  3. Self-building-app framework brief.
+  1. Review the doc 40 explicit refresh/rebase replacement creation slice.
+  2. Visible proposal editor UI that creates edited replacement proposals through the existing edit service.
+  3. Agent/subagent execution ontology brief.
+  4. Self-building-app framework brief.
 
 Recommended next implementation slice, if the human wants code next:
 
 ```text
-Richer missing-concept edit/apply flows:
+Proposal refresh/rebase creation:
   - branch-local and base/core proposal apply are now both explicit review actions
-  - manual missing-concept proposals are revalidated before creation
-  - implement how explicitly selected target layers become proposal drafts or accepted apply operations
-  - do not re-decide target defaults: Conceptualize starts active branch/local first, and base/core remains explicit/version-guarded
-  - preserve the evidence-first correction record and keep suggestions behind user intent
-  - keep retrieval, graph traversal, automatic confidence/ranking updates, auto-apply, external write-back, and old-card rewrites out of this gate
+  - doc 40 locks freshness as derived review state, not proposal status
+  - branch target revision snapshots are implemented
+  - pure freshness helper over proposal + caller-supplied target facts is implemented
+  - proposal review now shows freshness before Apply and blocks unsafe Apply
+  - keep refresh explicit: replacement pending proposal + supersede old proposal
+  - keep checker runtime, auto-apply, graph traversal, external write-back, and old-card rewrites out of this gate
 ```
 
 Strict boundaries:
@@ -520,10 +522,11 @@ The user-fit projection decision is locked and implemented in doc 37. Correction
 
 The base profile versioning, base apply helper/service, and explicit base/core review UI wiring are locked and implemented in doc 38. Base-targeted proposals snapshot `targetProfileVersion`, base/core apply rejects missing or stale target versions, patch revalidation runs before mutation, successful apply creates the next persisted profile definition version, and the proposal review UI exposes this through an explicit `Apply to core` action. No auto-apply, stale refresh flow, edit-then-apply, branch merge apply, profile version-history UI, old-card backfill, checker runtime, historical undo, agent runtime, app-builder runtime, or DSL runtime was added.
 
-The first richer missing-concept edit/apply slices are implemented in doc 39. Missing-concept drafts now have editable meaning, `Use suggestion` copies suggested label/meaning/reason/valid parent, proposal reasons preserve the original suggestion plus edited-field provenance, Conceptualize correction controls show a read-only target/blast-radius summary, and saved drafts that create pending proposals can open the existing proposal review/apply surface with that proposal selected. Superseding lifecycle persistence is now implemented: old pending proposals can be marked `superseded`, linked to an already-created pending replacement proposal, and recorded with a `superseded` proposal event. No one-click direct Conceptualize Apply, target switching controls, stale refresh/rebase, UI edit-flow wiring into the superseding service, old-card backfill, checker runtime, auto-apply, graph/vector retrieval, trust-setting update, agent runtime, app-builder runtime, or DSL runtime was added.
+The first richer missing-concept edit/apply slices are implemented in doc 39. Missing-concept drafts now have editable meaning, `Use suggestion` copies suggested label/meaning/reason/valid parent, proposal reasons preserve the original suggestion plus edited-field provenance, Conceptualize correction controls show a read-only target/blast-radius summary, and saved drafts that create pending proposals can open the existing proposal review/apply surface with that proposal selected. Superseding lifecycle persistence is now implemented: old pending proposals can be marked `superseded`, linked to an already-created pending replacement proposal, and recorded with a `superseded` proposal event. Doc 40 refresh creation now uses that replacement/superseding shape for stale-refreshable proposals. The edited replacement service/hook now validates a same-target edited patch, inserts a replacement pending proposal, and supersedes the old pending proposal in one transaction. Proposal review now shows selected-proposal event history. There is still no visible freeform proposal editor UI. No one-click direct Conceptualize Apply, target switching controls, old-card backfill, checker runtime, auto-apply, graph/vector retrieval, trust-setting update, agent runtime, app-builder runtime, or DSL runtime was added.
 
-Remaining open decisions:
+Remaining open decisions / implementation gaps:
 
-1. Continue proposal lifecycle/edit flow toward stale refresh/rebase or UI wiring that creates replacement proposals and calls the superseding service.
-2. Agent/subagent execution ontology brief.
-3. Self-building-app framework brief.
+1. Review the doc 40 explicit refresh/rebase replacement creation slice.
+2. Continue proposal lifecycle/edit flow toward UI wiring that creates edited replacement proposals through the existing edit service.
+3. Agent/subagent execution ontology brief.
+4. Self-building-app framework brief.

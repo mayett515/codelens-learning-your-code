@@ -200,6 +200,120 @@ describe('supersedePendingProfileChangeProposal', () => {
     expectServiceErrorCode(caught, 'replacement_proposal_invalid');
   });
 
+  it('rejects self-superseding before opening a transaction', async () => {
+    const calls: string[] = [];
+    const deps: ProfileChangeProposalLifecycleServiceDependencies = {
+      transaction: async (callback) => {
+        calls.push('transaction');
+        return callback(tx);
+      },
+      getProposalById: async () => {
+        calls.push('getProposal');
+        return makeProposal();
+      },
+      saveProposalIfPending: async () => {
+        calls.push('saveProposal');
+        return true;
+      },
+      insertEvent: async () => {
+        calls.push('insertEvent');
+      },
+      newEventId: () => 'event-1',
+    };
+
+    let caught: unknown;
+    try {
+      await supersedePendingProfileChangeProposal({
+        proposalId: 'proposal-1',
+        supersededByProposalId: 'proposal-1',
+        now: 4,
+        deps,
+      });
+    } catch (error) {
+      caught = error;
+    }
+
+    expectServiceErrorCode(caught, 'replacement_proposal_invalid');
+    expect(calls).toEqual([]);
+  });
+
+  it('rejects superseding a proposal that was already superseded', async () => {
+    const calls: string[] = [];
+    const deps: ProfileChangeProposalLifecycleServiceDependencies = {
+      transaction: async (callback) => callback(tx),
+      getProposalById: async (id) => {
+        calls.push(`getProposal:${id}`);
+        return id === 'proposal-1'
+          ? makeProposal({
+            status: 'superseded',
+            supersededByProposalId: 'proposal-0',
+            reviewedAt: 3,
+            updatedAt: 3,
+          })
+          : makeProposal({ id: 'proposal-2', updatedAt: 3 });
+      },
+      saveProposalIfPending: async () => {
+        calls.push('saveProposal');
+        return true;
+      },
+      insertEvent: async () => {
+        calls.push('insertEvent');
+      },
+      newEventId: () => 'event-1',
+    };
+
+    let caught: unknown;
+    try {
+      await supersedePendingProfileChangeProposal({
+        proposalId: 'proposal-1',
+        supersededByProposalId: 'proposal-2',
+        now: 4,
+        deps,
+      });
+    } catch (error) {
+      caught = error;
+    }
+
+    expectServiceErrorCode(caught, 'proposal_not_pending');
+    expect(calls).toEqual(['getProposal:proposal-1', 'getProposal:proposal-2']);
+  });
+
+  it('rejects lifecycle timestamps older than the replacement proposal', async () => {
+    const calls: string[] = [];
+    const deps: ProfileChangeProposalLifecycleServiceDependencies = {
+      transaction: async (callback) => callback(tx),
+      getProposalById: async (id) => {
+        calls.push(`getProposal:${id}`);
+        return id === 'proposal-1'
+          ? makeProposal()
+          : makeProposal({ id: 'proposal-2', updatedAt: 5 });
+      },
+      saveProposalIfPending: async () => {
+        calls.push('saveProposal');
+        return true;
+      },
+      insertEvent: async () => {
+        calls.push('insertEvent');
+      },
+      newEventId: () => 'event-1',
+    };
+
+    let caught: unknown;
+    try {
+      await supersedePendingProfileChangeProposal({
+        proposalId: 'proposal-1',
+        supersededByProposalId: 'proposal-2',
+        now: 4,
+        deps,
+      });
+    } catch (error) {
+      caught = error;
+    }
+
+    expectServiceErrorCode(caught, 'proposal_lifecycle_time_invalid');
+    expect(calls).toEqual(['getProposal:proposal-1', 'getProposal:proposal-2']);
+  });
+
   it('fails atomically when the conditional write detects proposal drift', async () => {
     const calls: string[] = [];
     const deps: ProfileChangeProposalLifecycleServiceDependencies = {

@@ -363,6 +363,7 @@ export const profileChangeProposals = sqliteTable('profile_change_proposals', {
   targetProfileId: text('target_profile_id'),
   targetBranchId: text('target_branch_id'),
   targetProfileVersion: integer('target_profile_version'),
+  targetBranchUpdatedAt: integer('target_branch_updated_at'),
   evidenceIdsJson: text('evidence_ids_json', { mode: 'json' }).notNull().$type<string[]>(),
   patchJson: text('patch_json', { mode: 'json' }).notNull().$type<unknown>(),
   title: text('title').notNull(),
@@ -384,6 +385,7 @@ export const profileChangeProposals = sqliteTable('profile_change_proposals', {
   index('idx_profile_change_proposals_source_branch').on(t.sourceBranchId),
   index('idx_profile_change_proposals_target_branch').on(t.targetBranchId),
   index('idx_profile_change_proposals_target_profile_version').on(t.targetProfileId, t.targetProfileVersion),
+  index('idx_profile_change_proposals_target_branch_revision').on(t.targetBranchId, t.targetBranchUpdatedAt),
   index('idx_profile_change_proposals_status').on(t.status),
   index('idx_profile_change_proposals_updated').on(t.updatedAt),
 ]);

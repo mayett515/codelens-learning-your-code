@@ -254,6 +254,7 @@ export const PROFILE_CHANGE_PROPOSALS_COLUMN_MAP = {
   'target_profile_id': 'targetProfileId',
   'target_branch_id': 'targetBranchId',
   'target_profile_version': 'targetProfileVersion',
+  'target_branch_updated_at': 'targetBranchUpdatedAt',
   'evidence_ids_json': 'evidenceIdsJson',
   'patch_json': 'patchJson',
   'title': 'title',

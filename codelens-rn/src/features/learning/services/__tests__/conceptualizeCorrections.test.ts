@@ -279,6 +279,7 @@ describe('Conceptualize correction save', () => {
         profile,
         selectionSnapshot: { baseProfileId: 'coding', personalBranchIds: ['personal-branch'] },
         proposalTarget: { kind: 'profile_branch', branchId: 'personal-branch' },
+        proposalTargetBranchUpdatedAt: 2_000,
       },
       {
         correctedTypeNodeId: 'pattern',
@@ -300,6 +301,7 @@ describe('Conceptualize correction save', () => {
       sourceKind: 'user',
       target: { kind: 'profile_branch', branchId: 'personal-branch' },
       targetProfileVersion: null,
+      targetBranchUpdatedAt: 2_000,
       status: 'pending',
       patch: {
         addItemTypeNodeIds: ['react_hook_lifecycle'],

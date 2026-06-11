@@ -597,6 +597,7 @@ describe('Column map: profile_change_proposals', () => {
       target_profile_id: null,
       target_branch_id: 'branch-1',
       target_profile_version: null,
+      target_branch_updated_at: 2000,
       evidence_ids_json: '["ev-1"]',
       patch_json: '{"addItemTypeNodeIds":["react_hook"]}',
       title: 'Add React hook type',
@@ -620,11 +621,12 @@ describe('Column map: profile_change_proposals', () => {
     expect(m['targetKind']).toBe('profile_branch');
     expect(m['targetBranchId']).toBe('branch-1');
     expect(m['targetProfileVersion']).toBeNull();
+    expect(m['targetBranchUpdatedAt']).toBe(2000);
     expect(m['evidenceIdsJson']).toBe('["ev-1"]');
     expect(m['patchJson']).toBe('{"addItemTypeNodeIds":["react_hook"]}');
     expect(m['riskScore']).toBe(35);
     expect(m['status']).toBe('pending');
-    expect(Object.keys(m).length).toBe(23);
+    expect(Object.keys(m).length).toBe(24);
   });
 
   it('drops unknown apply/runtime keys from imported rows', () => {
@@ -638,6 +640,7 @@ describe('Column map: profile_change_proposals', () => {
       target_profile_id: null,
       target_branch_id: 'branch-1',
       target_profile_version: null,
+      target_branch_updated_at: 2000,
       evidence_ids_json: '[]',
       patch_json: '{"addItemTypeNodeIds":["react_hook"]}',
       title: 'Add React hook type',
@@ -658,7 +661,7 @@ describe('Column map: profile_change_proposals', () => {
     const m = mapBackupRow(raw, PROFILE_CHANGE_PROPOSALS_COLUMN_MAP);
     expect('activeRuntimeProfileJson' in m).toBe(false);
     expect('applyImmediately' in m).toBe(false);
-    expect(Object.keys(m).length).toBe(23);
+    expect(Object.keys(m).length).toBe(24);
   });
 });
 
@@ -1494,7 +1497,7 @@ describe('TABLE_COLUMN_MAPS index', () => {
     expect(Object.keys(PROFILE_SELECTIONS_COLUMN_MAP).length).toBe(8);
     expect(Object.keys(PROFILE_DEFINITIONS_COLUMN_MAP).length).toBe(8);
     expect(Object.keys(ONTOLOGY_CORRECTION_EVIDENCE_COLUMN_MAP).length).toBe(13);
-    expect(Object.keys(PROFILE_CHANGE_PROPOSALS_COLUMN_MAP).length).toBe(23);
+    expect(Object.keys(PROFILE_CHANGE_PROPOSALS_COLUMN_MAP).length).toBe(24);
     expect(Object.keys(PROFILE_PROPOSAL_EVENTS_COLUMN_MAP).length).toBe(19);
     expect(Object.keys(PROFILE_TRUST_SETTINGS_COLUMN_MAP).length).toBe(12);
   });

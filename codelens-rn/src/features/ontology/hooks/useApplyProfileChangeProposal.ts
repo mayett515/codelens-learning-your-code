@@ -1,5 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { profileBranchKeys, profileProposalKeys } from '../data/queryKeys';
+import {
+  profileBranchKeys,
+  profileProposalEventKeys,
+  profileProposalFreshnessKeys,
+  profileProposalKeys,
+} from '../data/queryKeys';
 import { applyPendingBranchLocalProfileChangeProposal } from '../data/branchLocalProposalApplyService';
 import { applyPendingBaseProfileChangeProposal } from '../data/baseProfileProposalApplyService';
 import { loadDefaultProfileRegistry } from '../data/profileRegistryBootstrap';
@@ -84,8 +89,10 @@ export function useApplyProfileChangeProposal() {
 
   return useMutation({
     mutationFn: (proposal: ProfileChangeProposal) => applyProfileChangeProposal(proposal),
-    onSuccess: () => {
+    onSuccess: (_result, proposal) => {
       void queryClient.invalidateQueries({ queryKey: profileProposalKeys.all() });
+      void queryClient.invalidateQueries({ queryKey: profileProposalEventKeys.byProposal(proposal.id) });
+      void queryClient.invalidateQueries({ queryKey: profileProposalFreshnessKeys.all() });
       void queryClient.invalidateQueries({ queryKey: profileBranchKeys.all() });
     },
   });

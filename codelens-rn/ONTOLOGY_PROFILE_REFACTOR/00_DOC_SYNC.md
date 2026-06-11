@@ -57,6 +57,7 @@ This file explains how the root architecture docs and this refactor folder shoul
 - `37_USER_FIT_PROJECTION_DECISION.md` locks bounded derived user-fit projection from evidence/events.
 - `38_BASE_PROFILE_VERSIONING_DECISION.md` locks base/core proposal version guards and explicit apply path.
 - `39_EDIT_THEN_APPLY_DECISION.md` locks richer draft/edit/proposal handoff behavior without direct Conceptualize apply.
+- `40_PROPOSAL_FRESHNESS_AND_STALE_REFRESH_DECISION.md` locks proposal freshness as a separate derived review condition and refresh as replacement-plus-supersede.
 - `FABLE_STRATEGIC_REVIEW_2026-06-09/` preserves Claude Fable's strategic review as guidance only; it does not override numbered decisions.
 - `architecture_contract_for_profile_refactor.md` is the local adjusted LLM contract for this refactor.
 - `architecture_guide_for_profile_refactor_humans.md` is the local adjusted human guide.

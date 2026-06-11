@@ -345,6 +345,7 @@ export interface ProfileChangeProposal<TItemTypeNodeId extends string = string> 
   sourceBranchId?: string | null | undefined;
   target: ProfileChangeProposalTarget;
   targetProfileVersion?: number | null | undefined;
+  targetBranchUpdatedAt?: number | null | undefined;
   evidenceIds: readonly string[];
   patch: ProfilePatch<TItemTypeNodeId>;
   title: string;

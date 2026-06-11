@@ -137,6 +137,7 @@ Superseding support is now implemented as an audit-preserving lifecycle transiti
 - `supersedePendingProfileChangeProposal(input)` marks an old pending proposal as `superseded`, sets `supersededByProposalId`, and appends a `superseded` event in one transaction
 - the replacement proposal must already exist, still be pending, and belong to the same base profile
 - superseded events remain audit history and are not treated as positive/negative user-fit preference
+- `supersedeProfileChangeProposal()` / `useSupersedeProfileChangeProposal()` expose the lifecycle transition to future edit UI code while preserving the data-layer guardrails
 
 ## Implementation Update - Ask Why Events
 
@@ -148,21 +149,30 @@ Ask why support is now wired to the same event table without changing proposal s
 - `ProfileProposalReviewScreen` de-duplicates repeated opens for the same proposal during one screen session
 - `asked_why` events can inform future user-fit/review analytics, but they are neutral and do not become positive/negative preference by themselves
 
+## Implementation Update - Event History Readout
+
+Proposal review now exposes the append-only audit trail for the selected proposal:
+
+- `useProfileProposalEventsForProposal(proposalId)` reads proposal events through the ontology data boundary
+- `profileProposalEventKeys` keeps event-history cache keys separate from proposal-row cache keys
+- Apply / Reject / Postpone / Ask-why / Supersede mutations invalidate the selected proposal's event-history query after writing audit facts
+- `ProfileProposalReviewScreen` shows a compact History section for the selected proposal
+- event-history formatting is presentation-only; it does not change proposal status, profile state, user-fit scoring, or apply semantics
+
 Latest verification after superseding and Ask why event wiring:
 
 ```powershell
 node node_modules\typescript\bin\tsc -p tsconfig.json --noEmit
 npm.cmd test -- --run src/db/migrations/__tests__/profile-proposal-events-migration.test.ts src/db/migrations/__tests__/profile-proposal-event-superseded-action-migration.test.ts src/features/ontology/__tests__/profileProposalEventCodec.test.ts src/features/ontology/__tests__/profileChangeProposalLifecycleService.test.ts src/features/ontology/__tests__/profileChangeProposalReviewService.test.ts src/features/ontology/__tests__/profileChangeProposalCodec.test.ts src/features/ontology/__tests__/userFitProjection.test.ts src/features/backup/__tests__/profile-columns.test.ts src/__tests__/stage10-architecture-guards.test.ts
-npm.cmd test -- --run src/features/ontology/__tests__/profileChangeProposalReviewService.test.ts src/features/ontology/__tests__/profileProposalEventCodec.test.ts src/features/ontology/__tests__/userFitProjection.test.ts src/features/ontology/__tests__/profileProposalReviewPresentation.test.ts src/__tests__/stage10-architecture-guards.test.ts
+npm.cmd test -- --run src/features/ontology/__tests__/profileChangeProposalLifecycleService.test.ts src/features/ontology/__tests__/useReviewProfileChangeProposal.test.ts src/features/ontology/__tests__/profileChangeProposalReviewService.test.ts src/features/ontology/__tests__/profileProposalEventCodec.test.ts src/features/ontology/__tests__/userFitProjection.test.ts src/__tests__/stage10-architecture-guards.test.ts
 npm.cmd test -- --run
 ```
 
-Result: TypeScript clean; focused proposal lifecycle/event/backup/guard tests 185/185 passed across 9 files; focused Ask-why/review/projection/guard tests 107/107 passed across 5 files; full suite 948/948 passed across 100 files.
+Result: TypeScript clean; focused proposal lifecycle/event/backup/guard tests 185/185 passed across 9 files; focused lifecycle/hook/Ask-why/review/projection/guard tests 110/110 passed across 6 files; focused event-history/review/lifecycle/guard tests 104/104 passed across 6 files; full suite 953/953 passed across 101 files.
 
 ## Next Work
 
 Good next bounded choices:
 
-1. Wire edit flows to create the replacement proposal and call the superseding service.
-2. Add stale refresh/rebase behavior before checker proposal volume grows.
-3. Query/read UI for proposal event history on the review surface.
+1. Wire edit flows to create the replacement proposal and call the superseding hook/service.
+2. Review the doc 40 stale refresh/rebase behavior before checker proposal volume grows.

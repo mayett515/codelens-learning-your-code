@@ -3,16 +3,24 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { colors, fontSize, spacing } from '../../../ui/theme';
 import { useApplyProfileChangeProposal } from '../hooks/useApplyProfileChangeProposal';
 import { usePendingProfileChangeProposals } from '../hooks/useProfileChangeProposals';
+import { useProfileProposalFreshness } from '../hooks/useProfileProposalFreshness';
+import { useProfileProposalEventsForProposal } from '../hooks/useProfileProposalEvents';
+import { useRefreshProfileChangeProposal } from '../hooks/useRefreshProfileChangeProposal';
 import {
   useAskWhyProfileChangeProposal,
   useReviewProfileChangeProposal,
 } from '../hooks/useReviewProfileChangeProposal';
-import type { ProfileChangeProposal } from '../types';
+import type { ProfileChangeProposal, ProfileProposalEvent } from '../types';
 import {
   formatApplyActionLabel,
   formatApplySuccessMessage,
   formatConfidence,
+  formatProposalFreshnessDescription,
+  formatProposalFreshnessLabel,
+  formatProposalEventSummary,
+  formatProposalEventTimestamp,
   formatProposalReviewError,
+  formatRefreshSuccessMessage,
   formatRiskDescription,
   formatTarget,
   summarizePatch,
@@ -34,6 +42,7 @@ export function ProfileProposalReviewScreen({
 }: ProfileProposalReviewScreenProps = {}) {
   const { data: proposals = [], isLoading } = usePendingProfileChangeProposals();
   const applyMutation = useApplyProfileChangeProposal();
+  const refreshMutation = useRefreshProfileChangeProposal();
   const reviewMutation = useReviewProfileChangeProposal();
   const askWhyMutation = useAskWhyProfileChangeProposal();
   const [selectedId, setSelectedId] = useState<string | null>(initialProposalId ?? null);
@@ -52,8 +61,20 @@ export function ProfileProposalReviewScreen({
     if (selected) return selected;
     return selectedId ? undefined : proposals[0];
   }, [proposals, selectedId]);
-  const busy = applyMutation.isPending || reviewMutation.isPending || askWhyMutation.isPending;
-  const canApplySelected = selectedProposal?.target.kind === 'profile_branch' || selectedProposal?.target.kind === 'base_profile';
+  const { data: proposalEvents = [], isLoading: eventsLoading } = useProfileProposalEventsForProposal(
+    selectedProposal?.id ?? null,
+  );
+  const {
+    data: proposalFreshness,
+    isLoading: freshnessLoading,
+  } = useProfileProposalFreshness(selectedProposal);
+  const busy = applyMutation.isPending ||
+    refreshMutation.isPending ||
+    reviewMutation.isPending ||
+    askWhyMutation.isPending;
+  const targetSupported = selectedProposal?.target.kind === 'profile_branch' || selectedProposal?.target.kind === 'base_profile';
+  const canApplySelected = Boolean(targetSupported && proposalFreshness?.canApply);
+  const canRefreshSelected = Boolean(targetSupported && proposalFreshness?.canRefresh);
 
   async function apply(proposal: ProfileChangeProposal) {
     setMessage(null);
@@ -62,10 +83,33 @@ export function ProfileProposalReviewScreen({
       setMessage({ tone: 'error', text: formatProposalReviewError({ code: 'proposal_target_not_supported' }) });
       return;
     }
+    if (!proposalFreshness?.canApply) {
+      setMessage({ tone: 'error', text: formatProposalFreshnessDescription(proposalFreshness) });
+      return;
+    }
     try {
       await applyMutation.mutateAsync(proposal);
       setMessage({ tone: 'notice', text: formatApplySuccessMessage(proposal) });
       setSelectedId(null);
+    } catch (error) {
+      setMessage({ tone: 'error', text: formatProposalReviewError(error, proposal.target.kind) });
+    }
+  }
+
+  async function refresh(proposal: ProfileChangeProposal) {
+    setMessage(null);
+    setShowReason(false);
+    if (!proposalFreshness?.canRefresh) {
+      setMessage({ tone: 'error', text: formatProposalFreshnessDescription(proposalFreshness) });
+      return;
+    }
+    try {
+      const result = await refreshMutation.mutateAsync({
+        proposalId: proposal.id,
+        reason: 'User refreshed a stale proposal from the review surface.',
+      });
+      setMessage({ tone: 'notice', text: formatRefreshSuccessMessage(result.proposal) });
+      setSelectedId(result.proposal.id);
     } catch (error) {
       setMessage({ tone: 'error', text: formatProposalReviewError(error, proposal.target.kind) });
     }
@@ -156,6 +200,19 @@ export function ProfileProposalReviewScreen({
             <Meta label="Semantic" value={formatConfidence(selectedProposal.semanticConfidence)} />
             <Meta label="User fit" value={formatConfidence(selectedProposal.userFitConfidence)} />
           </View>
+          <View style={[
+            styles.freshnessBox,
+            proposalFreshness?.status === 'fresh' ? styles.freshnessBoxReady : styles.freshnessBoxBlocked,
+          ]}>
+            <Text style={styles.freshnessTitle}>
+              {freshnessLoading ? 'Checking target' : formatProposalFreshnessLabel(proposalFreshness)}
+            </Text>
+            <Text style={styles.freshnessBody}>
+              {freshnessLoading
+                ? 'Kordex is checking whether this proposal still fits its target.'
+                : formatProposalFreshnessDescription(proposalFreshness)}
+            </Text>
+          </View>
           <Text style={styles.sectionLabel}>Patch</Text>
           {summarizePatch(selectedProposal.patch).map((line) => (
             <Text key={line} style={styles.patchLine}>{line}</Text>
@@ -177,10 +234,22 @@ export function ProfileProposalReviewScreen({
               ) : null}
             </View>
           ) : null}
+          <Text style={styles.sectionLabel}>History</Text>
+          {eventsLoading ? (
+            <Text style={styles.muted}>Loading history...</Text>
+          ) : proposalEvents.length > 0 ? (
+            <View style={styles.historyBox}>
+              {proposalEvents.map((event) => (
+                <ProposalEventHistoryItem key={event.id} event={event} />
+              ))}
+            </View>
+          ) : (
+            <Text style={styles.muted}>No review history yet.</Text>
+          )}
           {selectedProposal.target.kind === 'base_profile' ? (
             <Text style={styles.coreWarning}>Core changes affect derived branches. Apply only after checking the patch and reason.</Text>
           ) : null}
-          {!canApplySelected ? (
+          {!targetSupported ? (
             <Text style={styles.error}>This proposal target cannot be applied in this review surface yet.</Text>
           ) : null}
           {message ? <Text style={message.tone === 'error' ? styles.error : styles.notice}>{message.text}</Text> : null}
@@ -190,8 +259,19 @@ export function ProfileProposalReviewScreen({
               onPress={() => void apply(selectedProposal)}
               disabled={busy || !canApplySelected}
             >
-              <Text style={styles.primaryActionText}>{canApplySelected ? formatApplyActionLabel(selectedProposal) : 'Apply unavailable'}</Text>
+              <Text style={styles.primaryActionText}>
+                {canApplySelected ? formatApplyActionLabel(selectedProposal) : 'Apply unavailable'}
+              </Text>
             </Pressable>
+            {canRefreshSelected ? (
+              <Pressable
+                style={[styles.secondaryAction, busy && styles.disabledAction]}
+                onPress={() => void refresh(selectedProposal)}
+                disabled={busy}
+              >
+                <Text style={styles.secondaryActionText}>Refresh proposal</Text>
+              </Pressable>
+            ) : null}
             <Pressable
               style={[styles.secondaryAction, busy && styles.disabledAction]}
               onPress={() => void mark(selectedProposal, 'postponed')}
@@ -254,6 +334,15 @@ function Meta({ label, value }: { label: string; value: string }) {
     <View style={styles.meta}>
       <Text style={styles.metaLabel}>{label}</Text>
       <Text style={styles.metaValue}>{value}</Text>
+    </View>
+  );
+}
+
+function ProposalEventHistoryItem({ event }: { event: ProfileProposalEvent }) {
+  return (
+    <View style={styles.historyItem}>
+      <Text style={styles.historySummary}>{formatProposalEventSummary(event)}</Text>
+      <Text style={styles.historyMeta}>{formatProposalEventTimestamp(event)}</Text>
     </View>
   );
 }
@@ -361,6 +450,30 @@ const styles = StyleSheet.create({
     color: colors.text,
     fontSize: fontSize.md,
   },
+  freshnessBox: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: spacing.md,
+    marginTop: spacing.md,
+  },
+  freshnessBoxReady: {
+    borderColor: colors.green,
+    backgroundColor: colors.surface,
+  },
+  freshnessBoxBlocked: {
+    borderColor: colors.yellow,
+    backgroundColor: colors.surface,
+  },
+  freshnessTitle: {
+    color: colors.text,
+    fontSize: fontSize.md,
+    fontWeight: '800',
+  },
+  freshnessBody: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    marginTop: spacing.xs,
+  },
   sectionLabel: {
     color: colors.text,
     fontSize: fontSize.lg,
@@ -398,6 +511,27 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: fontSize.sm,
     marginTop: spacing.sm,
+  },
+  historyBox: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    backgroundColor: colors.surface,
+  },
+  historyItem: {
+    padding: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  historySummary: {
+    color: colors.text,
+    fontSize: fontSize.md,
+    fontWeight: '700',
+  },
+  historyMeta: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    marginTop: spacing.xs,
   },
   notice: {
     color: colors.green,

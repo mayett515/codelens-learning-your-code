@@ -26,6 +26,7 @@ export interface ConceptualizeProfileContext {
   branches: readonly ProfileBranch[];
   selectionSnapshot: OntologyCorrectionActiveSelectionSnapshot;
   proposalTarget: ProfileChangeProposalTarget;
+  proposalTargetBranchUpdatedAt?: number | null | undefined;
   compositionStamp: ContextCompositionStamp;
   scopeLegend: ContextScopeLegend;
   userFitProjection?: UserFitProjection | undefined;
@@ -103,7 +104,7 @@ export async function resolveConceptualizeProfileContext(
     baseProfile: result.baseProfile,
     branches: result.branches,
     selectionSnapshot,
-    proposalTarget: chooseProposalTarget(result.selection.baseProfileId, result.branches),
+    ...chooseProposalTarget(result.selection.baseProfileId, result.branches),
     userFitProjection: await loadUserFitProjection(result.selection.baseProfileId, deps),
   });
 }
@@ -114,10 +115,13 @@ export function createConceptualizeProfileContext(input: {
   branches: readonly ProfileBranch[];
   selectionSnapshot: OntologyCorrectionActiveSelectionSnapshot;
   proposalTarget: ProfileChangeProposalTarget;
+  proposalTargetBranchUpdatedAt?: number | null | undefined;
   userFitProjection?: UserFitProjection | undefined;
 }): ConceptualizeProfileContext {
   return {
     ...input,
+    proposalTargetBranchUpdatedAt: input.proposalTargetBranchUpdatedAt
+      ?? resolveProposalTargetBranchUpdatedAt(input.proposalTarget, input.branches),
     userFitProjection: input.userFitProjection ?? emptyUserFitProjection(input.baseProfile.id),
     branches: [...input.branches],
     compositionStamp: buildCompositionStamp(input.baseProfile, input.profile, input.branches),
@@ -187,14 +191,43 @@ function emptyUserFitProjection(baseProfileId: string): UserFitProjection {
 function chooseProposalTarget(
   baseProfileId: string,
   branches: readonly ProfileBranch[],
-): ProfileChangeProposalTarget {
+): {
+  proposalTarget: ProfileChangeProposalTarget;
+  proposalTargetBranchUpdatedAt: number | null;
+} {
   const personal = lastBranchOfKind(branches, 'personal');
-  if (personal) return { kind: 'profile_branch', branchId: personal.id };
+  if (personal) {
+    return {
+      proposalTarget: { kind: 'profile_branch', branchId: personal.id },
+      proposalTargetBranchUpdatedAt: personal.updatedAt,
+    };
+  }
   const learning = lastBranchOfKind(branches, 'learning');
-  if (learning) return { kind: 'profile_branch', branchId: learning.id };
+  if (learning) {
+    return {
+      proposalTarget: { kind: 'profile_branch', branchId: learning.id },
+      proposalTargetBranchUpdatedAt: learning.updatedAt,
+    };
+  }
   const project = lastBranchOfKind(branches, 'project');
-  if (project) return { kind: 'profile_branch', branchId: project.id };
-  return { kind: 'base_profile', profileId: baseProfileId };
+  if (project) {
+    return {
+      proposalTarget: { kind: 'profile_branch', branchId: project.id },
+      proposalTargetBranchUpdatedAt: project.updatedAt,
+    };
+  }
+  return {
+    proposalTarget: { kind: 'base_profile', profileId: baseProfileId },
+    proposalTargetBranchUpdatedAt: null,
+  };
+}
+
+function resolveProposalTargetBranchUpdatedAt(
+  target: ProfileChangeProposalTarget,
+  branches: readonly ProfileBranch[],
+): number | null {
+  if (target.kind !== 'profile_branch' || !target.branchId) return null;
+  return branches.find((branch) => branch.id === target.branchId)?.updatedAt ?? null;
 }
 
 function lastBranchOfKind(

@@ -4,13 +4,18 @@ import {
   formatApplyActionLabel,
   formatApplySuccessMessage,
   formatConfidence,
+  formatProposalFreshnessDescription,
+  formatProposalFreshnessLabel,
+  formatProposalEventSummary,
+  formatProposalEventTimestamp,
   formatProposalReviewError,
+  formatRefreshSuccessMessage,
   formatRiskDescription,
   formatRiskLabel,
   formatTarget,
   summarizePatch,
 } from '../ui/profileProposalReviewPresentation';
-import type { ProfileChangeProposal } from '../types';
+import type { ProfileChangeProposal, ProfileProposalEvent } from '../types';
 
 function makeProposal(overrides: Partial<ProfileChangeProposal> = {}): ProfileChangeProposal {
   return {
@@ -40,6 +45,32 @@ function makeProposal(overrides: Partial<ProfileChangeProposal> = {}): ProfileCh
     updatedAt: 2,
     reviewedAt: null,
     appliedAt: null,
+    ...overrides,
+  };
+}
+
+function makeEvent(overrides: Partial<ProfileProposalEvent> = {}): ProfileProposalEvent {
+  return {
+    id: 'event-1',
+    proposalId: 'proposal-1',
+    action: 'applied',
+    actorKind: 'user',
+    actorId: null,
+    baseProfileId: 'coding',
+    proposalKind: 'ontology_node_patch',
+    target: {
+      kind: 'profile_branch',
+      branchId: 'branch-1',
+    },
+    statusBefore: 'pending',
+    statusAfter: 'accepted',
+    proposalUpdatedAtBefore: 1,
+    proposalUpdatedAtAfter: 2,
+    branchUpdatedAtBefore: null,
+    branchUpdatedAtAfter: null,
+    reason: null,
+    details: null,
+    createdAt: 1767225600000,
     ...overrides,
   };
 }
@@ -79,9 +110,77 @@ describe('profile proposal review presentation helpers', () => {
     expect(formatConfidence(null)).toBe('unknown');
   });
 
+  it('formats proposal freshness as apply readiness copy', () => {
+    expect(formatProposalFreshnessLabel(null)).toBe('Checking target');
+    expect(formatProposalFreshnessDescription(null)).toContain('checking');
+
+    expect(formatProposalFreshnessLabel({
+      status: 'fresh',
+      reason: 'target_branch_updated_at_matches',
+      canApply: true,
+      canRefresh: false,
+      expectedRevision: 2,
+      currentRevision: 2,
+    })).toBe('Ready to apply');
+
+    expect(formatProposalFreshnessLabel({
+      status: 'stale_refreshable',
+      reason: 'target_branch_updated_at_changed',
+      canApply: false,
+      canRefresh: true,
+      expectedRevision: 2,
+      currentRevision: 5,
+    })).toBe('Target changed');
+    expect(formatProposalFreshnessDescription({
+      status: 'stale_refreshable',
+      reason: 'target_branch_updated_at_changed',
+      canApply: false,
+      canRefresh: true,
+      expectedRevision: 2,
+      currentRevision: 5,
+    })).toContain('Refresh before applying');
+
+    expect(formatProposalFreshnessLabel({
+      status: 'conflicted',
+      reason: 'patch_conflict',
+      canApply: false,
+      canRefresh: false,
+      expectedRevision: 2,
+      currentRevision: 5,
+    })).toBe('Cannot safely refresh');
+
+    expect(formatProposalFreshnessLabel({
+      status: 'obsolete',
+      reason: 'target_missing',
+      canApply: false,
+      canRefresh: false,
+      expectedRevision: null,
+      currentRevision: null,
+    })).toBe('Target missing');
+    expect(formatProposalFreshnessDescription({
+      status: 'obsolete',
+      reason: 'target_missing',
+      canApply: false,
+      canRefresh: false,
+      expectedRevision: null,
+      currentRevision: null,
+    })).toContain('no longer exists');
+
+    expect(formatProposalFreshnessDescription({
+      status: 'unknown',
+      reason: 'target_branch_updated_at_missing',
+      canApply: false,
+      canRefresh: false,
+      expectedRevision: null,
+      currentRevision: 5,
+    })).toContain('missing its target snapshot');
+  });
+
   it('formats target-specific apply labels and success messages', () => {
     expect(formatApplyActionLabel(makeProposal())).toBe('Apply to branch');
     expect(formatApplySuccessMessage(makeProposal())).toBe('Applied to branch.');
+    expect(formatRefreshSuccessMessage(makeProposal({ id: 'proposal-2' }))).toContain('proposal-2');
+    expect(formatRefreshSuccessMessage(makeProposal({ id: 'proposal-2' }))).toContain('Review it before applying');
 
     const baseProposal = makeProposal({
       target: {
@@ -92,6 +191,30 @@ describe('profile proposal review presentation helpers', () => {
     expect(formatApplyActionLabel(baseProposal)).toBe('Apply to core');
     expect(formatApplySuccessMessage(baseProposal)).toContain('Applied to base profile');
     expect(formatApplySuccessMessage(baseProposal)).toContain('Derived branches');
+  });
+
+  it('formats proposal event history as compact audit copy', () => {
+    expect(formatProposalEventSummary(makeEvent())).toBe('Applied: pending to accepted.');
+    expect(formatProposalEventSummary(makeEvent({
+      action: 'rejected',
+      statusAfter: 'rejected',
+    }))).toBe('Rejected: pending to rejected.');
+    expect(formatProposalEventSummary(makeEvent({
+      action: 'postponed',
+      statusAfter: 'postponed',
+    }))).toBe('Postponed: pending to postponed.');
+    expect(formatProposalEventSummary(makeEvent({
+      action: 'asked_why',
+      statusAfter: 'pending',
+    }))).toBe('Asked why: reason opened while still pending.');
+    expect(formatProposalEventSummary(makeEvent({
+      action: 'superseded',
+      statusAfter: 'superseded',
+      details: {
+        supersededByProposalId: 'proposal-2',
+      },
+    }))).toBe('Superseded: replaced by proposal-2.');
+    expect(formatProposalEventTimestamp(makeEvent())).toBe('2026-01-01 00:00 UTC');
   });
 
   it('summarizes patch operations for compact review cards', () => {
@@ -127,6 +250,8 @@ describe('profile proposal review presentation helpers', () => {
     const cases = [
       ['branch_write_conflict', 'branch changed'],
       ['proposal_write_conflict', 'proposal changed'],
+      ['proposal_not_refreshable', 'not refreshable'],
+      ['proposal_refresh_time_invalid', 'timestamp'],
       ['profile_definition_write_conflict', 'base profile changed'],
       ['proposal_not_pending', 'already been reviewed'],
       ['proposal_not_branch_target', 'branch-local proposals'],

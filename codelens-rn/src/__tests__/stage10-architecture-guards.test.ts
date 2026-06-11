@@ -400,6 +400,7 @@ describe('Kortex overlay persistence table guards', () => {
       'src/db/migrations/021-user-fit-history-recency-indexes.ts',
       'src/db/migrations/022-profile-change-proposal-target-version.ts',
       'src/db/migrations/023-profile-proposal-event-superseded-action.ts',
+      'src/db/migrations/024-profile-change-proposal-target-branch-updated-at.ts',
       'src/db/migrations/index.ts',
       'src/features/ontology/data/schema.ts',
       'src/features/ontology/data/profileBranchRepo.ts',
@@ -817,6 +818,61 @@ describe('Kordex context assembly guards', () => {
     expect(versioningSrc).not.toMatch(/\basync\b|\bPromise\b/);
     expect(versioningSrc).not.toMatch(/\b(insert|update|delete|transaction|saveCapture|saveConceptualizedCapture)\b/);
     expect(versioningSrc).not.toMatch(/\b(applyProfilePatch|applyBranchLocal|mutateProfile|autoApply|runExtractor|buildConceptualizePrompt|enqueue|complete)\b/);
+  });
+
+  it('proposal freshness stays a pure read-only classifier, not refresh/apply logic', () => {
+    const freshnessSrc = read('src/features/ontology/profileProposalFreshness.ts');
+    const ontologyIndexSrc = read('src/features/ontology/index.ts');
+
+    expect(freshnessSrc).toContain('evaluateProfileProposalFreshness');
+    expect(freshnessSrc).toContain("stale_refreshable");
+    expect(freshnessSrc).toContain("patch_validation_unknown");
+    expect(ontologyIndexSrc).toContain('evaluateProfileProposalFreshness');
+
+    expect(freshnessSrc).not.toMatch(/from\s+['"][^'"]*(?:db\/|\/db|features\/backup|features\/learning|features\/graph|ai\/|react|react-native|expo|zustand|@tanstack)[^'"]*['"]/);
+    expect(freshnessSrc).not.toMatch(/\basync\b|\bPromise\b/);
+    expect(freshnessSrc).not.toMatch(/\b(insert|update|delete|transaction|saveCapture|saveConceptualizedCapture)\b/);
+    expect(freshnessSrc).not.toMatch(/\b(applyProfilePatch|applyBranchLocal|mutateProfile|autoApply|runExtractor|buildConceptualizePrompt|enqueue|complete|refresh|rebase)\b/);
+  });
+
+  it('proposal freshness service stays a read-only data seam, not a refresh/apply writer', () => {
+    const serviceSrc = read('src/features/ontology/data/profileProposalFreshnessService.ts');
+    const hookSrc = read('src/features/ontology/hooks/useProfileProposalFreshness.ts');
+    const ontologyDataIndexSrc = read('src/features/ontology/data/index.ts');
+    const ontologyRootIndexSrc = read('src/features/ontology/index.ts');
+
+    expect(serviceSrc).toContain('loadProfileProposalFreshness');
+    expect(serviceSrc).toContain('evaluateProfileProposalFreshness');
+    expect(serviceSrc).toContain('compileBranchLocalProposalApplyOperation');
+    expect(serviceSrc).toContain('compileBaseProfileProposalApplyOperation');
+    expect(hookSrc).toContain('useProfileProposalFreshness');
+    expect(ontologyDataIndexSrc).toContain('loadProfileProposalFreshness');
+    expect(ontologyRootIndexSrc).not.toContain('loadProfileProposalFreshness');
+
+    expect(serviceSrc).not.toMatch(/from\s+['"][^'"]*(?:features\/backup|features\/learning|features\/graph|ai\/|react|react-native|expo|zustand|@tanstack)[^'"]*['"]/);
+    expect(serviceSrc).not.toMatch(/\b(insert|upsert|update|delete|transaction|saveProposalIfPending|saveBranchIfUnchanged|saveProfileDefinitionIfUnchanged)\b/);
+    expect(serviceSrc).not.toMatch(/\b(supersede|supersededByProposalId|autoApply|runExtractor|buildConceptualizePrompt|enqueue|complete|refresh|rebase)\b/);
+    expect(hookSrc).not.toMatch(/\b(useMutation|mutateAsync|applyPending|supersedePending|setPending|recordPending)\b/);
+  });
+
+  it('proposal edit replacement service stays behind the ontology data boundary', () => {
+    const serviceSrc = read('src/features/ontology/data/profileChangeProposalEditService.ts');
+    const hookSrc = read('src/features/ontology/hooks/useEditProfileChangeProposal.ts');
+    const ontologyDataIndexSrc = read('src/features/ontology/data/index.ts');
+    const ontologyRootIndexSrc = read('src/features/ontology/index.ts');
+
+    expect(serviceSrc).toContain('createEditedProfileChangeProposalReplacement');
+    expect(serviceSrc).toContain('insertProposal');
+    expect(serviceSrc).toContain('supersedePendingProfileChangeProposal');
+    expect(serviceSrc).toContain('compileBranchLocalProposalApplyOperation');
+    expect(serviceSrc).toContain('compileBaseProfileProposalApplyOperation');
+    expect(hookSrc).toContain('useEditProfileChangeProposal');
+    expect(ontologyDataIndexSrc).toContain('createEditedProfileChangeProposalReplacement');
+    expect(ontologyRootIndexSrc).not.toContain('createEditedProfileChangeProposalReplacement');
+
+    expect(serviceSrc).not.toMatch(/from\s+['"][^'"]*(?:features\/backup|features\/learning|features\/graph|ai\/|react|react-native|expo|zustand|@tanstack)[^'"]*['"]/);
+    expect(serviceSrc).not.toMatch(/\b(autoApply|runExtractor|buildConceptualizePrompt|enqueue|complete)\b/);
+    expect(hookSrc).not.toMatch(/from\s+['"][^'"]*(?:features\/learning|features\/graph|ai\/|react-native|expo|zustand)[^'"]*['"]/);
   });
 
   it('base profile apply helper stays a pure patch compiler, not a data/UI seam', () => {

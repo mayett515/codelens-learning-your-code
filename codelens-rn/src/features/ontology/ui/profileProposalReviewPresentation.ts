@@ -1,7 +1,13 @@
 import { BranchLocalProposalApplyError } from '../branchLocalProposalApply';
 import { BaseProfileProposalApplyError } from '../baseProfileProposalApply';
 import { BaseProfileVersioningError } from '../baseProfileVersioning';
-import type { ProfileChangeProposal, ProfileChangeProposalTargetKind, ProfilePatch } from '../types';
+import type { ProfileProposalFreshness } from '../profileProposalFreshness';
+import type {
+  ProfileChangeProposal,
+  ProfileChangeProposalTargetKind,
+  ProfilePatch,
+  ProfileProposalEvent,
+} from '../types';
 
 export function formatRiskLabel(riskScore: number): string {
   if (riskScore >= 70) return 'High risk';
@@ -28,6 +34,50 @@ export function formatTarget(proposal: ProfileChangeProposal): string {
   return `Core ${proposal.target.profileId ?? proposal.baseProfileId}`;
 }
 
+export function formatProposalFreshnessLabel(
+  freshness: ProfileProposalFreshness | null | undefined,
+): string {
+  if (!freshness) return 'Checking target';
+  switch (freshness.status) {
+    case 'fresh':
+      return 'Ready to apply';
+    case 'stale_refreshable':
+      return 'Target changed';
+    case 'conflicted':
+      return 'Cannot safely refresh';
+    case 'obsolete':
+      return 'Target missing';
+    case 'unknown':
+      return 'Cannot verify freshness';
+  }
+}
+
+export function formatProposalFreshnessDescription(
+  freshness: ProfileProposalFreshness | null | undefined,
+): string {
+  if (!freshness) {
+    return 'Kordex is checking the proposal target before Apply is available.';
+  }
+  switch (freshness.status) {
+    case 'fresh':
+      return 'The target still matches the proposal snapshot, and the patch validates against the current target.';
+    case 'stale_refreshable':
+      return 'The target changed after this proposal was created. Refresh before applying.';
+    case 'conflicted':
+      return 'The target changed in a way this patch no longer fits. Create a replacement proposal instead of applying this one.';
+    case 'obsolete':
+      return 'The target branch or base profile no longer exists.';
+    case 'unknown':
+      if (
+        freshness.reason === 'target_branch_updated_at_missing' ||
+        freshness.reason === 'target_profile_version_missing'
+      ) {
+        return 'This older proposal is missing its target snapshot, so Apply stays blocked.';
+      }
+      return 'Kordex cannot prove this proposal still fits the current target, so Apply stays blocked.';
+  }
+}
+
 export function summarizePatch(patch: ProfilePatch): string[] {
   const lines: string[] = [];
   pushNamedCount(lines, patch.addOntologyNodes, 'new ontology node');
@@ -52,6 +102,36 @@ export function formatApplySuccessMessage(proposal: ProfileChangeProposal): stri
   return 'Applied to branch.';
 }
 
+export function formatRefreshSuccessMessage(proposal: ProfileChangeProposal): string {
+  return `Created refreshed proposal ${proposal.id}. Review it before applying.`;
+}
+
+export function formatProposalEventSummary(event: ProfileProposalEvent): string {
+  switch (event.action) {
+    case 'applied':
+      return `Applied: ${event.statusBefore} to ${event.statusAfter}.`;
+    case 'rejected':
+      return `Rejected: ${event.statusBefore} to ${event.statusAfter}.`;
+    case 'postponed':
+      return `Postponed: ${event.statusBefore} to ${event.statusAfter}.`;
+    case 'asked_why':
+      return 'Asked why: reason opened while still pending.';
+    case 'superseded': {
+      const replacementId = typeof event.details?.['supersededByProposalId'] === 'string'
+        ? event.details['supersededByProposalId']
+        : null;
+      return replacementId
+        ? `Superseded: replaced by ${replacementId}.`
+        : 'Superseded: replaced by a newer proposal.';
+    }
+  }
+}
+
+export function formatProposalEventTimestamp(event: ProfileProposalEvent): string {
+  if (!Number.isFinite(event.createdAt)) return 'unknown time';
+  return `${new Date(event.createdAt).toISOString().slice(0, 16).replace('T', ' ')} UTC`;
+}
+
 export function formatProposalReviewError(
   error: unknown,
   targetKind?: ProfileChangeProposalTargetKind,
@@ -62,6 +142,10 @@ export function formatProposalReviewError(
       return 'The branch changed while this proposal was open. Refresh and review it again.';
     case 'proposal_write_conflict':
       return 'The proposal changed while this was open. Refresh the queue and try again.';
+    case 'proposal_not_refreshable':
+      return 'This proposal is not refreshable from its current target state.';
+    case 'proposal_refresh_time_invalid':
+      return 'The proposal timestamp is newer than this refresh action. Refresh the queue and try again.';
     case 'profile_definition_write_conflict':
       return 'The base profile changed while this proposal was open. Refresh and review it again.';
     case 'proposal_not_pending':

@@ -36,6 +36,7 @@ export interface ConceptualizeSaveContext {
   profile: DomainProfile;
   selectionSnapshot: OntologyCorrectionActiveSelectionSnapshot;
   proposalTarget: ProfileChangeProposalTarget;
+  proposalTargetBranchUpdatedAt?: number | null | undefined;
 }
 
 export interface SaveConceptualizedCaptureDeps {
@@ -290,6 +291,7 @@ function buildNewTypeProposal(input: {
     sourceBranchId: targetIsBranch ? input.context.proposalTarget.branchId ?? null : null,
     target: input.context.proposalTarget,
     targetProfileVersion: targetIsBranch ? null : input.context.profile.version,
+    targetBranchUpdatedAt: targetIsBranch ? input.context.proposalTargetBranchUpdatedAt ?? null : null,
     evidenceIds: [input.evidenceId],
     patch: {
       addOntologyNodes: [input.node],

@@ -91,7 +91,42 @@ export type {
   ProfileChangeProposalLifecycleServiceErrorCode,
   SupersedePendingProfileChangeProposalInput,
 } from './profileChangeProposalLifecycleService';
-export { profileBranchKeys, profileProposalKeys } from './queryKeys';
+
+export {
+  ProfileChangeProposalRefreshServiceError,
+  refreshStaleProfileChangeProposal,
+} from './profileChangeProposalRefreshService';
+export type {
+  ProfileChangeProposalRefreshServiceDependencies,
+  ProfileChangeProposalRefreshServiceErrorCode,
+  RefreshStaleProfileChangeProposalInput,
+  RefreshStaleProfileChangeProposalResult,
+} from './profileChangeProposalRefreshService';
+export {
+  ProfileChangeProposalEditServiceError,
+  createEditedProfileChangeProposalReplacement,
+} from './profileChangeProposalEditService';
+export type {
+  CreateEditedProfileChangeProposalReplacementInput,
+  CreateEditedProfileChangeProposalReplacementResult,
+  EditProfileChangeProposalDraftInput,
+  ProfileChangeProposalEditServiceDependencies,
+  ProfileChangeProposalEditServiceErrorCode,
+} from './profileChangeProposalEditService';
+export {
+  profileBranchKeys,
+  profileProposalEventKeys,
+  profileProposalFreshnessKeys,
+  profileProposalKeys,
+} from './queryKeys';
+
+export {
+  loadProfileProposalFreshness,
+} from './profileProposalFreshnessService';
+export type {
+  LoadProfileProposalFreshnessInput,
+  ProfileProposalFreshnessServiceDependencies,
+} from './profileProposalFreshnessService';
 
 export {
   BranchLocalProposalApplyServiceError,

@@ -72,6 +72,14 @@ export type {
   AssertBaseProfileProposalTargetVersionInput,
   BaseProfileVersioningErrorCode,
 } from './baseProfileVersioning';
+export { evaluateProfileProposalFreshness } from './profileProposalFreshness';
+export type {
+  ProfileProposalFreshness,
+  ProfileProposalFreshnessReason,
+  ProfileProposalFreshnessStatus,
+  ProfileProposalPatchValidation,
+  ProfileProposalTargetFacts,
+} from './profileProposalFreshness';
 export {
   BaseProfileProposalApplyError,
   applyBaseProfileChangeProposal,

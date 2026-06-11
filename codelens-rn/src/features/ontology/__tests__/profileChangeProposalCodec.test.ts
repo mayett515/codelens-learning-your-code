@@ -57,6 +57,7 @@ describe('profile change proposal codec', () => {
       targetProfileId: null,
       targetBranchId: 'branch-1',
       targetProfileVersion: null,
+      targetBranchUpdatedAt: null,
       evidenceIdsJson: ['ev-1'],
       patchJson: { addItemTypeNodeIds: ['react_hook'] },
       riskScore: 35,
@@ -75,6 +76,7 @@ describe('profile change proposal codec', () => {
       targetProfileId: null,
       targetBranchId: 'branch-1',
       targetProfileVersion: null,
+      targetBranchUpdatedAt: 2000,
       evidenceIdsJson: '["ev-1"]',
       patchJson: '{"addItemTypeNodeIds":["react_hook"]}',
       title: 'Add React hook type',
@@ -95,6 +97,7 @@ describe('profile change proposal codec', () => {
     expect(proposal.patch).toEqual({ addItemTypeNodeIds: ['react_hook'] });
     expect(proposal.target).toEqual({ kind: 'profile_branch', profileId: null, branchId: 'branch-1' });
     expect(proposal.targetProfileVersion).toBeNull();
+    expect(proposal.targetBranchUpdatedAt).toBe(2000);
   });
 
   it('stores a target profile version for base-profile proposals', () => {
@@ -110,6 +113,18 @@ describe('profile change proposal codec', () => {
     expect(row.targetProfileId).toBe('coding');
     expect(row.targetBranchId).toBeNull();
     expect(row.targetProfileVersion).toBe(3);
+    expect(row.targetBranchUpdatedAt).toBeNull();
+  });
+
+  it('stores a target branch revision for branch proposals', () => {
+    const row = profileChangeProposalToRow(validProposal({
+      targetBranchUpdatedAt: 2000,
+    }));
+
+    expect(row.targetKind).toBe('profile_branch');
+    expect(row.targetBranchId).toBe('branch-1');
+    expect(row.targetProfileVersion).toBeNull();
+    expect(row.targetBranchUpdatedAt).toBe(2000);
   });
 
   it('requires base-profile target profileId to match baseProfileId', () => {
@@ -126,6 +141,17 @@ describe('profile change proposal codec', () => {
     expect(() => validateProfileChangeProposal(validProposal({
       targetProfileVersion: 1,
     }))).toThrow(/must not set targetProfileVersion/);
+  });
+
+  it('rejects target branch revisions on base-profile proposals', () => {
+    expect(() => validateProfileChangeProposal(validProposal({
+      target: {
+        kind: 'base_profile',
+        profileId: 'coding',
+      },
+      targetProfileVersion: 3,
+      targetBranchUpdatedAt: 2000,
+    }))).toThrow(/must not set targetBranchUpdatedAt/);
   });
 
   it('rejects target shapes that mix base-profile and branch targets', () => {
