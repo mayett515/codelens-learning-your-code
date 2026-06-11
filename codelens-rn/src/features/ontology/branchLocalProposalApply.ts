@@ -248,6 +248,13 @@ function assertPatchAppliesToCurrentBranchProfile<TItemTypeNodeId extends string
       throwPatchConflict(`Cannot add item type ${id}; no matching ontology node exists or is added by this patch.`);
     }
   }
+  const patchItemTypeIds = new Set<string>([
+    ...currentProfile.ontology.itemTypeNodeIds,
+    ...itemTypeIds,
+  ]);
+  assertPatchParentIds(patch.addOntologyNodes ?? [], patchItemTypeIds, 'addOntologyNodes');
+  assertPatchParentIds(patch.overrideOntologyNodes ?? [], patchItemTypeIds, 'overrideOntologyNodes');
+  assertPatchParentIds(overrideOntologyNodes, patchItemTypeIds, 'overrideOntology.nodes');
 
   const currentRelationshipTypeIds = new Set(currentProfile.ontology.relationshipTypeNodeIds);
   const relationshipTypeIds = [
@@ -264,6 +271,22 @@ function assertPatchAppliesToCurrentBranchProfile<TItemTypeNodeId extends string
     // The base coding profile uses ids like "prerequisite" and "related"
     // without corresponding ontology nodes, so this helper intentionally
     // validates duplicate/conflict behavior but not node existence.
+  }
+}
+
+function assertPatchParentIds(
+  nodes: readonly OntologyNode[],
+  itemTypeIds: ReadonlySet<string>,
+  field: string,
+): void {
+  for (const node of nodes) {
+    if (!node.parentId) continue;
+    if (node.parentId === node.id) {
+      throwPatchConflict(`Cannot set ontology node ${node.id} as its own parent in ${field}.`);
+    }
+    if (!itemTypeIds.has(node.parentId)) {
+      throwPatchConflict(`Cannot set parent ${node.parentId} for ontology node ${node.id}; parent is not an item type in the target branch profile or patch.`);
+    }
   }
 }
 

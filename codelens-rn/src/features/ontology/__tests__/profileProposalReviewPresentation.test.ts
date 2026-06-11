@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { BranchLocalProposalApplyError } from '../branchLocalProposalApply';
 import {
+  buildEditedProposalDraft,
+  createProposalEditorModel,
   formatApplyActionLabel,
   formatApplySuccessMessage,
   formatConfidence,
@@ -76,6 +78,120 @@ function makeEvent(overrides: Partial<ProfileProposalEvent> = {}): ProfilePropos
 }
 
 describe('profile proposal review presentation helpers', () => {
+  it('builds editable proposal drafts for pending new-node proposals without changing target identity', () => {
+    const proposal = makeProposal({
+      patch: {
+        addOntologyNodes: [{
+          id: 'noise_control',
+          label: 'Noise control',
+          kind: 'subcategory',
+          parentId: 'frontend',
+          meaning: 'Original meaning.',
+          useWhen: ['Use original.'],
+          doNotUseWhen: [],
+          examples: [],
+          relatedNodeIds: ['frontend'],
+          contrastNodeIds: [],
+          status: 'suggested',
+          createdBy: 'user',
+          createdAt: 1,
+          updatedAt: 1,
+        }],
+        addItemTypeNodeIds: ['noise_control'],
+      },
+      reason: 'Original proposal reason.',
+      riskScore: 25,
+    });
+
+    const model = createProposalEditorModel(proposal);
+    expect(model).toMatchObject({
+      canEdit: true,
+      nodeId: 'noise_control',
+      draft: {
+        label: 'Noise control',
+        parentId: 'frontend',
+        meaning: 'Original meaning.',
+        reason: 'Original proposal reason.',
+        riskScore: '25',
+      },
+    });
+
+    if (!model.canEdit) throw new Error('Expected editable model');
+    const result = buildEditedProposalDraft(proposal, {
+      ...model.draft,
+      label: 'Exposure planning',
+      parentId: 'mechanism',
+      meaning: 'Plans shutter, aperture, and ISO tradeoffs.',
+      reason: 'The user narrowed the proposal before applying it.',
+      riskScore: '30',
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.message);
+    expect(result.draft).toMatchObject({
+      title: 'Add Exposure planning type',
+      summary: 'Create Exposure planning as an item type after user review.',
+      reason: 'The user narrowed the proposal before applying it.',
+      riskScore: 30,
+    });
+    expect(result.draft.patch.addOntologyNodes?.[0]).toMatchObject({
+      id: 'noise_control',
+      label: 'Exposure planning',
+      kind: 'subcategory',
+      parentId: 'mechanism',
+      meaning: 'Plans shutter, aperture, and ISO tradeoffs.',
+    });
+    expect(result.draft.patch.addItemTypeNodeIds).toEqual(['noise_control']);
+  });
+
+  it('keeps unsupported proposal patches out of the editor and validates draft input', () => {
+    const nonNodeProposal = makeProposal({
+      patch: {
+        addItemTypeNodeIds: ['noise_control'],
+      },
+    });
+    expect(createProposalEditorModel(nonNodeProposal)).toMatchObject({
+      canEdit: false,
+    });
+
+    const proposal = makeProposal({
+      patch: {
+        addOntologyNodes: [{
+          id: 'noise_control',
+          label: 'Noise control',
+          kind: 'category',
+          parentId: null,
+          meaning: 'Original meaning.',
+          useWhen: [],
+          doNotUseWhen: [],
+          examples: [],
+          relatedNodeIds: [],
+          contrastNodeIds: [],
+          status: 'suggested',
+          createdBy: 'user',
+          createdAt: 1,
+          updatedAt: 1,
+        }],
+        addItemTypeNodeIds: ['noise_control'],
+      },
+    });
+    const model = createProposalEditorModel(proposal);
+    if (!model.canEdit) throw new Error('Expected editable model');
+
+    expect(buildEditedProposalDraft(proposal, {
+      ...model.draft,
+      label: '',
+    })).toMatchObject({ ok: false, message: 'The edited proposal needs a label.' });
+    expect(buildEditedProposalDraft(proposal, {
+      ...model.draft,
+      meaning: '',
+    })).toMatchObject({ ok: false, message: 'The edited proposal needs a meaning.' });
+    expect(buildEditedProposalDraft(proposal, {
+      ...model.draft,
+      riskScore: '150',
+    })).toMatchObject({ ok: false, message: 'Risk must be a number from 0 to 100.' });
+  });
+
   it('formats risk as blast-radius language rather than a bare score', () => {
     expect(formatRiskLabel(10)).toBe('Low risk');
     expect(formatRiskLabel(40)).toBe('Medium risk');

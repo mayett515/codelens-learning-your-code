@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors, fontSize, spacing } from '../../../ui/theme';
 import { useApplyProfileChangeProposal } from '../hooks/useApplyProfileChangeProposal';
+import { useEditProfileChangeProposal } from '../hooks/useEditProfileChangeProposal';
 import { usePendingProfileChangeProposals } from '../hooks/useProfileChangeProposals';
 import { useProfileProposalFreshness } from '../hooks/useProfileProposalFreshness';
 import { useProfileProposalEventsForProposal } from '../hooks/useProfileProposalEvents';
@@ -12,6 +13,8 @@ import {
 } from '../hooks/useReviewProfileChangeProposal';
 import type { ProfileChangeProposal, ProfileProposalEvent } from '../types';
 import {
+  buildEditedProposalDraft,
+  createProposalEditorModel,
   formatApplyActionLabel,
   formatApplySuccessMessage,
   formatConfidence,
@@ -23,6 +26,7 @@ import {
   formatRefreshSuccessMessage,
   formatRiskDescription,
   formatTarget,
+  type ProposalEditorDraftState,
   summarizePatch,
 } from './profileProposalReviewPresentation';
 
@@ -42,11 +46,13 @@ export function ProfileProposalReviewScreen({
 }: ProfileProposalReviewScreenProps = {}) {
   const { data: proposals = [], isLoading } = usePendingProfileChangeProposals();
   const applyMutation = useApplyProfileChangeProposal();
+  const editMutation = useEditProfileChangeProposal();
   const refreshMutation = useRefreshProfileChangeProposal();
   const reviewMutation = useReviewProfileChangeProposal();
   const askWhyMutation = useAskWhyProfileChangeProposal();
   const [selectedId, setSelectedId] = useState<string | null>(initialProposalId ?? null);
   const [showReason, setShowReason] = useState(false);
+  const [editDraft, setEditDraft] = useState<ProposalEditorDraftState | null>(null);
   const [askedWhyProposalIds, setAskedWhyProposalIds] = useState<ReadonlySet<string>>(() => new Set());
   const [message, setMessage] = useState<ReviewMessage | null>(null);
 
@@ -68,13 +74,22 @@ export function ProfileProposalReviewScreen({
     data: proposalFreshness,
     isLoading: freshnessLoading,
   } = useProfileProposalFreshness(selectedProposal);
+  const editorModel = useMemo(
+    () => selectedProposal ? createProposalEditorModel(selectedProposal) : null,
+    [selectedProposal],
+  );
   const busy = applyMutation.isPending ||
+    editMutation.isPending ||
     refreshMutation.isPending ||
     reviewMutation.isPending ||
     askWhyMutation.isPending;
   const targetSupported = selectedProposal?.target.kind === 'profile_branch' || selectedProposal?.target.kind === 'base_profile';
   const canApplySelected = Boolean(targetSupported && proposalFreshness?.canApply);
   const canRefreshSelected = Boolean(targetSupported && proposalFreshness?.canRefresh);
+
+  useEffect(() => {
+    setEditDraft(null);
+  }, [selectedProposal?.id, selectedProposal?.updatedAt]);
 
   async function apply(proposal: ProfileChangeProposal) {
     setMessage(null);
@@ -110,6 +125,30 @@ export function ProfileProposalReviewScreen({
       });
       setMessage({ tone: 'notice', text: formatRefreshSuccessMessage(result.proposal) });
       setSelectedId(result.proposal.id);
+    } catch (error) {
+      setMessage({ tone: 'error', text: formatProposalReviewError(error, proposal.target.kind) });
+    }
+  }
+
+  async function saveEditedProposal(proposal: ProfileChangeProposal) {
+    if (!editDraft) return;
+    setMessage(null);
+    const result = buildEditedProposalDraft(proposal, editDraft);
+    if (!result.ok) {
+      setMessage({ tone: 'error', text: result.message });
+      return;
+    }
+
+    try {
+      const editResult = await editMutation.mutateAsync({
+        proposalId: proposal.id,
+        draft: result.draft,
+        supersedeReason: 'User edited the proposal from the review surface.',
+      });
+      setMessage({ tone: 'notice', text: `Created edited proposal ${editResult.proposal.id}. Review it before applying.` });
+      setSelectedId(editResult.proposal.id);
+      setEditDraft(null);
+      setShowReason(false);
     } catch (error) {
       setMessage({ tone: 'error', text: formatProposalReviewError(error, proposal.target.kind) });
     }
@@ -185,6 +224,7 @@ export function ProfileProposalReviewScreen({
               onPress={() => {
                 setSelectedId(proposal.id);
                 setShowReason(false);
+                setEditDraft(null);
                 setMessage(null);
               }}
             />
@@ -234,6 +274,34 @@ export function ProfileProposalReviewScreen({
               ) : null}
             </View>
           ) : null}
+          <View style={styles.editorGate}>
+            {editDraft ? (
+              <ProposalEditor
+                draft={editDraft}
+                disabled={busy}
+                onChange={(patch) => setEditDraft((current) => current ? { ...current, ...patch } : current)}
+                onCancel={() => {
+                  setEditDraft(null);
+                  setMessage(null);
+                }}
+                onSave={() => void saveEditedProposal(selectedProposal)}
+              />
+            ) : editorModel?.canEdit ? (
+              <Pressable
+                style={[styles.secondaryAction, busy && styles.disabledAction]}
+                onPress={() => {
+                  setEditDraft(editorModel.draft);
+                  setShowReason(false);
+                  setMessage(null);
+                }}
+                disabled={busy}
+              >
+                <Text style={styles.secondaryActionText}>Edit proposal</Text>
+              </Pressable>
+            ) : editorModel ? (
+              <Text style={styles.muted}>{editorModel.reason}</Text>
+            ) : null}
+          </View>
           <Text style={styles.sectionLabel}>History</Text>
           {eventsLoading ? (
             <Text style={styles.muted}>Loading history...</Text>
@@ -289,6 +357,106 @@ export function ProfileProposalReviewScreen({
           </View>
         </ScrollView>
       </View>
+    </View>
+  );
+}
+
+function ProposalEditor({
+  draft,
+  disabled,
+  onChange,
+  onCancel,
+  onSave,
+}: {
+  draft: ProposalEditorDraftState;
+  disabled: boolean;
+  onChange: (patch: Partial<ProposalEditorDraftState>) => void;
+  onCancel: () => void;
+  onSave: () => void;
+}) {
+  return (
+    <View style={styles.editorBox}>
+      <Text style={styles.editorTitle}>Edit proposal</Text>
+      <LabeledInput
+        label="Label"
+        value={draft.label}
+        disabled={disabled}
+        onChangeText={(value) => onChange({ label: value })}
+      />
+      <LabeledInput
+        label="Parent id"
+        value={draft.parentId}
+        disabled={disabled}
+        onChangeText={(value) => onChange({ parentId: value })}
+      />
+      <LabeledInput
+        label="Meaning"
+        value={draft.meaning}
+        disabled={disabled}
+        multiline
+        onChangeText={(value) => onChange({ meaning: value })}
+      />
+      <LabeledInput
+        label="Reason"
+        value={draft.reason}
+        disabled={disabled}
+        multiline
+        onChangeText={(value) => onChange({ reason: value })}
+      />
+      <LabeledInput
+        label="Risk"
+        value={draft.riskScore}
+        disabled={disabled}
+        keyboardType="numeric"
+        onChangeText={(value) => onChange({ riskScore: value })}
+      />
+      <View style={styles.editorActions}>
+        <Pressable
+          style={[styles.primaryAction, disabled && styles.disabledAction]}
+          onPress={onSave}
+          disabled={disabled}
+        >
+          <Text style={styles.primaryActionText}>Save edited proposal</Text>
+        </Pressable>
+        <Pressable
+          style={[styles.secondaryAction, disabled && styles.disabledAction]}
+          onPress={onCancel}
+          disabled={disabled}
+        >
+          <Text style={styles.secondaryActionText}>Cancel edit</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+function LabeledInput({
+  label,
+  value,
+  disabled,
+  multiline,
+  keyboardType,
+  onChangeText,
+}: {
+  label: string;
+  value: string;
+  disabled: boolean;
+  multiline?: boolean | undefined;
+  keyboardType?: 'default' | 'numeric' | undefined;
+  onChangeText: (value: string) => void;
+}) {
+  return (
+    <View style={styles.inputGroup}>
+      <Text style={styles.inputLabel}>{label}</Text>
+      <TextInput
+        style={[styles.input, multiline && styles.multilineInput]}
+        value={value}
+        editable={!disabled}
+        multiline={multiline}
+        keyboardType={keyboardType}
+        onChangeText={onChangeText}
+        placeholderTextColor={colors.textSecondary}
+      />
     </View>
   );
 }
@@ -506,6 +674,49 @@ const styles = StyleSheet.create({
   reasonText: {
     color: colors.text,
     fontSize: fontSize.md,
+  },
+  editorGate: {
+    marginTop: spacing.md,
+  },
+  editorBox: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    padding: spacing.md,
+    backgroundColor: colors.surface,
+    gap: spacing.sm,
+  },
+  editorTitle: {
+    color: colors.text,
+    fontSize: fontSize.lg,
+    fontWeight: '800',
+  },
+  inputGroup: {
+    gap: spacing.xs,
+  },
+  inputLabel: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    fontWeight: '700',
+  },
+  input: {
+    minHeight: 44,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    color: colors.text,
+    backgroundColor: colors.background,
+    fontSize: fontSize.md,
+  },
+  multilineInput: {
+    minHeight: 88,
+    textAlignVertical: 'top',
+  },
+  editorActions: {
+    gap: spacing.sm,
+    marginTop: spacing.sm,
   },
   evidenceText: {
     color: colors.textSecondary,

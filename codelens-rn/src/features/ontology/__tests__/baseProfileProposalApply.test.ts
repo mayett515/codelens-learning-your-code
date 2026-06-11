@@ -358,6 +358,43 @@ describe('base profile proposal apply helpers', () => {
     );
   });
 
+  it('rejects added node parents unless they are item types in the current base profile or patch', () => {
+    expectApplyErrorCode(
+      () => applyBaseProfileChangeProposal({
+        proposal: makeProposal({
+          patch: makePatch({
+            addOntologyNodes: [makeNode('noise_control', { parentId: 'missing_parent' })],
+            addItemTypeNodeIds: ['noise_control'],
+          }),
+        }),
+        profileDefinition: makeDefinition(),
+        now: 3,
+      }),
+      'patch_conflict',
+    );
+
+    const result = applyBaseProfileChangeProposal({
+      proposal: makeProposal({
+        patch: makePatch({
+          addOntologyNodes: [
+            makeNode('parent_type'),
+            makeNode('child_type', {
+              kind: 'subcategory',
+              parentId: 'parent_type',
+            }),
+          ],
+          addItemTypeNodeIds: ['parent_type', 'child_type'],
+        }),
+      }),
+      profileDefinition: makeDefinition(),
+      now: 3,
+    });
+
+    expect(result.profileDefinition.profile.ontology.nodes.some((node) => (
+      node.id === 'child_type' && node.parentId === 'parent_type'
+    ))).toBe(true);
+  });
+
   it('treats relationship type ids as opaque strings while rejecting conflicts', () => {
     const result = applyBaseProfileChangeProposal({
       proposal: makeProposal({

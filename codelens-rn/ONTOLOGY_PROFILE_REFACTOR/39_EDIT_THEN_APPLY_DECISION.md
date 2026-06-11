@@ -2,7 +2,7 @@
 
 Date: 2026-05-28
 
-Status: locked decision; first draft meaning/provenance, target readout, proposal-review handoff, superseding lifecycle, superseding hook-boundary, proposal event-history readout, and edited replacement service/hook slices are complete.
+Status: locked decision; first draft meaning/provenance, target readout, proposal-review handoff, superseding lifecycle, superseding hook-boundary, proposal event-history readout, edited replacement service/hook, and first visible proposal editor UI slices are complete.
 
 ## Decision
 
@@ -264,7 +264,36 @@ Behavior:
 
 Still not added:
 
-- visible proposal editor UI
+- target-layer switching controls
+- direct Apply from the edit flow
+- automatic target widening
+- branch/base mutation during edit
+- old-card backfill
+- checker runtime
+- auto-apply
+
+## Implementation Update - Visible Proposal Editor UI
+
+The first visible proposal editor slice is implemented in the proposal review surface.
+
+Updated:
+
+- `src/features/ontology/ui/ProfileProposalReviewScreen.tsx`
+- `src/features/ontology/ui/profileProposalReviewPresentation.ts`
+- `src/features/ontology/__tests__/profileProposalReviewPresentation.test.ts`
+
+Behavior:
+
+- Pending new-node proposals can open an inline editor from the proposal review detail pane.
+- The editor can change the proposed node label, parent id, meaning, review reason, and risk score.
+- The target remains fixed. Branch proposals stay branch-targeted, and base/core proposals stay base-targeted.
+- Saving the edit builds an edited `ProfilePatch`, calls `useEditProfileChangeProposal()`, creates a new pending replacement proposal, supersedes the old proposal, and selects the replacement for review.
+- The editor keeps the draft visible on local validation or service errors.
+- Parent ids are validated by the shared branch/base proposal compile path, so edit-save, stale refresh, and final Apply all reject parents that are not target item types.
+- Unsupported patch shapes stay out of this first editor and continue using the existing review actions.
+
+Still not added:
+
 - target-layer switching controls
 - direct Apply from the edit flow
 - automatic target widening

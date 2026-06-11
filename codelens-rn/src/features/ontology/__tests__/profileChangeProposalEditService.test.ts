@@ -426,6 +426,39 @@ describe('createEditedProfileChangeProposalReplacement', () => {
     expect(calls).toEqual([]);
   });
 
+  it('rejects edited parent ids that are not target item types before inserting a replacement', async () => {
+    const calls: string[] = [];
+    const error = await captureRejection(createEditedProfileChangeProposalReplacement({
+      proposalId: 'proposal-1',
+      now: 10,
+      draft: {
+        patch: {
+          addOntologyNodes: [makeNode('exposure_planning', {
+            parentId: 'missing_parent',
+          })],
+          addItemTypeNodeIds: ['exposure_planning'],
+        },
+      },
+      deps: makeDeps({
+        getBranchById: async () => makeBranch({ updatedAt: 8 }),
+        insertProposal: async () => {
+          calls.push('insertProposal');
+        },
+        saveProposalIfPending: async () => {
+          calls.push('saveProposal');
+          return true;
+        },
+        insertEvent: async () => {
+          calls.push('insertEvent');
+        },
+      }),
+    }));
+
+    expect(error).toBeInstanceOf(BranchLocalProposalApplyError);
+    expect((error as BranchLocalProposalApplyError).code).toBe('patch_conflict');
+    expect(calls).toEqual([]);
+  });
+
   it('propagates base-profile patch conflicts before inserting a replacement', async () => {
     const calls: string[] = [];
     const error = await captureRejection(createEditedProfileChangeProposalReplacement({

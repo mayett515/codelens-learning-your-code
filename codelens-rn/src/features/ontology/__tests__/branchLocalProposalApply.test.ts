@@ -377,6 +377,67 @@ describe('branch-local proposal apply helpers', () => {
     );
   });
 
+  it('rejects added node parents unless they are item types in the current branch profile or patch', () => {
+    expectApplyErrorCode(
+      () => applyBranchLocalProfileChangeProposal({
+        proposal: makeProposal({
+          patch: makePatch({
+            addOntologyNodes: [makeNode('noise_control', { parentId: 'missing_parent' })],
+            addItemTypeNodeIds: ['noise_control'],
+          }),
+        }),
+        baseProfile,
+        branch: makeBranch(),
+        now: 3,
+      }),
+      'patch_conflict',
+    );
+
+    expectApplyErrorCode(
+      () => applyBranchLocalProfileChangeProposal({
+        proposal: makeProposal({
+          patch: makePatch({
+            addOntologyNodes: [makeNode('child_type', { parentId: 'helper_node' })],
+            addItemTypeNodeIds: ['child_type'],
+          }),
+        }),
+        baseProfile,
+        branch: makeBranch({
+          overlay: {
+            id: 'overlay-1',
+            kind: 'project',
+            addOntologyNodes: [makeNode('helper_node')],
+          },
+        }),
+        now: 3,
+      }),
+      'patch_conflict',
+    );
+
+    const result = applyBranchLocalProfileChangeProposal({
+      proposal: makeProposal({
+        patch: makePatch({
+          addOntologyNodes: [
+            makeNode('parent_type'),
+            makeNode('child_type', {
+              kind: 'subcategory',
+              parentId: 'parent_type',
+            }),
+          ],
+          addItemTypeNodeIds: ['parent_type', 'child_type'],
+        }),
+      }),
+      baseProfile,
+      branch: makeBranch(),
+      now: 3,
+    });
+
+    expect(result.branch.overlay.addOntologyNodes?.map((node) => [node.id, node.parentId])).toEqual([
+      ['parent_type', null],
+      ['child_type', 'parent_type'],
+    ]);
+  });
+
   it('treats relationship type ids as opaque strings while rejecting duplicates', () => {
     const result = applyBranchLocalProfileChangeProposal({
       proposal: makeProposal({

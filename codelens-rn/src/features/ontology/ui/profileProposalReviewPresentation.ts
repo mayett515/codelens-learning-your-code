@@ -3,11 +3,47 @@ import { BaseProfileProposalApplyError } from '../baseProfileProposalApply';
 import { BaseProfileVersioningError } from '../baseProfileVersioning';
 import type { ProfileProposalFreshness } from '../profileProposalFreshness';
 import type {
+  OntologyNode,
   ProfileChangeProposal,
   ProfileChangeProposalTargetKind,
   ProfilePatch,
   ProfileProposalEvent,
 } from '../types';
+
+export interface ProposalEditorDraftState {
+  label: string;
+  parentId: string;
+  meaning: string;
+  reason: string;
+  riskScore: string;
+}
+
+export type ProposalEditorModel =
+  | {
+      canEdit: true;
+      nodeId: string;
+      draft: ProposalEditorDraftState;
+    }
+  | {
+      canEdit: false;
+      reason: string;
+    };
+
+export type BuildEditedProposalDraftResult =
+  | {
+      ok: true;
+      draft: {
+        patch: ProfilePatch;
+        title: string;
+        summary: string;
+        reason?: string | undefined;
+        riskScore: number;
+      };
+    }
+  | {
+      ok: false;
+      message: string;
+    };
 
 export function formatRiskLabel(riskScore: number): string {
   if (riskScore >= 70) return 'High risk';
@@ -146,6 +182,10 @@ export function formatProposalReviewError(
       return 'This proposal is not refreshable from its current target state.';
     case 'proposal_refresh_time_invalid':
       return 'The proposal timestamp is newer than this refresh action. Refresh the queue and try again.';
+    case 'proposal_edit_time_invalid':
+      return 'The proposal timestamp is newer than this edit. Refresh the queue and try again.';
+    case 'replacement_proposal_invalid':
+      return 'Kordex could not create a safe replacement proposal. Refresh and try again.';
     case 'profile_definition_write_conflict':
       return 'The base profile changed while this proposal was open. Refresh and review it again.';
     case 'proposal_not_pending':
@@ -186,6 +226,100 @@ export function formatProposalReviewError(
     default:
       return error instanceof Error ? error.message : 'Proposal review failed.';
   }
+}
+
+export function createProposalEditorModel(proposal: ProfileChangeProposal): ProposalEditorModel {
+  const node = proposal.patch.addOntologyNodes?.[0];
+  if (!node) {
+    return {
+      canEdit: false,
+      reason: 'This patch needs a dedicated editor before it can be changed here.',
+    };
+  }
+
+  if (!proposal.patch.addItemTypeNodeIds?.includes(node.id)) {
+    return {
+      canEdit: false,
+      reason: 'This proposal does not add an item type, so this editor cannot safely change it.',
+    };
+  }
+
+  return {
+    canEdit: true,
+    nodeId: node.id,
+    draft: {
+      label: node.label,
+      parentId: node.parentId ?? '',
+      meaning: node.meaning,
+      reason: proposal.reason,
+      riskScore: String(proposal.riskScore),
+    },
+  };
+}
+
+export function buildEditedProposalDraft(
+  proposal: ProfileChangeProposal,
+  draft: ProposalEditorDraftState,
+): BuildEditedProposalDraftResult {
+  const node = proposal.patch.addOntologyNodes?.[0];
+  if (!node) {
+    return {
+      ok: false,
+      message: 'This proposal patch cannot be edited in this review surface yet.',
+    };
+  }
+
+  const label = draft.label.trim();
+  if (!label) {
+    return {
+      ok: false,
+      message: 'The edited proposal needs a label.',
+    };
+  }
+
+  const meaning = draft.meaning.trim();
+  if (!meaning) {
+    return {
+      ok: false,
+      message: 'The edited proposal needs a meaning.',
+    };
+  }
+
+  const riskScore = Number(draft.riskScore);
+  if (!Number.isFinite(riskScore) || riskScore < 0 || riskScore > 100) {
+    return {
+      ok: false,
+      message: 'Risk must be a number from 0 to 100.',
+    };
+  }
+
+  const parentId = draft.parentId.trim() || null;
+  const editedNode: OntologyNode = {
+    ...node,
+    label,
+    kind: parentId ? 'subcategory' : 'category',
+    parentId,
+    meaning,
+  };
+  const addItemTypeNodeIds = proposal.patch.addItemTypeNodeIds?.includes(node.id)
+    ? proposal.patch.addItemTypeNodeIds
+    : [node.id, ...(proposal.patch.addItemTypeNodeIds ?? [])];
+  const reason = draft.reason.trim();
+
+  return {
+    ok: true,
+    draft: {
+      patch: {
+        ...proposal.patch,
+        addOntologyNodes: [editedNode, ...(proposal.patch.addOntologyNodes ?? []).slice(1)],
+        addItemTypeNodeIds,
+      },
+      title: `Add ${label} type`,
+      summary: `Create ${label} as an item type after user review.`,
+      ...(reason ? { reason } : {}),
+      riskScore,
+    },
+  };
 }
 
 function errorCode(error: unknown): string | null {
