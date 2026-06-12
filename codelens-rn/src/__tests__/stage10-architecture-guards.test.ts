@@ -644,6 +644,79 @@ describe('Kordex context assembly guards', () => {
     expect(contextSelectorSrc).toContain("selectContext(input, 'checker')");
   });
 
+  it('checker prompt and mapper stay pure, branch-local, insert-only contract helpers', () => {
+    const checkerPromptSrc = read('src/features/ontology/checkerPromptBuilder.ts');
+    const checkerMapperSrc = read('src/features/ontology/checkerProposalMapper.ts');
+    const ontologyIndexSrc = read('src/features/ontology/index.ts');
+    const combined = `${checkerPromptSrc}\n${checkerMapperSrc}`;
+    const forbiddenImportPattern =
+      /from\s+['"][^'"]*(?:db\/|\/db|features\/backup|features\/learning|features\/graph|ai\/|react|react-native|expo|zustand|@tanstack)[^'"]*['"]/;
+
+    expect(checkerPromptSrc).toContain('buildCheckerPrompt');
+    expect(checkerPromptSrc).toContain('CheckerPromptOutputSchema');
+    expect(checkerPromptSrc).toContain('missing_branch_item_type');
+    expect(checkerMapperSrc).toContain('mapCheckerOutputToProfileChangeProposals');
+    expect(checkerMapperSrc).toContain("sourceBranchId: null");
+    expect(checkerMapperSrc).toContain("proposalKind: 'ontology_node_patch'");
+    expect(checkerMapperSrc).toContain("status: 'active'");
+    expect(checkerMapperSrc).toContain("createdBy: 'model'");
+    expect(ontologyIndexSrc).toContain('buildCheckerPrompt');
+    expect(ontologyIndexSrc).toContain('mapCheckerOutputToProfileChangeProposals');
+
+    expect(combined).not.toMatch(forbiddenImportPattern);
+    expect(combined).not.toMatch(/\basync\b|\bPromise\b/);
+    expect(combined).not.toMatch(/\b(setInterval|setTimeout|BackgroundFetch|TaskManager|cron|schedule|scheduled)\b/);
+    expect(combined).not.toMatch(/\b(compileBranchLocalProposalApplyOperation|compileBaseProfileProposalApplyOperation|applyPending|applyBranchLocal|applyBaseProfile)\b/);
+    expect(combined).not.toMatch(/\b(upsertProfileChangeProposal|deleteProfileChangeProposal|updateProfileChangeProposal|updateProfileChangeProposalIfPending)\b/);
+    expect(combined).not.toMatch(/\b(profileTrust|ProfileTrust|autoApplyProposalKinds)\b/);
+    expect(combined).not.toContain("kind: 'base_profile'");
+    expect(combined).not.toMatch(/\b(branch_merge|relationship_patch|classification_patch|manual_draft)\b/);
+  });
+
+  it('doc 41 keeps checker runtime mapper pins and acceptance anchors', () => {
+    const doc41 = read('ONTOLOGY_PROFILE_REFACTOR/41_CHECKER_RUNTIME_FIRST_SLICE_DECISION.md');
+
+    expect(doc41).toContain('## First Runtime Slice Decision');
+    expect(doc41).toContain('### Mapper Contract Pins');
+    expect(doc41).toContain('## Acceptance Criteria');
+    expect(doc41).toContain('`sourceBranchId = null`');
+    expect(doc41).toContain('`proposalKind = \'ontology_node_patch\'`');
+    expect(doc41).toContain('minted node `createdBy = \'model\'`');
+    expect(doc41).toContain('minted node `status = \'active\'`');
+    expect(doc41).toContain('duplicate handling does not update, upsert, delete, or rewrite existing pending proposals');
+    expect(doc41).toContain('## Implementation Note - UI Trigger And Model Adapter Seam');
+    expect(doc41).toContain('mirror the Conceptualize live-wiring pattern');
+    expect(doc41).toContain('validateCheckerPromptOutput(raw, pack)` remains the only semantic gate');
+    expect(doc41).toContain('must not fall back to unvalidated prose');
+    expect(doc41).toContain('should not retry model calls automatically');
+    expect(doc41).toContain('accept an `AbortSignal`');
+    expect(doc41).toContain('disabled while a checker run is pending');
+    expect(doc41).toContain('show the read-only checker explanation and skipped findings');
+    expect(doc41).toContain('refresh pending proposal lists and proposal freshness queries');
+  });
+
+  it('manual checker runtime service stays data-boundary, branch-local, and insert-only', () => {
+    const serviceSrc = read('src/features/ontology/data/checkerRunService.ts');
+    const ontologyDataIndexSrc = read('src/features/ontology/data/index.ts');
+    const ontologyRootIndexSrc = read('src/features/ontology/index.ts');
+
+    expect(serviceSrc).toContain('runManualOntologyChecker');
+    expect(serviceSrc).toContain('buildCheckerPrompt');
+    expect(serviceSrc).toContain('validateCheckerPromptOutput');
+    expect(serviceSrc).toContain('mapCheckerOutputToProfileChangeProposals');
+    expect(serviceSrc).toContain('compileBranchLocalProposalApplyOperation');
+    expect(serviceSrc).toContain('insertProfileChangeProposal');
+    expect(ontologyDataIndexSrc).toContain('runManualOntologyChecker');
+    expect(ontologyRootIndexSrc).not.toContain('runManualOntologyChecker');
+
+    expect(serviceSrc).not.toMatch(/from\s+['"][^'"]*(?:features\/backup|features\/learning|features\/graph|react|react-native|expo|zustand|@tanstack)[^'"]*['"]/);
+    expect(serviceSrc).not.toMatch(/\b(setInterval|setTimeout|BackgroundFetch|TaskManager|cron|scheduled)\b/);
+    expect(serviceSrc).not.toMatch(/\b(compileBaseProfileProposalApplyOperation|applyPendingBranchLocalProfileChangeProposal|applyPendingBaseProfileChangeProposal|applyBaseProfile)\b/);
+    expect(serviceSrc).not.toMatch(/\b(upsertProfileChangeProposal|deleteProfileChangeProposal|updateProfileChangeProposal|updateProfileChangeProposalIfPending)\b/);
+    expect(serviceSrc).not.toMatch(/\b(insertProfileProposalEvent|profileTrust|ProfileTrust|autoApplyProposalKinds)\b/);
+    expect(serviceSrc).not.toMatch(/\b(supersedePendingProfileChangeProposal|refreshStaleProfileChangeProposal|createEditedProfileChangeProposalReplacement)\b/);
+  });
+
   it('Conceptualize ContextPack shadow wiring does not render prompts, call models, or mutate ontology state', () => {
     const shadowSrc = read('src/features/learning/services/conceptualizeContextPack.ts');
 

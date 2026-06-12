@@ -129,6 +129,18 @@ export type {
 } from './profileProposalFreshnessService';
 
 export {
+  ManualCheckerRunServiceError,
+  runManualOntologyChecker,
+} from './checkerRunService';
+export type {
+  CheckerModelInvocation,
+  ManualCheckerRunServiceDependencies,
+  ManualCheckerRunServiceErrorCode,
+  RunManualOntologyCheckerInput,
+  RunManualOntologyCheckerResult,
+} from './checkerRunService';
+
+export {
   BranchLocalProposalApplyServiceError,
   applyPendingBranchLocalProfileChangeProposal,
 } from './branchLocalProposalApplyService';

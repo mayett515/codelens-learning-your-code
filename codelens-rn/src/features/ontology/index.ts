@@ -222,6 +222,38 @@ export type {
   SharedContextSelectorInput,
 } from './contextSelector';
 export {
+  CHECKER_PROMPT_OUTPUT_VERSION,
+  CHECKER_PROMPT_VERSION,
+  MAX_CHECKER_FINDINGS_HARD_CAP,
+  buildCheckerPrompt,
+  validateCheckerPromptOutput,
+} from './checkerPromptBuilder';
+export type {
+  BuildCheckerPromptInput,
+  CheckerPromptBuildResult,
+  CheckerPromptFinding,
+  CheckerPromptFindingKind,
+  CheckerPromptOutput,
+  CheckerPromptOutputValidationCode,
+  CheckerPromptOutputValidationError,
+  CheckerPromptOutputValidationResult,
+  CheckerPromptPayload,
+} from './checkerPromptBuilder';
+export {
+  CHECKER_BRANCH_LOCAL_ADDITIVE_RISK_SCORE,
+  CHECKER_MAX_PROPOSALS_PER_RUN,
+  makeCheckerNodeId,
+  mapCheckerOutputToProfileChangeProposals,
+} from './checkerProposalMapper';
+export type {
+  CheckerProposalMapperExplanation,
+  CheckerProposalMapperResult,
+  CheckerProposalSkipReason,
+  CheckerProposalSkippedFinding,
+  CheckerTargetBranchSnapshot,
+  MapCheckerOutputToProfileChangeProposalsInput,
+} from './checkerProposalMapper';
+export {
   profileChangeProposalTargetKey,
   projectUserFitSignals,
   userFitActiveSelectionScopeKey,
