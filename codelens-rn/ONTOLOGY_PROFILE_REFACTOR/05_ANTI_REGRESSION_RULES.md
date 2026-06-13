@@ -120,6 +120,38 @@ The following directions are documented in `07_KORTEX_CORE_AND_CHILD_CORES.md`, 
 
 </future_architecture_rules>
 
+## Fable Strategic Review Regression Bans
+
+These bans fold the useful parts of `FABLE_STRATEGIC_REVIEW_2026-06-09/07-anti-regression-contract.md` into the active refactor contract. The Fable pack remains review guidance; this section is the operational anti-regression layer.
+
+<fable_regression_bans>
+- REGRESSION BAN FABLE-001: Do not reopen locked decisions without checking the numbered docs first.
+- REGRESSION BAN FABLE-002: Do not persist composed runtime profiles as canonical truth.
+- REGRESSION BAN FABLE-003: Do not expose hidden near-miss diagnostics as visible extra tags.
+- REGRESSION BAN FABLE-004: Do not let user-fit, checker confidence, or trust scores auto-apply ontology changes.
+- REGRESSION BAN FABLE-005: Do not allow DSL, MCP, CLI, or agent paths to mutate profiles outside proposal/apply services.
+- REGRESSION BAN FABLE-006: Do not build checker proposal volume without superseding, freshness, and stale-refresh safeguards.
+- REGRESSION BAN FABLE-007: Do not silently widen branch-local Conceptualize or checker proposals to base/core.
+- REGRESSION BAN FABLE-008: Do not use labels as durable node identity across scopes.
+</fable_regression_bans>
+
+<fable_conditional_gates>
+IF a task touches proposal apply,
+THEN verify branch-local and base/core version-guard paths remain separate.
+
+IF a task touches checker runtime,
+THEN verify it creates proposals only, stays manual unless a later doc changes that, and does not auto-apply.
+
+IF a task touches Conceptualize output,
+THEN verify public output remains singular and diagnostics remain internal.
+
+IF a task touches branch/profile selection,
+THEN verify runtime composition is derived from persisted layers, not persisted as composed truth.
+
+IF a task touches future language, adapter, CLI, MCP, or agent surfaces,
+THEN verify it compiles into typed operations and uses the existing review/apply guards.
+</fable_conditional_gates>
+
 ## Verification Checklist
 
 <verification_checklist>

@@ -325,6 +325,7 @@ describe('Conceptualize correction save', () => {
         profile,
         selectionSnapshot: { baseProfileId: 'coding', personalBranchIds: ['personal-branch'] },
         proposalTarget: { kind: 'profile_branch', branchId: 'personal-branch' },
+        proposalTargetBranchUpdatedAt: 2_000,
       },
       {
         correctedTypeNodeId: 'pattern',
@@ -338,8 +339,32 @@ describe('Conceptualize correction save', () => {
     expect(result.profileProposal).toMatchObject({
       id: 'proposal-1',
       target: { kind: 'profile_branch', branchId: 'personal-branch' },
+      targetProfileVersion: null,
+      targetBranchUpdatedAt: 2_000,
       status: 'pending',
     });
+  });
+
+  it('rejects branch-targeted new subtype proposals without a branch revision snapshot', async () => {
+    const d = saveDeps();
+
+    await expect(saveConceptualizedCapture(
+      candidate(),
+      {
+        profile,
+        selectionSnapshot: { baseProfileId: 'coding', personalBranchIds: ['personal-branch'] },
+        proposalTarget: { kind: 'profile_branch', branchId: 'personal-branch' },
+      },
+      {
+        correctedTypeNodeId: 'pattern',
+        newTypeLabel: 'React hook lifecycle',
+        reason: 'Review this as a branch-local profile proposal.',
+      },
+      { deps: d.deps },
+    )).rejects.toThrow(/current branch updatedAt snapshot/);
+
+    expect(d.evidence).toEqual([]);
+    expect(d.proposals).toEqual([]);
   });
 
   it('uses edited missing-concept draft meaning and preserves suggestion provenance on proposals', async () => {

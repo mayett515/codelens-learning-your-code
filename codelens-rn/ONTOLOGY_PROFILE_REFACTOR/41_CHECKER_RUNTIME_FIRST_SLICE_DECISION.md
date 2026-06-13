@@ -2,7 +2,7 @@
 
 Date: 2026-06-12
 
-Status: locked decision; pure checker prompt/output contract, deterministic mapper, manual checker runtime service, and UI/model seam policy are implemented or locked. No DB schema, UI trigger, concrete LLM adapter, auto-apply, relationship semantics implementation, or operation-vocabulary expansion is added by this document.
+Status: locked decision; pure checker prompt/output contract, deterministic mapper, manual checker runtime service, UI trigger/readout, and concrete model adapter seam are implemented. No DB schema, auto-apply, relationship semantics implementation, base/core checker targeting, background checker mode, checker-run table, or operation-vocabulary expansion is added by this document.
 
 ## Purpose
 
@@ -344,14 +344,7 @@ What this implements:
 - Duplicate pending checker proposals for the same branch/node are skipped and surfaced in the read-only explanation instead of rewritten.
 - Valid findings are split into one proposal per concept before cap enforcement.
 
-This implements steps 1 through 3 of the First Implementation Shape. Step 4 is implemented by the manual runtime service below.
-
-Still not implemented:
-
-- UI trigger
-- concrete LLM/provider adapter implementation
-
-The next product slice is the UI trigger that calls the manual runtime service and surfaces the read-only explanation plus created/skipped proposals.
+This implements steps 1 through 3 of the First Implementation Shape. Step 4 is implemented by the manual runtime service below, and step 5 is implemented by the UI trigger/readout slice below.
 
 Verification:
 
@@ -381,12 +374,10 @@ What this implements:
 - The service exports through `src/features/ontology/data/index.ts` only. It is not exported from the root ontology barrel.
 - Creation does not write proposal events, mutate ontology/profile state, auto-apply, target base/core, schedule background work, update trust settings, or add checker-run persistence.
 
-This implements step 4 of the First Implementation Shape. The remaining product slice is step 5's user-facing trigger/readout wiring.
+This implements step 4 of the First Implementation Shape. Step 5's user-facing trigger/readout wiring is implemented by the UI slice below.
 
 Still not implemented:
 
-- UI trigger / `Run checker now` action
-- concrete LLM/provider adapter implementation
 - checker-run history table
 - background/event/scheduled checker modes
 - base/core checker proposal targeting
@@ -399,7 +390,7 @@ Verification:
 
 ## Implementation Note - UI Trigger And Model Adapter Seam
 
-The remaining first-runtime product slice is the user-facing `Run checker now` trigger/readout plus a concrete model adapter. This is implementation wiring, not a new checker architecture.
+The first-runtime product slice includes a user-facing `Run checker now` trigger/readout plus a concrete model adapter. This is implementation wiring, not a new checker architecture.
 
 The UI/model seam is locked this way:
 
@@ -420,6 +411,76 @@ The UI/model seam is locked this way:
 - Query invalidation after a successful run should refresh pending proposal lists and proposal freshness queries. It should not invalidate branch/profile state as if the checker had mutated a profile.
 
 The first UI slice should not add a checker-run table. The readout can be transient until a later observability/run-history gate proves durable run history is needed.
+
+## Implementation Update - UI Trigger, Readout, And Adapter
+
+The first UI/model wiring slice is implemented.
+
+Implemented files:
+
+- `src/features/ontology/hooks/manualCheckerReviewAdapter.ts`
+- `src/features/ontology/hooks/useRunManualOntologyChecker.ts`
+- `src/features/ontology/ui/ProfileProposalReviewScreen.tsx`
+- `src/features/ontology/ui/profileProposalReviewPresentation.ts`
+- `src/features/learning/ui/SaveAsLearningModal.tsx`
+- `src/features/ontology/__tests__/useRunManualOntologyChecker.test.ts`
+- `src/features/ontology/__tests__/profileProposalReviewPresentation.test.ts`
+- `src/features/ontology/__tests__/checkerPromptBuilder.test.ts`
+- `src/__tests__/stage10-architecture-guards.test.ts`
+
+What this implements:
+
+- `completeManualCheckerPrompt()` adapts the checker prompt to the existing AI queue lane and parses raw JSON before handing output to the service validator.
+- Invalid JSON becomes `ManualCheckerRunServiceError('checker_output_invalid')`; the adapter does not fall back to prose or partial proposals.
+- The hook passes an `AbortSignal`, disables React Query automatic retries with `retry: false`, aborts in-flight runs on unmount, and invalidates pending proposal and freshness queries only.
+- `ProfileProposalReviewScreen` shows `Run checker now`, the read-only checker summary, relationship/boundary observations, and skipped finding explanations.
+- Created proposals route into the existing proposal review/edit/freshness/apply surface with the first created proposal selected.
+- `SaveAsLearningModal` passes the Conceptualize branch target into the review surface only when the active proposal target is branch-local.
+- The checker prompt explicitly tells the model not to include markdown fences or prose outside the JSON object.
+- The review screen's branch-target fallback is marked as Gate 3 scaffolding; explicit branch/profile selection should replace it when branch/profile selection UI lands.
+
+This completes the first checker gate end to end:
+
+```text
+bounded facts -> checker ContextPack -> validated model output -> branch-local pending proposals -> review/edit/freshness/apply
+```
+
+Verification:
+
+- TypeScript clean
+- full suite: 1031/1031 tests passed across 112 files
+
+## Implementation Update - Checker Quality Hardening
+
+The first checker runtime now carries two quality improvements inside the same locked V0 scope.
+
+Implemented files:
+
+- `src/features/ontology/contextAssembly.ts`
+- `src/features/ontology/contextSelector.ts`
+- `src/features/ontology/checkerPromptBuilder.ts`
+- `src/features/ontology/checkerProposalMapper.ts`
+- `src/features/ontology/data/checkerRunService.ts`
+- `src/features/ontology/__tests__/checkerPromptBuilder.test.ts`
+- `src/features/ontology/__tests__/checkerRunService.test.ts`
+- `src/__tests__/stage10-architecture-guards.test.ts`
+
+What this implements:
+
+- Repeated correction evidence for the same active-branch correction pattern is aggregated before checker ContextPack assembly.
+- Aggregated claims use the newest concrete correction row as the primary `evidenceId`, preserve all backing correction rows in `sourceEvidenceIds`, preserve source subject ids in `sourceIds`, and expose the real repetition count through `patternFrequency`.
+- Checker output validation and the deterministic mapper accept evidence references from either the aggregate claim `evidenceId` or its concrete `sourceEvidenceIds`, so proposals can still carry real correction evidence ids.
+- When the checker cites an aggregate claim `evidenceId`, the mapper expands the persisted proposal `evidenceIds` to the aggregate claim's concrete `sourceEvidenceIds`; when the checker cites a concrete source evidence id directly, that specific citation remains specific.
+- Ontology nodes in checker ContextPacks and prompt payloads now carry `isItemType`.
+- The prompt tells the checker to use `parentNodeRef` only for ontology nodes with `isItemType: true`.
+- Checker output validation rejects existing-but-non-item parents with `invalid-parent-ref` before proposal mapping; final dry-run validation still remains the write-boundary guard.
+
+This does not add new checker finding kinds, boundary/relationship operations, base/core targeting, maturity semantics, persistence tables, background runs, or auto-apply.
+
+Verification:
+
+- TypeScript clean
+- focused checker prompt/mapper/runtime/stage10 guard tests: 103/103 passed across 4 files
 
 ## Later Gates
 

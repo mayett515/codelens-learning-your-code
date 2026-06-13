@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors, fontSize, spacing } from '../../../ui/theme';
 import { useApplyProfileChangeProposal } from '../hooks/useApplyProfileChangeProposal';
@@ -6,15 +6,27 @@ import { useEditProfileChangeProposal } from '../hooks/useEditProfileChangePropo
 import { usePendingProfileChangeProposals } from '../hooks/useProfileChangeProposals';
 import { useProfileProposalFreshness } from '../hooks/useProfileProposalFreshness';
 import { useProfileProposalEventsForProposal } from '../hooks/useProfileProposalEvents';
+import { useOntologyProfileSummaries } from '../hooks/useProfileSelection';
 import { useRefreshProfileChangeProposal } from '../hooks/useRefreshProfileChangeProposal';
+import { useRunManualOntologyChecker } from '../hooks/useRunManualOntologyChecker';
+import { useSwitchProfileChangeProposalTarget } from '../hooks/useSwitchProfileChangeProposalTarget';
 import {
   useAskWhyProfileChangeProposal,
   useReviewProfileChangeProposal,
 } from '../hooks/useReviewProfileChangeProposal';
 import type { ProfileChangeProposal, ProfileProposalEvent } from '../types';
+import type { RunManualOntologyCheckerResult } from '../data/checkerRunService';
+import { createProposalTargetSwitchModel } from '../profileProposalTargetSwitch';
+import { DEFAULT_RUNTIME_PROFILE_BASE_PROFILE_ID } from '../runtimeProfileActivation';
+import {
+  ProfileSelectionPanel,
+  type ProfileSelectionPanelCheckerTarget,
+} from './ProfileSelectionPanel';
 import {
   buildEditedProposalDraft,
   createProposalEditorModel,
+  formatCheckerRunSummary,
+  formatCheckerSkipReason,
   formatApplyActionLabel,
   formatApplySuccessMessage,
   formatConfidence,
@@ -26,6 +38,7 @@ import {
   formatRefreshSuccessMessage,
   formatRiskDescription,
   formatTarget,
+  formatTargetSwitchFailureMessage,
   type ProposalEditorDraftState,
   summarizePatch,
 } from './profileProposalReviewPresentation';
@@ -35,26 +48,51 @@ type ReviewMessage = {
   text: string;
 };
 
+interface ProfileProposalReviewCheckerTarget {
+  baseProfileId: string;
+  targetBranchId?: string | null | undefined;
+  label?: string | undefined;
+  canRunChecker?: boolean | undefined;
+}
+
+interface ResolvedCheckerTarget {
+  baseProfileId: string;
+  targetBranchId: string | null;
+  label: string;
+  canRunChecker: boolean;
+}
+
 interface ProfileProposalReviewScreenProps {
+  projectId?: string | null | undefined;
   initialProposalId?: string | null;
+  checkerTarget?: ProfileProposalReviewCheckerTarget | undefined;
   onClose?: (() => void) | undefined;
 }
 
 export function ProfileProposalReviewScreen({
+  projectId,
   initialProposalId,
+  checkerTarget,
   onClose,
 }: ProfileProposalReviewScreenProps = {}) {
   const { data: proposals = [], isLoading } = usePendingProfileChangeProposals();
   const applyMutation = useApplyProfileChangeProposal();
   const editMutation = useEditProfileChangeProposal();
   const refreshMutation = useRefreshProfileChangeProposal();
+  const targetSwitchMutation = useSwitchProfileChangeProposalTarget();
+  const checkerMutation = useRunManualOntologyChecker();
   const reviewMutation = useReviewProfileChangeProposal();
   const askWhyMutation = useAskWhyProfileChangeProposal();
+  const { data: baseProfiles = [] } = useOntologyProfileSummaries();
   const [selectedId, setSelectedId] = useState<string | null>(initialProposalId ?? null);
   const [showReason, setShowReason] = useState(false);
   const [editDraft, setEditDraft] = useState<ProposalEditorDraftState | null>(null);
   const [askedWhyProposalIds, setAskedWhyProposalIds] = useState<ReadonlySet<string>>(() => new Set());
   const [message, setMessage] = useState<ReviewMessage | null>(null);
+  const [checkerRun, setCheckerRun] = useState<RunManualOntologyCheckerResult | null>(null);
+  const [selectionCheckerTarget, setSelectionCheckerTarget] =
+    useState<ProfileSelectionPanelCheckerTarget | null>(null);
+  const [selectionTargetInteracted, setSelectionTargetInteracted] = useState(false);
 
   useEffect(() => {
     setSelectedId(initialProposalId ?? null);
@@ -65,8 +103,33 @@ export function ProfileProposalReviewScreen({
       ? proposals.find((proposal) => proposal.id === selectedId)
       : undefined;
     if (selected) return selected;
+    const createdByChecker = selectedId
+      ? checkerRun?.proposals.find((proposal) => proposal.id === selectedId)
+      : undefined;
+    if (createdByChecker) return createdByChecker;
     return selectedId ? undefined : proposals[0];
-  }, [proposals, selectedId]);
+  }, [checkerRun?.proposals, proposals, selectedId]);
+  const handleSelectionCheckerTargetChange = useCallback((target: ProfileSelectionPanelCheckerTarget) => {
+    setSelectionCheckerTarget(target);
+  }, []);
+  const handleSelectionInteraction = useCallback(() => {
+    setSelectionTargetInteracted(true);
+  }, []);
+  useEffect(() => {
+    setSelectionTargetInteracted(false);
+  }, [checkerTarget?.baseProfileId, checkerTarget?.targetBranchId, projectId]);
+  const resolvedCheckerTarget = useMemo(() =>
+    resolveCheckerTarget({
+      explicit: selectionTargetInteracted
+        ? selectionCheckerTarget ?? checkerTarget
+        : checkerTarget ?? selectionCheckerTarget,
+      fallbackBaseProfileId: selectedProposal?.baseProfileId,
+    }), [
+      checkerTarget,
+      selectedProposal?.baseProfileId,
+      selectionCheckerTarget,
+      selectionTargetInteracted,
+    ]);
   const { data: proposalEvents = [], isLoading: eventsLoading } = useProfileProposalEventsForProposal(
     selectedProposal?.id ?? null,
   );
@@ -78,9 +141,27 @@ export function ProfileProposalReviewScreen({
     () => selectedProposal ? createProposalEditorModel(selectedProposal) : null,
     [selectedProposal],
   );
+  const selectedBaseProfile = useMemo(
+    () => selectedProposal
+      ? baseProfiles.find((profile) => profile.id === selectedProposal.baseProfileId)
+      : undefined,
+    [baseProfiles, selectedProposal],
+  );
+  const targetSwitchModel = useMemo(
+    () => selectedProposal
+      ? createProposalTargetSwitchModel({
+        proposal: selectedProposal,
+        baseProfileVersion: selectedBaseProfile?.version ?? null,
+        baseProfileLabel: selectedBaseProfile?.label ?? null,
+      })
+      : null,
+    [selectedBaseProfile, selectedProposal],
+  );
   const busy = applyMutation.isPending ||
     editMutation.isPending ||
     refreshMutation.isPending ||
+    targetSwitchMutation.isPending ||
+    checkerMutation.isPending ||
     reviewMutation.isPending ||
     askWhyMutation.isPending;
   const targetSupported = selectedProposal?.target.kind === 'profile_branch' || selectedProposal?.target.kind === 'base_profile';
@@ -130,6 +211,31 @@ export function ProfileProposalReviewScreen({
     }
   }
 
+  async function switchTargetToCore(proposal: ProfileChangeProposal) {
+    setMessage(null);
+    setShowReason(false);
+    setEditDraft(null);
+    if (!targetSwitchModel?.canSwitch) {
+      setMessage({
+        tone: 'error',
+        text: targetSwitchModel?.blockMessage ?? 'This proposal cannot be moved to core review yet.',
+      });
+      return;
+    }
+
+    try {
+      const result = await targetSwitchMutation.mutateAsync({
+        proposalId: proposal.id,
+        reason: 'User moved this branch-local proposal to core review.',
+      });
+      setMessage({ tone: 'notice', text: `Created core-targeted proposal ${result.proposal.id}. Review it before applying.` });
+      setSelectedId(result.proposal.id);
+      setShowReason(false);
+    } catch (error) {
+      setMessage({ tone: 'error', text: formatTargetSwitchFailureMessage(error) });
+    }
+  }
+
   async function saveEditedProposal(proposal: ProfileChangeProposal) {
     if (!editDraft) return;
     setMessage(null);
@@ -151,6 +257,30 @@ export function ProfileProposalReviewScreen({
       setShowReason(false);
     } catch (error) {
       setMessage({ tone: 'error', text: formatProposalReviewError(error, proposal.target.kind) });
+    }
+  }
+
+  async function runChecker() {
+    setMessage(null);
+    setShowReason(false);
+    setEditDraft(null);
+    setCheckerRun(null);
+    if (!resolvedCheckerTarget.canRunChecker) {
+      setMessage({ tone: 'error', text: 'Select a branch target before running the checker.' });
+      return;
+    }
+    try {
+      const result = await checkerMutation.mutateAsync({
+        baseProfileId: resolvedCheckerTarget.baseProfileId,
+        targetBranchId: resolvedCheckerTarget.targetBranchId ?? null,
+      });
+      setCheckerRun(result);
+      if (result.proposals[0]) {
+        setSelectedId(result.proposals[0].id);
+      }
+      setMessage({ tone: 'notice', text: formatCheckerRunSummary(result) });
+    } catch (error) {
+      setMessage({ tone: 'error', text: formatProposalReviewError(error) });
     }
   }
 
@@ -200,11 +330,27 @@ export function ProfileProposalReviewScreen({
     return (
       <View style={styles.container}>
         <ReviewHeader onClose={onClose} />
+        <Text style={styles.subtitle}>Review branch and base profile changes before applying them.</Text>
+        <ProfileSelectionPanel
+          projectId={projectId}
+          disabled={busy}
+          initialCheckerTargetBranchId={checkerTarget?.targetBranchId ?? null}
+          onCheckerTargetChange={handleSelectionCheckerTargetChange}
+          onSelectionInteraction={handleSelectionInteraction}
+        />
+        <CheckerRunPanel
+          targetLabel={resolvedCheckerTarget.label}
+          result={checkerRun}
+          disabled={busy || !resolvedCheckerTarget.canRunChecker}
+          pending={checkerMutation.isPending}
+          onRun={() => void runChecker()}
+        />
         <Text style={styles.muted}>
           {selectedId
             ? 'That proposal is no longer pending. Refresh the suggestion list and review the latest state.'
             : 'No pending suggestions.'}
         </Text>
+        {message ? <Text style={message.tone === 'error' ? styles.error : styles.notice}>{message.text}</Text> : null}
       </View>
     );
   }
@@ -213,6 +359,20 @@ export function ProfileProposalReviewScreen({
     <View style={styles.container}>
       <ReviewHeader onClose={onClose} />
       <Text style={styles.subtitle}>Review branch and base profile changes before applying them.</Text>
+      <ProfileSelectionPanel
+        projectId={projectId}
+        disabled={busy}
+        initialCheckerTargetBranchId={checkerTarget?.targetBranchId ?? null}
+        onCheckerTargetChange={handleSelectionCheckerTargetChange}
+        onSelectionInteraction={handleSelectionInteraction}
+      />
+      <CheckerRunPanel
+        targetLabel={resolvedCheckerTarget.label}
+        result={checkerRun}
+        disabled={busy || !resolvedCheckerTarget.canRunChecker}
+        pending={checkerMutation.isPending}
+        onRun={() => void runChecker()}
+      />
       <View style={styles.layout}>
         <ScrollView style={styles.list} contentContainerStyle={styles.listContent}>
           {proposals.map((proposal) => (
@@ -320,6 +480,16 @@ export function ProfileProposalReviewScreen({
           {!targetSupported ? (
             <Text style={styles.error}>This proposal target cannot be applied in this review surface yet.</Text>
           ) : null}
+          {targetSwitchModel && selectedProposal.target.kind === 'profile_branch' ? (
+            <View style={styles.targetSwitchBox}>
+              <Text style={styles.sectionLabel}>Target layer</Text>
+              <Text style={styles.muted}>
+                {targetSwitchModel.canSwitch
+                  ? targetSwitchModel.confirmationBody
+                  : targetSwitchModel.blockMessage}
+              </Text>
+            </View>
+          ) : null}
           {message ? <Text style={message.tone === 'error' ? styles.error : styles.notice}>{message.text}</Text> : null}
           <View style={styles.actions}>
             <Pressable
@@ -340,6 +510,15 @@ export function ProfileProposalReviewScreen({
                 <Text style={styles.secondaryActionText}>Refresh proposal</Text>
               </Pressable>
             ) : null}
+            {targetSwitchModel?.canSwitch ? (
+              <Pressable
+                style={[styles.secondaryAction, busy && styles.disabledAction]}
+                onPress={() => void switchTargetToCore(selectedProposal)}
+                disabled={busy}
+              >
+                <Text style={styles.secondaryActionText}>{targetSwitchModel.actionLabel}</Text>
+              </Pressable>
+            ) : null}
             <Pressable
               style={[styles.secondaryAction, busy && styles.disabledAction]}
               onPress={() => void mark(selectedProposal, 'postponed')}
@@ -357,6 +536,82 @@ export function ProfileProposalReviewScreen({
           </View>
         </ScrollView>
       </View>
+    </View>
+  );
+}
+
+function resolveCheckerTarget(input: {
+  explicit?: ProfileProposalReviewCheckerTarget | ProfileSelectionPanelCheckerTarget | null | undefined;
+  fallbackBaseProfileId?: string | undefined;
+}): ResolvedCheckerTarget {
+  if (input.explicit) {
+    const targetBranchId = input.explicit.targetBranchId ?? null;
+    return {
+      baseProfileId: input.explicit.baseProfileId,
+      targetBranchId,
+      label: input.explicit.label ?? formatCheckerTargetLabel(targetBranchId),
+      canRunChecker: input.explicit.canRunChecker ?? Boolean(targetBranchId),
+    };
+  }
+
+  return {
+    baseProfileId: input.fallbackBaseProfileId ?? DEFAULT_RUNTIME_PROFILE_BASE_PROFILE_ID,
+    targetBranchId: null,
+    label: 'No active branch',
+    canRunChecker: false,
+  };
+}
+
+function formatCheckerTargetLabel(targetBranchId: string | null): string {
+  return targetBranchId ? `Branch ${targetBranchId}` : 'No active branch';
+}
+
+function CheckerRunPanel({
+  targetLabel,
+  result,
+  disabled,
+  pending,
+  onRun,
+}: {
+  targetLabel: string;
+  result: RunManualOntologyCheckerResult | null;
+  disabled: boolean;
+  pending: boolean;
+  onRun: () => void;
+}) {
+  return (
+    <View style={styles.checkerBox}>
+      <View style={styles.checkerHeader}>
+        <View style={styles.checkerHeaderText}>
+          <Text style={styles.checkerTitle}>Ontology checker</Text>
+          <Text style={styles.checkerTarget}>{targetLabel}</Text>
+        </View>
+        <Pressable
+          style={[styles.secondaryAction, styles.checkerAction, disabled && styles.disabledAction]}
+          onPress={onRun}
+          disabled={disabled}
+        >
+          <Text style={styles.secondaryActionText}>{pending ? 'Checking...' : 'Run checker now'}</Text>
+        </Pressable>
+      </View>
+      {result ? (
+        <View style={styles.checkerReadout}>
+          <Text style={styles.checkerSummary}>{formatCheckerRunSummary(result)}</Text>
+          <Text style={styles.checkerBody}>{result.explanation.summary}</Text>
+          {result.explanation.relationshipOrBoundaryObservations.map((observation) => (
+            <Text key={observation} style={styles.checkerObservation}>{observation}</Text>
+          ))}
+          {result.explanation.skippedFindings.length > 0 ? (
+            <View style={styles.checkerSkipped}>
+              {result.explanation.skippedFindings.map((skip, index) => (
+                <Text key={`${skip.reason}-${skip.label}-${index}`} style={styles.checkerSkip}>
+                  {formatCheckerSkipReason(skip)}
+                </Text>
+              ))}
+            </View>
+          ) : null}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -548,6 +803,63 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     marginTop: spacing.md,
   },
+  checkerBox: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    padding: spacing.md,
+    backgroundColor: colors.surface,
+    marginBottom: spacing.md,
+  },
+  checkerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  checkerHeaderText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  checkerTitle: {
+    color: colors.text,
+    fontSize: fontSize.md,
+    fontWeight: '800',
+  },
+  checkerTarget: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    marginTop: spacing.xs,
+  },
+  checkerAction: {
+    minWidth: 150,
+    paddingHorizontal: spacing.md,
+  },
+  checkerReadout: {
+    marginTop: spacing.md,
+    gap: spacing.xs,
+  },
+  checkerSummary: {
+    color: colors.text,
+    fontSize: fontSize.md,
+    fontWeight: '700',
+  },
+  checkerBody: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+  },
+  checkerObservation: {
+    color: colors.yellow,
+    fontSize: fontSize.sm,
+  },
+  checkerSkipped: {
+    marginTop: spacing.xs,
+    gap: spacing.xs,
+  },
+  checkerSkip: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+  },
   layout: {
     flex: 1,
     gap: spacing.md,
@@ -677,6 +989,14 @@ const styles = StyleSheet.create({
   },
   editorGate: {
     marginTop: spacing.md,
+  },
+  targetSwitchBox: {
+    marginTop: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 8,
+    padding: spacing.md,
+    backgroundColor: colors.surface,
   },
   editorBox: {
     borderWidth: 1,

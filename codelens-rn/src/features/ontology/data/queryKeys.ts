@@ -20,3 +20,13 @@ export const profileBranchKeys = {
   all: () => ['ontology', 'profile-branches'] as const,
   byParentProfile: (parentProfileId: string) => [...profileBranchKeys.all(), 'parent', parentProfileId] as const,
 } as const;
+
+export const profileBaseProfileKeys = {
+  all: () => ['ontology', 'base-profiles'] as const,
+  summaries: () => [...profileBaseProfileKeys.all(), 'summaries'] as const,
+} as const;
+
+export const profileSelectionKeys = {
+  all: () => ['ontology', 'profile-selections'] as const,
+  byProject: (projectId: string) => [...profileSelectionKeys.all(), 'project', projectId] as const,
+} as const;

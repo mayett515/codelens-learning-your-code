@@ -1,5 +1,19 @@
 # CodeLens RN — Current State
 
+## Current Snapshot - 2026-06-12
+
+This file contains older phase history below, but the active project state has moved beyond the original phase tracker.
+
+- Phases 0-6 are complete: project viewer, mark system, chats, learning hub, graph, backup/restore, and hardening are live code.
+- The ontology/profile refactor is no longer just a plan. The repo now has an implemented profile/ontology layer with profile compatibility fields, profile branches, active selections, profile definitions, correction evidence, proposal storage, proposal events, trust-setting storage, freshness snapshots, user-fit projection/history readers, and backup/import/export coverage.
+- Conceptualize now runs through the profile/ontology spine: ContextPack assembly, strict prompt/output validation, singular public classification, missing-concept drafts, branch/local proposals, review, edit, freshness, refresh, and guarded apply.
+- The proposal lifecycle is implemented end to end: pending proposals are inert until explicit review/apply; edited and refreshed proposals create replacements and supersede old pending cards; branch proposals snapshot `targetBranchUpdatedAt`; base/core proposals use `targetProfileVersion`.
+- The first manual checker gate is implemented: bounded facts -> checker ContextPack -> validated checker output -> deterministic branch-local pending `ontology_node_patch` proposals -> existing review/edit/freshness/apply surface. It is manual-only, no retry, abortable, branch-local, additive-only, and proposal-only.
+- The active architecture source of truth for ontology/profile work is `ONTOLOGY_PROFILE_REFACTOR/README.md`, `ONTOLOGY_PROFILE_REFACTOR/00_DOC_SYNC.md`, and `ONTOLOGY_PROFILE_REFACTOR/NEXT_LLM_CONTEXT.md`.
+- Doc 42 now locks Gate 3 scope: minimal branch/profile selection UI over existing selection/branch seams. The pure selection helper, data hooks, compact review-surface selection panel, and explicit project-context wiring are implemented. Doc 39's first target-switching path is implemented for explicit branch-local additive proposal -> base/core replacement-plus-supersede, and branch-targeted Conceptualize proposal creation now requires born-fresh branch snapshots. Base/core checker proposals, relationship/boundary operation vocabulary, maturity/provisional tags, checker-run tables, background checker modes, target switching outside Doc 39's first scope, DSL/agent/app-builder runtime, and auto-apply remain deferred.
+
+Older phase sections are kept as historical implementation notes, not as the current architecture boundary.
+
 ## Phase 0: Scaffolding — COMPLETE
 
 - Expo SDK 54 + RN 0.81.5 + TypeScript 5.9.2 strict + `exactOptionalPropertyTypes`

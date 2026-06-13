@@ -43,7 +43,11 @@ type Detail =
   | { type: 'health' }
   | null;
 
-export function LearningHubScreen() {
+interface LearningHubScreenProps {
+  projectId?: string | null | undefined;
+}
+
+export function LearningHubScreen({ projectId }: LearningHubScreenProps = {}) {
   const profile = getActiveDomainProfile();
   useEffect(() => {
     syncPendingEmbeddings().catch(() => undefined);
@@ -160,7 +164,7 @@ export function LearningHubScreen() {
           />
         ) : null}
         {detail?.type === 'profileProposals' ? (
-          <ProfileProposalReviewScreen />
+          <ProfileProposalReviewScreen projectId={projectId ?? null} />
         ) : null}
         {detail?.type === 'health' ? (
           <KnowledgeHealthScreen

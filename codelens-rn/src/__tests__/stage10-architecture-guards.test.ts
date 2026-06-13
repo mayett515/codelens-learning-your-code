@@ -655,9 +655,14 @@ describe('Kordex context assembly guards', () => {
     expect(checkerPromptSrc).toContain('buildCheckerPrompt');
     expect(checkerPromptSrc).toContain('CheckerPromptOutputSchema');
     expect(checkerPromptSrc).toContain('missing_branch_item_type');
+    expect(checkerPromptSrc).toContain('isItemType');
+    expect(checkerPromptSrc).toContain('sourceEvidenceIds');
+    expect(checkerPromptSrc).toContain('invalid-parent-ref');
     expect(checkerMapperSrc).toContain('mapCheckerOutputToProfileChangeProposals');
     expect(checkerMapperSrc).toContain("sourceBranchId: null");
     expect(checkerMapperSrc).toContain("proposalKind: 'ontology_node_patch'");
+    expect(checkerMapperSrc).toContain('sourceEvidenceIds');
+    expect(checkerMapperSrc).toContain('expandFindingEvidenceIds');
     expect(checkerMapperSrc).toContain("status: 'active'");
     expect(checkerMapperSrc).toContain("createdBy: 'model'");
     expect(ontologyIndexSrc).toContain('buildCheckerPrompt');
@@ -693,6 +698,186 @@ describe('Kordex context assembly guards', () => {
     expect(doc41).toContain('disabled while a checker run is pending');
     expect(doc41).toContain('show the read-only checker explanation and skipped findings');
     expect(doc41).toContain('refresh pending proposal lists and proposal freshness queries');
+    expect(doc41).toContain('## Implementation Update - Checker Quality Hardening');
+    expect(doc41).toContain('Repeated correction evidence for the same active-branch correction pattern is aggregated');
+    expect(doc41).toContain('`sourceEvidenceIds`');
+    expect(doc41).toContain('mapper expands the persisted proposal `evidenceIds`');
+    expect(doc41).toContain('`isItemType`');
+    expect(doc41).toContain('`invalid-parent-ref`');
+  });
+
+  it('doc 42 keeps branch/profile selection UI scope anchors', () => {
+    const doc42 = read('ONTOLOGY_PROFILE_REFACTOR/42_BRANCH_PROFILE_SELECTION_UI_DECISION.md');
+
+    expect(doc42).toContain('## Locked Decision');
+    expect(doc42).toContain('Build a minimal branch/profile selection UI over existing persistence and runtime seams.');
+    expect(doc42).toContain('## Target Branch Rule');
+    expect(doc42).toContain('ProfileSelection` describes composition. It is not itself a mutation target.');
+    expect(doc42).toContain('If multiple branches are selected, the user must choose the checker target branch for the run.');
+    expect(doc42).toContain('## Non-Goals');
+    expect(doc42).toContain('Global `getActiveSelection()`');
+    expect(doc42).toContain('Multi-base composition.');
+    expect(doc42).toContain('Target-layer switching from Doc 39.');
+    expect(doc42).toContain('No branch/base mutation occurs except creating an empty branch row or saving the selection row.');
+  });
+
+  it('doc 43 keeps second-base forkability demo scope anchors', () => {
+    const doc43 = read('ONTOLOGY_PROFILE_REFACTOR/43_SECOND_BASE_PROFILE_FORKABILITY_DEMO_DECISION.md');
+
+    expect(doc43).toContain('## Locked Decision');
+    expect(doc43).toContain('Add a minimal second-base-profile forkability demo, using a photography profile.');
+    expect(doc43).toContain('## Coupling-Audit Criterion');
+    expect(doc43).toContain('Every required production-code change outside the profile fixture should be treated as a discovered coupling.');
+    expect(doc43).toContain('## Delivery Mechanism');
+    expect(doc43).toContain('Define a deterministic minimal photography `DomainProfile` fixture/source in code.');
+    expect(doc43).toContain('round-trip the same profile through `profile_definitions` / `loadDefaultProfileRegistry`');
+    expect(doc43).toContain('## Minimal Proof Set');
+    expect(doc43).toContain('one eligible branch-local proposal can target-switch to the photography core');
+    expect(doc43).toContain('Cross-base `typeNodeId` collisions are part of the audit.');
+    expect(doc43).toContain('must not silently treat bare node ids as globally unique across unrelated base profiles');
+    expect(doc43).toContain('Backup export/import preserves the photography profile definition alongside coding.');
+    expect(doc43).toContain('colliding id such as `composition`');
+    expect(doc43).toContain('## Non-Goals');
+    expect(doc43).toContain('profile gallery');
+    expect(doc43).toContain('cross-base evidence');
+    expect(doc43).toContain('new operation vocabulary');
+    expect(doc43).toContain('temporary/provisional tag or relationship maturity lifecycle');
+    expect(doc43).toContain("the demo's base-apply proof goes through user target-switch, not the checker");
+    expect(doc43).toContain('auto-apply');
+    expect(doc43).toContain('## Acceptance Criteria');
+    expect(doc43).toContain('The coding profile remains the strong default');
+  });
+
+  it('doc 39 keeps target-layer switching scope anchors', () => {
+    const doc39 = read('ONTOLOGY_PROFILE_REFACTOR/39_EDIT_THEN_APPLY_DECISION.md');
+
+    expect(doc39).toContain('## Implementation Note - Target-Layer Switching First Slice');
+    expect(doc39).toContain('pending branch-local additive new-node proposal');
+    expect(doc39).toContain('explicit user chooses "move proposal to base/core"');
+    expect(doc39).toContain('Switching creates a replacement proposal and supersedes the old proposal.');
+    expect(doc39).toContain('It must not rewrite the old proposal in place.');
+    expect(doc39).toContain('preserves the original `sourceKind`');
+    expect(doc39).toContain('re-derives `riskScore` from the new target and operation shape');
+    expect(doc39).toContain('Risk describes blast radius');
+    expect(doc39).toContain("target.kind = 'base_profile'");
+    expect(doc39).toContain('targetProfileVersion');
+    expect(doc39).toContain('targetBranchUpdatedAt = null');
+    expect(doc39).toContain('dry-run through the existing base-profile proposal compiler');
+    expect(doc39).toContain('Switching target is not Apply.');
+    expect(doc39).toContain('base-to-branch switching');
+    expect(doc39).toContain('branch-to-branch or sibling-branch switching');
+    expect(doc39).toContain('target switching initiated by a model');
+    expect(doc39).toContain('bulk switching multiple proposals');
+    expect(doc39).toContain('branch merge/upward promotion of already-applied branch overlay content');
+    expect(doc39).toContain('## Implementation Update - Target-Switch Pure Helper');
+    expect(doc39).toContain('createProposalTargetSwitchModel(input)');
+    expect(doc39).toContain('pure eligibility/blast-radius helper');
+    expect(doc39).toContain('## Implementation Update - Target-Switch Data Service');
+    expect(doc39).toContain('switchProfileChangeProposalTargetToBase(input)');
+    expect(doc39).toContain('data-layer replacement/supersede service');
+  });
+
+  it('profile selection draft helper stays pure and selection-scoped', () => {
+    const src = read('src/features/ontology/profileSelectionDraft.ts');
+
+    expect(src).toContain('createProfileSelectionDraftModel');
+    expect(src).toContain('project_id_required');
+    expect(src).toContain('requires_choice');
+    expect(src).toContain('single_preselected');
+
+    expect(src).not.toMatch(/\b(db|executor|transaction|profileSelectionRepo|profileBranchRepo)\b/);
+    expect(src).not.toMatch(/\b(React|useState|useEffect|@tanstack|zustand|AsyncStorage)\b/);
+    expect(src).not.toMatch(/\b(getActiveSelection|setActiveSelection|useActiveSelection|currentSelection|activeSelectionStore)\b/);
+    expect(src).not.toMatch(/\b(composeRuntimeDomainProfile|persistedRuntimeProfile|composed.*profile.*persist)\b/);
+    expect(src).not.toMatch(/\b(deleteProfileBranch|updateProfileBranch|branch_merge|upward promotion|sibling propagation)\b/);
+    expect(src).not.toContain("kind: 'base_profile'");
+    expect(src).not.toMatch(/\b(async|Promise|fetch|complete|enqueue)\b/);
+  });
+
+  it('proposal target-switch helper stays pure, explicit, and branch-to-base only', () => {
+    const src = read('src/features/ontology/profileProposalTargetSwitch.ts');
+    const ontologyIndexSrc = read('src/features/ontology/index.ts');
+
+    expect(src).toContain('createProposalTargetSwitchModel');
+    expect(src).toContain('targetSwitchBlockReason');
+    expect(src).toContain('BASE_PROFILE_ADDITIVE_TARGET_SWITCH_RISK_SCORE');
+    expect(src).toContain("targetProfileVersion: input.baseProfileVersion");
+    expect(src).toContain('targetBranchUpdatedAt: null');
+    expect(src).toContain('sourceKind: input.proposal.sourceKind');
+    expect(src).toContain('riskScore: BASE_PROFILE_ADDITIVE_TARGET_SWITCH_RISK_SCORE');
+    expect(src).toContain('Switching target is not Apply');
+    expect(ontologyIndexSrc).toContain('createProposalTargetSwitchModel');
+
+    expect(src).not.toMatch(/from\s+['"][^'"]*(?:db\/|\/db|\/data\/|features\/backup|features\/learning|features\/graph|ai\/|react|react-native|expo|zustand|@tanstack)[^'"]*['"]/);
+    expect(src).not.toMatch(/\b(async|Promise|fetch|complete|enqueue)\b/);
+    expect(src).not.toMatch(/\b(compileBranchLocalProposalApplyOperation|compileBaseProfileProposalApplyOperation|applyPending|applyBranchLocal|applyBaseProfile)\b/);
+    expect(src).not.toMatch(/\b(insertProfileChangeProposal|upsertProfileChangeProposal|deleteProfileChangeProposal|updateProfileChangeProposal|supersedePendingProfileChangeProposal)\b/);
+    expect(src).not.toMatch(/\b(branch_merge|relationship_patch|classification_patch|manual_draft)\b/);
+    expect(src).not.toMatch(/\b(base-to-branch|branch-to-branch|sibling|bulk)\b/i);
+    expect(src).not.toMatch(/\b(profileTrust|ProfileTrust|autoApplyProposalKinds)\b/);
+  });
+
+  it('profile selection hooks stay scoped to selection save and empty branch creation', () => {
+    const src = read('src/features/ontology/hooks/useProfileSelection.ts');
+
+    expect(src).toContain('useProjectProfileSelection');
+    expect(src).toContain('useOntologyProfileSummaries');
+    expect(src).toContain('useProfileBranchesForParent');
+    expect(src).toContain('useSaveProjectProfileSelection');
+    expect(src).toContain('useCreateEmptyProfileBranch');
+    expect(src).toContain('loadDefaultProfileRegistry');
+    expect(src).toContain('upsertProjectProfileSelection');
+    expect(src).toContain('insertProfileBranch');
+
+    expect(src).not.toMatch(/\b(deleteProjectProfileSelectionForProject|deleteProfileBranch|upsertProfileBranch|updateProfileBranch)\b/);
+    expect(src).not.toMatch(/\b(getActiveSelection|setActiveSelection|useActiveSelection|currentSelection|activeSelectionStore)\b/);
+    expect(src).not.toMatch(/\b(composeRuntimeDomainProfile|persistedRuntimeProfile|composed.*profile.*persist)\b/);
+    expect(src).not.toMatch(/\b(branch_merge|upward promotion|sibling propagation|target-layer|target switching)\b/i);
+    expect(src).not.toMatch(/\b(applyPending|applyBranchLocal|applyBaseProfile|compileBranchLocalProposalApplyOperation|compileBaseProfileProposalApplyOperation)\b/);
+    expect(src).not.toMatch(/\b(profileTrust|ProfileTrust|autoApplyProposalKinds)\b/);
+    expect(src).not.toContain("kind: 'base_profile'");
+  });
+
+  it('profile selection panel stays explicit, local, and non-destructive', () => {
+    const panelSrc = read('src/features/ontology/ui/ProfileSelectionPanel.tsx');
+    const screenSrc = read('src/features/ontology/ui/ProfileProposalReviewScreen.tsx');
+    const learningRouteSrc = read('app/learning/index.tsx');
+    const learningHubSrc = read('src/features/learning/ui/LearningHubScreen.tsx');
+    const projectRouteSrc = read('app/project/[id].tsx');
+
+    expect(panelSrc).toContain('ProfileSelectionPanel');
+    expect(panelSrc).toContain('createProfileSelectionDraftModel');
+    expect(panelSrc).toContain('useProjectProfileSelection');
+    expect(panelSrc).toContain('useOntologyProfileSummaries');
+    expect(panelSrc).toContain('useProfileBranchesForParent');
+    expect(panelSrc).toContain('useSaveProjectProfileSelection');
+    expect(panelSrc).toContain('useCreateEmptyProfileBranch');
+    expect(panelSrc).toContain('onCheckerTargetChange');
+    expect(panelSrc).toContain('onSelectionInteraction');
+    expect(panelSrc).toContain('selectionRow?.updatedAt');
+    expect(panelSrc).toContain('only persisted');
+    expect(panelSrc).toContain('removeProfileSelectionBranch');
+    expect(screenSrc).toContain('<ProfileSelectionPanel');
+    expect(screenSrc).toContain('canRunChecker');
+    expect(screenSrc).toContain('selectionTargetInteracted');
+    expect(screenSrc).toContain('selectionCheckerTarget ?? checkerTarget');
+    expect(screenSrc).toContain('Select a branch target before running the checker.');
+    expect(learningRouteSrc).toContain('useLocalSearchParams');
+    expect(learningRouteSrc).toContain('<LearningHubScreen projectId={projectId}');
+    expect(learningHubSrc).toContain('projectId?: string | null | undefined');
+    expect(learningHubSrc).toContain('<ProfileProposalReviewScreen projectId={projectId ?? null}');
+    expect(projectRouteSrc).toContain("pathname: '/learning'");
+    expect(projectRouteSrc).toContain('params: { projectId }');
+
+    expect(panelSrc).not.toMatch(/from\s+['"][^'"]*\/data\/[^'"]*['"]/);
+    expect(panelSrc).not.toMatch(/\b(deleteProfileBranch|upsertProfileBranch|updateProfileBranch|deleteProjectProfileSelectionForProject)\b/);
+    expect(panelSrc).not.toMatch(/\b(getActiveSelection|setActiveSelection|useActiveSelection|currentSelection|activeSelectionStore)\b/);
+    expect(panelSrc).not.toMatch(/\b(composeRuntimeDomainProfile|persistedRuntimeProfile|composed.*profile.*persist)\b/);
+    expect(panelSrc).not.toMatch(/\b(branch_merge|upward promotion|sibling propagation|target-layer|target switching)\b/i);
+    expect(panelSrc).not.toMatch(/\b(runManualOntologyChecker|insertProfileChangeProposal|upsertProfileChangeProposal|deleteProfileChangeProposal)\b/);
+    expect(panelSrc).not.toContain("kind: 'base_profile'");
+    expect(`${screenSrc}\n${learningHubSrc}`).not.toMatch(/\b(getCurrentProject|useCurrentProject|activeProjectStore|currentProjectStore)\b/);
+    expect(screenSrc).not.toMatch(/proposals\.find\(\(proposal\)\s*=>\s*proposal\.target\.kind\s*===\s*'profile_branch'\)/);
   });
 
   it('manual checker runtime service stays data-boundary, branch-local, and insert-only', () => {
@@ -704,6 +889,9 @@ describe('Kordex context assembly guards', () => {
     expect(serviceSrc).toContain('buildCheckerPrompt');
     expect(serviceSrc).toContain('validateCheckerPromptOutput');
     expect(serviceSrc).toContain('mapCheckerOutputToProfileChangeProposals');
+    expect(serviceSrc).toContain('aggregateCorrectionEvidenceClaims');
+    expect(serviceSrc).toContain('sourceEvidenceIds');
+    expect(serviceSrc).toContain('isItemType');
     expect(serviceSrc).toContain('compileBranchLocalProposalApplyOperation');
     expect(serviceSrc).toContain('insertProfileChangeProposal');
     expect(ontologyDataIndexSrc).toContain('runManualOntologyChecker');
@@ -715,6 +903,38 @@ describe('Kordex context assembly guards', () => {
     expect(serviceSrc).not.toMatch(/\b(upsertProfileChangeProposal|deleteProfileChangeProposal|updateProfileChangeProposal|updateProfileChangeProposalIfPending)\b/);
     expect(serviceSrc).not.toMatch(/\b(insertProfileProposalEvent|profileTrust|ProfileTrust|autoApplyProposalKinds)\b/);
     expect(serviceSrc).not.toMatch(/\b(supersedePendingProfileChangeProposal|refreshStaleProfileChangeProposal|createEditedProfileChangeProposalReplacement)\b/);
+  });
+
+  it('manual checker UI adapter stays manual, abortable, no-retry, and review-surface only', () => {
+    const adapterSrc = read('src/features/ontology/hooks/manualCheckerReviewAdapter.ts');
+    const hookSrc = read('src/features/ontology/hooks/useRunManualOntologyChecker.ts');
+    const screenSrc = read('src/features/ontology/ui/ProfileProposalReviewScreen.tsx');
+    const saveModalSrc = read('src/features/learning/ui/SaveAsLearningModal.tsx');
+    const combinedAdapter = `${adapterSrc}\n${hookSrc}`;
+
+    expect(adapterSrc).toContain('runManualOntologyCheckerForReview');
+    expect(adapterSrc).toContain('completeManualCheckerPrompt');
+    expect(adapterSrc).toContain('ManualCheckerRunServiceError');
+    expect(adapterSrc).toContain('checker_output_invalid');
+    expect(adapterSrc).toContain('KORDEX_CHECKER_CONTEXT_PAYLOAD_JSON');
+    expect(adapterSrc).toContain('AbortSignal');
+    expect(hookSrc).toContain('retry: false');
+    expect(hookSrc).toContain('AbortController');
+    expect(hookSrc).toContain('profileProposalKeys.all()');
+    expect(hookSrc).toContain('profileProposalFreshnessKeys.all()');
+    expect(hookSrc).not.toMatch(/\b(profileBranchKeys|profileProposalEventKeys)\b/);
+    expect(combinedAdapter).not.toMatch(/\b(RETRY_INSTRUCTION|retryInstruction|attempt|for\s*\(\s*let\s+attempt|while\s*\()/);
+
+    expect(screenSrc).toContain('Run checker now');
+    expect(screenSrc).toContain('checkerMutation.isPending');
+    expect(screenSrc).toContain('formatCheckerRunSummary');
+    expect(screenSrc).toContain('formatCheckerSkipReason');
+    expect(screenSrc).toContain('DEFAULT_RUNTIME_PROFILE_BASE_PROFILE_ID');
+    expect(screenSrc).not.toMatch(/\b(setInterval|setTimeout|BackgroundFetch|TaskManager|cron|scheduled)\b/);
+    expect(screenSrc).not.toMatch(/useEffect[\s\S]{0,300}runChecker/);
+    expect(screenSrc).not.toMatch(/\b(applyPendingBranchLocalProfileChangeProposal|applyPendingBaseProfileChangeProposal|insertProfileChangeProposal|upsertProfileChangeProposal|deleteProfileChangeProposal)\b/);
+
+    expect(saveModalSrc).toContain('checkerTarget={profileContext.proposalTarget.kind === \'profile_branch\'');
   });
 
   it('Conceptualize ContextPack shadow wiring does not render prompts, call models, or mutate ontology state', () => {
@@ -946,6 +1166,55 @@ describe('Kordex context assembly guards', () => {
     expect(serviceSrc).not.toMatch(/from\s+['"][^'"]*(?:features\/backup|features\/learning|features\/graph|ai\/|react|react-native|expo|zustand|@tanstack)[^'"]*['"]/);
     expect(serviceSrc).not.toMatch(/\b(autoApply|runExtractor|buildConceptualizePrompt|enqueue|complete)\b/);
     expect(hookSrc).not.toMatch(/from\s+['"][^'"]*(?:features\/learning|features\/graph|ai\/|react-native|expo|zustand)[^'"]*['"]/);
+  });
+
+  it('proposal target-switch service stays data-boundary, branch-to-base, and apply-free', () => {
+    const serviceSrc = read('src/features/ontology/data/profileChangeProposalTargetSwitchService.ts');
+    const ontologyDataIndexSrc = read('src/features/ontology/data/index.ts');
+    const ontologyRootIndexSrc = read('src/features/ontology/index.ts');
+
+    expect(serviceSrc).toContain('switchProfileChangeProposalTargetToBase');
+    expect(serviceSrc).toContain('createProposalTargetSwitchModel');
+    expect(serviceSrc).toContain('compileBaseProfileProposalApplyOperation');
+    expect(serviceSrc).toContain('insertProposal');
+    expect(serviceSrc).toContain('supersedePendingProfileChangeProposal');
+    expect(serviceSrc).toContain("kind: 'base_profile'");
+    expect(serviceSrc).toContain('targetBranchUpdatedAt: null');
+    expect(serviceSrc).toContain('sourceKind');
+    expect(serviceSrc).toContain('riskScore');
+    expect(ontologyDataIndexSrc).toContain('switchProfileChangeProposalTargetToBase');
+    expect(ontologyRootIndexSrc).not.toContain('switchProfileChangeProposalTargetToBase');
+
+    expect(serviceSrc).not.toMatch(/from\s+['"][^'"]*(?:features\/backup|features\/learning|features\/graph|ai\/|react|react-native|expo|zustand|@tanstack)[^'"]*['"]/);
+    expect(serviceSrc).not.toMatch(/\b(compileBranchLocalProposalApplyOperation|applyPendingBranchLocalProfileChangeProposal|applyPendingBaseProfileChangeProposal|applyBaseProfile)\b/);
+    expect(serviceSrc).not.toMatch(/\b(upsertProfileChangeProposal|deleteProfileChangeProposal|updateProfileChangeProposal\()\b/);
+    expect(serviceSrc).not.toMatch(/\b(profileTrust|ProfileTrust|autoApplyProposalKinds)\b/);
+    expect(serviceSrc).not.toMatch(/\b(runManualOntologyChecker|buildCheckerPrompt|validateCheckerPromptOutput|mapCheckerOutputToProfileChangeProposals)\b/);
+    expect(serviceSrc).not.toMatch(/\b(setInterval|setTimeout|BackgroundFetch|TaskManager|cron|scheduled)\b/);
+    expect(serviceSrc).not.toMatch(/\b(branch_merge|relationship_patch|classification_patch|manual_draft)\b/);
+  });
+
+  it('proposal target-switch hook and review control stay review-only', () => {
+    const hookSrc = read('src/features/ontology/hooks/useSwitchProfileChangeProposalTarget.ts');
+    const screenSrc = read('src/features/ontology/ui/ProfileProposalReviewScreen.tsx');
+
+    expect(hookSrc).toContain('useSwitchProfileChangeProposalTarget');
+    expect(hookSrc).toContain('switchProfileChangeProposalTargetToBase');
+    expect(hookSrc).toContain('profileProposalKeys.all()');
+    expect(hookSrc).toContain('profileProposalEventKeys.byProposal(input.proposalId)');
+    expect(hookSrc).toContain('profileProposalEventKeys.byProposal(result.proposal.id)');
+    expect(hookSrc).toContain('profileProposalFreshnessKeys.all()');
+    expect(screenSrc).toContain('useSwitchProfileChangeProposalTarget');
+    expect(screenSrc).toContain('createProposalTargetSwitchModel');
+    expect(screenSrc).toContain('switchTargetToCore');
+    expect(screenSrc).toContain('targetSwitchModel.confirmationBody');
+    expect(screenSrc).toContain('formatTargetSwitchFailureMessage');
+    expect(screenSrc).toContain('Created core-targeted proposal');
+
+    expect(hookSrc).not.toMatch(/\b(profileBranchKeys|profileSelectionKeys|profileBaseProfileKeys)\b/);
+    expect(hookSrc).not.toMatch(/\b(applyPendingBranchLocalProfileChangeProposal|applyPendingBaseProfileChangeProposal|applyBaseProfile|compileBaseProfileProposalApplyOperation)\b/);
+    expect(hookSrc).not.toMatch(/\b(runManualOntologyChecker|buildCheckerPrompt|enqueue|complete|autoApply)\b/);
+    expect(screenSrc).not.toMatch(/\b(switchProfileChangeProposalTargetToBase|compileBaseProfileProposalApplyOperation|applyPendingBaseProfileChangeProposal)\b/);
   });
 
   it('base profile apply helper stays a pure patch compiler, not a data/UI seam', () => {

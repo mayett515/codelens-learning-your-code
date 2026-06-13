@@ -2,9 +2,9 @@
 
 ## Overview
 
-CodeLens is a mobile-first code learning app built with Expo SDK 54, React Native 0.81.5, and TypeScript 5.9.2 (strict + `exactOptionalPropertyTypes`). It runs on-device AI chat, code marking/highlighting, and a knowledge graph backed by local RAG (sqlite-vec + op-sqlite).
+CodeLens is a mobile-first code learning app built with Expo SDK 54, React Native 0.81.5, and TypeScript 5.9.2 (strict + `exactOptionalPropertyTypes`). It runs local-first AI chat, code marking/highlighting, learning capture, profile-aware ontology review, a manual ontology checker, and a knowledge graph backed by local RAG (sqlite-vec + op-sqlite).
 
-Planned direction: keep the coding product first-class while moving hardcoded coding-learning assumptions into a profile/ontology layer. The strategic docs live under [ONTOLOGY_PROFILE_REFACTOR/](ONTOLOGY_PROFILE_REFACTOR/README.md). Until that refactor lands, this file describes the current learning-first implementation.
+The strategic direction is now implemented as a profile/ontology spine rather than only planned. Coding stays the first child profile, while dynamic profile definitions, branch overlays, correction evidence, inert proposals, freshness checks, user-fit signals, and the manual checker live under `src/features/ontology/`. The decision spine lives under [ONTOLOGY_PROFILE_REFACTOR/](ONTOLOGY_PROFILE_REFACTOR/README.md); read its `00_DOC_SYNC.md` and `NEXT_LLM_CONTEXT.md` before changing ontology/profile architecture.
 
 ## Directory Structure
 
@@ -125,19 +125,21 @@ Learning-specific code lives in `src/features/learning/` with a barrel `index.ts
 
 Core infrastructure (db, ai, domain, ports/adapters, shared UI) stays in `src/` — it IS the core layer, not a feature.
 
-### Planned profile/ontology layer
+### Profile/ontology spine
 
-The next strategic refactor should introduce profile-owned definitions for domain-specific meaning:
+Domain-specific meaning is moving behind profile-owned definitions instead of scattered hardcoded coding assumptions. The default coding profile preserves current behavior, but the runtime now has explicit seams for other profiles and branch-local ontology overlays.
 
-- concept/capture labels
-- concept type taxonomy and descriptions
-- metadata field definitions
-- extractor prompt category guidance
-- retrieval memory formatting
-- promotion classification rules
-- graph visual encoding
+Implemented pieces:
+- Profile compatibility columns on concepts/captures, plus codecs and backup mapping.
+- Profile branches and project-scoped active selections. Runtime `DomainProfile` values are composed from base definitions plus explicit branch overlays; composed profiles are not persisted as canonical truth.
+- Profile definitions for versioned base/core profile apply.
+- Append-only correction evidence with active-selection snapshots and internal near-miss diagnostics.
+- Inert `profile_change_proposals` plus proposal events. Conceptualize, checker, and future producers must create proposals, not hidden mutations.
+- Branch-local and base/core guarded apply paths. Branch proposals use `targetBranchUpdatedAt`; base/core proposals use `targetProfileVersion`.
+- Proposal review, edit-then-replace, stale freshness, stale refresh, superseding, audit history, and the first explicit branch-to-base target-switch path.
+- ContextPack assembly, strict Conceptualize output validation, singular public classification, user-fit projection/history, the first manual checker gate, and the first compact branch/profile selection panel with explicit project-context wiring.
 
-The default coding profile should preserve the current coding behavior. Future profiles should be able to define different ontologies without rewriting the core capture, retrieval, review, promotion, and graph engine. See [ONTOLOGY_PROFILE_REFACTOR/04_REFACTOR_WITHOUT_BREAKING_APP.md](ONTOLOGY_PROFILE_REFACTOR/04_REFACTOR_WITHOUT_BREAKING_APP.md).
+Still deferred by design: target switching outside Doc 39's first branch-to-base additive scope, base/core checker proposals, relationship/boundary operation vocabulary, temporary/provisional maturity lifecycle, checker-run tables, background checker modes, auto-apply, DSL/runtime agents, and source write-back adapters.
 
 ### Thin route screens
 
@@ -214,7 +216,7 @@ Writes that must be atomic (e.g. `commitLearningSession`) use Drizzle's `db.tran
 Backup and restore live in `src/features/backup/` and power the Export / Import / Clear-all-data buttons in Settings.
 
 **Archive format** — `.codelens` (a Zip with known entries):
-- `metadata.json` — `ARCHIVE_MAGIC = 'codelens-backup'`, `FORMAT_VERSION = 9`, `SCHEMA_VERSION = 22`, `APP_VERSION = '1.0.0'`, `createdAt`, per-table row counts.
+- `metadata.json` — `ARCHIVE_MAGIC = 'codelens-backup'`, `FORMAT_VERSION = 9`, `SCHEMA_VERSION = 24`, `APP_VERSION = '1.0.0'`, `createdAt`, per-table row counts.
 - `projects.ndjson`, `files.ndjson`, `chats.ndjson`, `chat_messages.ndjson`, `learning_sessions.ndjson`, `learning_captures.ndjson`, `concept_links.ndjson`, `profile_branches.ndjson`, `profile_selections.ndjson`, `profile_definitions.ndjson`, `ontology_correction_evidence.ndjson`, `profile_change_proposals.ndjson`, `profile_proposal_events.ndjson`, `profile_trust_settings.ndjson` — one JSON row per line.
 - `concepts.ndjson` — each row is enriched with an `embedding: { vectorBase64, model, api, signature, updatedAt }` field when a vector is known for that concept. The vector is a Base64-encoded `Float32Array` (RFC 4648, hand-rolled — Hermes lacks `Buffer` and `btoa/atob` are not binary-safe; see `src/features/backup/codecs.ts`).
 - `preferences.json` — MMKV dumps of `chat_config` + `embed_config`.
@@ -230,7 +232,7 @@ Backup and restore live in `src/features/backup/` and power the Export / Import 
 
 **Clear-all-data** (`clearAllData`):
 1. `vectorStore.deleteAll()` (clears both the vec0 table and `embeddings_meta`).
-2. Drizzle transaction deleting `chat_messages`, `chats`, `learning_captures`, `concept_links`, `concepts`, `learning_sessions`, `profile_selections`, `profile_definitions`, `profile_branches`, `ontology_correction_evidence`, `profile_change_proposals`, `files`, `projects` in FK-safe order.
+2. Drizzle transaction deleting `chat_messages`, `chats`, `learning_captures`, `concept_links`, `concepts`, `learning_sessions`, `profile_selections`, `profile_definitions`, `profile_branches`, `ontology_correction_evidence`, `profile_proposal_events`, `profile_change_proposals`, `profile_trust_settings`, `files`, `projects` in FK-safe order.
 3. `DELETE FROM concepts_fts` in a try/catch — guard against trigger misfire on bulk deletes.
 4. `kv.delete('chat_config')` + `kv.delete('embed_config')`.
 5. If `includeApiKeys` is true (opt-in red checkbox in the confirm modal — default OFF), `secureStore.deleteApiKey()` is called per provider. API keys survive by default because re-entering them on mobile is high-friction; the nuke option is reserved for the "sell my phone" case.

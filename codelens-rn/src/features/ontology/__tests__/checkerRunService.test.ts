@@ -152,8 +152,10 @@ function makeDeps(input: {
   branchBeforeModel?: ProfileBranch<string> | undefined;
   branchInTransaction?: ProfileBranch<string> | undefined;
   pendingProposals?: readonly ProfileChangeProposal[] | undefined;
+  correctionEvidence?: readonly OntologyCorrectionEvidence[] | undefined;
   output?: unknown;
   calls?: string[] | undefined;
+  onModel?: ((invocation: Parameters<ManualCheckerRunServiceDependencies['runCheckerModel']>[0]) => void) | undefined;
 } = {}): ManualCheckerRunServiceDependencies {
   const tx = { kind: 'tx' } as unknown as DbOrTx;
   const calls = input.calls ?? [];
@@ -179,7 +181,7 @@ function makeDeps(input: {
     loadUserFitFacts: async () => {
       calls.push('loadUserFitFacts');
       return {
-        correctionEvidence: [makeEvidence()],
+        correctionEvidence: [...(input.correctionEvidence ?? [makeEvidence()])],
         proposalEvents: [] as ProfileProposalEvent[],
       };
     },
@@ -194,6 +196,7 @@ function makeDeps(input: {
       calls.push('model');
       expect(invocation.pack.consumer).toBe('checker');
       expect(invocation.prompt.outputSchemaName).toBe('CheckerPromptOutputSchema');
+      input.onModel?.(invocation);
       return input.output ?? checkerOutput();
     },
     newProposalId: () => 'checker-proposal-1',
@@ -253,6 +256,72 @@ describe('runManualOntologyChecker', () => {
     expect(result.explanation.skippedFindings).toEqual([]);
   });
 
+  it('aggregates repeated correction patterns before building the checker prompt', async () => {
+    const evidenceNewest = makeEvidence({
+      id: 'evidence-3',
+      subjectId: 'capture-3',
+      reason: 'Newest correction confirms the same missing concept.',
+      createdAt: 80,
+    });
+    const evidenceMiddle = makeEvidence({
+      id: 'evidence-2',
+      subjectId: 'capture-2',
+      createdAt: 70,
+    });
+    const evidenceOldest = makeEvidence({
+      id: 'evidence-1',
+      subjectId: 'capture-1',
+      createdAt: 50,
+    });
+    const calls: string[] = [];
+
+    const result = await runManualOntologyChecker({
+      baseProfileId: 'coding',
+      targetBranchId: 'react-project',
+      now: 100,
+      deps: makeDeps({
+        calls,
+        correctionEvidence: [evidenceNewest, evidenceMiddle, evidenceOldest],
+        output: checkerOutput({
+          findings: [
+            {
+              ...checkerOutput().findings[0],
+              evidenceIds: ['evidence-3', 'evidence-2', 'evidence-1'],
+            },
+          ],
+        }),
+        onModel: (invocation) => {
+          expect(invocation.pack.evidence.claims).toHaveLength(1);
+          expect(invocation.pack.evidence.claims[0]).toMatchObject({
+            evidenceId: 'evidence-3',
+            patternFrequency: 3,
+            latestAt: 80,
+            reason: 'Newest correction confirms the same missing concept.',
+            sourceEvidenceIds: ['evidence-3', 'evidence-2', 'evidence-1'],
+            sourceIds: ['capture-3', 'capture-2', 'capture-1'],
+          });
+          expect(invocation.prompt.dataPayload.evidence.claims[0]).toMatchObject({
+            evidenceId: 'evidence-3',
+            patternFrequency: 3,
+            sourceEvidenceIds: ['evidence-3', 'evidence-2', 'evidence-1'],
+          });
+          expect(invocation.prompt.allowedEvidenceIds).toEqual([
+            'evidence-3',
+            'evidence-2',
+            'evidence-1',
+          ]);
+        },
+      }),
+    });
+
+    expect(calls).toContain('insert:checker-proposal-1');
+    expect(result.proposals[0]?.evidenceIds).toEqual([
+      'evidence-3',
+      'evidence-2',
+      'evidence-1',
+    ]);
+  });
+
   it('returns explanation only when no active branch is supplied', async () => {
     const result = await runManualOntologyChecker({
       baseProfileId: 'coding',
@@ -296,12 +365,12 @@ describe('runManualOntologyChecker', () => {
   });
 
   it('skips dry-run patch conflicts and inserts nothing for that candidate', async () => {
-    const branchWithNonItemParent = makeBranch({
+    const branchWithConflictingNode = makeBranch({
       updatedAt: 8,
       overlay: {
         id: 'overlay-react',
         kind: 'project',
-        addOntologyNodes: [makeNode('non_item_parent')],
+        addOntologyNodes: [makeNode('react_render_timing')],
       },
     });
     const calls: string[] = [];
@@ -311,20 +380,7 @@ describe('runManualOntologyChecker', () => {
       now: 100,
       deps: makeDeps({
         calls,
-        branchBeforeModel: branchWithNonItemParent,
-        branchInTransaction: branchWithNonItemParent,
-        output: checkerOutput({
-          findings: [
-            {
-              ...checkerOutput().findings[0],
-              label: 'Child concept',
-              parentNodeRef: {
-                scopeId: 'react-project',
-                nodeId: 'non_item_parent',
-              },
-            },
-          ],
-        }),
+        branchInTransaction: branchWithConflictingNode,
       }),
     });
 
@@ -332,9 +388,9 @@ describe('runManualOntologyChecker', () => {
     expect(result.proposals).toEqual([]);
     expect(result.explanation.skippedFindings).toEqual([
       {
-        label: 'Child concept',
+        label: 'React render timing',
         reason: 'patch-conflict',
-        proposedNodeId: 'child_concept',
+        proposedNodeId: 'react_render_timing',
       },
     ]);
   });

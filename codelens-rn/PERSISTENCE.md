@@ -72,11 +72,33 @@ Migrations 012 and 013 add the first durable ontology-profile branch plumbing:
 
 Runtime `DomainProfile` values are still derived. Do not persist composed runtime profiles as canonical state. Branch rows, selections, merge proposals, and profile/base sources remain separate boundaries.
 
+## Ontology proposal and evidence persistence
+
+Migrations 014 through 024 complete the local ontology/profile persistence spine used by Conceptualize, proposal review/apply, user-fit, and the manual checker:
+
+- `profile_definitions` stores versioned base/core profile definitions. Base/core proposal apply is guarded by `target_profile_version`.
+- `ontology_correction_evidence` stores append-only factual correction evidence. It records the active selection snapshot where the correction happened plus optional near-miss candidates. Evidence rows are not mutations and must not directly change the ontology.
+- `profile_change_proposals` stores inert pending/reviewed profile changes from Conceptualize, checker, user edit, or future producers. Proposal rows carry source/evidence, target layer, patch JSON, risk/confidence metadata, and lifecycle status.
+- `profile_proposal_events` stores append-only review/apply lifecycle events: apply, reject, postpone, asked-why, and superseded. Creation is represented by the proposal row itself, not an event.
+- `profile_trust_settings` stores future suggest-first trust preferences. It is storage-only for now; trust/user-fit/checker confidence must not auto-apply ontology changes.
+- Branch-targeted proposals use `target_branch_updated_at` to prevent born-stale or silently stale apply. Base/core proposals use `target_profile_version`.
+- `near_miss_candidates_json` on correction evidence is internal diagnostic evidence. It must not be shown as visible extra tags.
+
+The invariant is evidence -> proposal -> explicit review/apply. Conceptualize, checker runs, future graph chat, and future DSL/agent paths should all feed this same spine instead of inventing new mutation paths.
+
+## Manual checker persistence shape
+
+The first checker gate intentionally adds no `checker_runs` table. Checker output becomes ordinary `profile_change_proposals` with `source_kind = 'checker'`, `proposal_kind = 'ontology_node_patch'`, `source_branch_id = null`, non-empty `evidence_ids`, branch-local target snapshots, and one concept/node per proposal.
+
+The runtime service loads bounded correction/proposal facts, assembles a checker ContextPack, calls the model outside the write transaction, then opens a transaction to re-read branch state, deduplicate pending checker proposals, dry-run candidates through the branch-local compiler, and insert only valid pending proposals. Dry-run conflicts become read-only skip explanations, not writes.
+
 ## Backup and restore shape
 
 `.codelens` export uses raw `SELECT *`, so NDJSON rows contain database column names such as `concept_type`, `core_concept`, and `metadata_json`. Drizzle inserts expect schema property names such as `conceptType`, `coreConcept`, and `metadataJson`.
 
-Import must pass every table through `src/features/backup/columnMaps.ts` before `insertBatch()`. That mapper converts raw snake_case backup rows into Drizzle's camelCase insert shape and decodes JSON columns into arrays/objects/null, including `profile_branches.overlay_json` and the three branch id array columns on `profile_selections`. The import path validates and maps all rows before calling `clearAllData()`, so malformed backup JSON aborts while the current database is still intact.
+Import must pass every table through `src/features/backup/columnMaps.ts` before `insertBatch()`. That mapper converts raw snake_case backup rows into Drizzle's camelCase insert shape and decodes JSON columns into arrays/objects/null, including `profile_branches.overlay_json`, the three branch id array columns on `profile_selections`, correction evidence snapshots/near-miss candidates, proposal patches/evidence ids, proposal event details, trust-setting proposal-kind arrays, and `target_branch_updated_at`. The import path validates and maps all rows before calling `clearAllData()`, so malformed backup JSON aborts while the current database is still intact.
+
+Current backup constants live in `src/features/backup/format.ts`: `FORMAT_VERSION = 9`, `SCHEMA_VERSION = 24`.
 
 ## Layout
 
@@ -92,3 +114,4 @@ Import must pass every table through `src/features/backup/columnMaps.ts` before 
 - Embedding dimension changes (currently `FLOAT[384]`).
 - New vec0 virtual tables added.
 - Profile compatibility columns or backup import/export shape changes.
+- New ontology/profile tables, proposal lifecycle columns, or target snapshot fields added.

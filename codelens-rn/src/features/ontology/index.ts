@@ -110,6 +110,25 @@ export {
   composeRuntimeDomainProfileFromSelection,
   resolveProfileSelection,
 } from './profileSelection';
+export {
+  changeProfileSelectionBase,
+  createProfileSelectionDraftModel,
+  moveProfileSelectionBranch,
+  removeProfileSelectionBranch,
+  setProfileSelectionBranchSelected,
+} from './profileSelectionDraft';
+export type {
+  CreateProfileSelectionDraftModelInput,
+  ProfileSelectionBranchMoveDirection,
+  ProfileSelectionBaseOption,
+  ProfileSelectionBranchGroups,
+  ProfileSelectionBranchOption,
+  ProfileSelectionCheckerTargetOption,
+  ProfileSelectionCheckerTargetState,
+  ProfileSelectionDraftError,
+  ProfileSelectionDraftErrorCode,
+  ProfileSelectionDraftModel,
+} from './profileSelectionDraft';
 
 export {
   DuplicateProfileIdError,
@@ -253,6 +272,18 @@ export type {
   CheckerTargetBranchSnapshot,
   MapCheckerOutputToProfileChangeProposalsInput,
 } from './checkerProposalMapper';
+export {
+  BASE_PROFILE_ADDITIVE_TARGET_SWITCH_RISK_SCORE,
+  createProposalTargetSwitchModel,
+  formatTargetSwitchBlockReason,
+  targetSwitchBlockReason,
+} from './profileProposalTargetSwitch';
+export type {
+  CreateProposalTargetSwitchModelInput,
+  ProposalTargetSwitchBlockReason,
+  ProposalTargetSwitchModel,
+  ProposalTargetSwitchReplacementPreview,
+} from './profileProposalTargetSwitch';
 export {
   profileChangeProposalTargetKey,
   projectUserFitSignals,

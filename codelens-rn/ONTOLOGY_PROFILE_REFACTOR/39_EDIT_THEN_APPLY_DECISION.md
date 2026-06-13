@@ -2,7 +2,7 @@
 
 Date: 2026-05-28
 
-Status: locked decision; first draft meaning/provenance, target readout, proposal-review handoff, superseding lifecycle, superseding hook-boundary, proposal event-history readout, edited replacement service/hook, and first visible proposal editor UI slices are complete.
+Status: locked decision; first draft meaning/provenance, target readout, proposal-review handoff, superseding lifecycle, superseding hook-boundary, proposal event-history readout, edited replacement service/hook, first visible proposal editor UI slices, target-switching implementation scope, pure target-switch helper, target-switch data service, hook, and review control slices are complete.
 
 ## Decision
 
@@ -264,13 +264,158 @@ Behavior:
 
 Still not added:
 
-- target-layer switching controls
 - direct Apply from the edit flow
 - automatic target widening
 - branch/base mutation during edit
 - old-card backfill
-- checker runtime
 - auto-apply
+
+## Implementation Note - Target-Layer Switching First Slice
+
+Target-layer switching is already allowed only as explicit user action by the Target Rules above. This note narrows the first implementation slice; it does not reopen the branch-vs-core decision.
+
+The first target-switching slice should support only this direction:
+
+```text
+pending branch-local additive new-node proposal
+  -> explicit user chooses "move proposal to base/core"
+  -> Kordex shows branch-local vs base/core blast-radius copy
+  -> Kordex creates a new base-targeted pending replacement proposal
+  -> old branch-targeted proposal is superseded
+```
+
+Why branch-to-base first:
+
+- It matches the documented user story: a proposal that started local may be valuable enough to promote to the shared base/core layer.
+- Doc 38 already provides the version-guarded base/core proposal apply path.
+- Doc 42 now gives the review surface enough selection context to explain what is local branch scope versus base/core blast radius.
+- Base-to-branch narrowing, branch-to-branch retargeting, sibling targeting, and bulk target changes are lower-value and carry different UX semantics. They need their own later gates.
+
+The first slice must keep these mechanics:
+
+- Switching creates a replacement proposal and supersedes the old proposal. It must not rewrite the old proposal in place.
+- The replacement keeps the same `baseProfileId`, patch, evidence ids, reason, title/summary intent, `semanticConfidence`, `userFitConfidence`, and audit provenance unless the user separately edits those fields through the existing editor.
+- The replacement preserves the original `sourceKind`; a checker-discovered idea remains checker-discovered even when the user explicitly switches its target. The user action is captured by the superseding audit event actor/reason.
+- The replacement re-derives `riskScore` from the new target and operation shape by Kordex policy. Risk describes blast radius, so a branch-local risk score must not be carried onto a base/core replacement.
+- The replacement target becomes `target.kind = 'base_profile'` with `target.profileId = baseProfileId`.
+- The replacement snapshots the current base/core version as `targetProfileVersion`.
+- The replacement clears branch-only target basis by setting `targetBranchUpdatedAt = null`.
+- The patch is dry-run through the existing base-profile proposal compiler before the replacement is inserted.
+- Insertion of the replacement and superseding of the old pending proposal happen in one transaction, reusing the existing superseding lifecycle semantics.
+- Validation failures keep the original branch-targeted proposal pending and visible. They must not coerce the patch, parent, node id, or target.
+- Apply remains a separate explicit action after the replacement exists. Switching target is not Apply.
+
+The UI must make the blast radius explicit:
+
+- branch-local means the change applies only to the target branch if later applied;
+- base/core means the change affects the shared base profile for future composed runtime profiles if later applied;
+- the user must explicitly confirm the switch before the base-targeted replacement is created.
+
+Non-goals for the first target-switching slice:
+
+- base-to-branch switching;
+- branch-to-branch or sibling-branch switching;
+- target switching for checker-created proposals without user action;
+- target switching initiated by a model;
+- bulk switching multiple proposals;
+- applying immediately after switching;
+- branch merge/upward promotion of already-applied branch overlay content;
+- target switching for non-additive or future typed operation kinds;
+- base/core checker targeting;
+- old-card backfill;
+- auto-apply or trust-setting mutation.
+
+Recommended implementation order:
+
+1. Add a pure target-switching draft helper that decides whether a proposal can be switched and produces user-facing blast-radius copy.
+2. Add a data-layer service that creates the base-targeted replacement and supersedes the old proposal atomically.
+3. Add a hook with proposal/event/freshness invalidation only.
+4. Add a small review-surface control for eligible pending branch-local proposals.
+5. Add guards proving no in-place retargeting, no model calls, no checker path, no apply path, and no sibling/branch-merge path.
+
+## Implementation Update - Target-Switch Pure Helper
+
+The first target-switching implementation slice is a pure eligibility/blast-radius helper. It does not create replacement proposals, supersede proposals, call apply services, or render UI.
+
+Implemented files:
+
+- `src/features/ontology/profileProposalTargetSwitch.ts`
+- `src/features/ontology/__tests__/profileProposalTargetSwitch.test.ts`
+- `src/features/ontology/index.ts`
+- `src/__tests__/stage10-architecture-guards.test.ts`
+
+What this implements:
+
+- `createProposalTargetSwitchModel(input)` evaluates whether a proposal is eligible for the first target-switching slice.
+- Eligible proposals must be pending, branch-targeted, `ontology_node_patch`, and a single additive item-type node patch.
+- The model previews the base/core replacement fields without mutating the original proposal:
+  - `target.kind = 'base_profile'`
+  - `target.profileId = baseProfileId`
+  - current `targetProfileVersion`
+  - `targetBranchUpdatedAt = null`
+  - original `sourceKind`
+  - original patch/evidence/confidence values
+  - re-derived base/core additive risk score
+- The helper produces branch-local vs base/core blast-radius copy and states that switching target is not Apply.
+- Unsupported proposals return explicit block reasons instead of coercing target, patch, or status.
+- Stage10 guards keep the helper pure and branch-to-base-only: no DB/data imports, React, model calls, apply compilers/services, proposal writes, superseding service calls, checker/trust paths, sibling/bulk/branch-merge paths, or non-additive proposal kinds.
+
+Still not implemented:
+
+- branch/base mutation or Apply
+
+## Implementation Update - Target-Switch Data Service
+
+The second target-switching implementation slice is a data-layer replacement/supersede service. It creates a base-targeted replacement proposal and supersedes the original branch-targeted proposal atomically, but it still does not render UI or Apply the replacement.
+
+Implemented files:
+
+- `src/features/ontology/data/profileChangeProposalTargetSwitchService.ts`
+- `src/features/ontology/__tests__/profileChangeProposalTargetSwitchService.test.ts`
+- `src/features/ontology/data/index.ts`
+- `src/__tests__/stage10-architecture-guards.test.ts`
+
+What this implements:
+
+- `switchProfileChangeProposalTargetToBase(input)` loads the pending branch-targeted proposal, source branch row, and current profile definition inside one transaction.
+- The service reuses `createProposalTargetSwitchModel(input)` for eligibility and replacement-field policy.
+- The replacement preserves the original producer provenance through `sourceKind`, preserves patch/evidence/confidence values, re-derives base/core additive risk, sets `target.kind = 'base_profile'`, snapshots current `targetProfileVersion`, and sets `targetBranchUpdatedAt = null`.
+- The replacement patch is codec-cloned before insertion so caller-owned draft objects cannot leak into persistence.
+- The service dry-runs the exact replacement through `compileBaseProfileProposalApplyOperation` before any insert. Base conflicts, including branch-only parent ids, fail before writes.
+- After dry-run success, the service inserts the replacement and calls the existing superseding lifecycle in the same transaction. Supersede drift rolls the transaction back.
+- Stage10 guards keep the service behind the ontology data boundary and branch-to-base only: no root-barrel export, branch-local compiler, apply services, updater/upsert/delete proposal paths, trust settings, checker/model paths, schedulers, sibling/bulk/branch-merge paths, or non-additive proposal kinds.
+
+Still not implemented:
+
+- branch/base mutation or Apply
+
+## Implementation Update - Target-Switch Review Control
+
+The third target-switching implementation slice wires the data service into the proposal review surface. It exposes an explicit user action for eligible pending branch-local additive proposals and keeps the replacement in the normal review flow.
+
+Implemented files:
+
+- `src/features/ontology/hooks/useSwitchProfileChangeProposalTarget.ts`
+- `src/features/ontology/__tests__/useSwitchProfileChangeProposalTarget.test.ts`
+- `src/features/ontology/ui/ProfileProposalReviewScreen.tsx`
+- `src/features/ontology/ui/profileProposalReviewPresentation.ts`
+- `src/features/ontology/__tests__/profileProposalReviewPresentation.test.ts`
+- `src/__tests__/stage10-architecture-guards.test.ts`
+
+What this implements:
+
+- `switchProfileChangeProposalTarget(input)` calls the data service with user actor metadata and current time.
+- `useSwitchProfileChangeProposalTarget()` invalidates proposal lists, the old and new proposal event histories, and proposal freshness. It does not invalidate branch/profile state as if switching had applied a profile mutation.
+- The review surface builds `createProposalTargetSwitchModel(input)` for the selected proposal using the current base profile summary.
+- Eligible branch-local proposals show blast-radius copy and a "move proposal to core" action. The action creates a new pending base-targeted replacement, selects it, and leaves Apply as a separate explicit action.
+- Target-switch conflicts use branch-specific copy when a patch only fits the branch target, such as a parent id that exists only in the branch overlay.
+- Stage10 guards keep the hook/control review-only: no branch/selection/base-profile invalidation in the hook, no direct apply/compiler paths in the hook, no checker/model paths, and no data-service import from the UI screen.
+
+Still not implemented:
+
+- branch/base mutation during switching
+- automatic Apply after switching
+- base-to-branch, branch-to-branch, sibling, bulk, or non-additive target switching
 
 ## Implementation Update - Visible Proposal Editor UI
 
@@ -294,10 +439,8 @@ Behavior:
 
 Still not added:
 
-- target-layer switching controls
 - direct Apply from the edit flow
 - automatic target widening
 - branch/base mutation during edit
 - old-card backfill
-- checker runtime
 - auto-apply

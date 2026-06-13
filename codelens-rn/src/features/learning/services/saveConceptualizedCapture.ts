@@ -238,6 +238,9 @@ async function persistConceptualizeCorrection(input: {
   const { resolved, context, tx, deps } = input;
   if (!resolved.correctedTypeNodeId) return null;
   if (resolved.previousTypeNodeId === resolved.correctedTypeNodeId && !resolved.proposedNode) return null;
+  if (resolved.proposedNode) {
+    assertNewTypeProposalTargetSnapshot(context);
+  }
 
   const evidenceId = deps.newEvidenceId();
   const evidence: OntologyCorrectionEvidence = {
@@ -283,6 +286,12 @@ function buildNewTypeProposal(input: {
   now: number;
 }): ProfileChangeProposal {
   const targetIsBranch = input.context.proposalTarget.kind === 'profile_branch';
+  const targetBranchUpdatedAt = targetIsBranch
+    ? requireBranchTargetUpdatedAt(
+      input.context.proposalTargetBranchUpdatedAt,
+      input.context.proposalTarget.branchId,
+    )
+    : null;
   return {
     id: input.proposalId,
     proposalKind: 'ontology_node_patch',
@@ -291,7 +300,7 @@ function buildNewTypeProposal(input: {
     sourceBranchId: targetIsBranch ? input.context.proposalTarget.branchId ?? null : null,
     target: input.context.proposalTarget,
     targetProfileVersion: targetIsBranch ? null : input.context.profile.version,
-    targetBranchUpdatedAt: targetIsBranch ? input.context.proposalTargetBranchUpdatedAt ?? null : null,
+    targetBranchUpdatedAt,
     evidenceIds: [input.evidenceId],
     patch: {
       addOntologyNodes: [input.node],
@@ -313,6 +322,24 @@ function buildNewTypeProposal(input: {
     reviewedAt: null,
     appliedAt: null,
   };
+}
+
+function assertNewTypeProposalTargetSnapshot(context: ConceptualizeSaveContext): void {
+  if (context.proposalTarget.kind !== 'profile_branch') return;
+  requireBranchTargetUpdatedAt(context.proposalTargetBranchUpdatedAt, context.proposalTarget.branchId);
+}
+
+function requireBranchTargetUpdatedAt(
+  value: number | null | undefined,
+  branchId: string | null | undefined,
+): number {
+  const revision = typeof value === 'number' ? value : NaN;
+  if (!Number.isInteger(revision) || revision < 0) {
+    throw new Error(
+      `Branch-targeted Conceptualize proposals require the current branch updatedAt snapshot for ${branchId ?? 'unknown branch'}.`,
+    );
+  }
+  return revision;
 }
 
 function withConceptHintType(

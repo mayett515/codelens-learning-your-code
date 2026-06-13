@@ -1,652 +1,192 @@
 # Next LLM Context
 
-Use this file as the first read for the next worker/reviewer on `refactor/ontology-profile`.
+This is the canonical active handoff for the ontology/profile refactor. Use `implementation_handoff.md` and `WHERE_WE_STAND.md` only for historical slice audits.
 
-## Current Branch
+## Authority Order
 
-```text
-repo: C:\Projects\CodeLensApp\CodeLens-v2\codelens-rn
-branch: refactor/ontology-profile
-```
-
-The latest source slices continue the richer missing-concept draft implementation from doc 39 and the proposal lifecycle/freshness path from docs 25/40. Correction drafts now carry editable `newTypeMeaning`; `Use suggestion` copies the suggested label, meaning, reason, and valid parent; new subtype proposal nodes use edited meaning before suggestion/reason fallback; missing-concept proposal reasons preserve the original suggested label, parent, meaning, reason, and edited-field provenance; Conceptualize correction controls show the current proposal target with branch/base blast-radius copy; and saved drafts that create pending profile-change proposals can hand off into the existing proposal review surface with that proposal selected. Superseding lifecycle persistence is implemented: `profile_proposal_events.action` accepts `superseded`, and `supersedePendingProfileChangeProposal(input)` marks an old pending proposal superseded, links it to an already-created pending replacement proposal, and writes a superseded audit event in one transaction. The superseding hook boundary is implemented through `supersedeProfileChangeProposal()` / `useSupersedeProfileChangeProposal()`, and the edited replacement primitive is implemented through `createEditedProfileChangeProposalReplacement()` / `useEditProfileChangeProposal()`: it validates an edited same-target patch, inserts a replacement pending proposal, and supersedes the old pending proposal in one transaction. The proposal review surface now has a first visible editor for supported new-node proposals: label, parent id, meaning, reason, and risk can be changed, then saved as an edited replacement proposal through the existing hook. Ask why persistence is wired: opening a proposal reason from the review surface writes an `asked_why` event while preserving pending status and branch/base state. The proposal review surface now reads and displays the selected proposal's audit history. Doc 40's freshness path is implemented: branch-target proposals can snapshot `targetBranchUpdatedAt`, Conceptualize-created branch-local new-subtype proposals fill it from the selected branch `updatedAt`, `evaluateProfileProposalFreshness(input)` classifies proposal freshness from caller-supplied target facts, and the proposal review surface shows that freshness before Apply while blocking Apply unless the proposal is `fresh`. Explicit refresh creation is also implemented: stale-refreshable proposals can create a replacement pending proposal with the current target snapshot, supersede the old pending proposal, and select the replacement for normal review. Superseded and Ask-why events remain audit history and do not become positive/negative user-fit preference. Doc 41 is locked and its first checker implementation slices are implemented: `checkerPromptBuilder.ts` builds/validates checker-only output over a checker `ContextPack`; `checkerProposalMapper.ts` maps validated missing-branch-item-type findings into pinned branch-local `ontology_node_patch` proposal values; and `data/checkerRunService.ts` loads bounded facts, assembles checker context, calls an injected checker model seam, validates output, maps to branch-local proposals, dry-runs candidates through the branch-local compile path, and inserts only passing proposals. No one-click direct Apply from Conceptualize, target-layer switching controls, old-card backfill, checker UI trigger, concrete LLM/provider adapter implementation, auto-apply, graph/vector retrieval, trust-setting update, relationship/boundary operation vocabulary, agent runtime, app-builder runtime, or DSL runtime was added.
-
-## Decision Hygiene
-
-Before framing any architecture topic as a new decision, check the numbered decision docs and classify it explicitly:
-
-```text
-already locked
-partially implemented
-open implementation gap
-actually undecided
-```
-
-If a behavior is already locked, do not re-decide it. Cite the doc number and talk about the remaining implementation gap instead. Re-open a locked rule only when the human explicitly asks to reconsider it.
-
-Latest Kordex context state:
-
-- Doc 28 is locked and the first pure context assembly slice is implemented in `src/features/ontology/contextAssembly.ts`.
-- Context assembly now has typed `ContextPack` structures, bounded advisory `userFit` sections, `assembleContextPack`, `validateContextPack`, `assertValidContextPack`, `serializeContextPack`, and `scopedNodeRefKey`.
-- The implementation stays pure: no DB, UI, LLM, retrieval, graph engine, prompt renderer, checker runtime, or apply/mutation dependency.
-- Doc 29 is locked and the first pure context selector slice is implemented in `src/features/ontology/contextSelector.ts`.
-- Context selection now has a shared `ContextSelector` / `ContextSelection` contract plus deterministic Conceptualize and checker selectors over caller-supplied ordered candidates.
-- The selector uses pinned/elastic buckets, trace entries, cap omissions, same-label ambiguity preservation, cross-scope evidence preservation, and bounded direct-evidence pinning. Evidence tied only to elastic ontology context stays capped; only cross-scope, explicit, or pinned-decision-center evidence bypasses evidence caps. There is no runtime behavior change until a caller is deliberately wired.
-- Doc 30 is locked and the first Conceptualize ContextPack shadow wiring slice is implemented in `src/features/learning/services/conceptualizeContextPack.ts`.
-- The real Conceptualize extraction flow now builds and validates a `ContextPack` in shadow mode after candidates are prepared. This is behavior-neutral: invalid packs warn only, and no prompt, model, save, suggestion, proposal, or ontology/profile mutation behavior changes.
-- Doc 31 is locked and the pure Conceptualize prompt-builder slice is implemented in `src/features/learning/services/conceptualizePromptBuilder.ts`.
-- Prompt building now consumes a validated `ContextPack` and renders a stable instruction shell, compact Kordex context payload JSON including bounded `userFit` history, strict output schema, and output validator. Unknown refs are rejected against the original pack.
-- Doc 32 is locked and the Conceptualize output contract is hardened in `src/features/learning/services/conceptualizePromptBuilder.ts`.
-- Public Conceptualize output is now singular: one primary placement, confidence, `noStrongMatch` / `suggestedNewConcept`, and rationale. Public `additionalNodeRefs` are removed.
-- Hidden ambiguity is represented only as `diagnostics.candidateRefs`: internal-only, dynamic policy-driven candidates for future calibration. They are not visible tags and are not persisted unless a later correction-evidence flow deliberately snapshots factual near-miss data.
-- Doc 33 is locked and the first Conceptualize Extractor Flip slice is implemented in `src/features/learning/services/conceptualizeClassification.ts` and `prepareSaveCandidates.ts`.
-- The flip is classification-only: old extractor for card fields, new Conceptualize classifier for ontology placement when validation succeeds.
-- `noStrongMatch` produces an unclassified candidate instead of defaulting; `suggestedNewConcept` remains a suggestion and is not mapped into `conceptHint.proposedConceptType`.
-- Doc 34 is locked and implemented in `src/features/learning/types/rawProposedTypeIdentity.ts`, `prepareSaveCandidates.ts`, `conceptualizeClassification.ts`, and `saveConceptualizedCapture.ts`.
-- Raw proposed type identity is now structured in memory: Conceptualize refs are `scoped_ref` values and legacy extractor hallucinations are `unresolved_raw` values with active scope context.
-- `rawProposedTypeNodeId` remains a compatibility projection for existing correction evidence persistence; structured identity wins when both are present.
-- Doc 35 is locked and implemented in `src/features/ontology/types.ts`, `ontologyCorrectionEvidence.ts`, `conceptualizeClassification.ts`, and `saveConceptualizedCapture.ts`.
-- Hidden Conceptualize `diagnostics.candidateRefs` flow through save candidate memory as `conceptualizeNearMissCandidates` and persist only on user correction evidence.
-- `ontology_correction_evidence.near_miss_candidates_json` is factual evidence only. It is not public tag output, proposal creation, checker runtime, confidence/ranking update, or ontology/profile mutation.
-- Doc 36 is locked and implemented in `SaveModalCandidateData`, `conceptualizeClassification.ts`, `CandidateCaptureCard.tsx`, `ConceptualizeCorrectionControls.tsx`, and `SaveAsLearningModal.tsx`.
-- `noStrongMatch` now appears as explicit review metadata. `suggestedNewConcept` is shown to the user and can be copied into manual new-subtype fields, but it is not an existing type, not a visible extra tag list, not auto-filled by the store, not auto-applied, and not a new proposal path.
-- The manual new-subtype save path now rejects stale explicit parent ids and duplicate non-item ontology node ids before writing correction evidence or a pending proposal.
-- Doc 37 is locked and implemented in `src/features/ontology/userFitProjection.ts` and `src/features/ontology/data/userFitHistoryRepo.ts`.
-- User-fit is derived from correction evidence and proposal events only. Missing-concept corrections and near-miss hits are weak positive signals; postponed proposals are mild negative signals; asked-why remains neutral. Matching near-miss hits fold into the active correction scope.
-- The facts reader loads bounded recent history only and returns facts for callers to pass into the pure projection. Conceptualize consumes the projection through ContextPack, and the checker selector can consume the same `userFit` section when a future checker caller supplies candidates. Do not combine this with vector retrieval, graph traversal, automatic confidence/ranking updates, automatic missing-concept apply, auto-apply, or base/core mutation.
-- Doc 38 is locked and implemented in `src/features/ontology/baseProfileVersioning.ts`, `src/features/ontology/baseProfileProposalApply.ts`, `data/baseProfileProposalApplyService.ts`, `profile_change_proposals.target_profile_version`, and the Conceptualize proposal creation path.
-- Base-profile proposals can carry the profile version they were created against. The pure version guard rejects non-base targets, base id mismatches, missing versions, and stale versions. Branch proposals now carry nullable `targetBranchUpdatedAt` snapshots for freshness evaluation and still reject non-null `targetProfileVersion`.
-- Base-profile apply now exists as a helper/service for persisted `ProfileDefinition` rows: version guard -> patch revalidation -> next profile definition version -> accepted proposal -> proposal event.
-- The proposal review UI can now explicitly apply base/core proposals through the base apply service.
-- Doc 39 is locked and the first missing-concept draft/edit slices are implemented in the save-learning store, Conceptualize correction controls, `conceptualizeProfileContext.ts`, `saveConceptualizedCapture.ts`, the ontology proposal edit service/hook, and the proposal review editor surface.
-- Missing-concept drafts carry editable meaning and proposal provenance. The controls now show a read-only target/blast-radius summary for missing-concept and new-subtype drafts. Saved drafts that create pending proposals can open the existing proposal review surface with the created proposal selected. Suggestions are still review-time metadata only; the store does not auto-fill them, and no one-click direct Conceptualize Apply or target switching controls exist yet.
-- Doc 41 is locked and the first checker implementation slices are implemented in `src/features/ontology/checkerPromptBuilder.ts`, `src/features/ontology/checkerProposalMapper.ts`, and `src/features/ontology/data/checkerRunService.ts`. It does not re-decide checker architecture; it consolidates the long-term checker vision and locks the first runtime as manual-on-demand, branch-local, proposal-only, additive ontology-node/item-type proposals only. The output contract accepts read-only explanation plus `missing_branch_item_type` findings, rejects unsupported operation kinds, unknown refs, unknown evidence ids, duplicate findings, and model-supplied persistence metadata. The mapper pins `sourceKind: 'checker'`, `sourceBranchId: null`, `proposalKind: 'ontology_node_patch'`, one concept/node per proposal, checker-minted nodes as `createdBy: 'model'` and `status: 'active'`, branch target snapshots, deterministic risk, cap-after-validation/dedup, insert-only behavior, and no in-place rewrite of pending proposals. The manual runtime service loads bounded facts, assembles a checker `ContextPack`, calls an injected model seam outside the write transaction, re-reads branch state in the write transaction, dry-runs mapped candidates through the branch-local compile path, skips conflicts/duplicates with explanation, and inserts only passing pending proposals. No UI trigger, concrete LLM/provider adapter implementation, auto-apply, direct mutation, base/core checker targeting, relationship/boundary-rule operation, split/merge/rename/deprecate/move operation, maturity behavior, background/event/scheduled run, or checker-run persistence is implemented yet.
-
-The runtime profile coordinator decision is now locked (doc 11). The brain mixer is an explicit separate layer above runtime services. Services receive a composed `DomainProfile` and do not know branch groups, do not call activation input resolvers, and do not read hidden global active-profile state. Alternatives rejected: service-owned mixing, UI-screen-owned mixing, hidden global `getRuntimeProfile()` / active-profile store, and persistence-owned composed profile as the current shape. The coordinator can later grow into the Kortex Runtime, but not in this slice.
-
-The correction evidence persistence decision is now locked, updated, and implemented (doc 12). Evidence-first persistence: correction evidence is stored as a fact, not a mutation. Patch suggestions require user approval before any ontology or profile change, and proposal storage is separate in doc 19. No automatic ontology/profile mutation. Direct user-authored ontology changes are allowed. Model/checker suggestions require approval. Because branch/profile-selection persistence now exists, correction evidence stores an active selection context snapshot (baseProfileId plus active project/learning/personal branch id arrays) showing where the mistake happened. It does not store target/apply branch fields and does not mutate any branch, parent profile, or composed runtime profile. Implemented scope: migration/schema/ontology data-boundary repo/codec/backup support/guards only. No checker runtime/UI, auto-apply, agent/app-builder runtime, or DSL runtime is implemented.
-
-The branch/overlay persistence decision is now locked and v1 DB plumbing is implemented (doc 13). Persist branch layers separately, not composed runtime profiles. V1 persists `profile_branches` rows with inline `overlay_json`: branch identity/parent/kind/name/timestamps are the durable container, and the overlay JSON is the actual diff/change set. Runtime profiles are derived. Active selection, base profile definitions, and correction evidence storage are separate implemented boundaries. Merge proposals stay separate. Implemented scope is migration/schema/ontology data-boundary repo/codec/backup support/guards only. No UI activation selector, automatic merge, checker runtime, patch suggestion table, merge proposal table, agent/subagent runtime, app-builder runtime, Racket/DSL implementation, or MCP/adapters is implemented.
-
-The profile selection and branch resolution decision is now locked (doc 14). Branch persistence, active selection, branch resolution, and runtime composition are separate boundaries. `ProfileSelection` is per-context and id-based: it selects one base profile id plus ordered project/learning/personal branch ids. A resolver later turns ids into branch values; the Runtime Profile Coordinator composes resolved values into a runtime `DomainProfile`. There is no global active selection singleton, no composed runtime profile as canonical truth, no DB/UI/MCP/agent/app-builder/DSL runtime in this slice, and no multi-base composition in v1.
-
-Project-scoped profile selection persistence v1 is now implemented. Migration 013 adds `profile_selections`: one selection row per project, `project_id` cascades with `projects`, `base_profile_id` stores the selected base profile, and project/learning/personal branch id arrays are stored as JSON columns. The ontology data boundary exposes a repo and codec for insert/upsert/get/delete. Backup/export/import/clear support and stage10 guards are updated. This is storage plumbing only: no UI selector, no global active selection singleton, no DB-owned runtime composition, and no profile/base persistence.
-
-The domain-only ProfileBranch model is now implemented and tested. `ProfileBranchKind` and `ProfileBranch<TItemTypeNodeId>` live in `types.ts`. `profileBranches.ts` provides pure helpers: `profileBranchToOverlay`, `groupProfileBranchesByKind`, `createActiveDomainProfileSourceFromBranches`, and `composeRuntimeDomainProfileFromBranches`. These helpers convert branch layers into existing grouped overlay/runtime coordinator inputs without duplicating composition logic. This is TypeScript domain groundwork only; no DB, migration, storage API, UI selector, automatic merge, correction branch fields, MCP/adapters, agent runtime, app-builder runtime, or DSL runtime was added.
-
-The domain-only ProfileSelection helper slice is now implemented and tested. `ProfileSelection` lives in `types.ts`. `profileSelection.ts` provides pure helpers: `resolveProfileSelection` and `composeRuntimeDomainProfileFromSelection`. The resolver requires base id match, resolves selected branch ids from caller-provided branch values, throws on missing ids and wrong-kind ids, preserves selection order within each kind, normalizes kind order project -> learning -> personal, and delegates runtime composition through `composeRuntimeDomainProfileFromBranches`. No DB, migration, storage API, profile registry, UI selector, global active selection, MCP/adapters, agent runtime, app-builder runtime, DSL runtime, multi-base composition, merge, or promotion logic was added.
-
-The ProfileRegistry/ProfileSource direction is documented and the v1 static source helper is implemented (doc 15). Base profiles resolve through a source-based `ProfileRegistry`, separate from `ProfileBranchStore`. The interface leaves room for future built-in/file/DB/adapter sources. V1 implements only static/in-memory profile source helpers: `DomainProfileSummary`, `ProfileSource`, `ProfileRegistry`, `DuplicateProfileIdError`, `ProfileNotFoundError`, `toDomainProfileSummary`, `createStaticProfileSource`, and `createProfileRegistry`. Duplicate profile ids throw structured errors across all sources. No DB, migration, storage API, profile persistence, file source, adapter source, profile editor UI, global active registry, MCP, agent runtime, app-builder runtime, DSL runtime, branch persistence, active selection changes, service changes, multi-base composition, or automatic versioning was added.
-
-The ProfileBranchStore v1 seam is now implemented by Kimi Code CLI and accepted after Codex review. `ProfileBranchStore<TItemTypeNodeId>` lives in `types.ts`, and `profileBranchStore.ts` exposes `createStaticProfileBranchStore({ branches })`. This is static/in-memory only: it snapshots the branch array at construction, returns branch objects by reference, preserves requested id order, skips missing ids, preserves duplicate requested ids, and lists branches by `parentProfileId` in constructor order. No DB, migration, backup, UI, global active selection, automatic merge, MCP/adapters, agent runtime, app-builder runtime, or DSL runtime was added. The CLI run ended with a Windows console Unicode/charmap final-report crash, but Codex verification passed.
-
-The runtime activation wiring decision is locked (doc 16) and now implemented. `runtimeProfileActivation.ts` exposes `resolveRuntimeProfileForProject(input)`, `ProjectRuntimeProfileActivationInput`, `ProjectRuntimeProfileActivationResult`, `ProjectProfileSelectionStore`, `RuntimeProfileActivationError`, and `RuntimeProfileActivationErrorCode`. The resolver reads a project selection via caller-supplied store, resolves the base profile through the registry, resolves selected branch ids through the branch store, detects missing and wrong-kind branch ids with structured errors, composes through `composeRuntimeDomainProfileFromSelection`, and returns the finished profile plus trace data. Missing selection falls back to `coding` base. No global active profile, DB-owned composed profile, UI selector, MCP, agent runtime, app-builder runtime, or DSL runtime was added.
-
-The base profile persistence / user-created cores decision is locked and v1 storage is implemented (doc 17). User-created base cores/profiles are their own persistence concept. They are not stored as `profile_branches`, and composed runtime profiles are still not persisted as source of truth. `profile_definitions` now stores full base `DomainProfile` payloads behind the ontology data boundary. `createProfileDefinitionSource({ id, definitions })` plugs loaded definitions into the synchronous `ProfileRegistry` without changing the registry to async. `profileRegistryBootstrap.ts` provides `loadPersistedProfileDefinitionSource()` and `loadDefaultProfileRegistry()` to load persisted definitions once and expose them as synchronous `ProfileSource` / `ProfileRegistry` values alongside built-in profiles. New domains such as `photography`, `work-notes`, or `lisp` are independent base profiles by default; branches such as `night-photography` or `react` specialize one selected base. LLM-assisted creation may suggest tags, subtags, families, fields, relationships, examples, and "is not" boundaries later, but durable profile changes require user approval.
-
-The adaptive suggestion policy decision is locked (doc 18). Correction evidence stays factual. Patch suggestions stay separate. Default behavior is conservative suggest-first, not silent mutation. Manual tag/subtag/relationship creation is allowed but should be structured: validate, preview impact, choose target layer, apply with audit/undo, and review any backfill. The personal layer is the same branch machinery with `branchKind: 'personal'`. Relationship labels and edges follow the same trust/risk policy as tags/subtags. Adaptive behavior combines semantic confidence, user-fit confidence, risk score, and trust mode; risk overrides trust. Base/core mutations, upward merges, old-data rewrites, agent/app-builder policy, and external write-back always require explicit approval.
-
-The patch/merge proposal storage decision is locked and v1 storage is implemented (doc 19). Patch suggestions, relationship suggestions, branch merge proposals, and manual drafts use one unified proposal table: `profile_change_proposals`. Product language can still say "patch suggestion" or "merge proposal", but persistence/review share one lifecycle and one review shape. Proposals store source/evidence, target layer, `ProfilePatch`, risk/confidence, and review status. Proposals do not apply themselves. Apply/merge remains an explicit later operation. Implemented scope is storage-only: types/codec/migration/schema/repo/backup/guards/tests, with no review UI, checker runtime, apply service, trust storage, auto-apply, or base-profile versioning.
-
-The Conceptualize preview/correction-surface decision is locked (doc 20). The first correction surface belongs in the Conceptualize preview before final save. The old "save as learning" action should grow toward Conceptualize: raw input -> draft learning card -> classification -> correction -> mistake-understanding evidence -> safe branch-local ontology improvement or later proposal. Every correction must preserve what Kortex proposed, what the user corrected it to, where the mistake happened, and optional boundary/reason context. Conceptualize starts as a safe correction doorway, not the full Kortex ontology editor. If extraction invents an unknown type id and the preview normalizes it to the profile default, correction evidence can still preserve the invalid raw model id as `rawProposedTypeNodeId`.
-
-The checker/proposal/context/apply decision is locked (doc 21). Conceptualize, checker runs, graph selection chat, repeated-mistake review, old-card backfill, and future agent/app-builder flows use one architecture: explanations are read-only, evidence records what happened, proposals are reviewable recommendations, and durable changes happen only through typed Kortex operations after revalidation. Context assembly must be branch/profile-scoped, relevance-ranked, provenance-aware, and able to preserve contradictions. Proposal apply is atomic by default; large backfills become chunked bulk jobs. Historical undo is an impact-reviewed reversal proposal, not silent time travel.
-
-The trust setting storage decision is locked and storage-only v1 is implemented (doc 23). `ProfileTrustSetting` stores user policy separately from correction evidence and proposals, scoped to one base profile or one profile branch. `profile_trust_settings` stores trust mode plus future auto-apply policy fields behind the ontology data boundary. Default behavior is still `suggest_first`. Base-profile targets cannot enable auto-apply, `manual_only` and `suggest_first` cannot enable auto-apply, and branch-local future auto-apply is limited to classification, ontology-node, and relationship proposal kinds with strict risk caps. Model-review hardening fixed `upsertProfileTrustSetting` so `scopeKey` conflicts preserve the existing `id` and `createdAt` for future audit/event references. User-fit learning is not stored in the setting row; it belongs to future event/audit projection work from doc 21. No UI, checker runtime, apply service, event/audit store, user-fit projection store, or auto-apply engine was added.
-
-The branch-local proposal review/apply decision is locked and the first pure helper, persistence-backed service, and minimal review UI slices are implemented (doc 24). The first apply flow is explicit and branch-local: user clicks Apply, Kortex revalidates the pending branch-target proposal, compiles it to typed operations, mutates only the target branch overlay, and marks the proposal accepted/applied atomically. First review actions are Apply, Reject, Postpone, and Ask why / why not. Risk and confidence stay distinct: confidence means "is Kortex probably right?", risk means "how much could this break if wrong?" User-facing risk describes blast radius, for example "low risk: branch-local only; no core change and no old notes rewritten." `branchLocalProposalApply.ts` compiles pending branch proposals into `apply_profile_patch_to_branch_overlay` operations and merges `ProfilePatch` into copied branch overlay values. `data/branchLocalProposalApplyService.ts` loads the proposal and branch in one transaction, accepts a caller-provided base profile, applies the pure helper, and uses conditional writes so branch/proposal drift fails instead of silently overwriting. The minimal UI adds a Learning Hub entry and queue/detail modal for pending proposals, wires Apply/Reject/Postpone through hooks, and records Ask why / why not as audit history without changing proposal status or profile data. Post-review hardening added missing-base-profile error mapping, explicit message tone, branch-key invalidation, non-branch Apply disablement, and stronger presentation tests. No base/core mutation, upward merge, sibling propagation, auto-apply runtime, old-card backfill, edit-then-apply, or checker runtime was added.
-
-The proposal event audit storage decision is locked and implemented (doc 25). `profile_proposal_events` stores append-only decision/lifecycle facts for proposal Apply/Reject/Postpone/Ask-why/Superseded history. Apply writes an `applied` event inside the same transaction that updates the branch and accepts the proposal. Reject/Postpone write events inside the same transaction that reviews the proposal. Ask why writes an `asked_why` event when the reason is opened, with `pending -> pending` status and unchanged proposal/branch/base state. Superseding writes a `superseded` event inside the same transaction that marks the old pending proposal superseded and links it to the replacement proposal. If guarded writes fail, no event is appended. Superseded and Ask-why events are audit history, not user-fit preference. The proposal review surface now shows selected-proposal event history. No checker runtime, auto-apply engine, historical undo execution, base/core mutation, old-card backfill, agent runtime, app-builder runtime, or DSL runtime is implemented.
-
-The coordinator helper is now implemented and tested: `runtimeProfileCoordinator.ts` is the explicit above-services coordinator boundary. `composeRuntimeDomainProfile(input)` delegates to `resolveActiveDomainProfileFromActivationInput(input)`. `RuntimeProfileCoordinatorInput` aliases `ActiveDomainProfileActivationInput`. Services still receive composed `DomainProfile`; they do not call this helper directly unless their caller passes the result. No DB, UI, persistence, global store, service hidden lookup, agent runtime, app-builder runtime, or DSL runtime was added.
-
-The latest profile/core source slices add pure profile composition helpers, the first explicit active-profile overlay seam, and an explicit active-profile source resolver. `composeDomainProfile(base, overlays)` composes branch/project/learning/personal overlays without mutating inputs. `ActiveDomainProfileSource` packages a caller-owned `baseProfile` plus optional overlays, and `resolveActiveDomainProfile(source)` returns the base profile by reference when overlays are omitted/null/empty or composes explicit overlays when supplied. `getActiveDomainProfile(overlays?)` still returns `codingProfile` by reference with no overlays or an empty list, and now delegates through the resolver for explicit overlays. The latest guard batch added deeper immutability tests, active-profile no-cache/no-hidden-state tests, future runtime source guards, future architecture anti-regression rules, and durable doc-anchor guards.
-
-The latest product framing is stronger than "make CodeLens profile-driven": Kortex Core is the reusable ontology/graph/versioned reasoning system, and CodeLens/coding is the first serious child core/wrapper around it. Read `07_KORTEX_CORE_AND_CHILD_CORES.md` before implementing more branch, relationship, graph, or correction semantics.
-
-Independent base cores versus branches is now clarified in docs 07 and 15. A new base core such as `photography`, `work-notes`, or `lisp` uses the shared Kortex schema/engine but does not automatically inherit coding ontology content. Coding, photography, lisp, and work-notes can be sibling base profiles. A branch is different: it specializes one selected parent/base profile, such as `coding -> react` or `photography -> night-photography`. Future LLM-assisted creation should support both flows: broad domain questions for a new base core, and "what differs from the parent?" questions for a branch. Users can accept suggestions, edit manually, or mix both. Do not remove explicit fork, cross-domain relationship, or upward-merge ideas; make those deliberate choices rather than accidental inheritance from coding.
-
-The agent/subagent idea is preserved as architecture, not current implementation: Kortex can be an agent execution ontology. Tags/subtags, `is`, `is not`, and `extends` may later define agent identity, behavior, Ausfuehrung/execution constraints, allowed/forbidden operations, tool/file scope, and approval gates. Read the `Agent Execution Ontology` section in `07_KORTEX_CORE_AND_CHILD_CORES.md` before proposing orchestration or subagent behavior.
-
-The self-building-app idea is also preserved as architecture, not current implementation: Kortex can become the ontology/coherence framework behind app builders. User intent becomes a project app core; domain entities, workflows, screens, schema/API/UI/test responsibilities become ontology and child/subagent cores; user corrections become evidence and patch suggestions that update the project ontology before more code is generated. Read the `Self-Building App Framework Direction` section in `07_KORTEX_CORE_AND_CHILD_CORES.md` before proposing app-builder features.
-
-There is also a future language-layer direction: keep TypeScript for the current app/core seams, but design protocol-first operations so a later Racket/Kortex DSL can compile into validated core operations. Read `08_KORTEX_LANGUAGE_LAYER_AND_ADAPTERS.md` before proposing language/runtime/adapter changes.
-
-There is also an overlay direction: Kortex can sit over existing systems such as codebases, notes, databases, LLM tools, and project systems. Read `09_KORTEX_OVER_EXISTING_SYSTEMS.md` before proposing adapters, sync, source identity, MCP-over-codebase, or write-back behavior.
-
-The Fable strategic review pack is now preserved under `FABLE_STRATEGIC_REVIEW_2026-06-09/`. Use it as review guidance for Kordex's big-picture coherence, risk map, next-gate order, future DSL/adapter constraints, and future LLM reading bundles. It does not override numbered decision docs.
+1. Numbered decision docs in `ONTOLOGY_PROFILE_REFACTOR/` are the source of truth.
+2. Root docs (`MAIN.md`, `ARCHITECTURE.md`, `PERSISTENCE.md`, `current_state.md`) summarize current repo-wide architecture.
+3. Fable strategic review docs are advisory review guidance only. They do not override numbered decisions.
+4. Before proposing a new architecture decision, classify the topic as `already locked`, `partially implemented`, `open implementation gap`, or `actually undecided`.
 
 Do not stage, commit, push, reset, or checkout unless the user explicitly asks.
 
-## Read These Files
+## Current State - 2026-06-12
 
-Read in this order:
+The ontology/profile refactor is an implemented spine, not just a plan.
 
-1. `ONTOLOGY_PROFILE_REFACTOR/implementation_handoff.md` - current durable state and completed work.
-2. `ONTOLOGY_PROFILE_REFACTOR/07_KORTEX_CORE_AND_CHILD_CORES.md` - updated product boundary: Kortex Core, child cores, agent execution ontology, self-building app framework direction, graph projections, dynamic relationship semantics.
-3. `ONTOLOGY_PROFILE_REFACTOR/08_KORTEX_LANGUAGE_LAYER_AND_ADAPTERS.md` - future Racket/DSL language-layer direction and protocol-first adapter boundary.
-4. `ONTOLOGY_PROFILE_REFACTOR/09_KORTEX_OVER_EXISTING_SYSTEMS.md` - non-destructive overlay model for codebases, notes, databases, LLMs, and other systems.
-5. `ONTOLOGY_PROFILE_REFACTOR/10_ACTIVE_PROFILE_RUNTIME_SOURCE_DECISION.md` - locked decision (A2): save/extraction receives composed DomainProfile via options.profile, not activation input.
-6. `ONTOLOGY_PROFILE_REFACTOR/11_RUNTIME_PROFILE_COORDINATOR_DECISION.md` - locked decision: explicit Runtime Profile Coordinator / Brain Mixer layer above services.
-7. `ONTOLOGY_PROFILE_REFACTOR/12_CORRECTION_EVIDENCE_PERSISTENCE_DECISION.md` - locked decision: evidence-first persistence, patch suggestions later, no automatic ontology/profile mutation.
-8. `ONTOLOGY_PROFILE_REFACTOR/13_BRANCH_OVERLAY_PERSISTENCE_DECISION.md` - locked decision: persist branch rows with inline `overlay_json`; overlays are the durable diff, runtime profiles are derived, active selection and merge proposals stay separate.
-9. `ONTOLOGY_PROFILE_REFACTOR/14_PROFILE_SELECTION_AND_BRANCH_RESOLUTION_DECISION.md` - locked decision: branch persistence, active selection, branch resolution, and runtime composition are separate boundaries. Selection is per-context, id-based, single-base in v1, and resolved before composition.
-10. `ONTOLOGY_PROFILE_REFACTOR/15_PROFILE_REGISTRY_AND_PROFILE_SOURCES_DECISION.md` - decision + implementation: source-based ProfileRegistry, static/in-memory source v1, future built-in/file/DB/adapter sources, duplicate profile ids throw structured errors.
-11. `ONTOLOGY_PROFILE_REFACTOR/16_RUNTIME_ACTIVATION_WIRING_DECISION.md` - locked decision + implementation: runtime activation wiring loads selected ingredients for one context, composes via pure helpers, and passes only finished DomainProfile to services. `resolveRuntimeProfileForProject` is now implemented and tested.
-12. `ONTOLOGY_PROFILE_REFACTOR/17_BASE_PROFILE_PERSISTENCE_DECISION.md` - locked decision + implementation: user-created base profiles persist separately from branches/runtime profiles. `profile_definitions` storage plugs loaded definitions into ProfileRegistry through a synchronous source factory.
-13. `ONTOLOGY_PROFILE_REFACTOR/18_ADAPTIVE_SUGGESTION_POLICY_DECISION.md` - locked decision: suggest-first default, adaptive trust/risk policy, relationship trust, manual ontology creation safety, personal layer as `branchKind: 'personal'`.
-14. `ONTOLOGY_PROFILE_REFACTOR/19_PATCH_MERGE_PROPOSAL_STORAGE_DECISION.md` - locked decision + storage-only v1: unified `profile_change_proposals`, `ProfilePatch`, source/evidence, target layer, risk/confidence, review status, explicit apply later.
-15. `ONTOLOGY_PROFILE_REFACTOR/20_CONCEPTUALIZE_PREVIEW_AND_CORRECTION_SURFACE_DECISION.md` - locked decision: first correction surface is Conceptualize preview before save; every correction stores mistake-understanding evidence; Conceptualize is not the full ontology editor.
-16. `ONTOLOGY_PROFILE_REFACTOR/21_CHECKER_PROPOSAL_REVIEW_CONTEXT_AND_APPLY_DECISION.md` - locked decision: checker output kinds, proposal lifecycle/freshness, context assembly, typed apply operations, atomic/chunked apply, events, and historical reversal.
-17. `ONTOLOGY_PROFILE_REFACTOR/22_CONCEPTUALIZE_FIRST_IMPLEMENTATION_SCOPE_DECISION.md` - locked and implemented decision: Conceptualize saves existing type corrections immediately with evidence and creates guarded pending proposals for explicit new subtype labels.
-18. `ONTOLOGY_PROFILE_REFACTOR/23_TRUST_SETTING_STORAGE_DECISION.md` - locked decision + storage-only v1: trust settings live separately from evidence/proposals, default to suggest-first, and keep future auto-apply bounded by target/risk/kind rules.
-19. `ONTOLOGY_PROFILE_REFACTOR/24_BRANCH_LOCAL_PROPOSAL_APPLY_DECISION.md` - locked decision + first helper/service/minimal UI implementation: first apply is explicit, branch-local, revalidated, and atomic; the first review surface supports Apply / Reject / Postpone / Ask why without edit support, base/core mutation, upward merge, auto-apply, or old-card backfill.
-20. `ONTOLOGY_PROFILE_REFACTOR/25_PROPOSAL_EVENT_AUDIT_STORAGE_DECISION.md` - locked decision + implementation: append-only proposal event audit storage for Apply / Reject / Postpone / Ask why / Superseded decisions; superseded events are audit lifecycle history, not user-fit preference.
-21. `ONTOLOGY_PROFILE_REFACTOR/26_SCOPED_MEANING_AND_BRANCH_CORE_SEMANTICS_DECISION.md` - locked decision: labels are display/search text, node refs carry identity, and branch-local same-label meanings must mint distinct ids.
-22. `ONTOLOGY_PROFILE_REFACTOR/27_PROJECT_NAMING_KORDEX_DECISION.md` - locked decision: new strategic docs prefer Kordex naming while implementation identifiers stay generic.
-23. `ONTOLOGY_PROFILE_REFACTOR/28_CONTEXT_ASSEMBLY_DECISION.md` - locked decision + implementation: shared ContextPack builder, validator, and deterministic serializer.
-24. `ONTOLOGY_PROFILE_REFACTOR/29_CONTEXT_SELECTOR_DECISION.md` - locked decision + implementation: shared ContextSelector contract, focused task-specific selectors, read-only candidates, pinned/elastic buckets, and first Conceptualize selector.
-25. `ONTOLOGY_PROFILE_REFACTOR/30_CONCEPTUALIZE_CONTEXTPACK_SHADOW_WIRING_DECISION.md` - locked decision + implementation: real Conceptualize caller builds and validates ContextPack in shadow mode only; prompt builder/missing-concept generation/user-fit remain future gates.
-26. `ONTOLOGY_PROFILE_REFACTOR/31_CONCEPTUALIZE_PROMPT_BUILDER_DECISION.md` - locked decision + implementation: pure ContextPack -> instruction shell + compact payload JSON + output schema + output validator, with no extractor flip or mutation.
-27. `ONTOLOGY_PROFILE_REFACTOR/32_CONCEPTUALIZE_SINGULAR_OUTPUT_AND_DIAGNOSTICS_DECISION.md` - locked decision + implementation: singular public Conceptualize output plus internal dynamic diagnostic candidates; no persistence or correction-evidence wiring yet.
-28. `ONTOLOGY_PROFILE_REFACTOR/33_CONCEPTUALIZE_EXTRACTOR_FLIP_DECISION.md` - locked decision + implementation: classification-only live Conceptualize wiring with guarded fallback.
-29. `ONTOLOGY_PROFILE_REFACTOR/34_RAW_PROPOSED_TYPE_IDENTITY_DECISION.md` - locked decision + implementation: structured in-memory raw proposed type identity plus legacy string projection.
-30. `ONTOLOGY_PROFILE_REFACTOR/35_CORRECTION_EVIDENCE_NEAR_MISS_DECISION.md` - locked decision + implementation: hidden diagnostics persist only as inert near-miss evidence when a user correction is written.
-31. `ONTOLOGY_PROFILE_REFACTOR/36_MISSING_CONCEPT_UX_DECISION.md` - locked decision + implementation: missing-concept suggestions are review metadata, not auto-fill or auto-apply.
-32. `ONTOLOGY_PROFILE_REFACTOR/37_USER_FIT_PROJECTION_DECISION.md` - locked decision + implementation: bounded user-fit projection is derived advisory context from correction/proposal facts.
-33. `ONTOLOGY_PROFILE_REFACTOR/38_BASE_PROFILE_VERSIONING_DECISION.md` - locked decision + implementation: base-targeted proposals snapshot target profile version and base/core apply uses explicit version guards.
-34. `ONTOLOGY_PROFILE_REFACTOR/39_EDIT_THEN_APPLY_DECISION.md` - locked decision + first implementation: richer missing-concept drafts and proposal review handoff without direct Conceptualize apply.
-35. `ONTOLOGY_PROFILE_REFACTOR/40_PROPOSAL_FRESHNESS_AND_STALE_REFRESH_DECISION.md` - locked decision + implementation: proposal freshness is derived review state; branch target revision snapshots, the pure freshness helper, proposal review freshness readout, and explicit refresh replacement creation are implemented.
-36. `ONTOLOGY_PROFILE_REFACTOR/FABLE_STRATEGIC_REVIEW_2026-06-09/00-system-index.md` - strategic review guidance only: coherence, risks, next gates, DSL/adapter constraints, and future LLM routing.
-37. `ONTOLOGY_PROFILE_REFACTOR/MODEL_REVIEW_2026-05-13_PROFILE_PROPOSAL_REVIEW_UI.md` - model-review report for the minimal proposal review UI, accepted fixes, rejected false positives, and reviewer quality notes.
-38. `ONTOLOGY_PROFILE_REFACTOR/05_ANTI_REGRESSION_RULES.md` - hard constraints and compatibility boundaries.
-39. `ONTOLOGY_PROFILE_REFACTOR/03_CATEGORIZATION_AND_ONTOLOGY_CHECKER.md` - next product direction: correction flow and ontology checker.
-40. `ONTOLOGY_PROFILE_REFACTOR/04_REFACTOR_WITHOUT_BREAKING_APP.md` - staged implementation plan and persistence/correction ideas.
-41. `ONTOLOGY_PROFILE_REFACTOR/02_DYNAMIC_PROFILE_SCHEMA.md` - proposed future profile/correction/suggestion shapes.
-42. `ONTOLOGY_PROFILE_REFACTOR/06_PROFILE_BRANCHING_AND_MERGE.md` - profile inheritance, branching, overlays, and merge semantics.
-43. `ONTOLOGY_PROFILE_REFACTOR/README.md` - map of this refactor folder.
-44. `ONTOLOGY_PROFILE_REFACTOR/TOMORROW_START.md` - startup prompt and next-slice reminder.
-44. Root docs if persistence or architecture is touched: `ARCHITECTURE.md`, `PERSISTENCE.md`.
+Implemented:
 
-## Current Changed Files
+- Profile compatibility columns on concepts/captures, with codecs and backup mapping.
+- Profile branches, project-scoped active selections, static/base profile sources, runtime activation, and explicit runtime profile composition.
+- Versioned `profile_definitions` for base/core profile apply.
+- Append-only `ontology_correction_evidence` with active selection snapshots and internal near-miss diagnostics.
+- Unified inert `profile_change_proposals` with `profile_proposal_events` for apply/reject/postpone/asked-why/superseded audit history.
+- Branch-local apply and base/core version-guarded apply.
+- Proposal review UI with Apply, Reject, Postpone, Ask why, event history, base/core review path, freshness readout, stale refresh, edit-then-replace for supported new-node proposals, and explicit branch-to-base target switching for supported pending additive proposals.
+- Proposal creation hardening: branch-targeted Conceptualize new-type proposals require a current branch `updatedAt` snapshot before writing evidence/proposals, and checker proposal caps are clamped in tests.
+- Conceptualize ContextPack assembly, prompt builder, strict output validator, singular public classification, missing-concept review UX, and guarded proposal creation.
+- User-fit projection and data-layer facts reader. User-fit is bounded, advisory, derived on read, and scoped to the active selection where correction happened.
+- Manual checker gate end to end: checker prompt/output validator, deterministic mapper, runtime service, UI trigger/readout, concrete model adapter over the existing AI queue, aggregated correction-pattern evidence, and item-type parent hints in checker payloads.
+- Root-doc consolidation: root docs now describe the implemented ontology/profile/checker spine; `NEXT_LLM_CONTEXT.md` is the active handoff; `implementation_handoff.md` and `WHERE_WE_STAND.md` are historical pointers; Fable regression bans are folded into `05_ANTI_REGRESSION_RULES.md`.
+- Doc 42 locks Gate 3 scope: minimal branch/profile selection UI over existing selection/branch/runtime activation seams. The pure selection-draft helper, focused data hooks, compact selection panel, and project-context wiring are implemented.
 
-Expected tracked changes are from the ontology-profile refactor slices in this branch. This list is not exhaustive; run `git status --short` before working. Recent tracked changes include:
+Still deferred:
 
-```text
-ARCHITECTURE.md
-ONTOLOGY_PROFILE_REFACTOR/28_CONTEXT_ASSEMBLY_DECISION.md
-ONTOLOGY_PROFILE_REFACTOR/31_CONCEPTUALIZE_PROMPT_BUILDER_DECISION.md
-ONTOLOGY_PROFILE_REFACTOR/33_CONCEPTUALIZE_EXTRACTOR_FLIP_DECISION.md
-ONTOLOGY_PROFILE_REFACTOR/38_BASE_PROFILE_VERSIONING_DECISION.md
-ONTOLOGY_PROFILE_REFACTOR/NEXT_LLM_CONTEXT.md
-ONTOLOGY_PROFILE_REFACTOR/README.md
-ONTOLOGY_PROFILE_REFACTOR/TOMORROW_START.md
-ONTOLOGY_PROFILE_REFACTOR/WHERE_WE_STAND.md
-ONTOLOGY_PROFILE_REFACTOR/implementation_handoff.md
-src/__tests__/stage10-architecture-guards.test.ts
-src/db/migrations/index.ts
-src/db/schema.ts
-src/features/backup/columnMaps.ts
-src/features/backup/format.ts
-src/features/learning/services/saveConceptualizedCapture.ts
-src/features/ontology/baseProfileProposalApply.ts
-src/features/ontology/baseProfileVersioning.ts
-src/features/ontology/codecs/profileChangeProposal.ts
-src/features/ontology/data/baseProfileProposalApplyService.ts
-src/features/ontology/data/profileChangeProposalRepo.ts
-src/features/ontology/data/profileDefinitionRepo.ts
-src/features/ontology/index.ts
-src/features/ontology/types.ts
-```
+- One-click direct Conceptualize Apply.
+- Selection-panel UX polish and later consumers of selection context.
+- Doc 43 locks the next forkability proof: a minimal photography second-base-profile demo that exercises existing seams and logs/fixes discovered coding couplings.
+- Target-layer switching outside Doc 39's first branch-to-base additive scope.
+- Base/core checker proposal targeting.
+- Relationship/boundary/split/merge/rename/deprecate/move typed operation vocabulary.
+- Temporary/provisional tag and relationship maturity lifecycle.
+- Checker-run history table, background/event/scheduled checker modes, and auto-apply.
+- DSL/runtime agents, self-building app runtime, source-sync adapters, external write-back, and MCP policy/runtime tools.
 
-Expected untracked files can include local tool folders and new slice files:
+## Current Checker Shape
 
-```text
-.claude/
-.deepseek/
-src/db/migrations/022-profile-change-proposal-target-version.ts
-src/db/migrations/__tests__/profile-change-proposal-target-version-migration.test.ts
-src/features/ontology/__tests__/baseProfileProposalApply.test.ts
-src/features/ontology/__tests__/baseProfileProposalApplyService.test.ts
-src/features/ontology/__tests__/baseProfileVersioning.test.ts
-```
+Doc 41 first checker gate is implemented.
 
-Worker prompts/logs for the HR/KR workflow live under `C:\pi-stuff`, not in this repo. Do not include local tool folders in a product commit unless the user explicitly requests it.
+- Manual-only `Run checker now`; no auto-run, no background scheduler, no automatic retry.
+- AbortSignal is threaded through the hook/adapter path.
+- The adapter parses raw JSON and then calls `validateCheckerPromptOutput`; invalid JSON or invalid schema fails closed.
+- No fallback to unvalidated prose and no proposals from partial output.
+- Supported proposal output is additive branch-local `ontology_node_patch` only.
+- Mapper pins `sourceKind: 'checker'`, `sourceBranchId: null`, `proposalKind: 'ontology_node_patch'`, `target.kind: 'profile_branch'`, `targetProfileVersion: null`, current `targetBranchUpdatedAt`, one concept/node per proposal, checker-minted nodes as `createdBy: 'model'` and `status: 'active'`, deterministic risk, and insert-only dedup.
+- Runtime loads bounded facts, assembles a checker ContextPack, calls the model outside the write transaction, re-reads branch state inside the write transaction, dry-runs each candidate through the branch-local compiler, skips conflicts/duplicates with explanation, and inserts only valid pending proposals.
+- Repeated same-pattern correction evidence is aggregated into one checker claim with real `patternFrequency`; backing correction row ids remain available through `sourceEvidenceIds`.
+- Checker ontology payload nodes expose `isItemType`, and output validation rejects non-item parent refs before proposal mapping.
+- UI readout shows explanation, relationship/boundary observations, skipped findings, and created proposals in the existing review surface.
 
-## What Was Just Completed
+## Next Recommended Slice
 
-- Review UI labels now read from `ReviewProfile` or existing `profile.labels.reviewModeTitle`.
-- Graph screen/mode/status/tooltip/legend labels now read from `GraphProfile`.
-- Learning hub, concept list, and session flashback labels now read from `DomainLabels`.
-- Flashback labels are nested under `profile.labels.flashback`.
-- Graph helper labels are nested under `profile.graph.statusLabels`, `profile.graph.tooltipLabels`, and `profile.graph.legendHelperLabels`.
-- Dynamic/fallback strings are profile-owned:
-  - `Unknown`
-  - concept/capture count templates
-  - lowercase count labels: `concept`, `concepts`, `capture`, `captures`
-  - day count tooltip labels
-- `GraphLegend` title is profile-owned as `profile.graph.legendHelperLabels.title`.
-- Correction evidence domain groundwork exists:
-  - `OntologyCorrectionEvidence`
-  - `OntologyCorrectionActiveSelectionSnapshot`
-  - `OntologyCorrectionSubjectKind`
-  - `OntologyCorrectionField`
-  - `OntologyCorrectionSource`
-  - `validateOntologyCorrection()`
-  - migration/schema/repo/codec/backup support for `ontology_correction_evidence`
-- Correction validation is domain-only. It checks profile id, non-empty ids, valid previous/corrected ontology item type ids, no-op corrections, and input/profile immutability.
-- Architecture guards now keep correction evidence narrow for this stage:
-  - correction field is only `typeNodeId`
-  - correction source is only `user`
-  - no forbidden ontology imports from DB, backup, learning, or graph
-  - no legacy `ontology_corrections` or `ontology_patch_suggestions` source implementation
-  - no automatic profile mutation helper in `corrections.ts`
-- Proposal storage v1 exists:
-  - `ProfilePatch`
-  - `ProfileChangeProposal`
-  - migration/schema/repo/codec/backup support for `profile_change_proposals`
-  - proposals store source/evidence, target layer, patch JSON, risk/confidence, and review status
-  - proposals do not apply themselves
-- Profile composition helpers exist:
-  - `ProfileOverlayKind`
-  - `ProfileOverlay<TItemTypeNodeId>`
-  - `composeDomainProfile(base, overlays)`
-  - project/learning overlays compose before personal overlays
-  - later overlays of the same kind win deterministically
-  - composition is pure and does not mutate inputs
-- Active profile overlay seam exists:
-  - `getActiveDomainProfile()` returns `codingProfile` directly
-  - `getActiveDomainProfile([])` returns `codingProfile` directly
-  - `getActiveDomainProfile(overlays)` composes overlays explicitly
-  - `ActiveDomainProfileSource` and `resolveActiveDomainProfile(source)` provide a structured, caller-owned base+overlays source without global state
-  - no global selector, persistence, UI, or automatic profile mutation has been added
-- The five-slice ontology guard batch hardened this seam and the future architecture boundaries:
-  - profile composition output does not share mutable nested graph, ontology, or metadata references with base profiles or overlays
-  - active-profile overlay composition has no cache/global state and does not mutate overlay inputs
-  - stage10 guards block hidden active overlay/profile state names in ontology source
-  - stage10 guards block future agent/app operation names and profile overlay persistence table names from production source
-  - `05_ANTI_REGRESSION_RULES.md` now preserves Kortex Core boundary rules and future architecture guardrails
-  - stage10 doc-anchor guards preserve agent/subagent and self-building-app architecture sections in durable docs
-- Batch 2 added/accepted:
-  - active-profile seam guards: singleton no-arg/empty-array reference, frozen overlay input, mixed three-kind seam precedence, same-kind input order
-  - stage10 doc-anchor guards for doc 06 branching/merge durable anchors
-  - profile composition tests for mixed three-kind precedence, three same-kind project overlay chain, and no-op overlay equivalence
-- Batch 3 added/accepted:
-  - correction validation tests proving overlay-added type ids validate only against an explicitly composed profile
-  - `overrideOntology` composition tests for item/relationship id merge/dedupe, node deep cloning, and composition with typed add fields
-  - active-profile ontology helper tests proving `getOntologyNode`/`getOntologyNodeLabel` stay profile-parameter driven and do not leak hidden overlay state
-- Batch 4 Slice 1 added/accepted:
-  - `ActiveDomainProfileSource<TItemTypeNodeId>` type
-  - `resolveActiveDomainProfile(source)` pure resolver
-  - `getActiveDomainProfile(overlays?)` now delegates through the resolver without changing no-arg/empty-array reference behavior
-  - `profileActivation.test.ts` covers omitted/null/empty overlays, explicit composition, immutability, no-cache behavior, and non-default base profiles
-- Batch 5 Slice 1 added/accepted:
-  - `ActiveDomainProfileActivationInput<TItemTypeNodeId>` type in `types.ts` with grouped overlay fields (`projectOverlays`, `learningOverlays`, `personalOverlays`)
-  - `createActiveDomainProfileSource(input)` in `profileActivation.ts` - flattens grouped overlays in normalized order (project -> learning -> personal) into an `ActiveDomainProfileSource`
-  - `resolveActiveDomainProfileFromActivationInput(input)` in `profileActivation.ts` - convenience resolver that composes grouped overlays through the pipeline in one step
-  - Exports from `src/features/ontology/index.ts`
-- Batch 5 Slice 2 added/accepted:
-  - `profileActivation.test.ts` now covers source creation, no-overlay reference behavior, group normalization (project -> learning -> personal), precedence (personal wins over project and learning; learning wins over project when personal is absent), later overlays inside the same project group win, returned overlays container is new and mutating it does not mutate original group arrays, frozen input/group/overlay values compose correctly
-- Batch 5 Slice 3 added/accepted:
-  - Stage10 architecture guard proves `profileActivation.ts` exports `createActiveDomainProfileSource` and `resolveActiveDomainProfileFromActivationInput`
-  - Stage10 architecture guard proves `profileActivation.ts` contains no forbidden state/persistence/runtime strings (AsyncStorage, sqlite, drizzle, schema, db, zustand, createStore, useActiveDomainProfile, setActiveDomainProfile, setActiveProfile, activeProfileStore, activeOverlays, profile_overlays, profile_branches, active_profile_overlay)
-  - Stage10 guard count: 39 -> 40
-- Decision brief added, then A2 locked and implemented in Batch 6:
-  - `10_ACTIVE_PROFILE_RUNTIME_SOURCE_DECISION.md` records the locked A2 decision: save/extraction path (`prepareSaveCandidates`) as the first real overlay-aware runtime caller
-  - DB, UI, persistence, branch storage, correction storage, agent runtime, app-builder runtime, MCP/adapters, and DSL runtime were kept out of the code slice
-- Batch 6 Slice 1 added/accepted:
-  - `prepareSaveCandidates` options now include `profile?: DomainProfile | undefined`
-  - Default behavior: `const profile = options?.profile ?? getActiveDomainProfile()`
-  - The profile flows into `buildExtractorSystemPrompt({ profile, relevantConcepts })`
-  - Tests: 4 total (default coding profile, overlay-added ontology node in prompt, base/overlay immutability, original mapping test)
-  - No DB, UI, persistence, global state, setters, activation input, branch storage, correction storage, MCP/adapters, agent runtime, app-builder runtime, or DSL runtime added
-  - A1 (passing `ActiveDomainProfileActivationInput` into `prepareSaveCandidates`) is explicitly rejected for this service
-- Batch 7 Slice 1 added/accepted:
-  - Created `11_RUNTIME_PROFILE_COORDINATOR_DECISION.md` with locked decision: explicit coordinator layer above services, services receive composed DomainProfile, no hidden global state
-  - No source code or tests changed in this slice
-- Batch 7 Slice 2 added/accepted:
-  - `runtimeProfileCoordinator.ts` is the explicit above-services coordinator boundary
-  - `composeRuntimeDomainProfile(input)` delegates to `resolveActiveDomainProfileFromActivationInput(input)`
-  - `RuntimeProfileCoordinatorInput` aliases `ActiveDomainProfileActivationInput`
-  - Pure function, no state, no persistence, no side effects
-  - 5/5 tests passed in `runtimeProfileCoordinator.test.ts`
-- Batch 7 Slice 3 added/accepted:
-  - Architecture guard proves `runtimeProfileCoordinator.ts` exports `composeRuntimeDomainProfile`, `RuntimeProfileCoordinatorInput`, and `resolveActiveDomainProfileFromActivationInput`
-  - Architecture guard proves `runtimeProfileCoordinator.ts` contains no forbidden state/persistence/runtime strings
-  - Guard count: 40 -> 42
-- Batch 8 Slice 1 added/accepted:
-  - Created `12_CORRECTION_EVIDENCE_PERSISTENCE_DECISION.md` with locked decision: evidence-first persistence, patch suggestions later, no automatic ontology/profile mutation, direct user-authored ontology changes allowed, model/checker suggestions require approval, no checker runtime/UI or DB/migration/source implementation in this slice
-  - 2026-05-11 update: v1 correction evidence stores active selection context where the mistake happened, but no `branchId`, `targetLayerId`, or apply target
-  - Updated NEXT_LLM_CONTEXT, TOMORROW_START, WHERE_WE_STAND, implementation_handoff, README doc map
-  - No source code or tests changed in this slice
-- Batch 9 Slice 1 added/accepted:
-  - Created `13_BRANCH_OVERLAY_PERSISTENCE_DECISION.md` with locked decision: persist branch layers separately, not composed runtime profiles. Overlays are the durable source; composition is derived. Merging upward requires approval. Sibling branches do not affect each other. Parent profiles stay clean. Rejected alternatives: store only composed profiles, let child branches mutate parents directly, make everything event-sourced immediately, make branches full profile copies. No DB, UI, storage API, automatic merge, checker runtime, patch suggestion table, correction storage, agent/subagent runtime, app-builder runtime, Racket/DSL implementation, or MCP/adapters is implemented in this slice.
-  - Updated NEXT_LLM_CONTEXT, TOMORROW_START, WHERE_WE_STAND, implementation_handoff, README doc map
-  - Added pointer from doc 06 to doc 13 for the locked persistence-source decision
-  - No source code or tests changed in this slice
-- Batch 10 Slice 1 added/accepted:
-  - Added `ProfileBranchKind` and `ProfileBranch<TItemTypeNodeId>` as the domain-only branch model in `types.ts`
-  - Added `profileBranches.ts` with pure branch helpers: `profileBranchToOverlay`, `groupProfileBranchesByKind`, `createActiveDomainProfileSourceFromBranches`, `composeRuntimeDomainProfileFromBranches`
-  - Added `profileBranches.test.ts` with 14 tests covering empty-branch base reference, project branch ontology additions, personal/learning/project precedence, same-kind later-wins behavior, sibling independence/no mutation, frozen inputs, grouping order, runtime composition equivalence, and forbidden-name/source-boundary checks
-  - Exported branch types/helpers from `src/features/ontology/index.ts`
-  - No DB, migration, storage API, UI selector, automatic merge, correction branch fields, MCP/adapters, agent runtime, app-builder runtime, or DSL runtime added
-- Batch 11 Slice 0 added/accepted:
-  - Created `14_PROFILE_SELECTION_AND_BRANCH_RESOLUTION_DECISION.md` with locked decision: branch persistence, active selection, branch resolution, and runtime composition are separate boundaries
-  - Locked id-based, per-context `ProfileSelection` with one base profile in v1 and ordered project/learning/personal branch id arrays
-  - Locked resolver boundary: selection ids are resolved into branch values before composition
-  - Rejected global active selection, composed runtime profile as canonical truth, embedded branch objects in selection, coordinator-owned store reads, and multi-base composition in v1
-  - No source code or tests changed in this doc slice
-- Batch 11 Slice 1 added/accepted:
-  - Added `ProfileSelection` to ontology types
-  - Added `profileSelection.ts` with pure selection helpers: `resolveProfileSelection` and `composeRuntimeDomainProfileFromSelection`
-  - Added `profileSelection.test.ts` with 19 tests covering empty selection reference behavior, selected project branch ontology additions, selection-order same-kind precedence, personal/learning/project precedence, missing branch id errors, base id mismatch, wrong-kind errors, frozen input immutability, composition equivalence with branch helpers, and source-boundary forbidden-name checks
-  - Exported selection types/helpers from `src/features/ontology/index.ts`
-  - No DB, migration, storage API, profile registry, UI selector, global active selection, MCP/adapters, agent runtime, app-builder runtime, DSL runtime, multi-base composition, merge, or promotion logic added
-- Batch 12 Slice 1 added/accepted:
-  - Locked duplicate profile id behavior in doc 15: duplicate ids throw structured duplicate-id errors across all sources; future UI/import flows may catch the error and ask create new version / rename / replace / merge later / cancel
-  - Added `DomainProfileSummary`, `ProfileSource<TItemTypeNodeId>`, and `ProfileRegistry<TItemTypeNodeId>` to ontology types
-  - Added `profileRegistry.ts` with `DuplicateProfileIdError`, `ProfileNotFoundError`, `toDomainProfileSummary`, `createStaticProfileSource`, and `createProfileRegistry`
-  - Added `profileRegistry.test.ts` with 26 tests covering summary shape, static source lookup/listing, duplicate ids within one source, registry lookup/listing, duplicate ids across sources, unknown id errors, frozen input handling, caller array mutation after creation, and source-boundary forbidden-name checks
-  - Exported registry types/helpers from `src/features/ontology/index.ts`
-  - No DB, migration, storage API, profile persistence, file source, adapter source, profile editor UI, global active registry, MCP/adapters, agent runtime, app-builder runtime, DSL runtime, branch persistence, branch composition changes, active selection changes, service changes, multi-base composition, merge, promotion, automatic versioning, rename, or replace flow added
-- Kimi Code CLI Slice 1 added/accepted:
-  - Added `ProfileBranchStore<TItemTypeNodeId>` to ontology types
-  - Added `profileBranchStore.ts` with `createStaticProfileBranchStore({ branches })`
-  - Added `profileBranchStore.test.ts` with 12 tests covering single lookup, missing lookup, requested-id order, missing-id skipping, duplicate requested ids, parent filtering, empty parent lists, constructor-order listing, caller array mutation after construction, frozen input arrays, and source-boundary forbidden-name checks
-  - Exported `ProfileBranchStore` and `createStaticProfileBranchStore` from `src/features/ontology/index.ts`
-  - No DB, migration, backup, storage adapter, UI selector, global active selection, automatic merge, MCP/adapters, agent runtime, app-builder runtime, DSL runtime, or profile persistence added
-- Kimi Code CLI Slice 2 added/accepted (profile definitions persistence v1):
-  - Added migration 014 for `profile_definitions` table with columns, source_kind CHECK constraint, and indexes
-  - Added `ProfileDefinition` and `ProfileDefinitionSourceKind` to ontology types
-  - Added `profileDefinition.ts` codec with strict DomainProfile zod schemas and definition/profile field match validation
-  - Added `profileDefinitionRepo.ts` with insert/upsert/getById/getByIds/list/delete
-  - Added `createProfileDefinitionSource` to `profileRegistry.ts` for synchronous `ProfileSource` from loaded definitions
-  - Added backup/export/import/clear/columnMaps support for `profile_definitions`
-  - Bumped FORMAT_VERSION 3 -> 4 and SCHEMA_VERSION 13 -> 14
-  - Added focused tests: migration (4), codec (17), registry source (10), backup columns (4)
-  - Updated stage10 architecture guards for `profile_definitions` boundary
-  - No UI, services, MCP/adapters, agent runtime, app-builder runtime, DSL runtime, merge proposal code, correction storage, or runtime activation changes
-- Kimi Code CLI Slice 3 added/accepted (profile registry bootstrap v1):
-  - Added `profileRegistryBootstrap.ts` with `loadPersistedProfileDefinitionSource()` and `loadDefaultProfileRegistry()`
-  - `loadPersistedProfileDefinitionSource()` loads definitions through the ontology data boundary and returns a synchronous `ProfileSource`
-  - `loadDefaultProfileRegistry()` combines built-in coding profile source with persisted definition source into a synchronous `ProfileRegistry`
-  - Built-in source precedes persisted source in `listProfiles()` order
-  - Duplicate ids across built-in and persisted sources throw `DuplicateProfileIdError`
-  - Accepts dependency injection for tests (`listDefinitions`, `sourceId`, `additionalSources`)
-  - Exported from `src/features/ontology/data/index.ts`, not the root ontology barrel
-  - Added `profileRegistryBootstrap.test.ts` with focused tests for source creation, registry composition, order, duplicate id errors, and immutability
-  - Added stage10 boundary guard proving root ontology barrel does not export DB-backed bootstrap helpers
-  - No global active registry, no singleton mutable state, no UI, no services, no MCP/adapters, no agent runtime, no app-builder runtime, no DSL runtime
-- Codex direct slice added/accepted (correction evidence persistence v1):
-  - Added migration 015 for `ontology_correction_evidence`
-  - Added Drizzle `ontologyCorrectionEvidence` schema
-  - Added `OntologyCorrectionActiveSelectionSnapshot` and required `activeSelectionSnapshot` on `OntologyCorrectionEvidence`
-  - Added strict codec and ontology data-boundary repo for correction evidence
-  - Added backup/export/import/clear/columnMaps support for `ontology_correction_evidence`
-  - Bumped FORMAT_VERSION 4 -> 5 and SCHEMA_VERSION 14 -> 15
-  - Updated `validateOntologyCorrection()` to validate active selection context without mutating evidence/profile inputs
-  - Added migration, codec, correction validation, backup column-map, and stage10 guard tests
-  - No correction UI, checker runtime, patch suggestion table, branch/base target fields, auto-apply, MCP/adapters, agent runtime, app-builder runtime, or DSL runtime
-- Codex docs-only decision added/accepted (adaptive suggestion policy):
-  - Added `18_ADAPTIVE_SUGGESTION_POLICY_DECISION.md`
-  - Locked conservative suggest-first as the default for evidence-derived changes
-  - Locked the distinction between correction evidence, patch suggestions, manual ontology edits, and merge/apply
-  - Locked personal layer as `branchKind: 'personal'`
-  - Locked relationship trust under the same policy as tag/subtag changes
-  - Locked adaptive policy inputs: semantic confidence, user-fit confidence, risk score, and trust mode
-  - Locked that risk overrides trust; base/core changes, upward merges, old-data rewrites, agent/app-builder policy, and external write-back always require approval
-  - No source code, tests, DB, UI, checker runtime, patch suggestion table, auto-apply engine, or trust storage added
-- Codex docs-only decision added/accepted (patch/merge proposal storage and review):
-  - Added `19_PATCH_MERGE_PROPOSAL_STORAGE_DECISION.md`
-  - Locked one unified `profile_change_proposals` concept for patch suggestions, relationship suggestions, branch merge proposals, and manual drafts
-  - Locked `ProfilePatch` as overlay-like diff language without branch identity
-  - Locked explicit target layer: base profile or profile branch
-  - Locked source/evidence fields, risk/confidence fields, and review status lifecycle
-  - Rejected separate `ontology_patch_suggestions` and `profile_merge_proposals` tables for v1
-  - Locked that proposals do not apply themselves; apply/merge is an explicit later operation
+Gate 3 is implemented, Doc 39's first target-switching path is implemented through the review surface, and the small checker/proposal hardening pass is done. Doc 43 now locks the next likely implementation slice: a minimal photography second-base-profile forkability demo.
 
-- Codex direct slice added/accepted (profile change proposals storage v1):
-  - Added migration 016 for `profile_change_proposals`
-  - Added `ProfilePatch` and `ProfileChangeProposal` domain types
-  - Added strict proposal codec and ontology data-boundary repo
-  - Added backup/export/import/clear/columnMaps support for `profile_change_proposals`
-  - Bumped FORMAT_VERSION 5 -> 6 and SCHEMA_VERSION 15 -> 16
-  - Added migration, codec, backup column-map, and stage10 guard tests
-  - No review UI, checker runtime, apply service, trust storage, auto-apply, base-profile versioning, MCP/adapters, agent runtime, app-builder runtime, or DSL runtime
+Purpose:
 
-- Codex docs-only decision added/accepted (Conceptualize preview and correction surface):
-  - Added `20_CONCEPTUALIZE_PREVIEW_AND_CORRECTION_SURFACE_DECISION.md`
-  - Locked Conceptualize preview as the first correction surface before final save
-  - Locked that every correction stores mistake-understanding evidence, not only the final corrected label
-  - Locked Conceptualize as a safe correction doorway, not the full Kortex ontology editor
-  - Locked branch-local default for approved new tag/subtag creation from Conceptualize
-  - No source code, tests, UI, checker runtime, apply service, trust storage, auto-apply, old-item backfill, or base-profile mutation added
+- Implement Doc 43 as a proof/audit slice, not a product-profile UX slice.
+- Treat every required production-code change outside the photography profile fixture as a discovered coding coupling to fix or log.
+- Keep any target-switching extension outside Doc 39's implemented branch-local additive -> base/core path as a new scoped gate.
 
-- Codex docs-only decision added/accepted (checker/proposal/context/apply architecture):
-  - Added `21_CHECKER_PROPOSAL_REVIEW_CONTEXT_AND_APPLY_DECISION.md`
-  - Locked checker output kinds: explanation, evidence, proposal
-  - Locked shared proposal lifecycle/freshness semantics across Conceptualize, checker, graph selection chat, repeated-mistake review, and backfill
-  - Locked context assembly as branch/profile-scoped, layered, relevance-ranked, provenance-aware context packs with contradiction preservation and drill-down paths
-  - Locked accepted proposals as revalidated typed Kortex operations, not raw patch writes
-  - Locked normal proposal apply as atomic and large backfills as chunked bulk jobs
-  - Locked historical undo as impact-reviewed reversal proposals, not silent time travel
-  - No source code, tests, UI, checker runtime, context builder, event store, apply service, undo service, trust storage, graph chat, agent runtime, app-builder runtime, or DSL runtime added
+Still out of scope unless a later decision explicitly opens it:
 
-## Verification Already Run
+- Target-layer switching outside Doc 39's locked first-slice scope.
+- Cross-base evidence, proposals, checker output, or composition.
+- Profile gallery/onboarding/shipping decision for photography.
+- Base/core checker targeting.
+- Relationship/boundary operation vocabulary.
+- Maturity/provisional lifecycle.
+- Auto-apply.
+- DSL/agent/app-builder/source-sync runtime.
 
-Latest Missing-Concept Proposal Revalidation verification:
+Optional hardening before a larger next gate:
+
+- Add broader screen-level interaction tests around proposal review once the UI stabilizes.
+- Add a cross-path born-fresh regression harness if another proposal creation path is introduced.
+
+## Read First
+
+Read these before code:
+
+1. `README.md`
+2. `00_DOC_SYNC.md`
+3. `05_ANTI_REGRESSION_RULES.md`
+4. `06_PROFILE_BRANCHING_AND_MERGE.md`
+5. `07_KORTEX_CORE_AND_CHILD_CORES.md`
+6. `08_KORTEX_LANGUAGE_LAYER_AND_ADAPTERS.md`
+7. `09_KORTEX_OVER_EXISTING_SYSTEMS.md`
+8. `10_ACTIVE_PROFILE_RUNTIME_SOURCE_DECISION.md` through `25_PROPOSAL_EVENT_AUDIT_STORAGE_DECISION.md` as needed for the touched boundary.
+9. `28_CONTEXT_ASSEMBLY_DECISION.md`, `29_CONTEXT_SELECTOR_DECISION.md`, and `31-33` if touching ContextPack or Conceptualize prompts/model seams.
+10. `37_USER_FIT_PROJECTION_DECISION.md` if touching correction/proposal learning signals.
+11. `38_BASE_PROFILE_VERSIONING_DECISION.md`, `39_EDIT_THEN_APPLY_DECISION.md`, and `40_PROPOSAL_FRESHNESS_AND_STALE_REFRESH_DECISION.md` if touching proposal review/apply/freshness/editing.
+12. `41_CHECKER_RUNTIME_FIRST_SLICE_DECISION.md` if touching checker prompt/mapper/runtime/UI.
+13. `42_BRANCH_PROFILE_SELECTION_UI_DECISION.md` if touching branch/profile selection UI, checker target selection, or selection-driven proposal review context.
+14. Root docs if touching repo-wide architecture or persistence: `../ARCHITECTURE.md`, `../PERSISTENCE.md`, `../MAIN.md`, `../current_state.md`.
+
+## Current Worktree Notes
+
+Run `git status --short` before working. Expected uncommitted product changes from the current slice include:
+
+- Checker UI trigger/readout and adapter files under `src/features/ontology/hooks/`, `src/features/ontology/ui/`, and related tests.
+- Stage10 architecture guard updates.
+- Root-doc consolidation updates in root docs and this folder.
+
+Do not include local tool/review folders in commits unless the user explicitly requests it:
+
+- `.claude/`
+- `.deepseek/`
+- `.pi/`
+- `.qwen/`
+- `agyreview/`
+- `slicereview/`
+- `../.claude/worktrees/`
+
+## Verification Status
+
+Latest verification after checker UI/adapter, root-doc consolidation, and Doc 42 scoping:
+
+- `npx.cmd tsc --noEmit --pretty false` passed.
+- `npm.cmd test -- --run stage10-architecture-guards` passed: 81/81 tests.
+- Focused checker/runtime/review tests passed: 31/31 tests across 5 files.
+- Full `npm.cmd test -- --run` passed: 1031/1031 tests across 112 files.
+- `git diff --check -- src ONTOLOGY_PROFILE_REFACTOR ARCHITECTURE.md PERSISTENCE.md MAIN.md current_state.md` passed with normal CRLF warnings only.
+
+Latest verification after Doc 42 pure helper slice:
+
+- `npx.cmd tsc --noEmit --pretty false` passed.
+- `npm.cmd test -- --run profileSelectionDraft stage10-architecture-guards` passed: 95/95 tests across 2 files.
+
+Latest verification after Doc 42 data-hook slice:
+
+- `npx.cmd tsc --noEmit --pretty false` passed.
+- `npm.cmd test -- --run useProfileSelection profileSelectionDraft stage10-architecture-guards` passed: 102/102 tests across 3 files.
+
+Latest verification after Doc 42 compact selection panel slice:
+
+- `npx.cmd tsc --noEmit --pretty false` passed.
+- `npm.cmd test -- --run profileSelectionDraft useProfileSelection stage10-architecture-guards` passed: 107/107 tests across 3 files.
+
+Latest verification after Doc 42 project-context wiring slice:
+
+- `npx.cmd tsc --noEmit --pretty false` passed.
+- `npm.cmd test -- --run profileSelectionDraft useProfileSelection stage10-architecture-guards stage4-hub-guards` passed: 115/115 tests across 4 files.
+
+Latest verification after checker quality hardening:
+
+- `npx.cmd tsc --noEmit --pretty false` passed.
+- `npm.cmd test -- --run checkerPromptBuilder checkerProposalMapper checkerRunService stage10-architecture-guards` passed: 103/103 tests across 4 files.
+
+Latest verification after Doc 39 target-switch data/hook/UI slices:
+
+- `npx.cmd tsc --noEmit --pretty false` passed.
+- `npm.cmd test -- --run useSwitchProfileChangeProposalTarget profileProposalReviewPresentation profileChangeProposalTargetSwitchService profileProposalTargetSwitch useRefreshProfileChangeProposal useEditProfileChangeProposal stage10-architecture-guards` passed: 114/114 tests across 7 files.
+
+Latest verification after proposal/checker hardening:
+
+- `npx.cmd tsc --noEmit --pretty false` passed.
+- `npm.cmd test -- --run conceptualizeCorrections checkerProposalMapper checkerRunService profileProposalTargetSwitch profileChangeProposalTargetSwitchService stage10-architecture-guards` passed: 128/128 tests across 6 files.
+
+Useful verification commands:
 
 ```powershell
-node node_modules\typescript\bin\tsc -p tsconfig.json --noEmit
-npm.cmd test -- --run src/features/learning/services/__tests__/conceptualizeCorrections.test.ts src/__tests__/stage10-architecture-guards.test.ts
-npm.cmd test -- --run
-git diff --check -- ONTOLOGY_PROFILE_REFACTOR src ARCHITECTURE.md
+npx.cmd tsc --noEmit --pretty false
+npm.cmd test -- --run stage10-architecture-guards
+git diff --check -- src ONTOLOGY_PROFILE_REFACTOR ARCHITECTURE.md PERSISTENCE.md MAIN.md current_state.md
 ```
 
-Result: TypeScript clean; focused conceptualize-correction/architecture-guard tests 82/82 passed across 2 files; full suite 899/899 passed across 93 files; `git diff --check -- ONTOLOGY_PROFILE_REFACTOR src ARCHITECTURE.md` clean with CRLF warnings only.
+## Guardrails
 
-Latest Base Profile Apply verification:
-
-```powershell
-node node_modules\typescript\bin\tsc -p tsconfig.json --noEmit
-npm.cmd test -- --run src/features/ontology/__tests__/baseProfileProposalApply.test.ts src/features/ontology/__tests__/baseProfileProposalApplyService.test.ts src/features/ontology/__tests__/baseProfileVersioning.test.ts src/features/ontology/__tests__/profileDefinitionCodec.test.ts src/features/ontology/__tests__/profileChangeProposalCodec.test.ts src/__tests__/stage10-architecture-guards.test.ts
-npm.cmd test -- --run
-git diff --check -- ONTOLOGY_PROFILE_REFACTOR src ARCHITECTURE.md
-```
-
-Result: TypeScript clean; focused base-apply/versioning/codec/guard tests 120/120 passed across 6 files; full suite 928/928 passed across 97 files; `git diff --check -- ONTOLOGY_PROFILE_REFACTOR src ARCHITECTURE.md` clean with CRLF warnings only.
-
-Latest Base/Core Review UI verification:
-
-```powershell
-node node_modules\typescript\bin\tsc -p tsconfig.json --noEmit
-npm.cmd test -- --run src/features/ontology/__tests__/useApplyProfileChangeProposal.test.ts src/features/ontology/__tests__/profileProposalReviewPresentation.test.ts src/features/ontology/__tests__/profileChangeProposalReviewService.test.ts src/features/ontology/__tests__/branchLocalProposalApplyService.test.ts src/features/ontology/__tests__/baseProfileProposalApplyService.test.ts src/features/ontology/__tests__/branchLocalProposalApply.test.ts src/features/ontology/__tests__/baseProfileProposalApply.test.ts src/__tests__/stage10-architecture-guards.test.ts
-npm.cmd test -- --run
-git diff --check -- ONTOLOGY_PROFILE_REFACTOR src ARCHITECTURE.md
-```
-
-Result: TypeScript clean; focused review/apply tests 118/118 passed across 8 files; full suite 932/932 passed across 98 files; `git diff --check -- ONTOLOGY_PROFILE_REFACTOR src ARCHITECTURE.md` clean with CRLF warnings only.
-
-Prior Base Profile Versioning verification:
-
-```powershell
-node node_modules\typescript\bin\tsc -p tsconfig.json --noEmit
-npm.cmd test -- --run src/db/migrations/__tests__/profile-change-proposal-target-version-migration.test.ts src/features/ontology/__tests__/baseProfileVersioning.test.ts src/features/ontology/__tests__/profileChangeProposalCodec.test.ts src/features/learning/services/__tests__/conceptualizeCorrections.test.ts src/features/backup/__tests__/profile-columns.test.ts src/__tests__/stage10-architecture-guards.test.ts
-npm.cmd test -- --run
-git diff --check -- ONTOLOGY_PROFILE_REFACTOR src ARCHITECTURE.md
-```
-
-Result: TypeScript clean; focused migration/versioning/codec/correction/backup/guard tests 166/166 passed across 6 files; full suite 909/909 passed across 95 files; `git diff --check -- ONTOLOGY_PROFILE_REFACTOR src ARCHITECTURE.md` clean with CRLF warnings only.
-
-Latest User-Fit Projection verification:
-
-```powershell
-node node_modules\typescript\bin\tsc -p tsconfig.json --noEmit
-npm.cmd test -- --run src/features/ontology/__tests__/userFitProjection.test.ts src/__tests__/stage10-architecture-guards.test.ts
-npm.cmd test -- --run
-git diff --check -- ONTOLOGY_PROFILE_REFACTOR src ARCHITECTURE.md
-```
-
-Result: TypeScript clean; focused user-fit ContextPack/prompt/profile-context/guard tests 151/151 passed across 8 files; full suite 887/887 passed across 93 files; `git diff --check -- ONTOLOGY_PROFILE_REFACTOR src ARCHITECTURE.md` clean with CRLF warnings only.
-
-Latest Missing-Concept UX verification:
-
-```powershell
-node node_modules\typescript\bin\tsc -p tsconfig.json --noEmit
-npm.cmd test -- --run src/features/learning/services/__tests__/conceptualizeClassification.test.ts src/features/learning/services/__tests__/stage2-prepareSaveCandidates.test.ts src/features/learning/state/__tests__/stage3-save-learning-store.test.ts src/features/learning/ui/cards/__tests__/stage3-card-guards.test.ts src/__tests__/stage10-architecture-guards.test.ts
-npm.cmd test -- --run
-git diff --check -- ONTOLOGY_PROFILE_REFACTOR src ARCHITECTURE.md
-```
-
-Result: TypeScript clean; focused missing-concept classifier/prepare/store/UI/guard tests 106/106 passed across 5 files; full suite 866/866 passed across 90 files; `git diff --check -- ONTOLOGY_PROFILE_REFACTOR src ARCHITECTURE.md` clean with CRLF warnings only.
-
-Prior Correction Evidence Near-Miss verification:
-
-```powershell
-node node_modules\typescript\bin\tsc -p tsconfig.json --noEmit
-npm.cmd test -- --run src/db/migrations/__tests__/ontology-correction-near-miss-candidates-migration.test.ts src/features/ontology/__tests__/ontologyCorrectionEvidenceCodec.test.ts src/features/learning/services/__tests__/conceptualizeClassification.test.ts src/features/learning/services/__tests__/conceptualizeCorrections.test.ts src/features/backup/__tests__/profile-columns.test.ts src/__tests__/stage10-architecture-guards.test.ts
-npm.cmd test -- --run
-git diff --check -- ONTOLOGY_PROFILE_REFACTOR src ARCHITECTURE.md
-```
-
-Result: TypeScript clean; targeted near-miss migration/codec/classifier/correction/backup/guard tests 163/163 passed across 6 files; full suite 862/862 passed across 90 files; `git diff --check -- ONTOLOGY_PROFILE_REFACTOR src ARCHITECTURE.md` clean with CRLF warnings only.
-
-Prior Raw Proposed Type Identity verification:
-
-```powershell
-node node_modules\typescript\bin\tsc -p tsconfig.json --noEmit
-npm.cmd test -- --run src/features/learning/types/__tests__/rawProposedTypeIdentity.test.ts src/features/learning/services/__tests__/conceptualizeClassification.test.ts src/features/learning/services/__tests__/stage2-prepareSaveCandidates.test.ts src/features/learning/services/__tests__/conceptualizeCorrections.test.ts src/__tests__/stage10-architecture-guards.test.ts
-npm.cmd test -- --run
-git diff --check -- ONTOLOGY_PROFILE_REFACTOR src
-```
-
-Result: TypeScript clean; targeted raw identity/classifier/prepare/correction/guard tests 95/95 passed across 5 files; full suite 853/853 passed across 89 files; `git diff --check -- ONTOLOGY_PROFILE_REFACTOR src` clean with CRLF warnings only.
-
-Latest Conceptualize Extractor Flip verification:
-
-```powershell
-node node_modules\typescript\bin\tsc -p tsconfig.json --noEmit
-npm.cmd test -- --run src/features/learning/services/__tests__/conceptualizeClassification.test.ts src/features/learning/services/__tests__/stage2-prepareSaveCandidates.test.ts src/__tests__/stage10-architecture-guards.test.ts
-npm.cmd test -- --run
-git diff --check -- ONTOLOGY_PROFILE_REFACTOR src
-```
-
-Result: TypeScript clean; targeted classifier/prepare/guard tests 77/77 passed across 3 files; full suite 841/841 passed across 88 files; `git diff --check -- ONTOLOGY_PROFILE_REFACTOR src` clean with CRLF warnings only.
-
-Prior Conceptualize singular-output diagnostics verification:
-
-```powershell
-node node_modules\typescript\bin\tsc -p tsconfig.json --noEmit
-npm.cmd test -- --run src/features/learning/services/__tests__/conceptualizePromptBuilder.test.ts src/features/learning/services/__tests__/conceptualizeContextPack.test.ts src/features/ontology/__tests__/contextSelector.test.ts src/features/ontology/__tests__/contextAssembly.test.ts src/__tests__/stage10-architecture-guards.test.ts
-npm.cmd test -- --run
-git diff --check -- ONTOLOGY_PROFILE_REFACTOR src
-```
-
-Result: TypeScript clean; targeted Conceptualize prompt/context selector/assembly/guard tests 115/115 passed across 5 files; full suite 832/832 passed across 87 files; `git diff --check -- ONTOLOGY_PROFILE_REFACTOR src` clean with CRLF warnings only.
-
-Latest verified commands after trust setting storage:
-
-```powershell
-node node_modules\typescript\bin\tsc -p tsconfig.json --noEmit
-npm.cmd test -- --run src/features/ontology/__tests__/profileTrustSettingRepo.test.ts src/features/ontology/__tests__/profileTrustSettingCodec.test.ts src/db/migrations/__tests__/profile-trust-settings-migration.test.ts src/features/backup/__tests__/profile-columns.test.ts src/__tests__/stage10-architecture-guards.test.ts
-npm.cmd test -- --run
-git diff --check
-```
-
-Latest result:
-
-```text
-TypeScript clean
-targeted trust-setting repo/codec/migration/backup/guard tests: 129/129 passed across 5 test files
-full suite: 723/723 passed across 76 test files
-git diff --check clean with CRLF warnings only
-```
-
-Latest docs-only verification after doc 24:
-
-```powershell
-npm.cmd test -- --run src/__tests__/stage10-architecture-guards.test.ts
-git diff --check
-```
-
-Result: stage10 architecture/doc guards 55/55 passed; `git diff --check` clean with CRLF warnings only.
-
-Latest proposal review UI verification:
-
-```powershell
-node node_modules\typescript\bin\tsc -p tsconfig.json --noEmit
-npm.cmd test -- --run src/features/ontology/__tests__/profileChangeProposalReviewService.test.ts src/features/ontology/__tests__/profileProposalReviewPresentation.test.ts src/features/ontology/__tests__/branchLocalProposalApplyService.test.ts src/features/ontology/__tests__/branchLocalProposalApply.test.ts src/features/ontology/__tests__/profileChangeProposalCodec.test.ts src/features/ontology/__tests__/profileBranches.test.ts src/__tests__/stage10-architecture-guards.test.ts
-npm.cmd test -- --run
-git diff --check
-```
-
-Result: TypeScript clean; targeted review/apply/proposal/branch/guard tests 101/101 passed across 7 files; full suite 749/749 passed across 80 files; `git diff --check` clean with CRLF warnings only.
-
-Latest proposal event audit storage verification:
-
-```powershell
-node node_modules\typescript\bin\tsc -p tsconfig.json --noEmit
-npm.cmd test -- --run src/db/migrations/__tests__/profile-proposal-events-migration.test.ts src/features/ontology/__tests__/profileProposalEventCodec.test.ts src/features/ontology/__tests__/branchLocalProposalApplyService.test.ts src/features/ontology/__tests__/profileChangeProposalReviewService.test.ts src/features/backup/__tests__/profile-columns.test.ts src/__tests__/stage10-architecture-guards.test.ts
-```
-
-Result: TypeScript clean; targeted proposal-event/apply/review/backup/guard tests 145/145 passed across 6 files; full suite 764/764 passed across 82 files; `git diff --check` clean with CRLF warnings only.
-
-Latest proposal lifecycle and Ask-why audit verification:
-
-```powershell
-node node_modules\typescript\bin\tsc -p tsconfig.json --noEmit
-npm.cmd test -- --run src/features/ontology/__tests__/profileChangeProposalReviewService.test.ts src/features/ontology/__tests__/profileProposalEventCodec.test.ts src/features/ontology/__tests__/userFitProjection.test.ts src/features/ontology/__tests__/profileProposalReviewPresentation.test.ts src/__tests__/stage10-architecture-guards.test.ts
-npm.cmd test -- --run
-```
-
-Result: TypeScript clean; focused Ask-why/review/projection/guard tests 107/107 passed across 5 files; full suite 948/948 passed across 100 files.
-
-Latest superseding hook-boundary verification:
-
-```powershell
-node node_modules\typescript\bin\tsc -p tsconfig.json --noEmit
-npm.cmd test -- --run src/features/ontology/__tests__/profileChangeProposalLifecycleService.test.ts src/features/ontology/__tests__/useReviewProfileChangeProposal.test.ts src/features/ontology/__tests__/profileChangeProposalReviewService.test.ts src/features/ontology/__tests__/profileProposalEventCodec.test.ts src/features/ontology/__tests__/userFitProjection.test.ts src/__tests__/stage10-architecture-guards.test.ts
-npm.cmd test -- --run
-```
-
-Result: TypeScript clean; focused lifecycle/hook/Ask-why/review/projection/guard tests 110/110 passed across 6 files; focused event-history/review/lifecycle/guard tests 104/104 passed across 6 files; full suite 953/953 passed across 101 files.
-
-## Important Compatibility Boundaries
-
-Do not rename or remove these in this cycle:
-
-- `LearningConcept.conceptType`
-- `ConceptHint.proposedConceptType`
-- DB columns such as `concept_type`, `proposed_concept_type`, and old coding metadata columns
-- structural folder/component names such as `learning`, `ConceptCardFull`, `LearningHubScreen`
-- old coding-specific columns: `coreConcept`, `architecturalPattern`, `programmingParadigm`, `conceptType`
-
-Persistence and backup/import compatibility work is already complete for migration 011. Do not touch persistence unless the user explicitly asks and the prompt includes raw-shape tests.
-
-## Next Real Work
-
-The label-profile cleanup is complete. Correction evidence domain groundwork and v1 persistence are in place. The explicit active-profile overlay seam is in place. The A2 decision is locked and implemented: `prepareSaveCandidates` can receive a composed profile/context from above the service boundary. Doc 33 extends that seam: `prepareSaveCandidates` accepts an optional `conceptualizeContext` and uses the new Conceptualize classifier for ontology placement when validation succeeds, while the old extractor still owns card text extraction. Doc 34 makes raw proposed type identity scoped/structured in memory while keeping the old raw string as a compatibility projection. Doc 35 snapshots hidden Conceptualize near-miss diagnostics only when user correction evidence is written. Doc 36 surfaces missing Conceptualize matches as explicit review metadata, keeps suggested new concepts behind user action, and now hardens the manual new-subtype proposal path with parent-id and node-id collision revalidation. Doc 37 projects correction/proposal facts into bounded user-fit signals, has a DB-backed facts reader that loads bounded recent history without persistence of learned scores or mutation, feeds matching current-scope user-fit signals into Conceptualize ContextPacks, and now exposes a pure checker selector that can consume the same `userFit` section. Doc 38 adds a target-version contract and base-profile apply helper/service for persisted profile definitions, with the base helper now documenting the synthetic patch-to-overlay adapter, keeping relationship type ids opaque per the branch-local apply decision, validating base target/profile id consistency, and routing base/core proposals through the proposal review UI. A1 (passing `ActiveDomainProfileActivationInput` into `prepareSaveCandidates`) was explicitly rejected; composition still belongs elsewhere.
-
-The runtime profile coordinator decision is now locked (doc 11). The brain mixer is an explicit separate layer above runtime services. Services receive composed `DomainProfile`, do not know branch groups, do not call activation input resolvers, and do not read hidden global active-profile state. Service-owned mixing, UI-screen-owned mixing, hidden global `getRuntimeProfile()` / active-profile store, and persistence-owned composed profile were all explicitly rejected.
-
-The coordinator helper module is now implemented and tested. The correction evidence, branch/overlay persistence, project profile selection, static ProfileRegistry, runtime activation, profile definitions, adaptive suggestion policy, proposal storage, Conceptualize correction scope, trust settings, branch-local apply, base/core apply, proposal events, ContextPack assembly/selection, prompt builder, Extractor Flip, raw proposed type identity, near-miss persistence, missing-concept UX/revalidation, user-fit projection/history/context consumption, doc 39 draft/provenance/handoff/superseding/event-history/edit-replacement/editor slices, doc 40 branch revision/freshness/readout/refresh slices, and doc 41 pure checker/runtime slices are implemented and tested. Doc 39 still lacks target switching and one-click direct Conceptualize Apply. Doc 41 still lacks the user-facing checker trigger/readout and concrete LLM/provider adapter implementation. The remaining open decision/implementation gaps are:
-
-```text
-1. Wire the manual checker runtime into a user-facing `Run checker now` trigger/readout, using the existing proposal review surface for created proposals.
-2. Decide whether target-layer switching belongs in the proposal editor now or should remain deferred until branch/profile selection UI exists.
-3. Agent/subagent execution ontology brief.
-4. Self-building-app framework brief.
-```
-
-Good next work should stay behind a human decision gate. Likely candidates:
-
-```text
-1. Wire the doc 41 checker UI trigger/readout to `runManualOntologyChecker()`.
-```
-
-The user also wants Kortex profile branches: a general coding child should be extendable into project, job, learning, or personal branches that can stay separate or later merge selected changes back. "Core" means immutable within a profile lineage; a fork/user can create a different ground-zero base profile later. Read `06_PROFILE_BRANCHING_AND_MERGE.md` before proposing correction/checker storage or UI.
-
-Updated framing: Kortex Core is the ontology/graph/versioned reasoning core. CodeLens/coding is the first child core/wrapper. Do not design future branch, graph, relationship, or correction code as if CodeLens is the boundary of the system.
+- The model may suggest taxonomy/profile changes; it must not silently apply them.
+- User/profile-owner approval is required before ontology suggestions become durable profile changes.
+- Prefer improving boundary rules before adding new categories, but V0 checker cannot emit boundary-rule operations until a typed operation vocabulary exists.
+- Every checker suggestion must include evidence IDs and a reason.
+- Do not rewrite user captures during ontology review.
+- Do not invent source evidence.
+- Do not make the app generic in a way that weakens the coding product.
+- Do not let Kortex Core depend on CodeLens UI or coding-only relationship assumptions.
+- Do not persist composed runtime profiles as canonical truth.
+- Do not expose hidden near-miss diagnostics as visible extra tags.
+- Do not use labels as durable node identity across scopes.
 
 Important relationship-semantics caution before implementation:
 
@@ -670,7 +210,7 @@ Important overlay caution before implementation:
 ```text
 Kortex may later sit over existing systems through read/write/sync adapters.
 It should be non-destructive by default: understand first, write back only by explicit approval/policy.
-Do not build source sync, file watchers, static analysis, MCP, or write-back in the current composition slice.
+Do not build source sync, file watchers, static analysis, MCP, or write-back in the current branch unless explicitly asked.
 ```
 
 Important agent/subagent caution before implementation:
@@ -687,26 +227,3 @@ Important self-building-app caution before implementation:
 Kortex may later be the framework behind self-building apps: intent -> project ontology -> constrained subagents -> generated/modified app -> corrections feed ontology.
 This is architecture direction only. Do not add app-builder runtime, code-generation orchestration, generated-app persistence, or source write-back in the current branch unless explicitly asked.
 ```
-
-Good next bounded slice:
-
-```text
-Checker UI trigger/readout:
-  - proposal lifecycle, freshness, refresh, same-target edit UI, and manual checker runtime service now exist
-  - doc 41 still needs a user-facing `Run checker now` trigger plus concrete adapter implementation
-  - created checker proposals must flow into the existing proposal review/edit/freshness/apply surface
-  - doc 39 target switching and direct Apply from edit remain deferred unless explicitly reopened
-```
-
-## Guardrails For Next Worker
-
-- The model may suggest taxonomy/profile changes; it must not silently apply them.
-- User/profile-owner approval is required before ontology suggestions become durable profile changes.
-- Prefer improving boundary rules before adding new categories.
-- Every checker suggestion must include evidence IDs and a reason.
-- Do not rewrite user captures during ontology review.
-- Do not invent source evidence.
-- Do not make the app generic in a way that weakens the coding product.
-- Do not let Kortex Core depend on CodeLens UI or coding-only relationship assumptions.
-- Do not introduce a new runtime/language dependency before the TypeScript core seams are stable.
-- Do not make Kortex assume it owns every source entity; future overlays may reference external systems.

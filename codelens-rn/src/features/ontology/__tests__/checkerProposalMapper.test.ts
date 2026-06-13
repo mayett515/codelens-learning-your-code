@@ -129,13 +129,14 @@ function outputWithLabels(labels: readonly string[]): CheckerPromptOutput {
 
 function mapOutput(input: {
   output?: CheckerPromptOutput | undefined;
+  pack?: ContextPack | undefined;
   targetBranch?: { branchId: string; updatedAt: number } | null | undefined;
   existingPendingProposals?: readonly ProfileChangeProposal[] | undefined;
   maxProposals?: number | undefined;
 } = {}) {
   return mapCheckerOutputToProfileChangeProposals({
     output: input.output ?? outputWithLabels(['React render timing']),
-    pack: makePack(),
+    pack: input.pack ?? makePack(),
     targetBranch: Object.prototype.hasOwnProperty.call(input, 'targetBranch')
       ? input.targetBranch ?? null
       : { branchId: 'react-project', updatedAt: 42 },
@@ -252,6 +253,56 @@ describe('checker proposal mapper', () => {
       ...proposal,
       evidenceIds: [],
     })).toThrow(/require evidence ids/);
+  });
+
+  it('expands aggregate evidence claim ids to their concrete backing evidence rows', () => {
+    const aggregatePack = makePack({
+      evidenceClaims: [
+        {
+          evidenceId: 'evidence-3',
+          previousNodeRef: ref('react-project', 'effect'),
+          correctedNodeRef: ref('react-project', 'frontend'),
+          reason: 'The aggregate representative is the newest correction row.',
+          patternFrequency: 3,
+          latestAt: 90,
+          crossScope: false,
+          sourceEvidenceIds: ['evidence-3', 'evidence-2', 'evidence-1'],
+          sourceIds: ['capture-3', 'capture-2', 'capture-1'],
+        },
+      ],
+    });
+
+    const aggregateCitation = mapOutput({
+      pack: aggregatePack,
+      output: {
+        ...outputWithLabels(['React render timing']),
+        findings: [
+          {
+            ...outputWithLabels(['React render timing']).findings[0],
+            evidenceIds: ['evidence-3'],
+          },
+        ],
+      },
+    });
+    expect(aggregateCitation.proposals[0]?.evidenceIds).toEqual([
+      'evidence-3',
+      'evidence-2',
+      'evidence-1',
+    ]);
+
+    const concreteCitation = mapOutput({
+      pack: aggregatePack,
+      output: {
+        ...outputWithLabels(['Specific row only']),
+        findings: [
+          {
+            ...outputWithLabels(['Specific row only']).findings[0],
+            evidenceIds: ['evidence-2'],
+          },
+        ],
+      },
+    });
+    expect(concreteCitation.proposals[0]?.evidenceIds).toEqual(['evidence-2']);
   });
 
   it('returns explanation only when no active branch target exists', () => {

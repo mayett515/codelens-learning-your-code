@@ -114,6 +114,16 @@ export type {
   ProfileChangeProposalEditServiceErrorCode,
 } from './profileChangeProposalEditService';
 export {
+  ProfileChangeProposalTargetSwitchServiceError,
+  switchProfileChangeProposalTargetToBase,
+} from './profileChangeProposalTargetSwitchService';
+export type {
+  ProfileChangeProposalTargetSwitchServiceDependencies,
+  ProfileChangeProposalTargetSwitchServiceErrorCode,
+  SwitchProfileChangeProposalTargetToBaseInput,
+  SwitchProfileChangeProposalTargetToBaseResult,
+} from './profileChangeProposalTargetSwitchService';
+export {
   profileBranchKeys,
   profileProposalEventKeys,
   profileProposalFreshnessKeys,

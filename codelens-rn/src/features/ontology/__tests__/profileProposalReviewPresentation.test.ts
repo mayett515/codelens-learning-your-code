@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { BranchLocalProposalApplyError } from '../branchLocalProposalApply';
+import { BaseProfileProposalApplyError } from '../baseProfileProposalApply';
 import {
   buildEditedProposalDraft,
   createProposalEditorModel,
+  formatCheckerRunSummary,
+  formatCheckerSkipReason,
   formatApplyActionLabel,
   formatApplySuccessMessage,
   formatConfidence,
@@ -15,6 +18,7 @@ import {
   formatRiskDescription,
   formatRiskLabel,
   formatTarget,
+  formatTargetSwitchFailureMessage,
   summarizePatch,
 } from '../ui/profileProposalReviewPresentation';
 import type { ProfileChangeProposal, ProfileProposalEvent } from '../types';
@@ -309,6 +313,56 @@ describe('profile proposal review presentation helpers', () => {
     expect(formatApplySuccessMessage(baseProposal)).toContain('Derived branches');
   });
 
+  it('formats checker run summaries and skipped findings for the review surface', () => {
+    expect(formatCheckerRunSummary({
+      proposals: [{ id: 'proposal-1' }],
+      explanation: {
+        summary: 'One missing type.',
+        relationshipOrBoundaryObservations: [],
+        skippedFindings: [],
+      },
+    })).toContain('1 pending proposal');
+
+    expect(formatCheckerRunSummary({
+      proposals: [{ id: 'proposal-1' }, { id: 'proposal-2' }],
+      explanation: {
+        summary: 'Two missing types.',
+        relationshipOrBoundaryObservations: [],
+        skippedFindings: [],
+      },
+    })).toContain('2 pending proposals');
+
+    expect(formatCheckerRunSummary({
+      proposals: [],
+      explanation: {
+        summary: 'Skipped stale output.',
+        relationshipOrBoundaryObservations: [],
+        skippedFindings: [{ label: 'React timing', reason: 'patch-conflict' }],
+      },
+    })).toContain('skipped findings');
+
+    expect(formatCheckerRunSummary({
+      proposals: [],
+      explanation: {
+        summary: 'Nothing to do.',
+        relationshipOrBoundaryObservations: [],
+        skippedFindings: [],
+      },
+    })).toContain('no new branch-local proposals');
+
+    expect(formatCheckerSkipReason({ label: 'React timing', reason: 'no-active-branch' })).toContain('active branch');
+    expect(formatCheckerSkipReason({ label: '!!!', reason: 'invalid-node-id' })).toContain('stable ontology node id');
+    expect(formatCheckerSkipReason({ label: 'Unknown', reason: 'unknown-evidence' })).toContain('outside the checker context');
+    expect(formatCheckerSkipReason({ label: 'Duplicate', reason: 'duplicate-output-node' })).toContain('duplicates');
+    expect(formatCheckerSkipReason({
+      label: 'Pending',
+      reason: 'duplicate-pending-proposal',
+      existingProposalId: 'proposal-9',
+    })).toContain('proposal-9');
+    expect(formatCheckerSkipReason({ label: 'Overflow', reason: 'proposal-cap' })).toContain('cap');
+    expect(formatCheckerSkipReason({ label: 'Stale', reason: 'patch-conflict' })).toContain('current branch');
+  });
+
   it('formats proposal event history as compact audit copy', () => {
     expect(formatProposalEventSummary(makeEvent())).toBe('Applied: pending to accepted.');
     expect(formatProposalEventSummary(makeEvent({
@@ -368,13 +422,21 @@ describe('profile proposal review presentation helpers', () => {
       ['proposal_write_conflict', 'proposal changed'],
       ['proposal_not_refreshable', 'not refreshable'],
       ['proposal_refresh_time_invalid', 'timestamp'],
+      ['proposal_target_switch_time_invalid', 'target switch'],
+      ['context_pack_invalid', 'Checker context'],
+      ['checker_output_invalid', 'Checker output'],
+      ['checker_model_missing', 'model adapter'],
       ['profile_definition_write_conflict', 'base profile changed'],
       ['proposal_not_pending', 'already been reviewed'],
       ['proposal_not_branch_target', 'branch-local proposals'],
       ['proposal_not_base_target', 'base-profile proposals'],
       ['proposal_kind_not_supported', 'dedicated apply flow'],
+      ['patch_not_single_additive_item_type', 'target-switching flow'],
+      ['target_branch_missing', 'branch target snapshot'],
+      ['base_profile_missing', 'base profile version'],
       ['proposal_not_found', 'no longer exists'],
       ['branch_not_found', 'target branch'],
+      ['branch_base_mismatch', 'selected base profile'],
       ['profile_definition_not_found', 'target base profile'],
       ['proposal_review_time_invalid', 'timestamp'],
       ['proposal_apply_time_invalid', 'timestamp'],
@@ -398,5 +460,13 @@ describe('profile proposal review presentation helpers', () => {
       new BranchLocalProposalApplyError('patch_conflict', 'patch conflict'),
       'base_profile',
     )).toContain('base profile has changed');
+  });
+
+  it('formats target-switch failures with branch-only-parent copy', () => {
+    expect(formatTargetSwitchFailureMessage(new BaseProfileProposalApplyError(
+      'patch_conflict',
+      'Cannot set parent branch_only_parent for ontology node render_timing.',
+    ))).toContain('only fits the branch target');
+    expect(formatTargetSwitchFailureMessage({ code: 'proposal_not_pending' })).toContain('already been reviewed');
   });
 });

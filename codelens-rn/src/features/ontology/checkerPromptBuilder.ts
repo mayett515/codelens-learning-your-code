@@ -70,6 +70,7 @@ export interface CheckerPromptPayload {
       refKey: string;
       label: string;
       meaning: string;
+      isItemType: boolean;
       useWhen: readonly string[];
       doNotUseWhen: readonly string[];
       examples: readonly string[];
@@ -91,6 +92,7 @@ export interface CheckerPromptPayload {
       patternFrequency: number;
       latestAt: number;
       crossScope: boolean;
+      sourceEvidenceIds: readonly string[];
       sourceIds: readonly string[];
     }>;
     omittedCount: number;
@@ -168,6 +170,7 @@ export type CheckerPromptOutputValidationCode =
   | 'schema'
   | 'wrong-consumer'
   | 'unknown-ref'
+  | 'invalid-parent-ref'
   | 'unknown-evidence'
   | 'duplicate-finding';
 
@@ -204,7 +207,7 @@ export function buildCheckerPrompt(input: BuildCheckerPromptInput): CheckerPromp
     ].join('\n\n'),
     outputSchemaName: 'CheckerPromptOutputSchema',
     allowedNodeRefKeys: dataPayload.ontology.allowedNodeRefKeys,
-    allowedEvidenceIds: dataPayload.evidence.claims.map((claim) => claim.evidenceId),
+    allowedEvidenceIds: evidenceIdsAllowedForCheckerOutput(input.pack),
   };
 }
 
@@ -235,8 +238,9 @@ export function validateCheckerPromptOutput(
     });
   }
 
-  const allowedNodeRefKeys = new Set(pack.ontology.nodes.map((node) => scopedNodeRefKey(node.ref)));
-  const allowedEvidenceIds = new Set(pack.evidence.claims.map((claim) => claim.evidenceId));
+  const nodesByRefKey = new Map(pack.ontology.nodes.map((node) => [scopedNodeRefKey(node.ref), node]));
+  const allowedNodeRefKeys = new Set(nodesByRefKey.keys());
+  const allowedEvidenceIds = new Set(evidenceIdsAllowedForCheckerOutput(pack));
   const seenFindings = new Set<string>();
   const output = parsed.data;
 
@@ -247,6 +251,12 @@ export function validateCheckerPromptOutput(
         code: 'unknown-ref',
         path: `findings[${index}].parentNodeRef`,
         message: `${parentKey} is not present in this ContextPack.`,
+      });
+    } else if (parentKey && nodesByRefKey.get(parentKey)?.isItemType !== true) {
+      errors.push({
+        code: 'invalid-parent-ref',
+        path: `findings[${index}].parentNodeRef`,
+        message: `${parentKey} is not an item-type node in this ContextPack.`,
       });
     }
 
@@ -308,6 +318,7 @@ function buildPromptPayload(pack: ContextPack): CheckerPromptPayload {
         refKey: scopedNodeRefKey(node.ref),
         label: node.label,
         meaning: node.meaning,
+        isItemType: node.isItemType === true,
         useWhen: [...node.useWhen],
         doNotUseWhen: [...node.doNotUseWhen],
         examples: [...node.examples],
@@ -330,6 +341,7 @@ function buildPromptPayload(pack: ContextPack): CheckerPromptPayload {
         patternFrequency: claim.patternFrequency,
         latestAt: claim.latestAt,
         crossScope: claim.crossScope,
+        sourceEvidenceIds: [...(claim.sourceEvidenceIds ?? [])],
         sourceIds: [...claim.sourceIds],
       })),
       omittedCount: pack.evidence.omittedCount,
@@ -401,15 +413,28 @@ function buildInstructionShell(): string {
     'You are the Kordex ontology checker.',
     'Use KORDEX_CHECKER_CONTEXT_PAYLOAD_JSON as the only ontology, evidence, proposal, and user-fit map for this run.',
     'Return JSON only, matching CheckerPromptOutputSchema.',
+    'Do not include markdown fences.',
+    'Do not include prose outside the JSON object.',
     'This run is manual-on-demand and proposal-only. Do not claim that you changed ontology, profiles, captures, or old notes.',
     'Emit zero findings when the evidence does not support a concrete missing branch-local item type.',
     'Do not fill proposal slots. The maximum is a cap, not a quota.',
     'The only supported finding kind is missing_branch_item_type.',
-    'Use parentNodeRef only when the parent scoped ref exists in ontology.allowedNodeRefKeys.',
-    'Every finding must reference evidenceIds from evidence.claims. Do not invent evidence ids.',
+    'Use parentNodeRef only when the parent scoped ref exists in ontology.allowedNodeRefKeys and that ontology node has isItemType true.',
+    'Every finding must reference evidenceIds from evidence.claims evidenceId or sourceEvidenceIds. Do not invent evidence ids.',
     'Relationship, boundary, split, merge, rename, move, deprecate, base/core, maturity, and temporary-tag observations belong only in explanation.relationshipOrBoundaryObservations.',
     'Do not output proposed node ids, target fields, risk, sourceKind, proposalKind, status, createdBy, or persistence metadata. Kordex owns those fields.',
   ].join('\n');
+}
+
+function evidenceIdsAllowedForCheckerOutput(pack: ContextPack): string[] {
+  const ids = new Set<string>();
+  for (const claim of pack.evidence.claims) {
+    ids.add(claim.evidenceId);
+    for (const sourceEvidenceId of claim.sourceEvidenceIds ?? []) {
+      ids.add(sourceEvidenceId);
+    }
+  }
+  return [...ids];
 }
 
 function cloneRef(ref: ScopedNodeRef): ScopedNodeRef {

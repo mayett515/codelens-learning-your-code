@@ -71,7 +71,8 @@ export function mapCheckerOutputToProfileChangeProposals(
 
   const targetBranch = input.targetBranch;
   const maxProposals = normalizeMaxProposals(input.maxProposals);
-  const knownEvidenceIds = new Set(input.pack.evidence.claims.map((claim) => claim.evidenceId));
+  const evidenceIdsByCitableId = indexEvidenceIdsByCitableId(input.pack);
+  const knownEvidenceIds = new Set(evidenceIdsByCitableId.keys());
   const existingNodeIds = new Set(input.pack.ontology.nodes.map((node) => node.ref.nodeId));
   const existingPendingByNodeId = indexExistingPendingProposals(
     input.existingPendingProposals ?? [],
@@ -134,7 +135,7 @@ export function mapCheckerOutputToProfileChangeProposals(
       },
       targetProfileVersion: null,
       targetBranchUpdatedAt: targetBranch.updatedAt,
-      evidenceIds: [...finding.evidenceIds],
+      evidenceIds: expandFindingEvidenceIds(finding.evidenceIds, evidenceIdsByCitableId),
       patch: {
         addOntologyNodes: [buildCheckerNode({
           id: nodeId,
@@ -219,6 +220,38 @@ function buildCheckerNode(input: {
     createdAt: input.now,
     updatedAt: input.now,
   };
+}
+
+function indexEvidenceIdsByCitableId(pack: ContextPack): Map<string, readonly string[]> {
+  const result = new Map<string, readonly string[]>();
+  for (const claim of pack.evidence.claims) {
+    const sourceEvidenceIds = claim.sourceEvidenceIds?.length
+      ? [...claim.sourceEvidenceIds]
+      : [claim.evidenceId];
+    result.set(claim.evidenceId, sourceEvidenceIds);
+    for (const sourceEvidenceId of sourceEvidenceIds) {
+      if (result.has(sourceEvidenceId)) continue;
+      result.set(sourceEvidenceId, [sourceEvidenceId]);
+    }
+  }
+  return result;
+}
+
+function expandFindingEvidenceIds(
+  evidenceIds: readonly string[],
+  evidenceIdsByCitableId: ReadonlyMap<string, readonly string[]>,
+): string[] {
+  const result: string[] = [];
+  const seen = new Set<string>();
+  for (const evidenceId of evidenceIds) {
+    const expanded = evidenceIdsByCitableId.get(evidenceId) ?? [evidenceId];
+    for (const concreteEvidenceId of expanded) {
+      if (seen.has(concreteEvidenceId)) continue;
+      seen.add(concreteEvidenceId);
+      result.push(concreteEvidenceId);
+    }
+  }
+  return result;
 }
 
 function indexExistingPendingProposals(

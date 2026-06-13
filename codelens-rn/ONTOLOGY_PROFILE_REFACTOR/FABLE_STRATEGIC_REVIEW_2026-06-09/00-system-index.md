@@ -3,11 +3,12 @@ version: "1.0.0"
 model_target: "universal-architecture-reviewer"
 protocol_compat: "not-runtime-protocol"
 dependencies: ["ONTOLOGY_PROFILE_REFACTOR/README.md", "05_ANTI_REGRESSION_RULES.md"]
-last_updated: "2026-06-09"
+last_updated: "2026-06-12"
 priority_schema: "critical > strong > guideline"
 source_review: "Claude Fable strategic architecture review, 2026-06-09"
-status: "review-pack"
+status: "historical-review-pack"
 authority: "review-guidance"
+folded_into: ["05_ANTI_REGRESSION_RULES.md", "README.md", "00_DOC_SYNC.md", "NEXT_LLM_CONTEXT.md"]
 ---
 
 # Fable Strategic Review Pack
@@ -19,9 +20,10 @@ ontology/profile decisions and summarizes Fable's external architecture critique
 </meta-instruction>
 
 <lifecycle>
-After the planned documentation consolidation pass, fold durable bans into
-`05_ANTI_REGRESSION_RULES.md`, fold durable routing guidance into `README.md` or
-`00_DOC_SYNC.md`, and mark this review pack historical.
+The documentation consolidation pass is complete. Durable bans were folded into
+`05_ANTI_REGRESSION_RULES.md`, durable routing guidance was folded into `README.md`,
+`00_DOC_SYNC.md`, and `NEXT_LLM_CONTEXT.md`, and this review pack is now historical
+review guidance.
 </lifecycle>
 
 ## 1. Routing Logic

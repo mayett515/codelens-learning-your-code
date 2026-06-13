@@ -63,6 +63,7 @@ export interface ContextOntologyNode {
   ref: ScopedNodeRef;
   label: string;
   meaning: string;
+  isItemType?: boolean | undefined;
   useWhen: readonly string[];
   doNotUseWhen: readonly string[];
   examples: readonly string[];
@@ -94,6 +95,7 @@ export interface ContextEvidenceClaim {
   patternFrequency: number;
   latestAt: number;
   crossScope: boolean;
+  sourceEvidenceIds?: readonly string[] | undefined;
   sourceIds: readonly string[];
 }
 
@@ -369,7 +371,10 @@ export function assembleContextPack(input: AssembleContextPackInput): ContextPac
   const selectedNodes = selectOntologyNodes(ontologyCandidates, caps.maxNodes, truncationLog);
   const sameLabelSiblings = buildSameLabelSiblingGroups(selectedNodes);
 
-  const evidenceCandidates = dedupeBy(input.evidenceClaims ?? [], (claim) => claim.evidenceId);
+  const evidenceCandidates = dedupeBy(
+    (input.evidenceClaims ?? []).map(normalizeEvidenceClaimInput),
+    (claim) => claim.evidenceId,
+  );
   const selectedEvidence = selectWithPinned(
     evidenceCandidates,
     // No ranking in this slice: all cross-scope evidence is pinned because it
@@ -528,6 +533,7 @@ function normalizeCaps(caps: Partial<ContextBudgetCaps> | undefined): ContextBud
 function normalizeOntologyNodeInput(node: ContextOntologyNodeInput): ContextOntologyNodeInput {
   return {
     ...node,
+    isItemType: node.isItemType === true,
     useWhen: [...node.useWhen],
     doNotUseWhen: [...node.doNotUseWhen],
     examples: [...node.examples],
@@ -535,6 +541,17 @@ function normalizeOntologyNodeInput(node: ContextOntologyNodeInput): ContextOnto
       typeNodeRef: relationship.typeNodeRef,
       targetNodeRef: relationship.targetNodeRef,
     })),
+  };
+}
+
+function normalizeEvidenceClaimInput(claim: ContextEvidenceClaimInput): ContextEvidenceClaimInput {
+  return {
+    ...claim,
+    ...(claim.subjectNodeRef ? { subjectNodeRef: cloneScopedNodeRef(claim.subjectNodeRef) } : {}),
+    ...(claim.previousNodeRef ? { previousNodeRef: cloneScopedNodeRef(claim.previousNodeRef) } : {}),
+    ...(claim.correctedNodeRef ? { correctedNodeRef: cloneScopedNodeRef(claim.correctedNodeRef) } : {}),
+    ...(claim.sourceEvidenceIds ? { sourceEvidenceIds: [...claim.sourceEvidenceIds] } : {}),
+    sourceIds: [...claim.sourceIds],
   };
 }
 

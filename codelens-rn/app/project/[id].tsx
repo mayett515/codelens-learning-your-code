@@ -462,6 +462,14 @@ export default function ProjectViewerScreen() {
           <Text style={styles.bookmarksBtnText}>Bookmarks</Text>
         </Pressable>
         <Pressable
+          style={styles.learnBtn}
+          onPress={() => router.push({ pathname: '/learning', params: { projectId } })}
+          accessibilityRole="button"
+          accessibilityLabel="Open learning hub for this project"
+        >
+          <Text style={styles.learnBtnText}>Learn</Text>
+        </Pressable>
+        <Pressable
           style={[styles.modeToggle, mode === 'mark' && styles.modeToggleMark]}
           onPress={toggleMode}
         >
@@ -673,6 +681,19 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   bookmarksBtnText: {
+    color: colors.textSecondary,
+    fontSize: fontSize.sm,
+    fontWeight: '600',
+  },
+  learnBtn: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs + 2,
+    borderRadius: 6,
+    backgroundColor: colors.surfaceLight,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  learnBtnText: {
     color: colors.textSecondary,
     fontSize: fontSize.sm,
     fontWeight: '600',

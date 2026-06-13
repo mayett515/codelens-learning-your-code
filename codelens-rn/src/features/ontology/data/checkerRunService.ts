@@ -269,9 +269,12 @@ function buildManualCheckerContext(input: {
   selectionTrace: readonly ContextSelectionTraceEntry[];
 } {
   const ontologyNodes = buildOntologyNodeCandidates(input.baseProfile, input.branch);
-  const evidenceClaims = input.facts.correctionEvidence
-    .filter((evidence) => evidenceMatchesBranch(evidence, input.branch))
-    .map((evidence) => toContextEvidenceClaim(evidence, ontologyNodes, input.baseProfile.id, input.branch.id));
+  const evidenceClaims = aggregateCorrectionEvidenceClaims({
+    correctionEvidence: input.facts.correctionEvidence.filter((evidence) => evidenceMatchesBranch(evidence, input.branch)),
+    ontologyNodes,
+    baseProfileId: input.baseProfile.id,
+    branch: input.branch,
+  });
   const projection = projectUserFitSignals({
     baseProfileId: input.baseProfile.id,
     correctionEvidence: input.facts.correctionEvidence,
@@ -411,8 +414,10 @@ function buildOntologyNodeCandidates(
   branch: ProfileBranch,
 ): ContextOntologyNodeInput[] {
   const candidates: ContextOntologyNodeInput[] = [];
+  const baseItemTypeIds = new Set(baseProfile.ontology.itemTypeNodeIds);
+  const branchItemTypeIds = itemTypeIdsForBranchContext(baseProfile, branch);
   for (const node of baseProfile.ontology.nodes) {
-    candidates.push(toContextOntologyNodeInput(baseProfile.id, node));
+    candidates.push(toContextOntologyNodeInput(baseProfile.id, node, baseItemTypeIds.has(node.id)));
   }
 
   const overlay = branch.overlay;
@@ -422,7 +427,7 @@ function buildOntologyNodeCandidates(
     ...(overlay.overrideOntology?.nodes ?? []),
   ];
   for (const node of branchNodes) {
-    candidates.push(toContextOntologyNodeInput(branch.id, node));
+    candidates.push(toContextOntologyNodeInput(branch.id, node, branchItemTypeIds.has(node.id)));
   }
 
   return candidates;
@@ -431,6 +436,7 @@ function buildOntologyNodeCandidates(
 function toContextOntologyNodeInput(
   scopeId: string,
   node: OntologyNode,
+  isItemType: boolean,
 ): ContextOntologyNodeInput {
   return {
     ref: {
@@ -439,11 +445,68 @@ function toContextOntologyNodeInput(
     },
     label: node.label,
     meaning: node.meaning,
+    isItemType,
     useWhen: [...node.useWhen],
     doNotUseWhen: node.doNotUseWhen.map((rule) => rule.text),
     examples: [...node.examples],
     relationshipRefs: [],
   };
+}
+
+function itemTypeIdsForBranchContext(
+  baseProfile: DomainProfile,
+  branch: ProfileBranch,
+): Set<string> {
+  return new Set([
+    ...baseProfile.ontology.itemTypeNodeIds,
+    ...(branch.overlay.addItemTypeNodeIds ?? []),
+    ...(branch.overlay.overrideOntology?.itemTypeNodeIds ?? []),
+  ]);
+}
+
+function aggregateCorrectionEvidenceClaims(input: {
+  correctionEvidence: readonly OntologyCorrectionEvidence[];
+  ontologyNodes: readonly ContextOntologyNodeInput[],
+  baseProfileId: string;
+  branch: ProfileBranch;
+}): ContextEvidenceClaimInput[] {
+  const groups = new Map<string, ContextEvidenceClaimInput>();
+
+  for (const evidence of input.correctionEvidence) {
+    const claim = toContextEvidenceClaim(evidence, input.ontologyNodes, input.baseProfileId, input.branch.id);
+    const key = correctionEvidencePatternKey(evidence, claim);
+    const existing = groups.get(key);
+    if (!existing) {
+      groups.set(key, {
+        ...claim,
+        sourceEvidenceIds: [evidence.id],
+      });
+      continue;
+    }
+
+    const isNewest = claim.latestAt >= existing.latestAt;
+    groups.set(key, {
+      ...existing,
+      ...(isNewest ? {
+        evidenceId: claim.evidenceId,
+        latestAt: claim.latestAt,
+        ...(claim.reason ? { reason: claim.reason } : {}),
+      } : {}),
+      patternFrequency: existing.patternFrequency + 1,
+      sourceEvidenceIds: uniqueStrings([
+        ...(isNewest ? [claim.evidenceId] : []),
+        ...(existing.sourceEvidenceIds ?? [existing.evidenceId]),
+        ...(!isNewest ? [claim.evidenceId] : []),
+      ]),
+      sourceIds: uniqueStrings([
+        ...(isNewest ? claim.sourceIds : []),
+        ...existing.sourceIds,
+        ...(!isNewest ? claim.sourceIds : []),
+      ]),
+    });
+  }
+
+  return [...groups.values()].sort(compareEvidenceClaimsForChecker);
 }
 
 function toContextEvidenceClaim(
@@ -470,8 +533,33 @@ function toContextEvidenceClaim(
     patternFrequency: 1,
     latestAt: evidence.createdAt,
     crossScope: false,
+    sourceEvidenceIds: [evidence.id],
     sourceIds: [evidence.subjectId],
   };
+}
+
+function correctionEvidencePatternKey(
+  evidence: OntologyCorrectionEvidence,
+  claim: ContextEvidenceClaimInput,
+): string {
+  return [
+    userFitActiveSelectionScopeKey(evidence.activeSelectionSnapshot),
+    evidence.field,
+    claim.previousNodeRef ? scopedRefPatternKey(claim.previousNodeRef) : '-',
+    claim.correctedNodeRef ? scopedRefPatternKey(claim.correctedNodeRef) : '-',
+  ].join('\u0000');
+}
+
+function scopedRefPatternKey(ref: ScopedNodeRef): string {
+  return `${ref.scopeId}:${ref.nodeId}`;
+}
+
+function compareEvidenceClaimsForChecker(a: ContextEvidenceClaimInput, b: ContextEvidenceClaimInput): number {
+  return b.patternFrequency - a.patternFrequency || b.latestAt - a.latestAt || a.evidenceId.localeCompare(b.evidenceId);
+}
+
+function uniqueStrings(values: readonly string[]): string[] {
+  return [...new Set(values)];
 }
 
 function toContextProposalEventSignal(event: ProfileProposalEvent): ContextProposalEventSignalInput {

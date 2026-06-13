@@ -280,6 +280,7 @@ function selectEvidenceClaims(
     cloneIncluded: (claim, pinned) => ({
       ...claim,
       pinned,
+      sourceEvidenceIds: claim.sourceEvidenceIds ? [...claim.sourceEvidenceIds] : undefined,
       sourceIds: [...claim.sourceIds],
     }),
     trace,

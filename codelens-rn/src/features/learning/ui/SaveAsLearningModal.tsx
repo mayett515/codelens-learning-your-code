@@ -325,7 +325,15 @@ export function SaveAsLearningModal() {
             onRequestClose={() => setReviewProposalId(null)}
           >
             <ProfileProposalReviewScreen
+              projectId={store.source?.projectId ?? null}
               initialProposalId={reviewProposalId}
+              checkerTarget={profileContext.proposalTarget.kind === 'profile_branch'
+                ? {
+                    baseProfileId: profileContext.baseProfile.id,
+                    targetBranchId: profileContext.proposalTarget.branchId,
+                    label: proposalTargetSummary.label,
+                  }
+                : undefined}
               onClose={() => setReviewProposalId(null)}
             />
           </Modal>

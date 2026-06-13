@@ -73,8 +73,8 @@ function makePack(overrides: Partial<AssembleContextPackInput> = {}): ContextPac
     },
     ontologyNodes: [
       node('react-project', 'effect', 'Effect', { pinned: true }),
-      node('react-project', 'frontend', 'Frontend'),
-      node('coding', 'concept', 'Concept'),
+      node('react-project', 'frontend', 'Frontend', { isItemType: true }),
+      node('coding', 'concept', 'Concept', { isItemType: true }),
     ],
     evidenceClaims: [
       {
@@ -85,6 +85,7 @@ function makePack(overrides: Partial<AssembleContextPackInput> = {}): ContextPac
         patternFrequency: 3,
         latestAt: 90,
         crossScope: false,
+        sourceEvidenceIds: ['evidence-1', 'evidence-2'],
         sourceIds: ['capture-1', 'capture-2'],
       },
     ],
@@ -146,11 +147,26 @@ describe('checker prompt builder', () => {
     expect(result.outputSchemaName).toBe('CheckerPromptOutputSchema');
     expect(result.instructionShell).toContain('Do not fill proposal slots');
     expect(result.instructionShell).toContain('Do not output proposed node ids');
+    expect(result.instructionShell).toContain('Do not include markdown fences');
+    expect(result.instructionShell).toContain('Do not include prose outside the JSON object');
     expect(result.allowedNodeRefKeys).toEqual(expect.arrayContaining([
       'react-project:effect',
       'react-project:frontend',
     ]));
-    expect(result.allowedEvidenceIds).toEqual(['evidence-1']);
+    expect(result.dataPayload.ontology.nodes).toContainEqual(expect.objectContaining({
+      refKey: 'react-project:frontend',
+      isItemType: true,
+    }));
+    expect(result.dataPayload.ontology.nodes).toContainEqual(expect.objectContaining({
+      refKey: 'react-project:effect',
+      isItemType: false,
+    }));
+    expect(result.dataPayload.evidence.claims[0]).toMatchObject({
+      evidenceId: 'evidence-1',
+      sourceEvidenceIds: ['evidence-1', 'evidence-2'],
+      patternFrequency: 3,
+    });
+    expect(result.allowedEvidenceIds).toEqual(['evidence-1', 'evidence-2']);
     expect(result.dataPayload.policy.allowedFindingKinds).toEqual(['missing_branch_item_type']);
     expect(result.dataPayload.proposals.pendingSnapshots).toHaveLength(1);
     expect(result.promptText).toContain('KORDEX_CHECKER_CONTEXT_PAYLOAD_JSON');
@@ -219,6 +235,28 @@ describe('checker prompt builder', () => {
       'unknown-evidence',
       'duplicate-finding',
     ]));
+  });
+
+  it('rejects parent refs that exist but are not item-type nodes', () => {
+    const result = validateCheckerPromptOutput({
+      ...goodOutput(),
+      findings: [
+        {
+          ...goodOutput().findings[0],
+          parentNodeRef: ref('react-project', 'effect'),
+          evidenceIds: ['evidence-2'],
+        },
+      ],
+    }, makePack());
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContainEqual(expect.objectContaining({
+      code: 'invalid-parent-ref',
+      path: 'findings[0].parentNodeRef',
+    }));
+    expect(result.errors).not.toContainEqual(expect.objectContaining({
+      code: 'unknown-evidence',
+    }));
   });
 
   it('refuses non-checker ContextPacks', () => {

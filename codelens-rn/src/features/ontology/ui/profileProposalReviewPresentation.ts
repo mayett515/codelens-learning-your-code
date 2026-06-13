@@ -1,6 +1,10 @@
 import { BranchLocalProposalApplyError } from '../branchLocalProposalApply';
 import { BaseProfileProposalApplyError } from '../baseProfileProposalApply';
 import { BaseProfileVersioningError } from '../baseProfileVersioning';
+import type {
+  CheckerProposalMapperExplanation,
+  CheckerProposalSkippedFinding,
+} from '../checkerProposalMapper';
 import type { ProfileProposalFreshness } from '../profileProposalFreshness';
 import type {
   OntologyNode,
@@ -44,6 +48,11 @@ export type BuildEditedProposalDraftResult =
       ok: false;
       message: string;
     };
+
+export interface CheckerRunPresentationInput {
+  proposals: readonly Pick<ProfileChangeProposal, 'id'>[];
+  explanation: CheckerProposalMapperExplanation;
+}
 
 export function formatRiskLabel(riskScore: number): string {
   if (riskScore >= 70) return 'High risk';
@@ -142,6 +151,41 @@ export function formatRefreshSuccessMessage(proposal: ProfileChangeProposal): st
   return `Created refreshed proposal ${proposal.id}. Review it before applying.`;
 }
 
+export function formatCheckerRunSummary(input: CheckerRunPresentationInput): string {
+  if (input.proposals.length === 1) {
+    return 'Checker created 1 pending proposal. Review it before applying.';
+  }
+  if (input.proposals.length > 1) {
+    return `Checker created ${input.proposals.length} pending proposals. Review them before applying.`;
+  }
+  if (input.explanation.skippedFindings.length > 0) {
+    return 'Checker finished without new proposals. Review the skipped findings below.';
+  }
+  return 'Checker found no new branch-local proposals.';
+}
+
+export function formatCheckerSkipReason(skip: CheckerProposalSkippedFinding): string {
+  const label = skip.label.trim() || 'Finding';
+  switch (skip.reason) {
+    case 'no-active-branch':
+      return `${label}: needs an active branch before Kordex can create branch-local proposals.`;
+    case 'invalid-node-id':
+      return `${label}: the label could not become a stable ontology node id.`;
+    case 'unknown-evidence':
+      return `${label}: referenced evidence outside the checker context.`;
+    case 'duplicate-output-node':
+      return `${label}: duplicates an existing or already suggested ontology node.`;
+    case 'duplicate-pending-proposal':
+      return skip.existingProposalId
+        ? `${label}: already has pending proposal ${skip.existingProposalId}.`
+        : `${label}: already has a pending checker proposal.`;
+    case 'proposal-cap':
+      return `${label}: held back by the per-run proposal cap.`;
+    case 'patch-conflict':
+      return `${label}: no longer fits the current branch state.`;
+  }
+}
+
 export function formatProposalEventSummary(event: ProfileProposalEvent): string {
   switch (event.action) {
     case 'applied':
@@ -184,8 +228,16 @@ export function formatProposalReviewError(
       return 'The proposal timestamp is newer than this refresh action. Refresh the queue and try again.';
     case 'proposal_edit_time_invalid':
       return 'The proposal timestamp is newer than this edit. Refresh the queue and try again.';
+    case 'proposal_target_switch_time_invalid':
+      return 'The proposal timestamp is newer than this target switch. Refresh the queue and try again.';
     case 'replacement_proposal_invalid':
       return 'Kordex could not create a safe replacement proposal. Refresh and try again.';
+    case 'context_pack_invalid':
+      return 'Checker context could not be assembled safely. Refresh and run the checker again.';
+    case 'checker_output_invalid':
+      return 'Checker output was not valid enough to create proposals. Run it again after checking the model connection.';
+    case 'checker_model_missing':
+      return 'Checker model adapter is not available yet.';
     case 'profile_definition_write_conflict':
       return 'The base profile changed while this proposal was open. Refresh and review it again.';
     case 'proposal_not_pending':
@@ -196,10 +248,18 @@ export function formatProposalReviewError(
       return 'Only base-profile proposals can use the core apply path.';
     case 'proposal_kind_not_supported':
       return 'This proposal type needs a dedicated apply flow and cannot be applied here yet.';
+    case 'patch_not_single_additive_item_type':
+      return 'This proposal patch needs a dedicated target-switching flow before it can move to core.';
+    case 'target_branch_missing':
+      return 'This proposal is missing its branch target snapshot.';
+    case 'base_profile_missing':
+      return 'Kordex needs the current base profile version before it can move this proposal to core.';
     case 'proposal_not_found':
       return 'This proposal no longer exists.';
     case 'branch_not_found':
       return 'The target branch no longer exists.';
+    case 'branch_base_mismatch':
+      return 'The active branch does not belong to the selected base profile. Check the active profile selection and run the checker again.';
     case 'profile_definition_not_found':
       return 'The target base profile no longer exists.';
     case 'patch_conflict':
@@ -226,6 +286,13 @@ export function formatProposalReviewError(
     default:
       return error instanceof Error ? error.message : 'Proposal review failed.';
   }
+}
+
+export function formatTargetSwitchFailureMessage(error: unknown): string {
+  if (errorCode(error) === 'patch_conflict') {
+    return 'This proposal cannot move to core because part of the patch only fits the branch target. Edit the parent or keep it branch-local.';
+  }
+  return formatProposalReviewError(error, 'base_profile');
 }
 
 export function createProposalEditorModel(proposal: ProfileChangeProposal): ProposalEditorModel {
