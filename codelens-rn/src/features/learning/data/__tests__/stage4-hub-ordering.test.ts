@@ -32,6 +32,7 @@ function capture(overrides: Partial<LearningCapture>): LearningCapture {
 function concept(overrides: Partial<LearningConcept>): LearningConcept {
   return {
     id: overrides.id!,
+    profileId: 'coding',
     name: overrides.name ?? 'Concept',
     normalizedKey: 'concept',
     canonicalSummary: null,

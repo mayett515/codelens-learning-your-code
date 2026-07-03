@@ -7,6 +7,7 @@ import type { LearningConcept } from '../../types/learning';
 function makeConcept(overrides: Partial<LearningConcept> = {}): LearningConcept {
   return {
     id: newConceptId(),
+    profileId: 'coding',
     name: 'Closure',
     normalizedKey: 'closure',
     canonicalSummary: 'A function retains lexical scope.',

@@ -33,6 +33,7 @@ const captureId = unsafeLearningCaptureId('lc_222222222222222222222');
 function concept(overrides: Partial<LearningConcept> = {}): LearningConcept {
   return {
     id: conceptId,
+    profileId: 'coding',
     name: 'Closure',
     normalizedKey: 'closure',
     canonicalSummary: 'Closures keep lexical scope.',

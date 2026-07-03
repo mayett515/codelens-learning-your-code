@@ -46,6 +46,13 @@ export {
   codingProfile,
 } from './profiles/codingProfile';
 export type { CodingConceptTypeNodeId } from './profiles/codingProfile';
+export {
+  PHOTOGRAPHY_TYPE_COLORS,
+  PHOTOGRAPHY_TYPE_NODE_IDS,
+  photographyOntologyNodes,
+  photographyProfile,
+} from './profiles/photographyProfile';
+export type { PhotographyTypeNodeId } from './profiles/photographyProfile';
 
 export { composeDomainProfile } from './profileComposition';
 export type { ProfileOverlay, ProfileOverlayKind } from './types';

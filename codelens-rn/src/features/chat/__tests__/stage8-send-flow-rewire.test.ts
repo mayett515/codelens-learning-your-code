@@ -38,6 +38,7 @@ function captureMemory(): RetrievedCaptureMemory {
     tier: 'hot',
     payload: {
       id: captureId,
+      profileId: 'coding',
       title: 'Callback capture',
       whatClicked: 'The callback keeps access to outer state.',
       whyItMattered: null,

@@ -45,7 +45,7 @@ export async function insertLearningConcept(
     representativeCaptureIds: validConcept.representativeCaptureIds,
     familiarityScore: validConcept.familiarityScore,
     importanceScore: validConcept.importanceScore,
-    profileId: 'coding',
+    profileId: validConcept.profileId,
     typeNodeId: validConcept.conceptType,
     metadataJson: metadataEntries,
     createdAt: toIso(validConcept.createdAt),

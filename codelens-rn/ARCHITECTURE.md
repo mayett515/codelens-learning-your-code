@@ -138,8 +138,27 @@ Implemented pieces:
 - Branch-local and base/core guarded apply paths. Branch proposals use `targetBranchUpdatedAt`; base/core proposals use `targetProfileVersion`.
 - Proposal review, edit-then-replace, stale freshness, stale refresh, superseding, audit history, and the first explicit branch-to-base target-switch path.
 - ContextPack assembly, strict Conceptualize output validation, singular public classification, user-fit projection/history, the first manual checker gate, and the first compact branch/profile selection panel with explicit project-context wiring.
+- A minimal built-in photography base profile now proves the same registry, selection, checker, proposal, target-switch, and base apply seams against a non-coding profile. The demo deliberately keeps `coding` as the strong default; learning concept-list and retrieval filters now carry profile scope so cross-base type-id collisions remain local to their base profiles.
 
 Still deferred by design: target switching outside Doc 39's first branch-to-base additive scope, base/core checker proposals, relationship/boundary operation vocabulary, temporary/provisional maturity lifecycle, checker-run tables, background checker modes, auto-apply, DSL/runtime agents, and source write-back adapters.
+
+### Bounded LLM worker harness
+
+Live models, Spark-style subagents, eval agents, and future tool-backed workers must remain behind the same bounded harness pattern already used by Conceptualize and the manual checker:
+
+```text
+Kordex state/evidence/profile
+-> deterministic selector / ContextPack
+-> LLM or worker adapter
+-> strict schema output
+-> validator
+-> Kordex-owned mapper
+-> explanation, evidence, pending proposal, or no-op
+```
+
+The harness may compress context to save tokens, but compression is a selector decision that must be testable. Worker output is intermediate data, not a mutation path and not automatically user-facing truth. Any future subagent or eval harness must compile back into validated Kordex-native outputs and pass through the existing proposal/review/apply boundaries before it can affect ontology/profile state.
+
+Future photography/media analyzers follow the same rule. A React Native or JavaScript image-analysis adapter may inspect photo pixels, EXIF, edits, or user captions and emit bounded observations such as lighting, composition, subject, exposure, or workflow hints. It must not mint tags, classify captures, or update ontology/profile state directly; its output must pass through a strict schema, validator, and Kordex-owned mapper before it becomes evidence, context, or a pending proposal.
 
 ### Thin route screens
 

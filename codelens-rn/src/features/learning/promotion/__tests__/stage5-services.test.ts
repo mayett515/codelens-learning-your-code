@@ -47,6 +47,7 @@ function capture(id: typeof captureId1, confidence: number, createdAt: number): 
 function concept(overrides: Partial<LearningConcept> = {}): LearningConcept {
   return {
     id: conceptId,
+    profileId: 'coding',
     name: 'Closure',
     normalizedKey: 'closure',
     canonicalSummary: null,

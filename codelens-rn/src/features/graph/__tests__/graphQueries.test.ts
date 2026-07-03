@@ -32,6 +32,7 @@ const conceptE = id('c_555555555555555555555');
 function concept(id: ConceptId, overrides: Partial<LearningConcept> = {}): LearningConcept {
   return {
     id,
+    profileId: 'coding',
     name: overrides.name ?? id,
     normalizedKey: id,
     canonicalSummary: null,

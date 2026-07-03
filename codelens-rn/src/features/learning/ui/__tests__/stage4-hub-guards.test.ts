@@ -81,6 +81,9 @@ describe('Stage 4 Learning Hub guards', () => {
   describe('useConceptList filter API naming', () => {
     it('exposes preferred typeNodeIds and keeps legacy conceptType', () => {
       const src = read('src/features/learning/hooks/useConceptList.ts');
+      // Profile scope must exist so equal type node IDs in unrelated bases do not collide.
+      expect(src).toMatch(/profileIds\?:\s*string\[\]/);
+      expect(src).toMatch(/profileId\?:\s*string/);
       // Preferred filter field must exist
       expect(src).toMatch(/typeNodeIds\?:\s*ConceptType\[\]/);
       // Legacy alias must still exist
@@ -91,6 +94,7 @@ describe('Stage 4 Learning Hub guards', () => {
       const src = read('src/features/learning/hooks/useConceptList.ts');
       // Must build a set/union from both fields
       expect(src).toMatch(/new Set<ConceptType>/);
+      expect(src).toMatch(/new Set<string>/);
       // Must not have an else-if that picks only one field
       expect(src).not.toMatch(/else if.*conceptType/);
     });

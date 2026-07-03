@@ -9,6 +9,7 @@ const ConceptIdCodec = z.string().refine(isConceptId);
 
 export const RetrievedCapturePayloadCodec = z.object({
   id: LearningCaptureIdCodec,
+  profileId: z.string().min(1),
   title: z.string(),
   whatClicked: z.string(),
   whyItMattered: z.string().nullable(),
@@ -28,6 +29,7 @@ export const RetrievedCapturePayloadCodec = z.object({
 
 export const RetrievedConceptPayloadCodec = z.object({
   id: ConceptIdCodec,
+  profileId: z.string().min(1),
   name: z.string(),
   typeNodeId: ConceptTypeEnum,
   canonicalSummary: z.string().nullable(),

@@ -95,6 +95,7 @@ export function matchesFilters(
   if (!filters) return true;
   if (filters.excludeIds?.some((id) => id === hit.id)) return false;
   if (filters.kinds && !filters.kinds.includes(hit.kind)) return false;
+  if (!matchesProfileFilter(hit.payload.profileId, filters)) return false;
 
   const createdAt = hit.payload.createdAt;
   if (filters.minCreatedAt !== undefined && createdAt < filters.minCreatedAt) return false;
@@ -120,4 +121,13 @@ export function matchesFilters(
     if (!filters.languages.some((lang) => conceptLanguages.has(lang.toLowerCase()))) return false;
   }
   return true;
+}
+
+function matchesProfileFilter(profileId: string, filters: RetrieveFilters): boolean {
+  const allowedProfiles = new Set([
+    ...(filters.profileIds ?? []),
+    ...(filters.profileId ? [filters.profileId] : []),
+  ]);
+  if (allowedProfiles.size === 0) return true;
+  return allowedProfiles.has(profileId);
 }

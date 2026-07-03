@@ -4,6 +4,7 @@ import {
   ProfileNotFoundError,
 } from '../profileRegistry';
 import { codingProfile } from '../profiles/codingProfile';
+import { photographyProfile } from '../profiles/photographyProfile';
 import type { DomainProfile, OntologyNode, ProfileDefinition, ProfileSource } from '../types';
 import {
   BUILT_IN_PROFILE_SOURCE_ID,
@@ -147,32 +148,34 @@ describe('loadPersistedProfileDefinitionSource', () => {
 
 describe('loadDefaultProfileRegistry', () => {
   it('includes built-in coding profile and persisted definitions', async () => {
-    const def = makeProfileDefinition('photography', 'Photography');
+    const def = makeProfileDefinition('work_notes', 'Work Notes');
     const registry = await loadDefaultProfileRegistry({
       listDefinitions: async () => [def],
     });
     const summaries = registry.listProfiles();
-    expect(summaries).toHaveLength(2);
+    expect(summaries).toHaveLength(3);
     expect(summaries[0].id).toBe('coding');
     expect(summaries[1].id).toBe('photography');
+    expect(summaries[2].id).toBe('work_notes');
   });
 
-  it('built-in profile appears before persisted definitions in listProfiles', async () => {
+  it('built-in profiles appear before persisted definitions in listProfiles', async () => {
     const d1 = makeProfileDefinition('alpha', 'Alpha');
     const registry = await loadDefaultProfileRegistry({
       listDefinitions: async () => [d1],
     });
     const summaries = registry.listProfiles();
     expect(summaries[0].id).toBe('coding');
-    expect(summaries[1].id).toBe('alpha');
+    expect(summaries[1].id).toBe('photography');
+    expect(summaries[2].id).toBe('alpha');
   });
 
   it('resolves custom persisted profile by id', async () => {
-    const def = makeProfileDefinition('photography', 'Photography');
+    const def = makeProfileDefinition('work_notes', 'Work Notes');
     const registry = await loadDefaultProfileRegistry({
       listDefinitions: async () => [def],
     });
-    expect(registry.getProfile('photography')).toBe(def.profile);
+    expect(registry.getProfile('work_notes')).toBe(def.profile);
   });
 
   it('resolves built-in coding profile by id', async () => {
@@ -180,6 +183,13 @@ describe('loadDefaultProfileRegistry', () => {
       listDefinitions: async () => [],
     });
     expect(registry.getProfile('coding')).toBe(codingProfile);
+  });
+
+  it('resolves built-in photography profile by id', async () => {
+    const registry = await loadDefaultProfileRegistry({
+      listDefinitions: async () => [],
+    });
+    expect(registry.getProfile('photography')).toBe(photographyProfile);
   });
 
   it('duplicate persisted id coding throws DuplicateProfileIdError', async () => {
@@ -195,6 +205,23 @@ describe('loadDefaultProfileRegistry', () => {
     expect(caught).toBeDefined();
     expect(caught!.code).toBe('DUPLICATE_PROFILE_ID');
     expect(caught!.profileId).toBe('coding');
+    expect(caught!.sourceIds).toContain(BUILT_IN_PROFILE_SOURCE_ID);
+    expect(caught!.sourceIds).toContain(PERSISTED_PROFILE_DEFINITION_SOURCE_ID);
+  });
+
+  it('duplicate persisted id photography throws DuplicateProfileIdError', async () => {
+    const def = makeProfileDefinition('photography', 'Duplicate Photography');
+    let caught: DuplicateProfileIdError | undefined;
+    try {
+      await loadDefaultProfileRegistry({
+        listDefinitions: async () => [def],
+      });
+    } catch (e) {
+      caught = e as DuplicateProfileIdError;
+    }
+    expect(caught).toBeDefined();
+    expect(caught!.code).toBe('DUPLICATE_PROFILE_ID');
+    expect(caught!.profileId).toBe('photography');
     expect(caught!.sourceIds).toContain(BUILT_IN_PROFILE_SOURCE_ID);
     expect(caught!.sourceIds).toContain(PERSISTED_PROFILE_DEFINITION_SOURCE_ID);
   });

@@ -91,6 +91,7 @@ export function conceptRowToDomain(row: ConceptRow): LearningConcept {
 
   return {
     id: unsafeConceptId(row.id),
+    profileId: z.string().min(1).parse(row.profileId ?? 'coding'),
     name: row.name,
     normalizedKey: row.normalizedKey,
     canonicalSummary: row.canonicalSummary,
@@ -120,6 +121,7 @@ export function normalizeConceptKey(name: string): string {
 
 export function validateConceptForWrite(concept: LearningConcept): LearningConcept {
   if (!isConceptId(concept.id)) throw new Error(`Invalid concept id: ${concept.id}`);
+  z.string().min(1).parse(concept.profileId);
   ConceptTypeEnum.parse(concept.conceptType);
   LanguageOrRuntimeCodec.parse(concept.languageOrRuntime);
   SurfaceFeaturesCodec.parse(concept.surfaceFeatures);

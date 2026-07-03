@@ -57,6 +57,7 @@ function captureMemory(overrides: Partial<RetrievedCaptureMemory> = {}): Retriev
     tier: 'cold',
     payload: {
       id: captureId,
+      profileId: 'coding',
       title: 'Closure captures lexical scope',
       whatClicked: 'The inner function keeps access to outer variables.',
       whyItMattered: null,
@@ -90,6 +91,7 @@ function conceptMemory(overrides: Partial<RetrievedConceptMemory> = {}): Retriev
     tier: 'hot',
     payload: {
       id: conceptId,
+      profileId: 'coding',
       name: 'Closure',
       typeNodeId: 'mechanism',
       canonicalSummary: 'A function can retain access to variables from its creation scope.',
@@ -409,6 +411,20 @@ describe('Stage 6 retrieval contracts', () => {
     // typeNodeIds (preferred)
     expect(matchesFilters(con, { typeNodeIds: ['mechanism'] })).toBe(true);
     expect(matchesFilters(con, { typeNodeIds: ['pattern'] })).toBe(false);
+
+    // profileIds (preferred)
+    expect(matchesFilters(con, { profileIds: ['coding'] })).toBe(true);
+    expect(matchesFilters(con, { profileIds: ['photography'] })).toBe(false);
+    expect(matchesFilters(cap, { profileIds: ['coding'] })).toBe(true);
+    expect(matchesFilters(cap, { profileIds: ['photography'] })).toBe(false);
+
+    // profileId (single-profile compatibility alias)
+    expect(matchesFilters(con, { profileId: 'coding' })).toBe(true);
+    expect(matchesFilters(con, { profileId: 'photography' })).toBe(false);
+
+    // profile and type filters must both match.
+    expect(matchesFilters(con, { profileId: 'coding', typeNodeIds: ['mechanism'] })).toBe(true);
+    expect(matchesFilters(con, { profileId: 'photography', typeNodeIds: ['mechanism'] })).toBe(false);
 
     // conceptTypes (legacy compatibility alias)
     expect(matchesFilters(con, { conceptTypes: ['mechanism'] })).toBe(true);

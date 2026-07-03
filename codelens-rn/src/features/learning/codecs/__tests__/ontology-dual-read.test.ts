@@ -34,6 +34,7 @@ function baseRow(overrides: Record<string, unknown> = {}) {
 describe('Ontology dual-read codec', () => {
   it('parses old row without new profile columns', () => {
     const result = conceptRowToDomain(baseRow());
+    expect(result.profileId).toBe('coding');
     expect(result.conceptType).toBe('mechanism');
     expect(result.coreConcept).toBe('lexical scope');
     expect(result.architecturalPattern).toBeNull();
@@ -149,7 +150,7 @@ describe('Ontology dual-read codec', () => {
 
   it('handles all new fields together', () => {
     const result = conceptRowToDomain(baseRow({
-      profileId: 'coding',
+      profileId: 'photography',
       typeNodeId: 'data_structure',
       metadataJson: {
         coreConcept: 'hash map',
@@ -160,6 +161,7 @@ describe('Ontology dual-read codec', () => {
       architecturalPattern: null,
       programmingParadigm: 'imperative',
     }));
+    expect(result.profileId).toBe('photography');
     expect(result.conceptType).toBe('data_structure');
     expect(result.coreConcept).toBe('hash map');
     expect(result.architecturalPattern).toBe('cache layer');

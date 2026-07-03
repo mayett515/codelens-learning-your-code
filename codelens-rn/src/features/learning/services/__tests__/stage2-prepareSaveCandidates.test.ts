@@ -44,8 +44,9 @@ describe('Stage 2 prepareSaveCandidates', () => {
       {
         similarity: 0.72,
         concept: {
-          id: conceptId,
-          name: 'Closure',
+        id: conceptId,
+        profileId: 'coding',
+        name: 'Closure',
           normalizedKey: 'closure',
           canonicalSummary: null,
           conceptType: 'mechanism',

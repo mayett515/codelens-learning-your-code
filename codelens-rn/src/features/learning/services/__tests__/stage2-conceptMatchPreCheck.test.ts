@@ -29,6 +29,7 @@ vi.mock('../../data/conceptRepo', () => ({
 const conceptId = unsafeConceptId('c_123456789012345678901');
 const concept: LearningConcept = {
   id: conceptId,
+  profileId: 'coding',
   name: 'Closure',
   normalizedKey: 'closure',
   canonicalSummary: null,

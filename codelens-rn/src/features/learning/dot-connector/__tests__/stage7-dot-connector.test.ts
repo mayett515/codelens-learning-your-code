@@ -43,6 +43,7 @@ function conceptMemory(score = 0.5): RetrievedConceptMemory {
     tier: 'cold',
     payload: {
       id: conceptId,
+      profileId: 'coding',
       name: 'Closure',
       typeNodeId: 'mechanism',
       canonicalSummary: 'A function keeps access to its creation scope.',
@@ -72,6 +73,7 @@ function captureMemory(score = 0.4): RetrievedCaptureMemory {
     tier: 'cold',
     payload: {
       id: captureId,
+      profileId: 'coding',
       title: 'Closure moment',
       whatClicked: 'The returned function reads outer state.',
       whyItMattered: null,

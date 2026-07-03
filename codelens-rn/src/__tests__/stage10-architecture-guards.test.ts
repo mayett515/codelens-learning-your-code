@@ -746,6 +746,29 @@ describe('Kordex context assembly guards', () => {
     expect(doc43).toContain('auto-apply');
     expect(doc43).toContain('## Acceptance Criteria');
     expect(doc43).toContain('The coding profile remains the strong default');
+    expect(doc43).toContain('## Implementation Update - Initial Forkability Proof');
+    expect(doc43).toContain('built-in registry lists `coding` and `photography`');
+    expect(doc43).toContain('seeded manual checker runtime creates branch-local photography proposals');
+    expect(doc43).toContain('Resolved coupling finding');
+    expect(doc43).toContain('LearningConcept`, `RetrievedCapturePayload`, and `RetrievedConceptPayload` carry `profileId`');
+    expect(doc43).toContain('`useConceptList` and `RetrieveFilters` expose preferred `profileIds`');
+    expect(doc43).toContain('## Implementation Update - Profile-Scoped Learning Filters');
+    expect(doc43).toContain('`coding/composition` and `photography/composition` are allowed to coexist as separate meanings');
+  });
+
+  it('keeps the photography second-base profile wired through the built-in profile source', () => {
+    const photographyProfileSrc = read('src/features/ontology/profiles/photographyProfile.ts');
+    const bootstrapSrc = read('src/features/ontology/data/profileRegistryBootstrap.ts');
+    const ontologyIndexSrc = read('src/features/ontology/index.ts');
+
+    expect(photographyProfileSrc).toContain("id: 'photography'");
+    expect(photographyProfileSrc).toContain("id: 'composition'");
+    expect(photographyProfileSrc).toContain('Photo Idea');
+    expect(photographyProfileSrc).toContain('Camera Body');
+    expect(photographyProfileSrc).toContain('Lightroom');
+    expect(bootstrapSrc).toContain('photographyProfile as DomainProfile<string>');
+    expect(ontologyIndexSrc).toContain('photographyProfile');
+    expect(ontologyIndexSrc).toContain('PhotographyTypeNodeId');
   });
 
   it('doc 39 keeps target-layer switching scope anchors', () => {
@@ -1292,9 +1315,13 @@ describe('Ontology-profile naming boundary guards', () => {
     const retrievalTypes = read('src/features/learning/retrieval/types/retrieval.ts');
     // RetrievedConceptPayload must use typeNodeId, not conceptType
     expect(retrievalTypes).toMatch(/typeNodeId:\s*ConceptType/);
+    expect(retrievalTypes).toMatch(/profileId:\s*string/);
     // Must not have conceptType as a field on RetrievedConceptPayload
     // (allowing conceptTypes as the legacy filter alias on RetrieveFilters)
     expect(retrievalTypes).not.toMatch(/^\s+conceptType:\s*ConceptType/m);
+    // RetrieveFilters must keep profileIds as the preferred scope filter.
+    expect(retrievalTypes).toMatch(/profileIds\?:\s*string\[\]/);
+    expect(retrievalTypes).toMatch(/profileId\?:\s*string/);
     // RetrieveFilters must keep typeNodeIds as the preferred filter
     expect(retrievalTypes).toMatch(/typeNodeIds\?:\s*ConceptType\[\]/);
     // RetrieveFilters must keep conceptTypes as the legacy filter alias
@@ -1328,6 +1355,11 @@ describe('Ontology-profile naming boundary guards', () => {
 
   it('does not reintroduce conceptType as sole filter on ConceptListFilters (hook-owned)', () => {
     const hookSrc = read('src/features/learning/hooks/useConceptList.ts');
+    const conceptRepoSrc = read('src/features/learning/data/conceptRepo.ts');
+    // ConceptListFilters must expose profileIds so equal node ids in different
+    // base profiles can be filtered without global-id assumptions.
+    expect(hookSrc).toMatch(/profileIds\?:\s*string\[\]/);
+    expect(hookSrc).toMatch(/profileId\?:\s*string/);
     // ConceptListFilters must expose typeNodeIds as the preferred filter
     expect(hookSrc).toMatch(/typeNodeIds\?:\s*ConceptType\[\]/);
     // ConceptListFilters must keep conceptType as the legacy alias
@@ -1337,8 +1369,13 @@ describe('Ontology-profile naming boundary guards', () => {
     // It must consider both fields (typeNodeIds and conceptType)
     expect(hookSrc).toMatch(/filters\.typeNodeIds/);
     expect(hookSrc).toMatch(/filters\.conceptType/);
+    expect(hookSrc).toMatch(/filters\.profileIds/);
+    expect(hookSrc).toMatch(/filters\.profileId/);
     // The filtering helper must use a union/Set pattern
     expect(hookSrc).toMatch(/new Set<ConceptType>/);
+    expect(hookSrc).toMatch(/new Set<string>/);
+    expect(conceptRepoSrc).toContain('profileId: validConcept.profileId');
+    expect(conceptRepoSrc).not.toContain("profileId: 'coding'");
   });
 });
 
@@ -1387,10 +1424,29 @@ describe('Kortex durable doc future-direction anchor guards', () => {
 
     expect(antiRegressionRules).toContain('## Future Architecture Guardrails');
     expect(antiRegressionRules).toContain('### Agent/Subagent Execution');
+    expect(antiRegressionRules).toContain('### Bounded LLM Worker Harness');
+    expect(antiRegressionRules).toContain('Worker output must be strict-schema data that passes validation');
+    expect(antiRegressionRules).toContain('Future photography/media analyzers may emit bounded observations');
+    expect(antiRegressionRules).toContain('REGRESSION BAN FABLE-009');
+    expect(antiRegressionRules).toContain('REGRESSION BAN FABLE-010');
+    expect(antiRegressionRules).toContain('worker output is intermediate data only, not a mutation path');
+    expect(antiRegressionRules).toContain('media analysis is an observation source, not a profile mutation path');
     expect(antiRegressionRules).toContain('### Self-Building App Framework');
     expect(antiRegressionRules).toContain('### Language/DSL Direction');
     expect(antiRegressionRules).toContain('### Overlay Over Existing Systems');
     expect(antiRegressionRules).toContain('### Active-Profile Overlays');
+  });
+
+  it('keeps the bounded LLM worker harness note in root architecture docs', () => {
+    const architecture = fs.readFileSync(path.join(repoRoot, 'ARCHITECTURE.md'), 'utf8');
+
+    expect(architecture).toContain('### Bounded LLM worker harness');
+    expect(architecture).toContain('deterministic selector / ContextPack');
+    expect(architecture).toContain('strict schema output');
+    expect(architecture).toContain('Worker output is intermediate data, not a mutation path');
+    expect(architecture).toContain('Future photography/media analyzers follow the same rule.');
+    expect(architecture).toContain('photo pixels, EXIF, edits, or user captions');
+    expect(architecture).toContain('proposal/review/apply boundaries');
   });
 
   it('keeps profile branching, layering, and merge anchors in doc 06', () => {

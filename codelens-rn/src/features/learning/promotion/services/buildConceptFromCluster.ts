@@ -11,9 +11,11 @@ export function buildConceptFromCluster(
   captures: LearningCapture[],
   now: number,
 ): LearningConcept {
-  const contextOnlyKeywords = new Set<string>(getActiveDomainProfile().promotion.contextOnlyKeywords);
+  const profile = getActiveDomainProfile();
+  const contextOnlyKeywords = new Set<string>(profile.promotion.contextOnlyKeywords);
   return {
     id: conceptId,
+    profileId: profile.id,
     name: input.name.trim(),
     normalizedKey: normalizeConceptKey(input.name),
     canonicalSummary: input.canonicalSummary ?? null,

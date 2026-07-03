@@ -1,5 +1,6 @@
 import type { DomainProfile, ProfileDefinition, ProfileRegistry, ProfileSource } from '../types';
 import { codingProfile } from '../profiles/codingProfile';
+import { photographyProfile } from '../profiles/photographyProfile';
 import {
   createProfileDefinitionSource,
   createProfileRegistry,
@@ -30,7 +31,10 @@ export async function loadDefaultProfileRegistry(
 ): Promise<ProfileRegistry> {
   const builtInSource = createStaticProfileSource({
     id: BUILT_IN_PROFILE_SOURCE_ID,
-    profiles: [codingProfile as DomainProfile<string>],
+    profiles: [
+      codingProfile as DomainProfile<string>,
+      photographyProfile as DomainProfile<string>,
+    ],
   });
 
   const persistedSource = await loadPersistedProfileDefinitionSource(options);

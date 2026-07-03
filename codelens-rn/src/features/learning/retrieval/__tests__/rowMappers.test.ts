@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { unsafeConceptId, unsafeLearningCaptureId } from '../../types/ids';
-import { conceptRowToRetrievedPayload } from '../data/rowMappers';
+import { captureRowToRetrievedPayload, conceptRowToRetrievedPayload } from '../data/rowMappers';
 
 const conceptId = unsafeConceptId('c_111111111111111111111');
 const captureId = unsafeLearningCaptureId('lc_222222222222222222222');
@@ -26,9 +26,38 @@ function baseRow(overrides: Record<string, unknown> = {}): Record<string, unknow
 describe('conceptRowToRetrievedPayload dual-read', () => {
   it('parses old row without new columns', () => {
     const result = conceptRowToRetrievedPayload(baseRow());
+    expect(result.profileId).toBe('coding');
     expect(result.typeNodeId).toBe('mechanism');
     expect(result.coreConcept).toBe('lexical scope');
     expect(result.name).toBe('Closure');
+  });
+
+  it('preserves explicit profile_id for scoped retrieval filtering', () => {
+    const result = conceptRowToRetrievedPayload(baseRow({ profile_id: 'photography' }));
+    expect(result.profileId).toBe('photography');
+  });
+
+  it('preserves capture profile_id for scoped retrieval filtering', () => {
+    const result = captureRowToRetrievedPayload({
+      id: captureId,
+      profile_id: 'photography',
+      title: 'Backlit portrait',
+      what_clicked: 'Rim light separates the subject.',
+      why_it_mattered: null,
+      raw_snippet: 'photo note',
+      snippet_lang: null,
+      snippet_source_path: null,
+      snippet_start_line: null,
+      snippet_end_line: null,
+      state: 'linked',
+      linked_concept_id: null,
+      linked_concept_name: null,
+      session_id: null,
+      created_at: 1_771_900_000_000,
+      last_accessed_at: null,
+      embedding_status: 'ready',
+    });
+    expect(result.profileId).toBe('photography');
   });
 
   it('prefers type_node_id over concept_type when non-empty', () => {

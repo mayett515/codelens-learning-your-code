@@ -24,6 +24,8 @@ import { conceptRowToDomain } from '../../learning/codecs/concept';
 import { captureRowToDomain, buildCaptureClassificationJson, parseClassificationJsonToConceptHint } from '../../learning/codecs/capture';
 import { CONCEPT_TYPES } from '../../learning/types/learning';
 import { newConceptId, newLearningCaptureId } from '../../learning/types/ids';
+import { validateProfileDefinition } from '../../ontology/codecs/profileDefinition';
+import { photographyProfile } from '../../ontology/profiles/photographyProfile';
 import type { ConceptHint } from '../../learning/types/learning';
 
 // Cast helpers --- mapBackupRow returns Record<string, unknown> which is 
@@ -892,6 +894,39 @@ describe('JSON decoding for Drizzle insert shape', () => {
       TABLE_JSON_COLUMNS['profile_definitions']!,
     );
     expect(mapped['profileJson']).toEqual({ id: 'def-1' });
+  });
+
+  it('preserves a photography profile definition through backup row mapping and validation', () => {
+    const mapped = mapBackupRow(
+      {
+        id: photographyProfile.id,
+        label: photographyProfile.label,
+        description: photographyProfile.description,
+        version: photographyProfile.version,
+        source_kind: 'built_in',
+        profile_json: JSON.stringify(photographyProfile),
+        created_at: 1000,
+        updated_at: 2000,
+      },
+      PROFILE_DEFINITIONS_COLUMN_MAP,
+      TABLE_JSON_COLUMNS['profile_definitions']!,
+    );
+
+    const definition = validateProfileDefinition({
+      id: mapped['id'],
+      label: mapped['label'],
+      description: mapped['description'],
+      version: mapped['version'],
+      sourceKind: mapped['sourceKind'],
+      profile: mapped['profileJson'],
+      createdAt: mapped['createdAt'],
+      updatedAt: mapped['updatedAt'],
+    });
+
+    expect(definition.id).toBe('photography');
+    expect(definition.profile.id).toBe('photography');
+    expect(definition.profile.labels.itemSingular).toBe('Photo Idea');
+    expect(definition.profile.ontology.itemTypeNodeIds).toContain('composition');
   });
 
   it('decodes ontology_correction_evidence active selection snapshot JSON', () => {

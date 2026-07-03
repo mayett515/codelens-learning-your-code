@@ -30,12 +30,13 @@ Implemented:
 - Manual checker gate end to end: checker prompt/output validator, deterministic mapper, runtime service, UI trigger/readout, concrete model adapter over the existing AI queue, aggregated correction-pattern evidence, and item-type parent hints in checker payloads.
 - Root-doc consolidation: root docs now describe the implemented ontology/profile/checker spine; `NEXT_LLM_CONTEXT.md` is the active handoff; `implementation_handoff.md` and `WHERE_WE_STAND.md` are historical pointers; Fable regression bans are folded into `05_ANTI_REGRESSION_RULES.md`.
 - Doc 42 locks Gate 3 scope: minimal branch/profile selection UI over existing selection/branch/runtime activation seams. The pure selection-draft helper, focused data hooks, compact selection panel, and project-context wiring are implemented.
+- Doc 43's initial forkability proof is implemented: a minimal built-in `photography` base profile exercises profile registry, profile-definition codec/backup mapping, project selection, branch composition, manual checker proposals, branch-local apply, branch-to-base target switching, and photography base/core apply.
+- Doc 43's collision follow-up is implemented: `LearningConcept` and retrieval payloads carry `profileId`, and concept-list/retrieval filters expose `profileIds` / `profileId` so overlapping type ids such as `composition` remain scoped by base profile.
 
 Still deferred:
 
 - One-click direct Conceptualize Apply.
 - Selection-panel UX polish and later consumers of selection context.
-- Doc 43 locks the next forkability proof: a minimal photography second-base-profile demo that exercises existing seams and logs/fixes discovered coding couplings.
 - Target-layer switching outside Doc 39's first branch-to-base additive scope.
 - Base/core checker proposal targeting.
 - Relationship/boundary/split/merge/rename/deprecate/move typed operation vocabulary.
@@ -60,12 +61,12 @@ Doc 41 first checker gate is implemented.
 
 ## Next Recommended Slice
 
-Gate 3 is implemented, Doc 39's first target-switching path is implemented through the review surface, and the small checker/proposal hardening pass is done. Doc 43 now locks the next likely implementation slice: a minimal photography second-base-profile forkability demo.
+Gate 3 is implemented, Doc 39's first target-switching path is implemented through the review surface, the small checker/proposal hardening pass is done, Doc 43's initial photography forkability proof is implemented, and Doc 43's profile-scoped learning filter follow-up is implemented.
 
 Purpose:
 
-- Implement Doc 43 as a proof/audit slice, not a product-profile UX slice.
-- Treat every required production-code change outside the photography profile fixture as a discovered coding coupling to fix or log.
+- There is no forced next architecture slice from Doc 43. The next slice should be chosen deliberately against the numbered docs.
+- Preserve the existing coding default and photography proof; do not weaken profile-specific meaning into globally unique node ids.
 - Keep any target-switching extension outside Doc 39's implemented branch-local additive -> base/core path as a new scoped gate.
 
 Still out of scope unless a later decision explicitly opens it:
@@ -73,6 +74,7 @@ Still out of scope unless a later decision explicitly opens it:
 - Target-layer switching outside Doc 39's locked first-slice scope.
 - Cross-base evidence, proposals, checker output, or composition.
 - Profile gallery/onboarding/shipping decision for photography.
+- Global uniqueness requirements for ontology node ids across unrelated base profiles.
 - Base/core checker targeting.
 - Relationship/boundary operation vocabulary.
 - Maturity/provisional lifecycle.
@@ -101,15 +103,16 @@ Read these before code:
 11. `38_BASE_PROFILE_VERSIONING_DECISION.md`, `39_EDIT_THEN_APPLY_DECISION.md`, and `40_PROPOSAL_FRESHNESS_AND_STALE_REFRESH_DECISION.md` if touching proposal review/apply/freshness/editing.
 12. `41_CHECKER_RUNTIME_FIRST_SLICE_DECISION.md` if touching checker prompt/mapper/runtime/UI.
 13. `42_BRANCH_PROFILE_SELECTION_UI_DECISION.md` if touching branch/profile selection UI, checker target selection, or selection-driven proposal review context.
-14. Root docs if touching repo-wide architecture or persistence: `../ARCHITECTURE.md`, `../PERSISTENCE.md`, `../MAIN.md`, `../current_state.md`.
+14. `43_SECOND_BASE_PROFILE_FORKABILITY_DEMO_DECISION.md` if touching second-base profiles, profile-generic tests, or profile-scoped type-id collision behavior.
+15. Root docs if touching repo-wide architecture or persistence: `../ARCHITECTURE.md`, `../PERSISTENCE.md`, `../MAIN.md`, `../current_state.md`.
 
 ## Current Worktree Notes
 
 Run `git status --short` before working. Expected uncommitted product changes from the current slice include:
 
-- Checker UI trigger/readout and adapter files under `src/features/ontology/hooks/`, `src/features/ontology/ui/`, and related tests.
-- Stage10 architecture guard updates.
-- Root-doc consolidation updates in root docs and this folder.
+- Bounded LLM/Spark worker harness documentation in `ARCHITECTURE.md` and `05_ANTI_REGRESSION_RULES.md`, with stage10 guard anchors.
+- Doc 43 photography forkability proof files under `src/features/ontology/profiles/`, `src/features/ontology/__tests__/`, and related registry/backup tests.
+- Stage10 architecture guard updates and root/handoff doc sync for the Doc 43 implementation state.
 
 Do not include local tool/review folders in commits unless the user explicitly requests it:
 

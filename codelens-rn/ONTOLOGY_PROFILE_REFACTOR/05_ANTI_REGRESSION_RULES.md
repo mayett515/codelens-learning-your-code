@@ -92,6 +92,15 @@ The following directions are documented in `07_KORTEX_CORE_AND_CHILD_CORES.md`, 
 - No structured execution policy types outside documentation.
 - Tags/subtags as agent identity descriptors are a future concept only.
 
+### Bounded LLM Worker Harness
+
+- No LLM, Spark-style subagent, eval worker, or tool-backed worker may mutate ontology/profile state directly.
+- Worker input must come from a deterministic selector, ContextPack, or equivalent bounded task payload.
+- Worker output must be strict-schema data that passes validation before any Kordex mapper consumes it.
+- Worker output must compile back into Kordex-native explanation, evidence, pending proposal, or no-op shapes.
+- Context compression is allowed only as a testable selector/harness decision, not as ad hoc prompt trimming inside mutation services.
+- Future photography/media analyzers may emit bounded observations from images, EXIF, edits, or captions, but they must not mint tags, classify captures, or update ontology/profile state directly.
+
 ### Self-Building App Framework
 
 - No app-builder runtime or project-app-core scaffolding.
@@ -133,6 +142,8 @@ These bans fold the useful parts of `FABLE_STRATEGIC_REVIEW_2026-06-09/07-anti-r
 - REGRESSION BAN FABLE-006: Do not build checker proposal volume without superseding, freshness, and stale-refresh safeguards.
 - REGRESSION BAN FABLE-007: Do not silently widen branch-local Conceptualize or checker proposals to base/core.
 - REGRESSION BAN FABLE-008: Do not use labels as durable node identity across scopes.
+- REGRESSION BAN FABLE-009: Do not let LLM/subagent/eval-worker output bypass bounded ContextPack-style input, strict validation, Kordex-owned mapping, and proposal/review/apply boundaries.
+- REGRESSION BAN FABLE-010: Do not let image/media analyzers become a direct classification, tag-minting, or ontology/profile mutation path.
 </fable_regression_bans>
 
 <fable_conditional_gates>
@@ -150,6 +161,12 @@ THEN verify runtime composition is derived from persisted layers, not persisted 
 
 IF a task touches future language, adapter, CLI, MCP, or agent surfaces,
 THEN verify it compiles into typed operations and uses the existing review/apply guards.
+
+IF a task adds an LLM worker, subagent harness, eval worker, or compressed model payload,
+THEN verify the input is bounded, output is strict-schema validated, and resulting actions remain Kordex-native explanation/evidence/proposal/no-op values.
+
+IF a task adds a photography/media analyzer,
+THEN verify image/EXIF/edit/caption observations stay bounded, strict-schema validated, and mapped into evidence/context/proposals instead of direct tags or profile mutations.
 </fable_conditional_gates>
 
 ## Verification Checklist
@@ -189,6 +206,12 @@ THEN stop and extract it to a child-core seam instead.
 
 IF a change adds agent/subagent runtime, orchestration, permission enforcement, or MCP policy,
 THEN stop: future architecture only. Ask for explicit approval.
+
+IF a change lets LLM, Spark, subagent, eval-worker, or tool-worker output mutate ontology/profile state without ContextPack-style bounds, strict validation, and Kordex-owned mapping,
+THEN stop: worker output is intermediate data only, not a mutation path.
+
+IF a change lets image/media analysis directly classify captures, mint tags, or update ontology/profile state,
+THEN stop: media analysis is an observation source, not a profile mutation path.
 
 IF a change adds app-builder runtime, code-generation orchestration, generated-app persistence, or source write-back,
 THEN stop: future architecture only. Ask for explicit approval.

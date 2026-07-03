@@ -1,6 +1,6 @@
 # Second Base Profile Forkability Demo Decision
 
-**Status:** Locked decision on 2026-06-12. Not implemented yet.
+**Status:** Locked decision on 2026-06-12. Initial forkability proof and profile-scoped learning-list/retrieval filters implemented on 2026-07-03.
 **Branch:** `refactor/ontology-profile`
 
 ## Source Map
@@ -163,6 +163,40 @@ Architecture guards:
 - Doc 43 anchors remain present.
 - The demo must not introduce cross-base, merge, maturity, auto-apply, scheduler, graph/vector retrieval, DSL, app-builder, MCP write-back, or source-sync implementation strings outside docs/tests.
 - Any hardcoded `coding` additions in non-test source must be classified as sanctioned fallback or fixed.
+
+## Implementation Update - Initial Forkability Proof
+
+The first implementation slice added a real built-in `photography` `DomainProfile` and kept `coding` as the strong default.
+
+Implemented proof points:
+
+- built-in registry lists `coding` and `photography`;
+- the photography profile is recognizably photography-shaped, including labels, ontology nodes, metadata fields, graph labels, review labels, extraction instructions, and a deliberate `composition` type id;
+- profile-definition codec and backup row mapping preserve the photography profile payload;
+- project selection can compose `photography` plus a photography branch without falling back to coding;
+- seeded manual checker runtime creates branch-local photography proposals with `targetBranchUpdatedAt`;
+- one photography proposal applies branch-locally;
+- one eligible photography proposal target-switches to `target.profileId = 'photography'`;
+- base/core Apply increments the photography profile definition version only.
+
+Resolved coupling finding:
+
+- Cross-base `typeNodeId` collision filtering is now explicit at the learning concept-list and retrieval filter boundaries. `LearningConcept`, `RetrievedCapturePayload`, and `RetrievedConceptPayload` carry `profileId`; `useConceptList` and `RetrieveFilters` expose preferred `profileIds` plus single-profile `profileId` aliases; matching now requires profile scope and type-node filters to agree. This keeps overlapping node ids such as `composition` valid in unrelated bases without requiring global node-id uniqueness.
+
+## Implementation Update - Profile-Scoped Learning Filters
+
+The follow-up implementation slice resolved the Doc 43 collision finding without changing the profile architecture:
+
+- legacy rows still default to `profileId = 'coding'`;
+- new and read-back `LearningConcept` values carry `profileId`;
+- concept-list filters can scope by `profileIds` / `profileId` and type ids together;
+- retrieval payloads carry `profileId` for both captures and concepts;
+- retrieval filters can scope by `profileIds` / `profileId` before type-node filtering;
+- `coding/composition` and `photography/composition` are allowed to coexist as separate meanings.
+
+Future media-analysis note:
+
+- A real photography core will eventually need image/EXIF/edit/caption analysis. That future adapter belongs behind the bounded worker harness in `ARCHITECTURE.md` and `05_ANTI_REGRESSION_RULES.md`: it can produce validated observations for evidence/context/proposals, but it must not classify captures, mint tags, or mutate ontology/profile state directly.
 
 ## Acceptance Criteria
 

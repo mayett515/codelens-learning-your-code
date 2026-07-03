@@ -49,6 +49,7 @@ export interface LearningCapture {
 
 export interface LearningConcept {
   id: ConceptId;
+  profileId: string;
   name: string;
   normalizedKey: string;
   canonicalSummary: string | null;

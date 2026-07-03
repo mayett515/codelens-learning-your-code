@@ -30,6 +30,9 @@ function parseMsOrIso(raw: unknown): number {
 export function captureRowToRetrievedPayload(row: Record<string, unknown>): RetrievedCapturePayload {
   return parseRetrievedCapturePayload({
     id: unsafeLearningCaptureId(String(row.id)),
+    profileId: typeof row.profile_id === 'string' && row.profile_id.trim().length > 0
+      ? row.profile_id
+      : 'coding',
     title: String(row.title),
     whatClicked: String(row.what_clicked),
     whyItMattered: row.why_it_mattered === null ? null : String(row.why_it_mattered),
@@ -65,6 +68,9 @@ export function conceptRowToRetrievedPayload(row: Record<string, unknown>): Retr
 
   return parseRetrievedConceptPayload({
     id: unsafeConceptId(String(row.id)),
+    profileId: typeof row.profile_id === 'string' && row.profile_id.trim().length > 0
+      ? row.profile_id
+      : 'coding',
     name: String(row.name),
     typeNodeId: resolvedConceptType,
     canonicalSummary: row.canonical_summary === null ? null : String(row.canonical_summary),

@@ -34,6 +34,7 @@ const memory: RetrievedMemory = {
   tier: 'hot',
   payload: {
     id: 'lc_123456789012345678901' as LearningCaptureId,
+    profileId: 'coding',
     title: 'Saved thing',
     whatClicked: 'The callback closes over state.',
     whyItMattered: null,

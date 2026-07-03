@@ -7,6 +7,7 @@ export type EmbeddingTier = 'hot' | 'cold';
 
 export interface RetrievedCapturePayload {
   id: LearningCaptureId;
+  profileId: string;
   title: string;
   whatClicked: string;
   whyItMattered: string | null;
@@ -26,6 +27,7 @@ export interface RetrievedCapturePayload {
 
 export interface RetrievedConceptPayload {
   id: ConceptId;
+  profileId: string;
   name: string;
   typeNodeId: ConceptType;
   canonicalSummary: string | null;
@@ -69,6 +71,10 @@ export interface RetrievedConceptMemory {
 }
 
 export interface RetrieveFilters {
+  /** Preferred: filter by profile/base IDs so type node ids stay scoped. */
+  profileIds?: string[];
+  /** Compatibility alias for a single profile filter. */
+  profileId?: string;
   states?: CaptureState[];
   /** Preferred: filter by ontology type node IDs. */
   typeNodeIds?: ConceptType[];
