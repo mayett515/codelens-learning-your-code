@@ -140,6 +140,7 @@ export function resolveConceptualizeCorrection(
   correction: ConceptualizeCorrectionDraft | null | undefined,
   now: () => number = Date.now,
 ): ResolvedConceptualizeCorrection {
+  const scopedCandidate = { ...candidate, profileId: profile.id };
   const previousTypeNodeId = candidate.conceptHint?.proposedConceptType ?? null;
   const rawProposedTypeNodeId = normalizeNullableText(
     rawProposedTypeIdentityToLegacyString(candidate.rawProposedTypeIdentity)
@@ -156,7 +157,7 @@ export function resolveConceptualizeCorrection(
     const newTypeNodeId = makeTypeNodeId(newTypeLabel);
     if (profile.ontology.itemTypeNodeIds.includes(newTypeNodeId)) {
       return {
-        candidate: withConceptHintType(candidate, newTypeNodeId, newTypeNodeId !== previousTypeNodeId),
+        candidate: withConceptHintType(scopedCandidate, newTypeNodeId, newTypeNodeId !== previousTypeNodeId),
         previousTypeNodeId,
         correctedTypeNodeId: newTypeNodeId,
         rawProposedTypeNodeId,
@@ -185,7 +186,7 @@ export function resolveConceptualizeCorrection(
     });
 
     return {
-      candidate: withConceptHintType(candidate, proposedNode.id, true),
+      candidate: withConceptHintType(scopedCandidate, proposedNode.id, true),
       previousTypeNodeId,
       correctedTypeNodeId: proposedNode.id,
       rawProposedTypeNodeId,
@@ -204,7 +205,7 @@ export function resolveConceptualizeCorrection(
 
   if (!selectedTypeNodeId || selectedTypeNodeId === previousTypeNodeId) {
     return {
-      candidate,
+      candidate: scopedCandidate,
       previousTypeNodeId,
       correctedTypeNodeId: previousTypeNodeId,
       rawProposedTypeNodeId,
@@ -217,7 +218,7 @@ export function resolveConceptualizeCorrection(
 
   assertKnownTypeNode(profile, selectedTypeNodeId);
   return {
-    candidate: withConceptHintType(candidate, selectedTypeNodeId, true),
+    candidate: withConceptHintType(scopedCandidate, selectedTypeNodeId, true),
     previousTypeNodeId,
     correctedTypeNodeId: selectedTypeNodeId,
     rawProposedTypeNodeId,

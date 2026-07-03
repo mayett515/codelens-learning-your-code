@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { prepareSaveCandidates } from '../prepareSaveCandidates';
 import { unsafeConceptId } from '../../types/ids';
-import { composeDomainProfile, codingProfile, type DomainProfile, type ProfileOverlay, type OntologyNode } from '../../../ontology';
+import { composeDomainProfile, codingProfile, photographyProfile, type DomainProfile, type ProfileOverlay, type OntologyNode } from '../../../ontology';
 import type { ConceptMatch } from '../conceptMatchPreCheck';
 import {
   CONCEPTUALIZE_PROMPT_OUTPUT_VERSION,
@@ -101,11 +101,81 @@ describe('Stage 2 prepareSaveCandidates', () => {
 
     expect(candidates).toHaveLength(1);
     expect(candidates[0]).toMatchObject({
+      profileId: 'coding',
       linkedConceptId: conceptId,
       matchSimilarity: 0.72,
       snippetLang: 'typescript',
       isNewLanguageForExistingConcept: true,
       keywords: ['closure', 'scope'],
+    });
+  });
+
+  it('filters concept pre-check matches to the active profile before prompt and linking', async () => {
+    let capturedPrompt = '';
+    const matches: ConceptMatch[] = [
+      {
+        similarity: 0.91,
+        concept: {
+          id: conceptId,
+          profileId: 'coding',
+          name: 'Coding Composition',
+          normalizedKey: 'composition',
+          canonicalSummary: null,
+          conceptType: 'composition',
+          coreConcept: null,
+          architecturalPattern: null,
+          programmingParadigm: null,
+          languageOrRuntime: [],
+          surfaceFeatures: [],
+          prerequisites: [],
+          relatedConcepts: [],
+          contrastConcepts: [],
+          representativeCaptureIds: [],
+          familiarityScore: 0,
+          importanceScore: 0,
+          createdAt: 0,
+          updatedAt: 0,
+        },
+      },
+    ];
+
+    const candidates = await prepareSaveCandidates(
+      { selectedText: 'Frame this shot with foreground balance.' },
+      {
+        profile: photographyProfile,
+        preCheck: async () => matches,
+        complete: async (prompt) => {
+          capturedPrompt = prompt;
+          return JSON.stringify({
+            candidates: [
+              {
+                title: 'Foreground composition',
+                whatClicked: 'The subject is framed by foreground elements.',
+                whyItMattered: null,
+                rawSnippet: 'Frame this shot with foreground balance.',
+                keywords: ['composition'],
+                conceptHint: {
+                  proposedName: 'Foreground composition',
+                  proposedNormalizedKey: 'foreground composition',
+                  proposedConceptType: 'composition',
+                  extractionConfidence: 0.8,
+                  linkedConceptId: conceptId,
+                  linkedConceptName: 'Coding Composition',
+                  linkedConceptLanguages: null,
+                  isNewLanguageForExistingConcept: false,
+                },
+              },
+            ],
+          });
+        },
+      },
+    );
+
+    expect(capturedPrompt).not.toContain('Coding Composition');
+    expect(candidates[0]).toMatchObject({
+      profileId: 'photography',
+      linkedConceptId: null,
+      matchSimilarity: null,
     });
   });
 

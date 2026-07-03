@@ -19,6 +19,7 @@ const baseProfile = codingProfile as DomainProfile<string>;
 
 function candidate(overrides: Partial<SaveModalCandidateData> = {}): SaveModalCandidateData {
   return {
+    profileId: 'coding',
     title: 'Closure captures stale state',
     whatClicked: 'A callback kept reading the old value after render.',
     whyItMattered: 'The fix was to understand the runtime mechanism.',

@@ -8,7 +8,7 @@ Status: locked decision; first draft meaning/provenance, target readout, proposa
 
 Richer missing-concept edit/apply must be a review-time draft flow over a pending proposal, not an automatic ontology mutation and not a hidden rewrite of the original model output.
 
-When Kordex suggests a missing concept and the user wants to adjust it before applying, the next implementation should let the user edit a draft proposal and then explicitly apply or save that draft through the already-guarded proposal paths:
+When Kordex suggests a missing concept and the user wants to adjust it before applying, the implemented flow lets the user edit a draft proposal and then explicitly apply or save that draft through the already-guarded proposal paths:
 
 ```text
 suggested missing concept
@@ -36,7 +36,7 @@ This is the polished path for "Kordex was close, but not quite right." It preser
 
 ## Scope
 
-The first edit/apply slice should support missing-concept proposal drafts created from Conceptualize review context.
+The implemented first edit/apply slice supports missing-concept proposal drafts created from Conceptualize review context.
 
 Editable fields:
 

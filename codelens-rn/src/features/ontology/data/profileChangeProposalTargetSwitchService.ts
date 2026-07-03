@@ -29,6 +29,7 @@ import { insertProfileProposalEvent } from './profileProposalEventRepo';
 export type ProfileChangeProposalTargetSwitchServiceErrorCode =
   | 'proposal_not_found'
   | 'branch_not_found'
+  | 'proposal_branch_base_mismatch'
   | 'profile_definition_not_found'
   | 'proposal_target_switch_time_invalid'
   | 'replacement_proposal_invalid'
@@ -116,6 +117,12 @@ export async function switchProfileChangeProposalTargetToBase(
       throw new ProfileChangeProposalTargetSwitchServiceError(
         'branch_not_found',
         `Profile branch ${branchId} for proposal ${proposal.id} was not found.`,
+      );
+    }
+    if (branch && branch.parentProfileId !== proposal.baseProfileId) {
+      throw new ProfileChangeProposalTargetSwitchServiceError(
+        'proposal_branch_base_mismatch',
+        `Profile branch ${branch.id} belongs to ${branch.parentProfileId}, not proposal base profile ${proposal.baseProfileId}.`,
       );
     }
 

@@ -138,7 +138,7 @@ Implemented pieces:
 - Branch-local and base/core guarded apply paths. Branch proposals use `targetBranchUpdatedAt`; base/core proposals use `targetProfileVersion`.
 - Proposal review, edit-then-replace, stale freshness, stale refresh, superseding, audit history, and the first explicit branch-to-base target-switch path.
 - ContextPack assembly, strict Conceptualize output validation, singular public classification, user-fit projection/history, the first manual checker gate, and the first compact branch/profile selection panel with explicit project-context wiring.
-- A minimal built-in photography base profile now proves the same registry, selection, checker, proposal, target-switch, and base apply seams against a non-coding profile. The demo deliberately keeps `coding` as the strong default; learning concept-list and retrieval filters now carry profile scope so cross-base type-id collisions remain local to their base profiles.
+- A minimal built-in photography base profile now proves the same registry, selection, checker, proposal, target-switch, and base apply seams against a non-coding profile. The demo deliberately keeps `coding` as the strong default; learning captures, concepts, save-precheck matching, concept-list filters, and retrieval filters now carry profile scope so cross-base type-id collisions remain local to their base profiles.
 
 Still deferred by design: target switching outside Doc 39's first branch-to-base additive scope, base/core checker proposals, relationship/boundary operation vocabulary, temporary/provisional maturity lifecycle, checker-run tables, background checker modes, auto-apply, DSL/runtime agents, and source write-back adapters.
 

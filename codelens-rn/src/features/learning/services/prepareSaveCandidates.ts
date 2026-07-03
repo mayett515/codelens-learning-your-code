@@ -4,7 +4,7 @@ import { buildExtractorSystemPrompt } from '../extractor/extractorPrompt';
 import { runExtractor, type ExtractorComplete } from '../extractor/runExtractor';
 import type { CaptureHint } from '../extractor/extractorSchema';
 import { conceptMatchPreCheck, type ConceptMatch } from './conceptMatchPreCheck';
-import type { ConceptId, LearningCaptureId } from '../types/ids';
+import type { LearningCaptureId } from '../types/ids';
 import type { SaveModalCandidateData } from '../types/saveModal';
 import {
   createUnresolvedRawProposedTypeIdentity,
@@ -45,9 +45,10 @@ export async function prepareSaveCandidates(
   const selectedText = source.selectedText.trim().slice(0, MAX_SNIPPET_LENGTH);
   if (!selectedText) throw new Error('Cannot extract a capture from empty source text');
 
-  const relevantConcepts = await (options?.preCheck ?? conceptMatchPreCheck)(selectedText);
   const conceptualizeContext = options?.conceptualizeContext;
   const profile = options?.profile ?? conceptualizeContext?.profile ?? getActiveDomainProfile();
+  const relevantConcepts = (await (options?.preCheck ?? conceptMatchPreCheck)(selectedText))
+    .filter((match) => match.concept.profileId === profile.id);
   const prompt = buildExtractorSystemPrompt({
     profile,
     relevantConcepts,
@@ -66,14 +67,16 @@ export async function prepareSaveCandidates(
     );
     const rawProposedTypeNodeId =
       rawProposedTypeIdentityToLegacyString(rawProposedTypeIdentity);
-    const linkedConceptId = conceptHint?.linkedConceptId
-      ? unsafeConceptId(conceptHint.linkedConceptId)
+    const linkedConceptMatch = conceptHint?.linkedConceptId
+      ? relevantConcepts.find((match) => match.concept.id === conceptHint.linkedConceptId)
+      : undefined;
+    const linkedConceptId = linkedConceptMatch
+      ? unsafeConceptId(linkedConceptMatch.concept.id)
       : null;
-    const matchSimilarity = linkedConceptId
-      ? findSimilarityForConcept(relevantConcepts, linkedConceptId)
-      : null;
+    const matchSimilarity = linkedConceptMatch?.similarity ?? null;
 
     return {
+      profileId: profile.id,
       title: candidate.title,
       whatClicked: candidate.whatClicked,
       whyItMattered: candidate.whyItMattered,
@@ -87,8 +90,8 @@ export async function prepareSaveCandidates(
       derivedFromCaptureId: source.derivedFromCaptureId ?? null,
       isNewLanguageForExistingConcept:
         conceptHint?.isNewLanguageForExistingConcept ?? false,
-      linkedConceptName: conceptHint?.linkedConceptName ?? null,
-      linkedConceptLanguages: conceptHint?.linkedConceptLanguages ?? null,
+      linkedConceptName: linkedConceptId ? conceptHint?.linkedConceptName ?? null : null,
+      linkedConceptLanguages: linkedConceptId ? conceptHint?.linkedConceptLanguages ?? null : null,
       linkedConceptId,
       extractionConfidence: conceptHint?.extractionConfidence ?? null,
       matchSimilarity,
@@ -146,10 +149,6 @@ function rawProposedTypeIdentityForEvidence(
     rawNodeId: rawTypeNodeId,
     activeScopeId,
   });
-}
-
-function findSimilarityForConcept(matches: ConceptMatch[], id: ConceptId): number | null {
-  return matches.find((match) => match.concept.id === id)?.similarity ?? null;
 }
 
 function isAbortError(error: unknown): boolean {

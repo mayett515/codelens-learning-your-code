@@ -30,9 +30,9 @@ export async function insertCapture(
     embeddingStatus: validCapture.embeddingStatus,
     embeddingRetryCount: validCapture.embeddingRetryCount,
     conceptHint: validCapture.conceptHint,
-    profileId: 'coding',
+    profileId: validCapture.profileId,
     classificationJson: validCapture.conceptHint !== null
-      ? buildCaptureClassificationJson(validCapture.conceptHint)
+      ? buildCaptureClassificationJson(validCapture.conceptHint, validCapture.profileId)
       : null,
     keywords: validCapture.keywords,
     createdAt: validCapture.createdAt,

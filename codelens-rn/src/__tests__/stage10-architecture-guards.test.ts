@@ -1356,6 +1356,10 @@ describe('Ontology-profile naming boundary guards', () => {
   it('does not reintroduce conceptType as sole filter on ConceptListFilters (hook-owned)', () => {
     const hookSrc = read('src/features/learning/hooks/useConceptList.ts');
     const conceptRepoSrc = read('src/features/learning/data/conceptRepo.ts');
+    const learningTypesSrc = read('src/features/learning/types/learning.ts');
+    const saveModalTypesSrc = read('src/features/learning/types/saveModal.ts');
+    const captureRepoSrc = read('src/features/learning/data/captureRepo.ts');
+    const prepareSaveSrc = read('src/features/learning/services/prepareSaveCandidates.ts');
     // ConceptListFilters must expose profileIds so equal node ids in different
     // base profiles can be filtered without global-id assumptions.
     expect(hookSrc).toMatch(/profileIds\?:\s*string\[\]/);
@@ -1376,6 +1380,12 @@ describe('Ontology-profile naming boundary guards', () => {
     expect(hookSrc).toMatch(/new Set<string>/);
     expect(conceptRepoSrc).toContain('profileId: validConcept.profileId');
     expect(conceptRepoSrc).not.toContain("profileId: 'coding'");
+    expect(learningTypesSrc).toMatch(/export interface LearningCapture\s*\{[\s\S]*profileId:\s*string/);
+    expect(saveModalTypesSrc).toMatch(/export interface SaveModalCandidateData\s*\{[\s\S]*profileId:\s*string/);
+    expect(captureRepoSrc).toContain('profileId: validCapture.profileId');
+    expect(captureRepoSrc).not.toContain("profileId: 'coding'");
+    expect(prepareSaveSrc).toContain('.filter((match) => match.concept.profileId === profile.id)');
+    expect(prepareSaveSrc).toContain('profileId: profile.id');
   });
 });
 

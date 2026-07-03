@@ -24,6 +24,7 @@ export interface ConceptualizeMissingConceptReview {
 }
 
 export interface SaveModalCandidateData {
+  profileId: string;
   title: string;
   whatClicked: string;
   whyItMattered: string | null;

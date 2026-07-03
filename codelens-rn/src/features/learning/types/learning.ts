@@ -26,6 +26,7 @@ export interface SnippetSource {
 
 export interface LearningCapture {
   id: LearningCaptureId;
+  profileId: string;
   title: string;
   whatClicked: string;
   whyItMattered: string | null;

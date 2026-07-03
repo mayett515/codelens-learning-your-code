@@ -7,6 +7,7 @@ import type { LearningCapture } from '../../types/learning';
 function capture(index: number, overrides: Partial<LearningCapture> = {}): LearningCapture {
   return {
     id: unsafeLearningCaptureId(`lc_${String(index).padStart(21, 'a')}`),
+    profileId: overrides.profileId ?? 'coding',
     title: `Capture ${index}`,
     whatClicked: 'clicked',
     whyItMattered: null,

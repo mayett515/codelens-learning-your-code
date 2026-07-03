@@ -6,6 +6,7 @@ import type { LearningCapture, LearningConcept } from '../../types/learning';
 function capture(overrides: Partial<LearningCapture>): LearningCapture {
   return {
     id: overrides.id!,
+    profileId: overrides.profileId ?? 'coding',
     title: 'Capture',
     whatClicked: 'clicked',
     whyItMattered: null,

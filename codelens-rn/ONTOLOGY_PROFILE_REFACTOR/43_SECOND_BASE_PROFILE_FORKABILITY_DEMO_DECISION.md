@@ -1,6 +1,6 @@
 # Second Base Profile Forkability Demo Decision
 
-**Status:** Locked decision on 2026-06-12. Initial forkability proof and profile-scoped learning-list/retrieval filters implemented on 2026-07-03.
+**Status:** Locked decision on 2026-06-12. Initial forkability proof and profile-scoped learning capture/save/precheck/list/retrieval boundaries implemented on 2026-07-03; graph and promotion profile-scope consumers remain deferred.
 **Branch:** `refactor/ontology-profile`
 
 ## Source Map
@@ -181,18 +181,27 @@ Implemented proof points:
 
 Resolved coupling finding:
 
-- Cross-base `typeNodeId` collision filtering is now explicit at the learning concept-list and retrieval filter boundaries. `LearningConcept`, `RetrievedCapturePayload`, and `RetrievedConceptPayload` carry `profileId`; `useConceptList` and `RetrieveFilters` expose preferred `profileIds` plus single-profile `profileId` aliases; matching now requires profile scope and type-node filters to agree. This keeps overlapping node ids such as `composition` valid in unrelated bases without requiring global node-id uniqueness.
+- Cross-base `typeNodeId` collision filtering is now explicit at the learning capture, concept-list, save-precheck, and retrieval filter boundaries. `LearningCapture`, `LearningConcept`, `RetrievedCapturePayload`, and `RetrievedConceptPayload` carry `profileId`; `SaveModalCandidateData` carries the active profile id through save; `prepareSaveCandidates` drops pre-check concept matches from other profiles before prompt/linking; `useConceptList` and `RetrieveFilters` expose preferred `profileIds` plus single-profile `profileId` aliases; matching now requires profile scope and type-node filters to agree. This keeps overlapping node ids such as `composition` valid in unrelated bases without requiring global node-id uniqueness.
+- Target switching now rejects a branch whose `parentProfileId` does not match the proposal `baseProfileId` before creating a base replacement.
+
+Deferred consumers:
+
+- Learning Hub and chat retrieval callers still rely on their existing active-profile/all-memory surfaces unless a caller passes explicit filters. Before those surfaces display or inject simultaneous multi-base memory, thread project/profile selection into their query and retrieval inputs.
+- Graph queries and promotion clustering still rely on their existing learning-domain surfaces and default active-profile assumptions. They are not opened as simultaneous multi-base product surfaces by this demo. Before graph or promotion UI displays multiple base profiles at once, add explicit profile-scoped filters there too.
 
 ## Implementation Update - Profile-Scoped Learning Filters
 
 The follow-up implementation slice resolved the Doc 43 collision finding without changing the profile architecture:
 
 - legacy rows still default to `profileId = 'coding'`;
-- new and read-back `LearningConcept` values carry `profileId`;
+- new and read-back `LearningCapture` and `LearningConcept` values carry `profileId`;
+- `SaveModalCandidateData` and Conceptualize save paths preserve the active context profile instead of falling back to `coding`;
+- pre-check concept matches are filtered to the active profile before extractor prompt construction or linked-concept persistence;
 - concept-list filters can scope by `profileIds` / `profileId` and type ids together;
 - retrieval payloads carry `profileId` for both captures and concepts;
 - retrieval filters can scope by `profileIds` / `profileId` before type-node filtering;
-- `coding/composition` and `photography/composition` are allowed to coexist as separate meanings.
+- `coding/composition` and `photography/composition` are allowed to coexist as separate meanings;
+- Learning Hub, chat retrieval callers, graph queries, and promotion clustering are intentionally left for later profile-scoped consumer slices.
 
 Future media-analysis note:
 

@@ -11,7 +11,7 @@ This decision does not reopen profile/branch architecture. It narrows the first 
 - **Doc 14:** active selection is id-based, single-base in v1, ordered by branch kind arrays, and must not become hidden global state.
 - **Doc 16:** runtime activation wiring loads selected base/branches and passes a finished `DomainProfile` to services.
 - **Doc 17:** user-created base profiles are separate profile definitions, not branches or composed runtime profiles.
-- **Doc 39:** target-layer switching is explicit user action with blast-radius copy, but it remains a later slice.
+- **Doc 39:** target-layer switching is explicit user action with blast-radius copy. Its first branch-local additive proposal -> base/core slice is now implemented through the review surface.
 - **Doc 41:** the checker is manual, branch-local, proposal-only, and currently needs an explicit branch target instead of the temporary review-queue fallback.
 
 ## Locked Decision
@@ -345,7 +345,7 @@ Verification:
 
 ## Later Gates
 
-- Target-layer switching for existing proposals (Doc 39), with blast-radius copy.
+- Target-layer switching outside Doc 39's implemented first branch-local additive proposal -> base/core scope.
 - Branch merge / promote-upward flow.
 - Base-profile creation and fork UX.
 - Multi-base composition.

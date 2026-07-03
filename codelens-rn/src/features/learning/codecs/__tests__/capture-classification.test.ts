@@ -43,6 +43,7 @@ function makeRow(overrides: Record<string, unknown> = {}): any {
     embeddingStatus: 'pending',
     embeddingRetryCount: 0,
     conceptHint: null,
+    profileId: 'coding',
     keywords: [],
     createdAt: 1_771_900_000_000,
     updatedAt: 1_771_900_000_000,
@@ -53,8 +54,8 @@ function makeRow(overrides: Record<string, unknown> = {}): any {
 describe('buildCaptureClassificationJson', () => {
   it('maps hint fields to classification shape with profileId and proposedTypeNodeId', () => {
     const hint = makeHint();
-    const cj = buildCaptureClassificationJson(hint);
-    expect(cj.profileId).toBe('coding');
+    const cj = buildCaptureClassificationJson(hint, 'photography');
+    expect(cj.profileId).toBe('photography');
     expect(cj.proposedTypeNodeId).toBe('mechanism');
     expect(cj.proposedName).toBe('Closure');
     expect(cj.proposedNormalizedKey).toBe('closure');
@@ -88,10 +89,15 @@ describe('parseClassificationJsonToConceptHint', () => {
     expect(parseClassificationJsonToConceptHint({ proposedName: 'X' })).toBeNull();
   });
 
-  it('returns null when profileId is absent or not coding', () => {
+  it('returns null when profileId is absent or empty', () => {
     const classification = buildCaptureClassificationJson(makeHint());
     expect(parseClassificationJsonToConceptHint({ ...classification, profileId: undefined })).toBeNull();
-    expect(parseClassificationJsonToConceptHint({ ...classification, profileId: 'photography' })).toBeNull();
+    expect(parseClassificationJsonToConceptHint({ ...classification, profileId: '' })).toBeNull();
+  });
+
+  it('accepts non-coding profile ids in compatibility classification JSON', () => {
+    const hint = makeHint({ proposedConceptType: 'composition' });
+    expect(parseClassificationJsonToConceptHint(buildCaptureClassificationJson(hint, 'photography'))).toEqual(hint);
   });
 
   it('accepts non-empty profile-defined type node ids', () => {
@@ -123,10 +129,12 @@ describe('captureRowToDomain - conceptHint/classificationJson fallback', () => {
     const hint = makeHint({ proposedConceptType: 'mental_model' });
     const otherHint = makeHint({ proposedConceptType: 'pattern' });
     const row = makeRow({
+      profileId: 'photography',
       conceptHint: hint,
       classificationJson: buildCaptureClassificationJson(otherHint),
     });
     const capture = captureRowToDomain(row);
+    expect(capture.profileId).toBe('photography');
     expect(capture.conceptHint?.proposedConceptType).toBe('mental_model');
   });
 

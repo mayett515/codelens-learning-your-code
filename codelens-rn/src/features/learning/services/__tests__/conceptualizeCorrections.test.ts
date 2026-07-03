@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { DbOrTx } from '../../../../db/client';
-import { codingProfile } from '../../../ontology';
+import { codingProfile, photographyProfile } from '../../../ontology';
 import type {
   DomainProfile,
   OntologyCorrectionEvidence,
@@ -35,6 +35,7 @@ const profile = codingProfile as DomainProfile<string>;
 
 function candidate(overrides: Partial<SaveModalCandidateData> = {}): SaveModalCandidateData {
   return {
+    profileId: 'coding',
     title: 'Closure keeps outer state',
     whatClicked: 'A returned function still reads outer state.',
     whyItMattered: null,
@@ -123,6 +124,16 @@ describe('Conceptualize correction save', () => {
     expect(result.candidate.linkedConceptName).toBeNull();
     expect(result.previousTypeNodeId).toBe('mechanism');
     expect(result.correctedTypeNodeId).toBe('pattern');
+  });
+
+  it('scopes the saved candidate to the Conceptualize context profile', () => {
+    const result = resolveConceptualizeCorrection(
+      candidate({ profileId: 'coding' }),
+      photographyProfile as DomainProfile<string>,
+      null,
+    );
+
+    expect(result.candidate.profileId).toBe('photography');
   });
 
   it('preserves proposed-new save mode while writing evidence for an existing type correction', async () => {

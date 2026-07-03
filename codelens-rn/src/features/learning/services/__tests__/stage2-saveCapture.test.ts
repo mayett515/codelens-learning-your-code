@@ -24,6 +24,7 @@ const captureId = unsafeLearningCaptureId('lc_123456789012345678901');
 
 function candidate(overrides: Partial<SaveModalCandidateData> = {}): SaveModalCandidateData {
   return {
+    profileId: 'coding',
     title: 'Closure keeps outer state',
     whatClicked: 'The returned function can still read the outer variable.',
     whyItMattered: null,
@@ -80,6 +81,7 @@ describe('Stage 2 saveCapture', () => {
 
     expect(d.inserted[0]).toMatchObject({
       id: captureId,
+      profileId: 'coding',
       state: 'unresolved',
       linkedConceptId: null,
       embeddingStatus: 'pending',
@@ -87,6 +89,13 @@ describe('Stage 2 saveCapture', () => {
       keywords: ['closure', 'scope'],
     });
     expect(d.enqueued).toHaveLength(1);
+  });
+
+  it('persists the candidate profile id instead of falling back to coding', async () => {
+    const d = deps();
+    await saveCapture(candidate({ profileId: 'photography' }), d);
+
+    expect(d.inserted[0].profileId).toBe('photography');
   });
 
   it('blocks weak concept links but still saves the capture', async () => {

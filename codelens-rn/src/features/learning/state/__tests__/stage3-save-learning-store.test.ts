@@ -4,6 +4,7 @@ import type { SaveModalCandidateData } from '../../types/saveModal';
 import { unsafeLearningCaptureId } from '../../types/ids';
 
 const candidate: SaveModalCandidateData = {
+  profileId: 'coding',
   title: 'Closure keeps state',
   whatClicked: 'The inner function reads outer state.',
   whyItMattered: null,

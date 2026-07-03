@@ -41,6 +41,7 @@ function context(): ConceptualizeProfileContext {
 
 function candidate(overrides: Partial<SaveModalCandidateData> = {}): SaveModalCandidateData {
   return {
+    profileId: 'coding',
     title: 'Closure keeps outer state',
     whatClicked: 'The returned function can still read the outer variable.',
     whyItMattered: 'It explains callbacks that remember setup state.',

@@ -138,6 +138,7 @@ export async function saveCapture(
     await resolvedDeps.insert(
       {
         id: captureId,
+        profileId: candidate.profileId,
         title: candidate.title,
         whatClicked: candidate.whatClicked,
         whyItMattered: candidate.whyItMattered,

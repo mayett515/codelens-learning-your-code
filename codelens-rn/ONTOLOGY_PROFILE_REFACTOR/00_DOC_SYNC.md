@@ -60,7 +60,7 @@ This file explains how the root architecture docs and this refactor folder shoul
 - `40_PROPOSAL_FRESHNESS_AND_STALE_REFRESH_DECISION.md` locks proposal freshness as a separate derived review condition and refresh as replacement-plus-supersede.
 - `41_CHECKER_RUNTIME_FIRST_SLICE_DECISION.md` consolidates the scattered future checker vision and locks the first checker runtime as manual-on-demand, branch-local, proposal-only, and additive ontology-node/item-type only. The pure prompt/output contract, deterministic mapper, manual runtime service, UI trigger/readout, concrete model adapter seam, correction-pattern `patternFrequency` aggregation, and `isItemType` parent hints are implemented. Relationship/boundary operations, base/core checker targeting, background modes, checker-run tables, and auto-apply remain deferred.
 - `42_BRANCH_PROFILE_SELECTION_UI_DECISION.md` locks the first branch/profile selection UI as a minimal project-scoped selector over existing docs 13/14/16/17 seams. The pure selection-draft helper, focused data hooks, compact selection panel, and explicit project-context route wiring are implemented. The gate may create empty branches, save selected base/branch ids, reorder selected branches, and pass an explicit checker branch target, but it must not add global active selection, composed-profile persistence, target switching, branch merge/fork UX, multi-base composition, base mutation, or auto-apply.
-- `43_SECOND_BASE_PROFILE_FORKABILITY_DEMO_DECISION.md` locks and implements the first second-base-profile proof as a minimal photography forkability demo. It proves the existing registry, profile-definition persistence/backup mapping, project selection, branch creation/composition, checker/proposal review, target-switch, and base apply seams work against a non-coding base profile. Its collision follow-up implements profile-scoped learning concept-list/retrieval filters for overlapping type ids such as `composition`, and it must not be used as a license for profile-gallery UX, cross-base behavior, new operation vocabulary, maturity lifecycle, or source-sync work.
+- `43_SECOND_BASE_PROFILE_FORKABILITY_DEMO_DECISION.md` locks and implements the first second-base-profile proof as a minimal photography forkability demo. It proves the existing registry, profile-definition persistence/backup mapping, project selection, branch creation/composition, checker/proposal review, target-switch, and base apply seams work against a non-coding base profile. Its collision follow-up implements profile-scoped learning capture, save-candidate, precheck, concept-list, and retrieval boundaries for overlapping type ids such as `composition`, and it must not be used as a license for profile-gallery UX, cross-base behavior, new operation vocabulary, maturity lifecycle, or source-sync work.
 - `FABLE_STRATEGIC_REVIEW_2026-06-09/` preserves Claude Fable's historical strategic review as guidance only; durable bans and routing guidance are folded into active docs and it does not override numbered decisions.
 - `architecture_contract_for_profile_refactor.md` is the local adjusted LLM contract for this refactor.
 - `architecture_guide_for_profile_refactor_humans.md` is the local adjusted human guide.
@@ -153,7 +153,7 @@ ONTOLOGY_PROFILE_REFACTOR/04_REFACTOR_WITHOUT_BREAKING_APP.md
 ONTOLOGY_PROFILE_REFACTOR/05_ANTI_REGRESSION_RULES.md
 ```
 
-For current strategic orientation and next-gate sanity checking, read:
+For historical strategic-review context and risk-pattern sanity checking, read:
 
 ```text
 ONTOLOGY_PROFILE_REFACTOR/FABLE_STRATEGIC_REVIEW_2026-06-09/00-system-index.md
@@ -161,7 +161,7 @@ ONTOLOGY_PROFILE_REFACTOR/FABLE_STRATEGIC_REVIEW_2026-06-09/05-next-gates.md
 ONTOLOGY_PROFILE_REFACTOR/FABLE_STRATEGIC_REVIEW_2026-06-09/07-anti-regression-contract.md
 ```
 
-The Fable review pack is review guidance. It can help prioritize and spot risk, but numbered decision docs remain the source of truth.
+The Fable review pack is historical review guidance. Its first gate sequence has been implemented; use it to spot risk patterns, not as current planning authority. Numbered decision docs remain the source of truth.
 
 For a smaller planning-only discussion, read:
 

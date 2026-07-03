@@ -345,6 +345,7 @@ describe('Stage 6 retrieval contracts', () => {
 
     const fullCapture: LearningCapture = {
       id: captureId,
+      profileId: 'coding',
       title: 'test',
       whatClicked: 'test clicked',
       whyItMattered: null,

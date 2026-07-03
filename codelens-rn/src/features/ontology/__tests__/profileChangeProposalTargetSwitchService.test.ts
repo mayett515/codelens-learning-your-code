@@ -374,6 +374,30 @@ describe('switchProfileChangeProposalTargetToBase', () => {
     expect(calls).toEqual([]);
   });
 
+  it('rejects branches that belong to a different base profile before creating replacements', async () => {
+    const calls: string[] = [];
+    const error = await captureRejection(switchProfileChangeProposalTargetToBase({
+      proposalId: 'proposal-1',
+      now: 10,
+      deps: makeDeps({
+        getBranchById: async () => makeBranch({ parentProfileId: 'photography' }),
+        insertProposal: async () => {
+          calls.push('insertProposal');
+        },
+        saveProposalIfPending: async () => {
+          calls.push('saveProposal');
+          return true;
+        },
+        insertEvent: async () => {
+          calls.push('insertEvent');
+        },
+      }),
+    }));
+
+    expectSwitchErrorCode(error, 'proposal_branch_base_mismatch');
+    expect(calls).toEqual([]);
+  });
+
   it('rolls back inserted replacements when superseding detects write drift', async () => {
     const calls: string[] = [];
     const error = await captureRejection(switchProfileChangeProposalTargetToBase({

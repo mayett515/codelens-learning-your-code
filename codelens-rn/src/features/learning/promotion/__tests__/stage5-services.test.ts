@@ -22,6 +22,7 @@ const captureId3 = unsafeLearningCaptureId('lc_333333333333333333333');
 function capture(id: typeof captureId1, confidence: number, createdAt: number): LearningCapture {
   return {
     id,
+    profileId: 'coding',
     title: 'Closure',
     whatClicked: 'clicked',
     whyItMattered: null,

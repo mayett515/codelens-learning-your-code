@@ -11,7 +11,7 @@ This is the canonical active handoff for the ontology/profile refactor. Use `imp
 
 Do not stage, commit, push, reset, or checkout unless the user explicitly asks.
 
-## Current State - 2026-06-12
+## Current State - 2026-07-03
 
 The ontology/profile refactor is an implemented spine, not just a plan.
 
@@ -31,7 +31,7 @@ Implemented:
 - Root-doc consolidation: root docs now describe the implemented ontology/profile/checker spine; `NEXT_LLM_CONTEXT.md` is the active handoff; `implementation_handoff.md` and `WHERE_WE_STAND.md` are historical pointers; Fable regression bans are folded into `05_ANTI_REGRESSION_RULES.md`.
 - Doc 42 locks Gate 3 scope: minimal branch/profile selection UI over existing selection/branch/runtime activation seams. The pure selection-draft helper, focused data hooks, compact selection panel, and project-context wiring are implemented.
 - Doc 43's initial forkability proof is implemented: a minimal built-in `photography` base profile exercises profile registry, profile-definition codec/backup mapping, project selection, branch composition, manual checker proposals, branch-local apply, branch-to-base target switching, and photography base/core apply.
-- Doc 43's collision follow-up is implemented: `LearningConcept` and retrieval payloads carry `profileId`, and concept-list/retrieval filters expose `profileIds` / `profileId` so overlapping type ids such as `composition` remain scoped by base profile.
+- Doc 43's collision follow-up is implemented: `LearningCapture`, `LearningConcept`, save candidates, and retrieval payloads carry `profileId`; Conceptualize save and pre-check matching preserve active profile scope; concept-list/retrieval filters expose `profileIds` / `profileId` so overlapping type ids such as `composition` remain scoped by base profile.
 
 Still deferred:
 
@@ -61,7 +61,7 @@ Doc 41 first checker gate is implemented.
 
 ## Next Recommended Slice
 
-Gate 3 is implemented, Doc 39's first target-switching path is implemented through the review surface, the small checker/proposal hardening pass is done, Doc 43's initial photography forkability proof is implemented, and Doc 43's profile-scoped learning filter follow-up is implemented.
+Gate 3 is implemented, Doc 39's first target-switching path is implemented through the review surface, the small checker/proposal hardening pass is done, Doc 43's initial photography forkability proof is implemented, and Doc 43's profile-scoped learning capture/concept/retrieval follow-up is implemented.
 
 Purpose:
 
@@ -73,6 +73,7 @@ Still out of scope unless a later decision explicitly opens it:
 
 - Target-layer switching outside Doc 39's locked first-slice scope.
 - Cross-base evidence, proposals, checker output, or composition.
+- Profile-scoped Learning Hub/chat retrieval consumers, graph queries, and promotion clustering for simultaneous visible base profiles.
 - Profile gallery/onboarding/shipping decision for photography.
 - Global uniqueness requirements for ontology node ids across unrelated base profiles.
 - Base/core checker targeting.
@@ -106,13 +107,9 @@ Read these before code:
 14. `43_SECOND_BASE_PROFILE_FORKABILITY_DEMO_DECISION.md` if touching second-base profiles, profile-generic tests, or profile-scoped type-id collision behavior.
 15. Root docs if touching repo-wide architecture or persistence: `../ARCHITECTURE.md`, `../PERSISTENCE.md`, `../MAIN.md`, `../current_state.md`.
 
-## Current Worktree Notes
+## Merge Readiness Notes
 
-Run `git status --short` before working. Expected uncommitted product changes from the current slice include:
-
-- Bounded LLM/Spark worker harness documentation in `ARCHITECTURE.md` and `05_ANTI_REGRESSION_RULES.md`, with stage10 guard anchors.
-- Doc 43 photography forkability proof files under `src/features/ontology/profiles/`, `src/features/ontology/__tests__/`, and related registry/backup tests.
-- Stage10 architecture guard updates and root/handoff doc sync for the Doc 43 implementation state.
+Run `git status --short` before working. After commit `edb6521`, product changes from the Doc 43 forkability/filtering slice are committed and pushed on `refactor/ontology-profile`.
 
 Do not include local tool/review folders in commits unless the user explicitly requests it:
 

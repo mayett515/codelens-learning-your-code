@@ -22,7 +22,7 @@ Summarize:
 
 ## Expected Next Slice
 
-The Fable strategic review pack is captured under `FABLE_STRATEGIC_REVIEW_2026-06-09/` and is now marked historical review guidance. Treat it as advisory, not a new authority over the numbered decision docs. Its recommended next gate order was: proposal lifecycle superseding/stale refresh, then manual checker runtime, then minimal branch/profile selection UI. Those gates are implemented, root-doc consolidation is done, Doc 39's first branch-to-base target-switch path is implemented through the review surface, the small proposal/checker hardening pass is complete, Doc 43's initial photography forkability proof is implemented, and Doc 43's profile-scoped learning filter follow-up is implemented. The next bounded slice should be chosen deliberately against the numbered docs.
+The Fable strategic review pack is captured under `FABLE_STRATEGIC_REVIEW_2026-06-09/` and is now marked historical review guidance. Treat it as advisory, not a new authority over the numbered decision docs. Its recommended next gate order was: proposal lifecycle superseding/stale refresh, then manual checker runtime, then minimal branch/profile selection UI. Those gates are implemented, root-doc consolidation is done, Doc 39's first branch-to-base target-switch path is implemented through the review surface, the small proposal/checker hardening pass is complete, Doc 43's initial photography forkability proof is implemented, and Doc 43's profile-scoped learning capture/save/precheck/list/retrieval follow-up is implemented. The next bounded slice should be chosen deliberately against the numbered docs.
 
 ```text
 The base profile versioning target contract, base apply service, and explicit base/core review UI wiring are locked and implemented (doc 38):
@@ -300,30 +300,7 @@ The missing-concept UX decision is locked and implemented in doc 36:
   - no automatic proposal creation, ontology/profile mutation, checker runtime, user-fit projection, retrieval, graph traversal, confidence update, auto-apply, or old-card backfill was added
   - verification: TypeScript clean; focused missing-concept tests 106/106; full suite 866/866; diff check clean with CRLF warnings only
 
-The remaining open decision/implementation gaps are:
-  1. Review the doc 40 explicit refresh/rebase replacement creation slice.
-  2. Visible proposal editor UI that creates edited replacement proposals through the existing edit service.
-  3. Agent/subagent execution ontology brief.
-  4. Self-building-app framework brief.
-
-Recommended next implementation slice, if the human wants code next:
-
-```text
-Proposal refresh/rebase creation:
-  - branch-local and base/core proposal apply are now both explicit review actions
-  - doc 40 locks freshness as derived review state, not proposal status
-  - branch target revision snapshots are implemented
-  - pure freshness helper over proposal + caller-supplied target facts is implemented
-  - proposal review now shows freshness before Apply and blocks unsafe Apply
-  - keep refresh explicit: replacement pending proposal + supersede old proposal
-  - keep checker runtime, auto-apply, graph traversal, external write-back, and old-card rewrites out of this gate
-```
-
-Strict boundaries:
-
-- no checker execution
-- no new profile patch storage shape
-- no automatic ontology or profile mutation
+Historical note: the older doc-40 refresh/rebase, visible proposal editor, checker runtime, and first target-switching gaps described in earlier handoff logs are implemented. Use `NEXT_LLM_CONTEXT.md` and the numbered docs for current next-slice selection; do not treat this historical block as active planning.
 
 ## Product Direction To Preserve
 
@@ -526,6 +503,6 @@ The first richer missing-concept edit/apply slices are implemented in doc 39. Mi
 
 Remaining open decisions / implementation gaps:
 
-1. Next: choose deliberately against the numbered docs; Doc 43's forkability proof and profile-scoped learning filter follow-up are implemented.
+1. Next: choose deliberately against the numbered docs; Doc 43's forkability proof and profile-scoped learning capture/save/precheck/list/retrieval follow-up are implemented.
 2. Later: branch merge / promote-upward flow and base-profile creation/fork UX.
 3. Later: relationship/boundary operation vocabulary and maturity lifecycle.

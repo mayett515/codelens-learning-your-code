@@ -8,7 +8,7 @@ export const CaptureStateEnum = z.enum(['unresolved', 'linked', 'proposed_new'])
 export const EmbeddingStatusEnum = z.enum(['pending', 'ready', 'failed']);
 
 export interface CaptureClassificationJson {
-  profileId: 'coding';
+  profileId: string;
   proposedTypeNodeId: string;
   proposedName: string;
   proposedNormalizedKey: string;
@@ -19,9 +19,12 @@ export interface CaptureClassificationJson {
   isNewLanguageForExistingConcept: boolean;
 }
 
-export function buildCaptureClassificationJson(hint: ConceptHint): CaptureClassificationJson {
+export function buildCaptureClassificationJson(
+  hint: ConceptHint,
+  profileId = 'coding',
+): CaptureClassificationJson {
   return {
-    profileId: 'coding',
+    profileId,
     proposedTypeNodeId: hint.proposedConceptType,
     proposedName: hint.proposedName,
     proposedNormalizedKey: hint.proposedNormalizedKey,
@@ -43,7 +46,7 @@ export function parseClassificationJsonToConceptHint(raw: unknown): ConceptHint 
   }
   if (obj === null || typeof obj !== 'object' || Array.isArray(obj)) return null;
   const r = obj as Record<string, unknown>;
-  if (r.profileId !== 'coding') return null;
+  if (typeof r.profileId !== 'string' || r.profileId.trim().length === 0) return null;
   if (!('proposedTypeNodeId' in r)) return null;
   const mapped = {
     proposedName: r.proposedName,
@@ -104,6 +107,7 @@ export function captureRowToDomain(row: LearningCaptureRow): LearningCapture {
 
   return {
     id: unsafeLearningCaptureId(row.id),
+    profileId: z.string().min(1).parse(row.profileId ?? 'coding'),
     title: row.title,
     whatClicked: row.whatClicked,
     whyItMattered: row.whyItMattered,
@@ -136,6 +140,7 @@ export function validateCaptureForWrite(capture: LearningCapture): LearningCaptu
   if (capture.derivedFromCaptureId !== null && !isLearningCaptureId(capture.derivedFromCaptureId)) {
     throw new Error(`Invalid derived capture id: ${capture.derivedFromCaptureId}`);
   }
+  z.string().min(1).parse(capture.profileId);
   ConceptHintCodec.parse(capture.conceptHint);
   KeywordsCodec.parse(capture.keywords);
   return capture;

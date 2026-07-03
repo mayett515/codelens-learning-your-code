@@ -65,6 +65,7 @@ async function buildEmbeddingTextFor(ref: {
     const capture = await getCaptureById(ref.id as LearningCaptureId);
     if (!capture) throw new Error(`Cannot embed missing capture: ${ref.id}`);
     return buildCaptureEmbeddingText({
+      profileId: capture.profileId,
       title: capture.title,
       whatClicked: capture.whatClicked,
       whyItMattered: capture.whyItMattered,
