@@ -22,7 +22,7 @@ Summarize:
 
 ## Expected Next Slice
 
-The Fable strategic review pack is captured under `FABLE_STRATEGIC_REVIEW_2026-06-09/` and is now marked historical review guidance. Treat it as advisory, not a new authority over the numbered decision docs. Its recommended next gate order was: proposal lifecycle superseding/stale refresh, then manual checker runtime, then minimal branch/profile selection UI. Those gates are implemented, root-doc consolidation is done, Doc 39's first branch-to-base target-switch path is implemented through the review surface, the small proposal/checker hardening pass is complete, Doc 43's initial photography forkability proof is implemented, and Doc 43's profile-scoped learning capture/save/precheck/list/retrieval follow-up is implemented. The next bounded slice should be chosen deliberately against the numbered docs.
+The Fable strategic review pack is captured under `FABLE_STRATEGIC_REVIEW_2026-06-09/` and is now marked historical review guidance. Treat it as advisory, not a new authority over the numbered decision docs. Its recommended next gate order was: proposal lifecycle superseding/stale refresh, then manual checker runtime, then minimal branch/profile selection UI. Those gates are implemented, root-doc consolidation is done, Doc 39's first branch-to-base target-switch path is implemented through the review surface, the small proposal/checker hardening pass is complete, Doc 43's initial photography forkability proof is implemented, and Doc 43's profile-scoped consumer follow-ups are implemented. The next bounded slice should be chosen deliberately against the numbered docs.
 
 ```text
 The base profile versioning target contract, base apply service, and explicit base/core review UI wiring are locked and implemented (doc 38):
@@ -503,6 +503,6 @@ The first richer missing-concept edit/apply slices are implemented in doc 39. Mi
 
 Remaining open decisions / implementation gaps:
 
-1. Next: choose deliberately against the numbered docs; Doc 43's forkability proof and profile-scoped learning capture/save/precheck/list/retrieval follow-up are implemented.
+1. Next: choose deliberately against the numbered docs; Doc 43's forkability proof and profile-scoped consumer follow-ups are implemented.
 2. Later: branch merge / promote-upward flow and base-profile creation/fork UX.
 3. Later: relationship/boundary operation vocabulary and maturity lifecycle.

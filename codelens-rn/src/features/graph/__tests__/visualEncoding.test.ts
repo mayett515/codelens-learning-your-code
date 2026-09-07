@@ -40,6 +40,17 @@ describe('Stage 9A visual encoding', () => {
     expect(visual.radius).toBe(14);
   });
 
+  it('uses caller-supplied profile colors for non-coding graph scopes', () => {
+    const visual = computeNodeVisual(
+      node({ typeNodeId: 'composition' }),
+      'structure',
+      Date.now(),
+      { composition: '#123456' },
+    );
+
+    expect(visual.fill).toBe('#123456');
+  });
+
   it('falls back and warns for unknown type nodes', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
     const visual = computeNodeVisual(

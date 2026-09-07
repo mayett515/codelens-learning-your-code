@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { DOT_CONNECTOR_DEBOUNCE_MS, runTypingRetrieval } from '../services/runTypingRetrieval';
 import type { DotConnectorSettings, TypingRetrievalSnapshot } from '../types/dotConnector';
+import type { RetrieveFilters } from '../../retrieval/types/retrieval';
 
 export function useDotConnectorRetrieve(
   queryText: string,
   settings: DotConnectorSettings,
   perTurnEnabled: boolean,
+  filters?: RetrieveFilters | undefined,
 ) {
   const [snapshot, setSnapshot] = useState<TypingRetrievalSnapshot | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -28,7 +30,7 @@ export function useDotConnectorRetrieve(
 
     setIsLoading(true);
     const timeoutId = setTimeout(() => {
-      runTypingRetrieval({ query: trimmed, settings })
+      runTypingRetrieval({ query: trimmed, settings, filters })
         .then((next) => {
           if (generationRef.current !== generation) return;
           setSnapshot(next);
@@ -56,7 +58,7 @@ export function useDotConnectorRetrieve(
     return () => {
       clearTimeout(timeoutId);
     };
-  }, [queryText, settings, perTurnEnabled]);
+  }, [queryText, settings, perTurnEnabled, filters]);
 
   return {
     result: snapshot?.result ?? null,

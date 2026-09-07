@@ -5,13 +5,16 @@ import { useDismissCluster } from '../hooks/useDismissCluster';
 import { usePromotionSuggestion } from '../hooks/usePromotionSuggestion';
 import { usePromotionSuggestions } from '../hooks/usePromotionSuggestions';
 import { PromotionSuggestionCard } from './PromotionSuggestionCard';
+import type { DomainProfile } from '../../../ontology';
 
 interface PromotionSuggestionsSectionProps {
+  profileId?: string | null | undefined;
+  profile?: DomainProfile | undefined;
   onOpenReview: (fingerprint: string) => void;
 }
 
-export function PromotionSuggestionsSection({ onOpenReview }: PromotionSuggestionsSectionProps) {
-  const { data: suggestions = [] } = usePromotionSuggestions({ limit: 5 });
+export function PromotionSuggestionsSection({ profileId, profile, onOpenReview }: PromotionSuggestionsSectionProps) {
+  const { data: suggestions = [] } = usePromotionSuggestions({ limit: 5, profileId });
   const dismissMutation = useDismissCluster();
 
   if (suggestions.length === 0) return null;
@@ -23,6 +26,8 @@ export function PromotionSuggestionsSection({ onOpenReview }: PromotionSuggestio
         <SuggestionCardLoader
           key={suggestion.fingerprint}
           fingerprint={suggestion.fingerprint}
+          profileId={profileId}
+          profile={profile}
           onOpenReview={onOpenReview}
           onDismiss={(fingerprint) => dismissMutation.mutate(suggestion)}
         />
@@ -33,10 +38,12 @@ export function PromotionSuggestionsSection({ onOpenReview }: PromotionSuggestio
 
 function SuggestionCardLoader(props: {
   fingerprint: string;
+  profileId?: string | null | undefined;
+  profile?: DomainProfile | undefined;
   onOpenReview: (fingerprint: string) => void;
   onDismiss: (fingerprint: string) => void;
 }) {
-  const { data } = usePromotionSuggestion(props.fingerprint);
+  const { data } = usePromotionSuggestion(props.fingerprint, props.profileId);
   const suggestion = data?.suggestion;
   const sampleTitles = data?.captures.slice(0, 3).map((capture) => capture.title) ?? [];
 
@@ -51,6 +58,7 @@ function SuggestionCardLoader(props: {
       sharedKeywords={suggestion.sharedKeywords}
       sampleCaptureTitles={sampleTitles}
       avgExtractionConfidence={suggestion.avgExtractionConfidence}
+      profile={props.profile}
       onOpenReview={props.onOpenReview}
       onDismiss={props.onDismiss}
     />

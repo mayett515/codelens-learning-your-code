@@ -42,6 +42,21 @@ describe('Stage 4 Learning Hub guards', () => {
     expect(hub).toMatch(/useConceptCaptures/);
   });
 
+  it('threads project profile selection into hub learning lists', () => {
+    const hub = read('src/features/learning/ui/LearningHubScreen.tsx');
+
+    expect(hub).toMatch(/useProjectProfileSelection/);
+    expect(hub).toMatch(/useOntologyProfile/);
+    expect(hub).toMatch(/activeProfileId/);
+    expect(hub).toMatch(/profileFilters/);
+    expect(hub).toMatch(/useRecentCaptures\(\{\s*limit:\s*10,\s*filters:\s*profileFilters\s*\}\)/s);
+    expect(hub).toMatch(/useConceptList\(\{\s*sort:\s*'weakest',\s*filters:\s*profileFilters\s*\}\)/s);
+    expect(hub).toMatch(/useKnowledgeHealthConcepts\(\{\s*filters:\s*profileFilters\s*\}\)/);
+    expect(hub).toMatch(/<PromotionSuggestionsSection[\s\S]*profileId=\{activeProfileId\}[\s\S]*profile=\{profile\}/);
+    expect(hub).toMatch(/<ConceptListSection[\s\S]*profile=\{profile\}/);
+    expect(hub).toMatch(/<ReviewThresholdScreen[\s\S]*profileId=\{activeProfileId\}/);
+  });
+
   it('uses compact cards in hub lists and full cards only in detail modal', () => {
     expect(read('src/features/learning/ui/RecentCapturesSection.tsx')).toMatch(/CaptureCardCompact/);
     expect(read('src/features/learning/ui/ConceptListSection.tsx')).toMatch(/ConceptCardCompact/);
@@ -75,6 +90,23 @@ describe('Stage 4 Learning Hub guards', () => {
       expect(src).toMatch(/TypeNodeChip/);
       expect(src).not.toMatch(/ConceptTypeChip/);
       expect(src).toMatch(/typeNodeId=\{/);
+      expect(src).toMatch(/useOntologyProfile\(data\?\.concept\.profileId\)/);
+      expect(src).toMatch(/profile=\{profile\}/);
+    });
+  });
+
+  describe('profile-scoped review surfaces', () => {
+    it('scopes weak review concepts by active profile', () => {
+      const hook = read('src/features/learning/review/hooks/useWeakConcepts.ts');
+      const keys = read('src/features/learning/review/data/queryKeys.ts');
+      const screen = read('src/features/learning/review/ui/ReviewThresholdScreen.tsx');
+
+      expect(keys).toMatch(/weakConcepts:\s*\(threshold:\s*number,\s*profileId/);
+      expect(hook).toMatch(/useWeakConcepts\(threshold:\s*number,\s*profileId/);
+      expect(hook).toMatch(/concept\.profileId\s*===\s*profileId/);
+      expect(screen).toMatch(/useOntologyProfile\(props\.profileId\)/);
+      expect(screen).toMatch(/useWeakConcepts\(settings\.weakConceptThreshold,\s*props\.profileId\)/);
+      expect(screen).toMatch(/profile=\{profile\}/);
     });
   });
 
@@ -97,6 +129,29 @@ describe('Stage 4 Learning Hub guards', () => {
       expect(src).toMatch(/new Set<string>/);
       // Must not have an else-if that picks only one field
       expect(src).not.toMatch(/else if.*conceptType/);
+    });
+  });
+
+  describe('profile-scoped consumer filters', () => {
+    it('useRecentCaptures exposes profileIds/profileId filters', () => {
+      const src = read('src/features/learning/data/captureFilters.ts');
+      const hook = read('src/features/learning/hooks/useRecentCaptures.ts');
+
+      expect(src).toMatch(/profileIds\?:\s*string\[\]/);
+      expect(src).toMatch(/profileId\?:\s*string/);
+      expect(hook).toMatch(/captureKeys\.recent\(limit,\s*filters\)/);
+      expect(hook).toMatch(/getRecentCaptures\(limit,\s*undefined,\s*filters\)/);
+    });
+
+    it('learning chat can scope dot-connector retrieval by concept profile', () => {
+      const chatInput = read('src/ui/components/ChatInput.tsx');
+      const learningChat = read('app/learning/chat/[id].tsx');
+
+      expect(chatInput).toMatch(/retrievalFilters\?:\s*RetrieveFilters/);
+      expect(chatInput).toMatch(/useDotConnectorRetrieve\(text,\s*settings,\s*perTurnEnabled,\s*retrievalFilters\)/);
+      expect(chatInput).toMatch(/useSendWithInjection\(settings,\s*retrievalFilters\)/);
+      expect(learningChat).toMatch(/retrievalFilters/);
+      expect(learningChat).toMatch(/profileId:\s*concept\.profileId/);
     });
   });
 });

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { colors, fontSize, spacing } from '../../../../ui/theme';
 import { getActiveDomainProfile, getMetadataFieldPlaceholder, getOntologyNodeLabel } from '../../../ontology';
+import { useOntologyProfile } from '../../../ontology/hooks/useProfileSelection';
 import { CaptureCardCompact } from '../../ui/cards/CaptureCardCompact';
 import { LanguageChip } from '../../ui/primitives/LanguageChip';
 import type { ConceptType, LearningConcept } from '../../types/learning';
@@ -17,6 +18,7 @@ import type { PromotionReviewModel } from '../types/promotion';
 interface PromotionReviewScreenProps {
   fingerprint?: string | null;
   singleCaptureId?: LearningCaptureId | null;
+  profileId?: string | null | undefined;
   onComplete: (conceptId: string) => void;
   onCancel?: () => void;
 }
@@ -24,13 +26,16 @@ interface PromotionReviewScreenProps {
 export function PromotionReviewScreen({
   fingerprint = null,
   singleCaptureId = null,
+  profileId = null,
   onComplete,
   onCancel,
 }: PromotionReviewScreenProps) {
-  const { data: clusterData } = usePromotionSuggestion(fingerprint);
+  const { data: clusterData } = usePromotionSuggestion(fingerprint, profileId);
   const { data: singleData } = useSingleCapturePromotion(singleCaptureId);
-  const activeProfile = getActiveDomainProfile();
   const reviewModel = toReviewModel(clusterData, singleData);
+  const fallbackProfile = getActiveDomainProfile();
+  const { data: reviewProfile } = useOntologyProfile(reviewModel?.profileId ?? profileId);
+  const activeProfile = reviewProfile ?? fallbackProfile;
   const captures = reviewModel?.captures ?? [];
   const [name, setName] = useState('');
   const [typeNodeId, setTypeNodeId] = useState<ConceptType>(activeProfile.promotion.defaultTypeNodeId);
@@ -48,9 +53,13 @@ export function PromotionReviewScreen({
   useEffect(() => {
     if (!reviewModel) return;
     setName((current) => current || reviewModel.proposedName);
-    setTypeNodeId(reviewModel.proposedTypeNodeId);
+    const proposedTypeBelongsToProfile = new Set<string>(activeProfile.ontology.itemTypeNodeIds)
+      .has(reviewModel.proposedTypeNodeId);
+    setTypeNodeId(proposedTypeBelongsToProfile
+      ? reviewModel.proposedTypeNodeId
+      : activeProfile.promotion.defaultTypeNodeId);
     setIncludedIds((current) => current.size > 0 ? current : new Set(reviewModel.captures.map((capture) => capture.id)));
-  }, [reviewModel]);
+  }, [activeProfile, reviewModel]);
 
   const includedCaptureIds = [...includedIds];
   const canConfirm = name.trim().length > 0 && includedCaptureIds.length > 0;
@@ -205,6 +214,7 @@ function toReviewModel(
   if (!clusterData) return null;
   return {
     fingerprint: clusterData.suggestion.fingerprint,
+    profileId: clusterData.profileId,
     proposedName: clusterData.suggestion.proposedName,
     proposedTypeNodeId: clusterData.suggestion.proposedTypeNodeId,
     captures: clusterData.captures,

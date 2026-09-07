@@ -1,12 +1,14 @@
 import { StyleSheet, TextInput } from 'react-native';
 import { colors, fontSize, spacing } from '../../../../ui/theme';
 import { getActiveDomainProfile } from '@/src/features/ontology';
+import type { DomainProfile } from '@/src/features/ontology';
 
 export function ReflectionInput(props: {
   value: string;
+  profile?: DomainProfile | undefined;
   onChangeText: (value: string) => void;
 }) {
-  const profile = getActiveDomainProfile();
+  const profile = props.profile ?? getActiveDomainProfile();
 
   return (
     <TextInput

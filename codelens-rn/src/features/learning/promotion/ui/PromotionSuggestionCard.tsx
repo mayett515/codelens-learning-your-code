@@ -2,6 +2,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, fontSize, spacing } from '../../../../ui/theme';
 import { TypeNodeChip } from '../../ui/primitives/TypeNodeChip';
 import { LanguageChip } from '../../ui/primitives/LanguageChip';
+import type { DomainProfile } from '../../../ontology';
 import type { ConceptType } from '../../types/learning';
 
 interface PromotionSuggestionCardProps {
@@ -13,6 +14,7 @@ interface PromotionSuggestionCardProps {
   sharedKeywords: string[];
   sampleCaptureTitles: string[];
   avgExtractionConfidence: number;
+  profile?: DomainProfile | undefined;
   onOpenReview: (fingerprint: string) => void;
   onDismiss: (fingerprint: string) => void;
 }
@@ -25,7 +27,7 @@ export function PromotionSuggestionCard(props: PromotionSuggestionCardProps) {
     <View style={styles.card}>
       <View style={styles.headerRow}>
         <Text style={styles.title} numberOfLines={1}>{props.proposedName}</Text>
-        <TypeNodeChip typeNodeId={props.proposedTypeNodeId} />
+        <TypeNodeChip typeNodeId={props.proposedTypeNodeId} profile={props.profile} />
       </View>
       <Text style={styles.meta}>
         From {props.captureCount} captures across {props.sessionCount} sessions

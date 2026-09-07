@@ -41,6 +41,7 @@ export function useRelatedConcepts(conceptId: ConceptId, concept: Concept | unde
 }
 
 export { useRecentCaptures } from './useRecentCaptures';
+export type { CaptureListFilters } from '../data/captureFilters';
 export { useConceptList } from './useConceptList';
 export type { ConceptListFilters, ConceptListSort } from './useConceptList';
 export { useRecentSessions } from './useRecentSessions';

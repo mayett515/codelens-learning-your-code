@@ -15,6 +15,7 @@ export function useSingleCapturePromotion(captureId: LearningCaptureId | null) {
       const profile = getActiveDomainProfile();
       return {
         fingerprint: null,
+        profileId: capture.profileId,
         proposedName: capture.conceptHint?.proposedName ?? capture.title,
         proposedTypeNodeId: capture.conceptHint?.proposedConceptType ?? profile.promotion.defaultTypeNodeId,
         captures: [capture],

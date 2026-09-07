@@ -675,8 +675,10 @@ LLM silently rewrites arbitrary source code with no diff, approval, or rollback.
 
 ## Game Engine Approach
 
-The game-engine idea in `C:\Projects\gameengine` maps well to Kortex, but it should now be understood
-through the newer Kortex Core framing.
+The full [game-engine concept](FUTURE_CONCEPTS/GAME_ENGINE/README.md) maps well to Kordex, but it
+should be understood through the newer Kordex Core framing. The linked folder preserves both the
+original notes and a standalone technical explainer without making them current implementation
+requirements.
 
 The game engine should separate deterministic simulation from semantic ontology.
 
@@ -749,22 +751,17 @@ player imagination
 
 Currently implemented in this repo:
 
-- profile labels and graph/review/learning labels moved into profile-owned structures
-- `composeDomainProfile(base, overlays)`
-- `ProfileOverlay`
-- active profile source helpers
-- grouped activation input helpers
-- `prepareSaveCandidates(options.profile?: DomainProfile)` receives a composed profile
-- `runtimeProfileCoordinator.ts` as the explicit above-services brain mixer
-- correction evidence domain groundwork and validation
-- branch/selection/base-profile/correction/proposal persistence storage seams
-- decision docs for runtime source, coordinator, correction evidence, branch/overlay persistence, adaptive suggestions, and proposal storage
+- coding and photography base profiles with project-scoped branch selection and derived runtime
+  composition;
+- profile-scoped capture, retrieval, graph, review, and promotion flows;
+- correction evidence, bounded user-fit projection, and ContextPack-based model inputs;
+- inert profile-change proposals with review, audit events, freshness, replacement, superseding,
+  branch-local Apply, versioned base/core Apply, and the first branch-to-core target switch;
+- a manual checker that emits validated, additive branch-local proposals through the shared review
+  path.
 
 Not implemented yet:
 
-- branch selection UI
-- proposal review UI and apply/merge service
-- checker runtime
 - MCP server
 - source adapters
 - agent/subagent runtime
@@ -772,9 +769,9 @@ Not implemented yet:
 - Racket DSL
 - game engine
 
-The next practical engineering question is where the first correction/proposal review surface belongs
-before DB persistence. The current recommendation is yes: define the branch model in TypeScript
-without touching migrations first.
+The next architecture gate is intentionally undecided. Numbered decisions through the second-base
+forkability proof are implemented; future work should be selected against evidence from real model
+and product use rather than inferred from these exploratory applications.
 
 ## Why This Is Interesting To A Software Developer
 

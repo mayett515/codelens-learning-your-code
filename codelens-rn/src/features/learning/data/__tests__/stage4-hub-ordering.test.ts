@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { matchesCaptureListFilters } from '../captureFilters';
 import { sortCapturesForHub, sortConceptsForHub } from '../hubOrdering';
 import { unsafeConceptId, unsafeLearningCaptureId } from '../../types/ids';
 import type { LearningCapture, LearningConcept } from '../../types/learning';
@@ -78,5 +79,16 @@ describe('Stage 4 hub ordering', () => {
     ]);
 
     expect(ordered.map((item) => item.name)).toEqual(['Gamma', 'Alpha', 'Beta']);
+  });
+
+  it('matches recent captures by profileIds or profileId aliases', () => {
+    const coding = capture({ id: unsafeLearningCaptureId('lc_111111111111111111111'), profileId: 'coding' });
+    const photography = capture({ id: unsafeLearningCaptureId('lc_222222222222222222222'), profileId: 'photography' });
+
+    expect(matchesCaptureListFilters(coding, {})).toBe(true);
+    expect(matchesCaptureListFilters(coding, { profileIds: ['coding'] })).toBe(true);
+    expect(matchesCaptureListFilters(photography, { profileIds: ['coding'] })).toBe(false);
+    expect(matchesCaptureListFilters(photography, { profileId: 'photography' })).toBe(true);
+    expect(matchesCaptureListFilters(coding, { profileIds: ['photography'], profileId: 'coding' })).toBe(true);
   });
 });

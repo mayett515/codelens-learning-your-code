@@ -142,6 +142,8 @@ export interface LearningSession {
 
 export interface Concept {
   id: ConceptId;
+  /** Ontology base/profile scope for type node ids; legacy callers may omit it. */
+  profileId?: string | undefined;
   name: string;
   summary: string;
   taxonomy: ConceptTaxonomy;

@@ -4,7 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import type { Href } from 'expo-router';
 import { colors, fontSize, spacing } from '@/src/ui/theme';
-import { getActiveDomainProfile } from '@/src/features/ontology';
+import { getActiveDomainProfile, type DomainProfile } from '@/src/features/ontology';
+import { useOntologyProfile } from '@/src/features/ontology/hooks/useProfileSelection';
 import { runForceLayout } from '../engine/layout';
 import { useGraphForFocal } from '../hooks/useGraphData';
 import { GraphCanvas } from './GraphCanvas';
@@ -16,6 +17,7 @@ import type { GraphMode, LayoutResult } from '../types';
 
 interface GraphScreenProps {
   focalConceptId: ConceptId | null;
+  profileId?: string | null | undefined;
 }
 
 interface CanvasSize {
@@ -29,13 +31,16 @@ interface TooltipState {
   screenY: number;
 }
 
-export function GraphScreen({ focalConceptId }: GraphScreenProps) {
+export function GraphScreen({ focalConceptId, profileId }: GraphScreenProps) {
   const [mode, setMode] = useState<GraphMode>('structure');
   const [canvasSize, setCanvasSize] = useState<CanvasSize>({ width: 0, height: 0 });
   const [layout, setLayout] = useState<LayoutResult | null>(null);
   const [isLayingOut, setIsLayingOut] = useState(false);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
-  const query = useGraphForFocal(focalConceptId);
+  const query = useGraphForFocal(focalConceptId, profileId);
+  const fallbackProfile = getActiveDomainProfile();
+  const { data: selectedProfile } = useOntologyProfile(profileId);
+  const profile = selectedProfile ?? fallbackProfile;
   const nowMs = useMemo(() => Date.now(), [layout]);
 
   useEffect(() => {
@@ -62,8 +67,6 @@ export function GraphScreen({ focalConceptId }: GraphScreenProps) {
     return [...new Set(ids)].sort();
   }, [query.data]);
 
-  const profile = getActiveDomainProfile();
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -76,7 +79,7 @@ export function GraphScreen({ focalConceptId }: GraphScreenProps) {
         </View>
       </View>
       <View style={styles.modeRow}>
-        <GraphModeBar currentMode={mode} onModeChange={setMode} />
+        <GraphModeBar currentMode={mode} profile={profile} onModeChange={setMode} />
       </View>
       <View
         style={styles.canvasHost}
@@ -87,19 +90,24 @@ export function GraphScreen({ focalConceptId }: GraphScreenProps) {
       >
         {query.isPending ? <CenteredText label={profile.graph.statusLabels.loading} /> : null}
         {query.isError ? (
-          <ErrorState message={query.error instanceof Error ? query.error.message : profile.graph.statusLabels.unavailable} onRetry={() => query.refetch()} />
+          <ErrorState
+            message={query.error instanceof Error ? query.error.message : profile.graph.statusLabels.unavailable}
+            profile={profile}
+            onRetry={() => query.refetch()}
+          />
         ) : null}
         {query.data && query.data.nodes.length === 0 ? (
-          <EmptyState />
+          <EmptyState profile={profile} />
         ) : null}
         {layout && canvasSize.width > 0 && canvasSize.height > 0 ? (
           <GraphCanvas
             layoutResult={layout}
             mode={mode}
+            nodeColors={profile.graph.nodeColors}
             nowMs={nowMs}
             width={canvasSize.width}
             height={canvasSize.height}
-            onNodeDoubleTap={(id) => router.push(graphHref(id))}
+            onNodeDoubleTap={(id) => router.push(graphHref(id, profileId))}
             onNodeLongPress={(nodeIndex, screenX, screenY) => setTooltip({ nodeIndex, screenX, screenY })}
             onCanvasMiss={() => setTooltip(null)}
           />
@@ -121,22 +129,24 @@ export function GraphScreen({ focalConceptId }: GraphScreenProps) {
         {tooltip && layout?.nodes[tooltip.nodeIndex] ? (
           <NodePreviewTooltip
             node={layout.nodes[tooltip.nodeIndex]}
+            profile={profile}
             screenX={tooltip.screenX}
             screenY={tooltip.screenY}
             mode={mode}
             nowMs={nowMs}
             onDismiss={() => setTooltip(null)}
-            onOpenDetail={(id) => router.push(graphHref(id))}
+            onOpenDetail={(id) => router.push(graphHref(id, profileId))}
           />
         ) : null}
-        <GraphLegend mode={mode} presentTypeNodeIds={presentTypeNodeIds} />
+        <GraphLegend mode={mode} profile={profile} presentTypeNodeIds={presentTypeNodeIds} />
       </View>
     </SafeAreaView>
   );
 }
 
-function graphHref(conceptId: ConceptId): Href {
-  return `/graph?conceptId=${encodeURIComponent(conceptId)}` as Href;
+function graphHref(conceptId: ConceptId, profileId: string | null | undefined): Href {
+  const profileParam = profileId ? `&profileId=${encodeURIComponent(profileId)}` : '';
+  return `/graph?conceptId=${encodeURIComponent(conceptId)}${profileParam}` as Href;
 }
 
 function CenteredText({ label }: { label: string }) {
@@ -147,8 +157,15 @@ function CenteredText({ label }: { label: string }) {
   );
 }
 
-function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
-  const profile = getActiveDomainProfile();
+function ErrorState({
+  message,
+  profile,
+  onRetry,
+}: {
+  message: string;
+  profile: DomainProfile;
+  onRetry: () => void;
+}) {
   return (
     <View style={styles.center}>
       <Text style={styles.centerTitle}>{profile.graph.statusLabels.unavailable}</Text>
@@ -160,8 +177,7 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
   );
 }
 
-function EmptyState() {
-  const profile = getActiveDomainProfile();
+function EmptyState({ profile }: { profile: DomainProfile }) {
   return (
     <View style={styles.center}>
       <Text style={styles.centerTitle}>{profile.graph.emptyLabel}</Text>

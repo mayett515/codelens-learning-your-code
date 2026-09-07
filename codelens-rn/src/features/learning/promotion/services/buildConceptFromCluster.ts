@@ -13,9 +13,10 @@ export function buildConceptFromCluster(
 ): LearningConcept {
   const profile = getActiveDomainProfile();
   const contextOnlyKeywords = new Set<string>(profile.promotion.contextOnlyKeywords);
+  const profileId = captures[0]?.profileId ?? profile.id;
   return {
     id: conceptId,
-    profileId: profile.id,
+    profileId,
     name: input.name.trim(),
     normalizedKey: normalizeConceptKey(input.name),
     canonicalSummary: input.canonicalSummary ?? null,

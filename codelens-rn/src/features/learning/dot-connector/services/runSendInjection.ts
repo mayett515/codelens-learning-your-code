@@ -3,7 +3,7 @@ import { retrieveRelevantMemories } from '../../retrieval/services/retrieveRelev
 import { RetrievalUnavailableError } from '../../retrieval/types/retrieval';
 import { getRawDb } from '../../../../db/client';
 import { getInjectionModeConfig } from './dotConnectorSettings';
-import { withoutRemoved } from './runTypingRetrieval';
+import { dotConnectorRetrievalFilters, retrievalFilterSignature, withoutRemoved } from './runTypingRetrieval';
 import type { RetrieveDiagnostics, RetrievedMemory } from '../../retrieval/types/retrieval';
 import type { SendInjectionInput, SendInjectionResult } from '../types/dotConnector';
 
@@ -19,8 +19,10 @@ export async function runSendInjection(input: SendInjectionInput): Promise<SendI
   const now = input.now ?? Date.now;
   const config = getInjectionModeConfig(input.settings.injectionMode);
   const typingSnapshot = input.typingSnapshot ?? null;
+  const filters = dotConnectorRetrievalFilters(input.filters);
   const fresh = typingSnapshot !== null
     && typingSnapshot.query === query
+    && retrievalFilterSignature(typingSnapshot.filters) === retrievalFilterSignature(filters)
     && now() - typingSnapshot.createdAt <= SEND_RETRIEVAL_FRESHNESS_MS;
 
   try {
@@ -31,7 +33,7 @@ export async function runSendInjection(input: SendInjectionInput): Promise<SendI
           query,
           limit: config.limit,
           tokenBudget: config.tokenBudget,
-          filters: { kinds: ['capture', 'concept'] },
+          filters,
           enableJitRehydration: true,
           bumpLastAccessed: true,
         }),

@@ -16,7 +16,8 @@ export const learningKeys = {
 
 export const captureKeys = {
   all: ['learning-captures'] as const,
-  recent: (limit?: number) => ['learning-captures', 'recent', limit ?? 'default'] as const,
+  recent: (limit?: number, filters?: unknown) =>
+    ['learning-captures', 'recent', limit ?? 'default', filters ?? null] as const,
   byId: (id: LearningCaptureId) => ['learning-captures', id] as const,
   byConcept: (id: LearningConceptId | null) => ['learning-captures', 'concept', id ?? 'none'] as const,
 } as const;
@@ -25,7 +26,7 @@ export const conceptKeys = {
   all: ['learning-concepts'] as const,
   list: (sort?: string, filters?: unknown) =>
     ['learning-concepts', 'list', sort ?? 'weakest', filters ?? null] as const,
-  health: ['learning-concepts', 'health'] as const,
+  health: (filters?: unknown) => ['learning-concepts', 'health', filters ?? null] as const,
   byId: (id: LearningConceptId) => ['learning-concepts', id] as const,
   byNormalizedKey: (normalizedKey: string) =>
     ['learning-concepts', 'normalized-key', normalizedKey] as const,

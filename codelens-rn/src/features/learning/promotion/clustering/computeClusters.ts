@@ -66,24 +66,33 @@ export async function computeClusters(
   const eligible = await resolvedDeps.findEligibleCaptures();
   if (eligible.length < 3) return [];
 
-  const captureById = new Map(eligible.map((capture) => [capture.id, capture]));
-  const candidateIds = eligible.map((capture) => capture.id);
-  const edges = await buildSimilarityEdges(eligible, candidateIds, resolvedDeps.topMatches);
-  const components = connectedComponents(candidateIds, edges)
-    .flatMap((component) => splitIfOversized(component, edges));
   const dismissals = await resolvedDeps.dismissals();
+  const eligibleById = new Map(eligible.map((capture) => [capture.id, capture]));
 
   const clusters: ClusterCandidate[] = [];
-  for (const component of components) {
-    const captures = component.map((id) => captureById.get(id)).filter((capture): capture is LearningCapture => !!capture);
-    const candidate = await buildClusterCandidate(captures, edges);
-    if (!candidate) continue;
-    if (isDismissed(candidate, dismissals)) continue;
-    clusters.push(candidate);
+  for (const capturesForProfile of capturesGroupedByProfile(eligible)) {
+    if (capturesForProfile.length < 3) continue;
+
+    const captureById = new Map(capturesForProfile.map((capture) => [capture.id, capture]));
+    const candidateIds = capturesForProfile.map((capture) => capture.id);
+    const edges = await buildSimilarityEdges(capturesForProfile, candidateIds, resolvedDeps.topMatches);
+    const components = connectedComponents(candidateIds, edges)
+      .flatMap((component) => splitIfOversized(component, edges));
+    const profileId = capturesForProfile[0]!.profileId;
+
+    const profileClusters: ClusterCandidate[] = [];
+    for (const component of components) {
+      const captures = component.map((id) => captureById.get(id)).filter((capture): capture is LearningCapture => !!capture);
+      const candidate = await buildClusterCandidate(captures, edges);
+      if (!candidate) continue;
+      if (isDismissed(candidate, profileId, dismissals, eligibleById)) continue;
+      profileClusters.push(candidate);
+    }
+
+    clusters.push(...await assignCaptureOnce(profileClusters, captureById, edges));
   }
 
-  const assignedClusters = await assignCaptureOnce(clusters, captureById, edges);
-  return assignedClusters.sort((left, right) => {
+  return clusters.sort((left, right) => {
     const byScore = right.clusterScore - left.clusterScore;
     if (byScore !== 0) return byScore;
     const byCount = right.captureIds.length - left.captureIds.length;
@@ -92,6 +101,16 @@ export async function computeClusters(
     if (byCreatedAt !== 0) return byCreatedAt;
     return left.fingerprint.localeCompare(right.fingerprint);
   });
+}
+
+function capturesGroupedByProfile(captures: LearningCapture[]): LearningCapture[][] {
+  const groups = new Map<string, LearningCapture[]>();
+  for (const capture of captures) {
+    const group = groups.get(capture.profileId) ?? [];
+    group.push(capture);
+    groups.set(capture.profileId, group);
+  }
+  return [...groups.values()];
 }
 
 async function buildSimilarityEdges(
@@ -265,9 +284,16 @@ function mostCommonTypeNodeId(captures: LearningCapture[]): ConceptType {
     .sort((left, right) => right[1] - left[1] || typeOrder.indexOf(left[0]) - typeOrder.indexOf(right[0]))[0]?.[0] ?? defaultType;
 }
 
-function isDismissed(candidate: ClusterCandidate, dismissals: PromotionDismissal[]): boolean {
+function isDismissed(
+  candidate: ClusterCandidate,
+  profileId: string,
+  dismissals: PromotionDismissal[],
+  eligibleById: ReadonlyMap<LearningCaptureId, LearningCapture>,
+): boolean {
   const relevantDismissals = dismissals.filter(
-    (item) => item.proposedNormalizedKey === candidate.proposedNormalizedKey,
+    (item) =>
+      item.proposedNormalizedKey === candidate.proposedNormalizedKey &&
+      dismissalBelongsToProfile(item, profileId, eligibleById),
   );
   if (relevantDismissals.some((item) => item.isPermanent)) {
     return true;
@@ -284,6 +310,18 @@ function isDismissed(candidate: ClusterCandidate, dismissals: PromotionDismissal
   const lost = dismissal.captureIds.filter((id) => !current.has(id)).length;
   if (gained >= 2 && lost >= 2) return false;
   return true;
+}
+
+function dismissalBelongsToProfile(
+  dismissal: PromotionDismissal,
+  profileId: string,
+  eligibleById: ReadonlyMap<LearningCaptureId, LearningCapture>,
+): boolean {
+  const profileIds = dismissal.captureIds
+    .map((id) => eligibleById.get(id)?.profileId)
+    .filter((value): value is string => value !== undefined);
+  if (profileIds.length === 0) return true;
+  return profileIds.some((value) => value === profileId);
 }
 
 async function assignCaptureOnce(

@@ -2,10 +2,12 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, fontSize, spacing } from '../../../../ui/theme';
 import { getActiveDomainProfile } from '@/src/features/ontology';
 import { CaptureCardCompact } from '../../ui/cards/CaptureCardCompact';
+import type { DomainProfile } from '@/src/features/ontology';
 import type { LearningCapture } from '../../types/learning';
 
 export function ReviewResultScreen(props: {
   conceptName: string;
+  profile?: DomainProfile | undefined;
   summary?: string | null;
   captures?: LearningCapture[];
   onDone: () => void;
@@ -13,7 +15,7 @@ export function ReviewResultScreen(props: {
   onOpenCapture?: ((id: LearningCapture['id']) => void) | undefined;
   onContinueInChat?: (() => void) | undefined;
 }) {
-  const profile = getActiveDomainProfile();
+  const profile = props.profile ?? getActiveDomainProfile();
 
   return (
     <View style={styles.container}>

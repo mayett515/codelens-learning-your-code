@@ -4,6 +4,7 @@ import { colors, fontSize, spacing } from '../../../../ui/theme';
 import { TypeNodeChip } from '../primitives/TypeNodeChip';
 import { SourceBreadcrumb } from '../primitives/SourceBreadcrumb';
 import { StateChip } from '../primitives/StateChip';
+import type { DomainProfile } from '../../../ontology';
 import type { ConceptId, LearningCaptureId } from '../../types/ids';
 import type { CaptureState, ConceptType } from '../../types/learning';
 
@@ -11,6 +12,7 @@ interface CaptureCardFullProps {
   captureId?: LearningCaptureId;
   title: string;
   conceptType?: ConceptType | null;
+  profile?: DomainProfile | undefined;
   state?: CaptureState;
   whatClicked: string;
   whyItMattered: string | null;
@@ -38,13 +40,13 @@ interface CaptureCardFullProps {
 }
 
 export function CaptureCardFull(props: CaptureCardFullProps) {
-  const profile = getActiveDomainProfile();
+  const profile = props.profile ?? getActiveDomainProfile();
   const canEdit = props.editableUntil ? (props.now ?? Date.now()) <= props.editableUntil : false;
   return (
     <View style={styles.card}>
       <View style={styles.headerRow}>
         <Text style={styles.title}>{props.title}</Text>
-        {props.conceptType ? <TypeNodeChip typeNodeId={props.conceptType} size="md" /> : null}
+        {props.conceptType ? <TypeNodeChip typeNodeId={props.conceptType} size="md" profile={profile} /> : null}
       </View>
       {props.state ? <StateChip state={props.state} /> : null}
       <SourceBreadcrumb

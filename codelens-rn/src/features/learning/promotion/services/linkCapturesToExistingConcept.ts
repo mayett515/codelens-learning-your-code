@@ -57,7 +57,8 @@ export async function linkCapturesToExistingConcept(
     target = await resolvedDeps.getTargetConcept(input.targetConceptId, tx);
     if (!target) throw new PromotionCapturesChangedError();
     const captures = await resolvedDeps.getCaptures(input.includedCaptureIds, tx);
-    const linkableCaptures = captures.filter((capture) => capture.linkedConceptId === null);
+    const linkableCaptures = captures.filter((capture) =>
+      capture.linkedConceptId === null && capture.profileId === target!.profileId);
     if (linkableCaptures.length === 0) throw new PromotionCapturesChangedError();
 
     const languages = new Set<string>();

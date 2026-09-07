@@ -27,6 +27,10 @@ import { ReviewSessionScreen } from '../review/ui/ReviewSessionScreen';
 import { ReviewThresholdScreen } from '../review/ui/ReviewThresholdScreen';
 import { useReviewSettings } from '../review/hooks/useReviewSettings';
 import { getActiveDomainProfile } from '../../ontology';
+import {
+  useOntologyProfile,
+  useProjectProfileSelection,
+} from '../../ontology/hooks/useProfileSelection';
 import { ProfileProposalReviewEntry } from '../../ontology/ui/ProfileProposalReviewEntry';
 import { ProfileProposalReviewScreen } from '../../ontology/ui/ProfileProposalReviewScreen';
 import type { ConceptId, LearningCaptureId } from '../types/ids';
@@ -48,7 +52,14 @@ interface LearningHubScreenProps {
 }
 
 export function LearningHubScreen({ projectId }: LearningHubScreenProps = {}) {
-  const profile = getActiveDomainProfile();
+  const fallbackProfile = getActiveDomainProfile();
+  const normalizedProjectId = projectId?.trim() ?? '';
+  const { data: selectionRow } = useProjectProfileSelection(normalizedProjectId || null);
+  const activeProfileId = selectionRow?.selection.baseProfileId ?? fallbackProfile.id;
+  const { data: selectedProfile } = useOntologyProfile(activeProfileId);
+  const profile = selectedProfile ?? fallbackProfile;
+  const profileFilters = useMemo(() => ({ profileId: activeProfileId }), [activeProfileId]);
+
   useEffect(() => {
     syncPendingEmbeddings().catch(() => undefined);
     maybeRecomputeSuggestions('hub_open').catch(() => undefined);
@@ -56,10 +67,10 @@ export function LearningHubScreen({ projectId }: LearningHubScreenProps = {}) {
 
   const [detail, setDetail] = useState<Detail>(null);
   const reviewSettings = useReviewSettings();
-  const { data: captures = [] } = useRecentCaptures({ limit: 10 });
-  const { data: concepts = [] } = useConceptList({ sort: 'weakest' });
+  const { data: captures = [] } = useRecentCaptures({ limit: 10, filters: profileFilters });
+  const { data: concepts = [] } = useConceptList({ sort: 'weakest', filters: profileFilters });
   const { data: sessions = [] } = useRecentSessions({ limit: 5 });
-  const { data: healthConcepts = [] } = useKnowledgeHealthConcepts();
+  const { data: healthConcepts = [] } = useKnowledgeHealthConcepts({ filters: profileFilters });
   const { data: flashback } = useSessionFlashback(detail?.type === 'session' ? detail.id : null);
   const { data: conceptCaptures = [] } = useConceptCaptures(
     detail?.type === 'concept' ? detail.id : null,
@@ -84,7 +95,7 @@ export function LearningHubScreen({ projectId }: LearningHubScreenProps = {}) {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <Pressable style={styles.graphEntry} onPress={() => router.push('/graph' as Href)}>
+        <Pressable style={styles.graphEntry} onPress={() => router.push(profileGraphHref(activeProfileId))}>
           <Text style={styles.graphEntryTitle}>Knowledge Graph</Text>
           <Text style={styles.graphEntryText}>Explore your promoted concepts by structure, recency, and strength.</Text>
         </Pressable>
@@ -93,9 +104,17 @@ export function LearningHubScreen({ projectId }: LearningHubScreenProps = {}) {
           conceptsById={conceptsById}
           onOpenCapture={(id) => setDetail({ type: 'capture', id })}
         />
-        <PromotionSuggestionsSection onOpenReview={(fingerprint) => setDetail({ type: 'promotion', fingerprint })} />
+        <PromotionSuggestionsSection
+          profileId={activeProfileId}
+          profile={profile}
+          onOpenReview={(fingerprint) => setDetail({ type: 'promotion', fingerprint })}
+        />
         <ProfileProposalReviewEntry onOpen={() => setDetail({ type: 'profileProposals' })} />
-        <ConceptListSection concepts={concepts} onOpenConcept={(id) => setDetail({ type: 'concept', id })} />
+        <ConceptListSection
+          concepts={concepts}
+          profile={profile}
+          onOpenConcept={(id) => setDetail({ type: 'concept', id })}
+        />
         <SessionCardsSection sessions={sessions} onOpenSession={(id) => setDetail({ type: 'session', id })} />
         <KnowledgeHealthEntry concepts={healthConcepts} onOpen={() => setDetail({ type: 'health' })} />
         {reviewSettings.enableReviewMode ? (
@@ -112,6 +131,7 @@ export function LearningHubScreen({ projectId }: LearningHubScreenProps = {}) {
             captureId={selectedCapture.id}
             title={selectedCapture.title}
             conceptType={selectedCapture.conceptHint?.proposedConceptType ?? null}
+            profile={profile}
             state={selectedCapture.state}
             whatClicked={selectedCapture.whatClicked}
             whyItMattered={selectedCapture.whyItMattered}
@@ -133,6 +153,7 @@ export function LearningHubScreen({ projectId }: LearningHubScreenProps = {}) {
             name={selectedConcept.name}
             conceptType={selectedConcept.conceptType}
             strength={computeStrength(selectedConcept.familiarityScore, selectedConcept.importanceScore)}
+            profile={profile}
             canonicalSummary={selectedConcept.canonicalSummary}
             coreConcept={selectedConcept.coreConcept}
             architecturalPattern={selectedConcept.architecturalPattern}
@@ -148,7 +169,7 @@ export function LearningHubScreen({ projectId }: LearningHubScreenProps = {}) {
             onStartReview={() => {
               if (reviewSettings.enableReviewMode) setDetail({ type: 'reviewSession', id: selectedConcept.id });
             }}
-            onViewGraph={() => router.push(graphHref(selectedConcept.id))}
+            onViewGraph={() => router.push(graphHref(selectedConcept.id, activeProfileId))}
             onOpenConcept={(id) => setDetail({ type: 'concept', id })}
             onOpenCapture={(id) => setDetail({ type: 'capture', id })}
             onJumpToSession={(id) => setDetail({ type: 'session', id })}
@@ -160,6 +181,7 @@ export function LearningHubScreen({ projectId }: LearningHubScreenProps = {}) {
         {detail?.type === 'promotion' ? (
           <PromotionReviewScreen
             fingerprint={detail.fingerprint}
+            profileId={activeProfileId}
             onComplete={(conceptId) => setDetail({ type: 'concept', id: conceptId as ConceptId })}
           />
         ) : null}
@@ -174,6 +196,7 @@ export function LearningHubScreen({ projectId }: LearningHubScreenProps = {}) {
         ) : null}
         {detail?.type === 'reviewThreshold' ? (
           <ReviewThresholdScreen
+            profileId={activeProfileId}
             onOpenConcept={(id) => setDetail({ type: 'reviewSession', id })}
             onClose={() => setDetail(null)}
           />
@@ -275,8 +298,12 @@ function formatDate(ms: number): string {
   return new Date(ms).toLocaleDateString();
 }
 
-function graphHref(conceptId: ConceptId): Href {
-  return `/graph?conceptId=${encodeURIComponent(conceptId)}` as Href;
+function profileGraphHref(profileId: string): Href {
+  return `/graph?profileId=${encodeURIComponent(profileId)}` as Href;
+}
+
+function graphHref(conceptId: ConceptId, profileId: string): Href {
+  return `/graph?conceptId=${encodeURIComponent(conceptId)}&profileId=${encodeURIComponent(profileId)}` as Href;
 }
 
 const styles = StyleSheet.create({

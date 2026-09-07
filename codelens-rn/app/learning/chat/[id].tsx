@@ -30,7 +30,7 @@ import { ChatInput } from '@/src/ui/components/ChatInput';
 import { BubbleMenu } from '@/src/ui/components/BubbleMenu';
 import { ChatModelPickerModal } from '@/src/ui/components/ChatModelPickerModal';
 import type { ChatMessage, ChatModelOverride, ConceptId } from '@/src/domain/types';
-import type { RetrievedMemory } from '@/src/features/learning';
+import type { RetrieveFilters, RetrievedMemory } from '@/src/features/learning';
 
 export default function LearningChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -47,6 +47,10 @@ export default function LearningChatScreen() {
   const scopeConfig = getScopeConfig('learning');
 
   const { chatId, concept, related } = useLearningChat(conceptId);
+  const retrievalFilters = useMemo<RetrieveFilters | undefined>(
+    () => (concept?.profileId ? { profileId: concept.profileId } : undefined),
+    [concept?.profileId],
+  );
 
   const { data: chat } = useQuery({
     queryKey: chatKeys.detail(chatId!),
@@ -271,6 +275,7 @@ export default function LearningChatScreen() {
           onSend={handleSend}
           disabled={sending || !chatId}
           isGenerationInFlight={isGenerationInFlight}
+          retrievalFilters={retrievalFilters}
           onStop={stopGenerating}
           onUserTyping={handleUserTyping}
         />

@@ -3,15 +3,17 @@ import { useState } from 'react';
 import { colors, fontSize, spacing } from '../../../../ui/theme';
 import { getActiveDomainProfile } from '@/src/features/ontology';
 import { CaptureCardCompact } from '../../ui/cards/CaptureCardCompact';
+import type { DomainProfile } from '@/src/features/ontology';
 import type { LearningCapture } from '../../types/learning';
 
 export function ShowSavedReveal(props: {
   summary: string | null;
   captures: LearningCapture[];
+  profile?: DomainProfile | undefined;
   onOpenCapture?: ((id: LearningCapture['id']) => void) | undefined;
 }) {
   const [open, setOpen] = useState(false);
-  const profile = getActiveDomainProfile();
+  const profile = props.profile ?? getActiveDomainProfile();
 
   return (
     <View style={styles.container}>

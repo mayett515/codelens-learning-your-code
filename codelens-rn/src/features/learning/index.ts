@@ -13,6 +13,7 @@ export {
   setCaptureEmbeddingStatus,
   incrementCaptureEmbeddingRetry,
 } from './data/captureRepo';
+export type { CaptureListFilters } from './data/captureFilters';
 export {
   insertLearningConcept,
   getLearningConceptById,

@@ -3,6 +3,7 @@ import { colors, fontSize, spacing } from '../../../../ui/theme';
 import { TypeNodeChip } from '../primitives/TypeNodeChip';
 import { LanguageChip } from '../primitives/LanguageChip';
 import { StrengthIndicator } from '../primitives/StrengthIndicator';
+import type { DomainProfile } from '../../../ontology';
 import type { ConceptId } from '../../types/ids';
 import type { ConceptType } from '../../types/learning';
 
@@ -14,6 +15,7 @@ interface ConceptCardCompactProps {
   languageOrRuntime: string[];
   canonicalSummary: string | null;
   relationshipLine?: string | null;
+  profile?: DomainProfile | undefined;
   onPress: (conceptId: ConceptId) => void;
 }
 
@@ -28,7 +30,7 @@ export function ConceptCardCompact(props: ConceptCardCompactProps) {
         <StrengthIndicator strength={props.strength} />
       </View>
       <View style={styles.metaRow}>
-        <TypeNodeChip typeNodeId={props.conceptType} />
+        <TypeNodeChip typeNodeId={props.conceptType} profile={props.profile} />
         {visibleLanguages.map((language) => <LanguageChip key={language} label={language} />)}
         {hiddenCount > 0 ? <Text style={styles.moreText}>+{hiddenCount}</Text> : null}
       </View>

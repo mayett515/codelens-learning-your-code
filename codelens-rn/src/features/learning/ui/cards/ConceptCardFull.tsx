@@ -4,6 +4,7 @@ import { colors, fontSize, spacing } from '../../../../ui/theme';
 import { TypeNodeChip } from '../primitives/TypeNodeChip';
 import { LanguageChip } from '../primitives/LanguageChip';
 import { StrengthIndicator } from '../primitives/StrengthIndicator';
+import type { DomainProfile } from '../../../ontology';
 import type { ConceptId, LearningCaptureId } from '../../types/ids';
 import type { ConceptType } from '../../types/learning';
 
@@ -12,6 +13,7 @@ interface ConceptCardFullProps {
   name: string;
   conceptType: ConceptType;
   strength: number;
+  profile?: DomainProfile | undefined;
   canonicalSummary: string | null;
   coreConcept?: string | null;
   architecturalPattern?: string | null;
@@ -47,7 +49,7 @@ interface ConceptCardFullProps {
 }
 
 export function ConceptCardFull(props: ConceptCardFullProps) {
-  const profile = getActiveDomainProfile();
+  const profile = props.profile ?? getActiveDomainProfile();
   const representativeSet = new Set(props.representativeCaptureIds);
   const coreLabel = getMetadataFieldLabel(profile, 'coreConcept', 'Core');
   const patternLabel = getMetadataFieldLabel(profile, 'architecturalPattern', 'Pattern');
@@ -58,7 +60,7 @@ export function ConceptCardFull(props: ConceptCardFullProps) {
         <Text style={styles.name}>{props.name}</Text>
         <StrengthIndicator strength={props.strength} size="md" />
       </View>
-      <TypeNodeChip typeNodeId={props.conceptType} size="md" />
+      <TypeNodeChip typeNodeId={props.conceptType} size="md" profile={profile} />
       {props.canonicalSummary ? <Text style={styles.summary}>{props.canonicalSummary}</Text> : null}
       <View style={styles.actions}>
         <Action label="Start Review" onPress={props.onStartReview} />

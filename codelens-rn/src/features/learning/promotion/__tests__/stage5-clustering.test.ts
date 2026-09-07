@@ -79,6 +79,54 @@ describe('Stage 5 clustering', () => {
     expect(clusters[0].sharedKeywords).toContain('closure');
   });
 
+  it('does not cluster captures across different ontology profiles', async () => {
+    const eligible = [
+      capture(1, { profileId: 'coding' }),
+      capture(2, { profileId: 'coding' }),
+      capture(3, { profileId: 'photography' }),
+      capture(4, { profileId: 'photography' }),
+    ];
+
+    const clusters = await computeClusters({
+      findEligibleCaptures: async () => eligible,
+      topMatches: async (item, ids) =>
+        ids
+          .filter((id) => id !== item.id)
+          .map((id) => ({ id, cosine: 0.9 })),
+      dismissals: async () => [],
+    });
+
+    expect(clusters).toEqual([]);
+  });
+
+  it('can return separate clusters for separate profiles', async () => {
+    const eligible = [
+      capture(1, { profileId: 'coding' }),
+      capture(2, { profileId: 'coding' }),
+      capture(3, { profileId: 'coding' }),
+      capture(4, { profileId: 'photography' }),
+      capture(5, { profileId: 'photography' }),
+      capture(6, { profileId: 'photography' }),
+    ];
+
+    const clusters = await computeClusters({
+      findEligibleCaptures: async () => eligible,
+      topMatches: async (item, ids) =>
+        ids
+          .filter((id) => id !== item.id)
+          .map((id) => ({ id, cosine: 0.9 })),
+      dismissals: async () => [],
+    });
+
+    expect(clusters).toHaveLength(2);
+    const profileGroups = clusters
+      .map((cluster) => [...new Set(
+        cluster.captureIds.map((id) => eligible.find((capture) => capture.id === id)?.profileId),
+      )].join(','))
+      .sort();
+    expect(profileGroups).toEqual(['coding', 'photography']);
+  });
+
   it('hides soft-dismissed clusters until they grow enough', async () => {
     const captures = [capture(1), capture(2), capture(3)];
     const fingerprint = await clusterFingerprint(captures.map((item) => item.id));

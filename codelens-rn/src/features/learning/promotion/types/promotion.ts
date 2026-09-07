@@ -21,6 +21,7 @@ export interface PromotionSuggestion extends ClusterCandidate {
 
 export interface PromotionSuggestionWithCaptures {
   suggestion: PromotionSuggestion;
+  profileId: string;
   captures: LearningCapture[];
 }
 
@@ -54,6 +55,7 @@ export interface LinkExistingInput {
 
 export interface PromotionReviewModel {
   fingerprint: string | null;
+  profileId: string;
   proposedName: string;
   proposedTypeNodeId: ConceptType;
   captures: LearningCapture[];

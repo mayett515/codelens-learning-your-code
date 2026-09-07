@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { unsafeConceptId, unsafeLearningCaptureId } from '../../types/ids';
 import { getInjectionModeConfig, runSendInjection, runTypingRetrieval, sortPreviewMemories } from '../services';
-import type { DotConnectorSettings } from '../types/dotConnector';
+import type { DotConnectorSettings, TypingRetrievalSnapshot } from '../types/dotConnector';
 import type { RetrieveResult, RetrievedCaptureMemory, RetrievedConceptMemory } from '../../retrieval/types/retrieval';
 
 vi.mock('../../../../db/client', () => ({
@@ -142,6 +142,30 @@ describe('Stage 7 Dot Connector contracts', () => {
     expect(snapshot?.injection.includedCount).toBe(2);
   });
 
+  it('typing retrieval preserves profile filters while forcing capture and concept memories', async () => {
+    const retrieve = vi.fn(async () => result());
+    const snapshot = await runTypingRetrieval({
+      query: 'composition',
+      settings,
+      filters: { profileId: 'photography', typeNodeIds: ['composition'] },
+      retrieve,
+      now: () => 10,
+    });
+
+    expect(retrieve).toHaveBeenCalledWith(expect.objectContaining({
+      filters: {
+        profileId: 'photography',
+        typeNodeIds: ['composition'],
+        kinds: ['capture', 'concept'],
+      },
+    }));
+    expect(snapshot?.filters).toEqual({
+      profileId: 'photography',
+      typeNodeIds: ['composition'],
+      kinds: ['capture', 'concept'],
+    });
+  });
+
   it('send skips retrieval when the per-turn toggle is off', async () => {
     const retrieve = vi.fn(async () => result());
     const send = await runSendInjection({
@@ -180,6 +204,36 @@ describe('Stage 7 Dot Connector contracts', () => {
     expect(send.memories[0]?.kind).toBe('concept');
     expect(send.injection?.text).toContain('Closure');
     expect(send.diagnostics?.status).toBe('ok');
+  });
+
+  it('send does not reuse a typing snapshot from a different profile filter', async () => {
+    const retrieve = vi.fn(async () => result([captureMemory()]));
+    const bumpLastAccessed = vi.fn(async () => undefined);
+    const typingSnapshot: TypingRetrievalSnapshot = {
+      query: 'composition',
+      filters: { profileId: 'coding', kinds: ['capture', 'concept'] },
+      result: result([conceptMemory()]),
+      injection: { text: 'cached', includedIds: [{ kind: 'concept' as const, id: conceptId }], includedCount: 1, droppedCount: 0, totalTokensApprox: 2 },
+      createdAt: 1_000,
+    };
+
+    const send = await runSendInjection({
+      query: 'composition',
+      settings,
+      filters: { profileId: 'photography' },
+      perTurnEnabled: true,
+      retrieve,
+      bumpLastAccessed,
+      typingSnapshot,
+      now: () => 5_000,
+    });
+
+    expect(retrieve).toHaveBeenCalledWith(expect.objectContaining({
+      filters: { profileId: 'photography', kinds: ['capture', 'concept'] },
+    }));
+    expect(bumpLastAccessed).not.toHaveBeenCalled();
+    expect(send.reusedTypingResult).toBe(false);
+    expect(send.memories[0]?.kind).toBe('capture');
   });
 
   it('removing a memory excludes it from this turn without deleting source data', async () => {

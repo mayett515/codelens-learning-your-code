@@ -20,7 +20,7 @@ import {
 import { formatMemoriesForInjection } from '../../features/learning/retrieval';
 import { StopGeneratingButton } from '../../features/chat/ui/StopGeneratingButton';
 import type { DotConnectorIndicatorStatus } from '../../features/learning/dot-connector';
-import type { RetrievedMemory } from '../../features/learning/retrieval/types/retrieval';
+import type { RetrieveFilters, RetrievedMemory } from '../../features/learning/retrieval/types/retrieval';
 
 export interface ChatInputSendContext {
   memories: RetrievedMemory[];
@@ -30,6 +30,7 @@ interface Props {
   onSend: (text: string, context?: ChatInputSendContext) => void;
   disabled?: boolean | undefined;
   isGenerationInFlight?: boolean | undefined;
+  retrievalFilters?: RetrieveFilters | undefined;
   onStop?: (() => void) | undefined;
   onUserTyping?: (() => void) | undefined;
 }
@@ -38,6 +39,7 @@ export function ChatInput({
   onSend,
   disabled,
   isGenerationInFlight,
+  retrievalFilters,
   onStop,
   onUserTyping,
 }: Props) {
@@ -49,8 +51,8 @@ export function ChatInput({
   const [previewVisible, setPreviewVisible] = useState(false);
   const [removedMemoryIds, setRemovedMemoryIds] = useState<string[]>([]);
   const sendInFlightRef = useRef(false);
-  const retrieval = useDotConnectorRetrieve(text, settings, perTurnEnabled);
-  const { prepareSend } = useSendWithInjection(settings);
+  const retrieval = useDotConnectorRetrieve(text, settings, perTurnEnabled, retrievalFilters);
+  const { prepareSend } = useSendWithInjection(settings, retrievalFilters);
   const config = getInjectionModeConfig(settings.injectionMode);
   const activeMemories = useMemo(
     () => withoutRemoved(retrieval.snapshot?.result.memories ?? [], removedMemoryIds),

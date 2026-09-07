@@ -141,6 +141,21 @@ export function useOntologyProfileSummaries() {
   });
 }
 
+export function useOntologyProfile(profileId: string | null | undefined) {
+  const normalizedProfileId = profileId?.trim() ?? '';
+
+  return useQuery({
+    queryKey: normalizedProfileId
+      ? profileBaseProfileKeys.byId(normalizedProfileId)
+      : profileBaseProfileKeys.byId('__missing_profile__'),
+    queryFn: async () => {
+      const registry = await loadDefaultProfileRegistry();
+      return registry.getProfile(normalizedProfileId);
+    },
+    enabled: normalizedProfileId.length > 0,
+  });
+}
+
 export function useProfileBranchesForParent(parentProfileId: string | null | undefined) {
   const normalizedParentProfileId = parentProfileId?.trim() ?? '';
 

@@ -15,12 +15,15 @@ function clamp01(value: number): number {
   return Math.min(1, Math.max(0, value));
 }
 
-function typeNodeColor(typeNodeId: ConceptType): string {
-  if (Object.prototype.hasOwnProperty.call(CONCEPT_TYPE_COLORS, typeNodeId)) {
-    return CONCEPT_TYPE_COLORS[typeNodeId];
+function typeNodeColor(
+  typeNodeId: ConceptType,
+  nodeColors: Readonly<Record<string, string>>,
+): string {
+  if (Object.prototype.hasOwnProperty.call(nodeColors, typeNodeId)) {
+    return nodeColors[typeNodeId]!;
   }
   console.warn(`[Graph] Unknown ontology type node for visual encoding: ${String(typeNodeId)}`);
-  return CONCEPT_TYPE_COLORS[FALLBACK_CONCEPT_TYPE];
+  return nodeColors[FALLBACK_CONCEPT_TYPE] ?? Object.values(nodeColors)[0] ?? '#94A3B8';
 }
 
 export function getRecencyColor(lastAccessedAt: number | null, nowMs: number): string {
@@ -67,6 +70,7 @@ export function computeNodeVisual(
   node: GraphNode,
   mode: GraphMode,
   nowMs: number,
+  nodeColors: Readonly<Record<string, string>> = CONCEPT_TYPE_COLORS,
 ): NodeVisual {
   if (mode === 'recency') {
     return {
@@ -87,7 +91,7 @@ export function computeNodeVisual(
   }
 
   return {
-    fill: typeNodeColor(node.typeNodeId),
+    fill: typeNodeColor(node.typeNodeId, nodeColors),
     radius: STRUCTURE_RADIUS,
     strokeColor: '#FFFFFF',
     strokeWidth: 1.5,

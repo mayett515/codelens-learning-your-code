@@ -1,6 +1,6 @@
 # Second Base Profile Forkability Demo Decision
 
-**Status:** Locked decision on 2026-06-12. Initial forkability proof and profile-scoped learning capture/save/precheck/list/retrieval boundaries implemented on 2026-07-03; graph and promotion profile-scope consumers remain deferred.
+**Status:** Locked decision on 2026-06-12. Initial forkability proof, profile-scoped learning capture/save/precheck/list/retrieval boundaries, Learning Hub/chat retrieval consumers, graph consumers, and promotion consumers implemented on 2026-07-03. No forced Doc 43 follow-up remains.
 **Branch:** `refactor/ontology-profile`
 
 ## Source Map
@@ -184,10 +184,11 @@ Resolved coupling finding:
 - Cross-base `typeNodeId` collision filtering is now explicit at the learning capture, concept-list, save-precheck, and retrieval filter boundaries. `LearningCapture`, `LearningConcept`, `RetrievedCapturePayload`, and `RetrievedConceptPayload` carry `profileId`; `SaveModalCandidateData` carries the active profile id through save; `prepareSaveCandidates` drops pre-check concept matches from other profiles before prompt/linking; `useConceptList` and `RetrieveFilters` expose preferred `profileIds` plus single-profile `profileId` aliases; matching now requires profile scope and type-node filters to agree. This keeps overlapping node ids such as `composition` valid in unrelated bases without requiring global node-id uniqueness.
 - Target switching now rejects a branch whose `parentProfileId` does not match the proposal `baseProfileId` before creating a base replacement.
 
-Deferred consumers:
+Resolved consumer follow-ups:
 
-- Learning Hub and chat retrieval callers still rely on their existing active-profile/all-memory surfaces unless a caller passes explicit filters. Before those surfaces display or inject simultaneous multi-base memory, thread project/profile selection into their query and retrieval inputs.
-- Graph queries and promotion clustering still rely on their existing learning-domain surfaces and default active-profile assumptions. They are not opened as simultaneous multi-base product surfaces by this demo. Before graph or promotion UI displays multiple base profiles at once, add explicit profile-scoped filters there too.
+- Learning Hub and chat retrieval callers now thread project/profile selection into profile-shaped query and retrieval inputs.
+- Graph queries and promotion clustering now use explicit profile-scoped filters where they read, render, or group profile-shaped data.
+- Session flashbacks remain session-scoped rather than profile-scoped; they can show the contents of the selected session and do not create cross-profile mutations.
 
 ## Implementation Update - Profile-Scoped Learning Filters
 
@@ -201,7 +202,19 @@ The follow-up implementation slice resolved the Doc 43 collision finding without
 - retrieval payloads carry `profileId` for both captures and concepts;
 - retrieval filters can scope by `profileIds` / `profileId` before type-node filtering;
 - `coding/composition` and `photography/composition` are allowed to coexist as separate meanings;
-- Learning Hub, chat retrieval callers, graph queries, and promotion clustering are intentionally left for later profile-scoped consumer slices.
+- Learning Hub, chat retrieval callers, graph queries, and promotion clustering were intentionally left for later profile-scoped consumer slices, and those slices are now implemented.
+
+## Implementation Update - Profile-Scoped Consumer Completion
+
+The next implementation slice closed the deferred Doc 43 consumers without opening a new architecture gate:
+
+- Learning Hub resolves the active project selection, scopes capture/concept/health/promotion/review queries by the active base profile, and routes graph links with `profileId`;
+- chat retrieval callers pass the concept profile into dot-connector retrieval/send injection so same-id type filters remain profile-scoped;
+- graph full/ego queries accept profile scope, default ego scope to the focal concept's profile, reject explicit mismatches, and render graph labels/colors from the selected profile;
+- promotion clustering groups eligible captures by profile before similarity clustering, and promotion review/promote/link paths reject or skip cross-profile capture/concept mixing;
+- review threshold and review-session surfaces render labels/chips against the relevant profile instead of the default coding profile;
+- shared type-chip/card components accept an explicit `DomainProfile` while keeping the coding default fallback for older call sites;
+- focused guards now pin profile-scoped consumer behavior for Hub, cards, graph, promotion, retrieval, and checker/proposal architecture boundaries.
 
 Future media-analysis note:
 

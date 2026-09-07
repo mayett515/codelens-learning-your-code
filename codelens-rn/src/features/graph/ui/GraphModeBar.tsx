@@ -1,18 +1,17 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, fontSize, spacing } from '@/src/ui/theme';
-import { getActiveDomainProfile } from '@/src/features/ontology';
+import type { DomainProfile } from '@/src/features/ontology';
 import type { GraphMode } from '../types';
 
 const MODES: GraphMode[] = ['structure', 'recency', 'strength'];
 
 interface GraphModeBarProps {
   currentMode: GraphMode;
+  profile: DomainProfile;
   onModeChange: (mode: GraphMode) => void;
 }
 
-export function GraphModeBar({ currentMode, onModeChange }: GraphModeBarProps) {
-  const profile = getActiveDomainProfile();
-
+export function GraphModeBar({ currentMode, profile, onModeChange }: GraphModeBarProps) {
   return (
     <View style={styles.container}>
       {MODES.map((mode) => {

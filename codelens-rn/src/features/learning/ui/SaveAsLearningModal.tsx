@@ -225,6 +225,7 @@ export function SaveAsLearningModal() {
                       whatClicked={candidate.whatClicked}
                       rawSnippet={candidate.rawSnippet}
                       conceptType={conceptType as ConceptType | null}
+                      profile={profile}
                       linkedConceptName={candidate.linkedConceptName}
                       isNewLanguageForExistingConcept={candidate.isNewLanguageForExistingConcept}
                       crossLanguageHint={buildCrossLanguageHint(candidate)}
@@ -279,6 +280,7 @@ export function SaveAsLearningModal() {
                   <CaptureCardFull
                     title={inspectingCandidate.title}
                     conceptType={inspectingCandidate.conceptHint?.proposedConceptType ?? null}
+                    profile={profile}
                     whatClicked={inspectingCandidate.whatClicked}
                     whyItMattered={inspectingCandidate.whyItMattered}
                     rawSnippet={inspectingCandidate.rawSnippet}

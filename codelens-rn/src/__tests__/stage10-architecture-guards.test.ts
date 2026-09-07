@@ -29,12 +29,23 @@ function walk(dir: string): string[] {
   });
 }
 
+let cachedSourceFiles: string[] | null = null;
+const sourceTextCache = new Map<string, string>();
+
 function sourceFiles(): string[] {
-  return sourceRoots.flatMap((root) => walk(path.join(repoRoot, root)));
+  // Guard tests never mutate source, so one snapshot avoids repeated full-tree walks.
+  cachedSourceFiles ??= sourceRoots.flatMap((root) => walk(path.join(repoRoot, root)));
+  return cachedSourceFiles;
 }
 
 function read(filePath: string): string {
-  return fs.readFileSync(filePath, 'utf8');
+  const resolvedPath = path.isAbsolute(filePath) ? filePath : path.join(repoRoot, filePath);
+  const cached = sourceTextCache.get(resolvedPath);
+  if (cached !== undefined) return cached;
+
+  const content = fs.readFileSync(resolvedPath, 'utf8');
+  sourceTextCache.set(resolvedPath, content);
+  return content;
 }
 
 describe('Stage 10 Phase A architecture guards', () => {

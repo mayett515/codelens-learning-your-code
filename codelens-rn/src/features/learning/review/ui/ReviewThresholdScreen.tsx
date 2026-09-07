@@ -1,6 +1,7 @@
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { colors, fontSize, spacing } from '../../../../ui/theme';
 import { getActiveDomainProfile } from '@/src/features/ontology';
+import { useOntologyProfile } from '@/src/features/ontology/hooks/useProfileSelection';
 import { ConceptCardCompact } from '../../ui/cards/ConceptCardCompact';
 import { computeStrength } from '../../strength/computeStrength';
 import { useReviewSettings } from '../hooks/useReviewSettings';
@@ -8,12 +9,15 @@ import { useWeakConcepts } from '../hooks/useWeakConcepts';
 import type { ConceptId } from '../../types/ids';
 
 export function ReviewThresholdScreen(props: {
+  profileId?: string | null | undefined;
   onOpenConcept: (conceptId: ConceptId) => void;
   onClose?: () => void;
 }) {
   const settings = useReviewSettings();
-  const { data: concepts = [], isLoading } = useWeakConcepts(settings.weakConceptThreshold);
-  const profile = getActiveDomainProfile();
+  const fallbackProfile = getActiveDomainProfile();
+  const { data: selectedProfile } = useOntologyProfile(props.profileId);
+  const profile = selectedProfile ?? fallbackProfile;
+  const { data: concepts = [], isLoading } = useWeakConcepts(settings.weakConceptThreshold, props.profileId);
 
   return (
     <View style={styles.container}>
@@ -42,6 +46,7 @@ export function ReviewThresholdScreen(props: {
             strength={computeStrength(concept.familiarityScore, concept.importanceScore)}
             languageOrRuntime={concept.languageOrRuntime}
             canonicalSummary={concept.canonicalSummary}
+            profile={profile}
             onPress={props.onOpenConcept}
           />
         ))}

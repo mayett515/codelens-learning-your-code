@@ -49,8 +49,17 @@ function relationshipConcepts(concepts: LearningConcept[]): LearningConcept[] {
   return concepts;
 }
 
-export async function fetchFullGraphData(): Promise<GraphData> {
-  const concepts = await getLearningConceptList();
+function conceptsInProfile(
+  concepts: LearningConcept[],
+  profileId: string | null | undefined,
+): LearningConcept[] {
+  const normalizedProfileId = profileId?.trim();
+  if (!normalizedProfileId) return concepts;
+  return concepts.filter((concept) => concept.profileId === normalizedProfileId);
+}
+
+export async function fetchFullGraphData(profileId?: string | null): Promise<GraphData> {
+  const concepts = conceptsInProfile(await getLearningConceptList(), profileId);
   const totalConceptCount = concepts.length;
   const selectedConcepts = [...concepts]
     .sort(compareForFullGraph)
@@ -67,12 +76,20 @@ export async function fetchFullGraphData(): Promise<GraphData> {
   };
 }
 
-export async function fetchEgoGraphData(conceptId: ConceptId): Promise<GraphData> {
-  const concepts = await getLearningConceptList();
+export async function fetchEgoGraphData(
+  conceptId: ConceptId,
+  profileId?: string | null,
+): Promise<GraphData> {
+  const allConcepts = await getLearningConceptList();
+  const allById = conceptsById(allConcepts);
+  const focalConcept = allById.get(conceptId);
+  if (!focalConcept) throw new GraphFocalNotFoundError(conceptId);
+  const graphProfileId = profileId?.trim() || focalConcept.profileId;
+  if (focalConcept.profileId !== graphProfileId) throw new GraphFocalNotFoundError(conceptId);
+
+  const concepts = conceptsInProfile(allConcepts, graphProfileId);
   const totalConceptCount = concepts.length;
   const byId = conceptsById(concepts);
-  const focalConcept = byId.get(conceptId);
-  if (!focalConcept) throw new GraphFocalNotFoundError(conceptId);
 
   const candidates = new Map<ConceptId, NeighborCandidate>();
   const addCandidate = (id: ConceptId, priority: number): void => {

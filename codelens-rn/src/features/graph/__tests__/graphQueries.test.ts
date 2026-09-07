@@ -77,6 +77,18 @@ describe('Stage 9A graph queries', () => {
     expect(graph.nodes[0].strength).toBe(computeStrengthForTest(0.9, 0.9));
   });
 
+  it('scopes full graph concepts by profile when requested', async () => {
+    getLearningConceptListMock.mockResolvedValue([
+      concept(conceptA, { name: 'Coding composition', profileId: 'coding' }),
+      concept(conceptB, { name: 'Photography composition', profileId: 'photography' }),
+    ]);
+
+    const graph = await fetchFullGraphData('photography');
+
+    expect(graph.totalConceptCount).toBe(1);
+    expect(graph.nodes.map((node) => node.id)).toEqual([conceptB]);
+  });
+
   it('caps full graph nodes at 300 and keeps edges inside the selected set', async () => {
     const concepts = Array.from({ length: 305 }, (_, index) => {
       const conceptId = id(`c_${String(index).padStart(21, '0')}`);
@@ -119,6 +131,26 @@ describe('Stage 9A graph queries', () => {
     expect(graph.edges.map((edge) => edge.id)).toContain(`${conceptA}__related__${conceptC}`);
     expect(graph.edges.map((edge) => edge.id)).toContain(`${conceptA}__contrast__${conceptD}`);
     expect(graph.edges.map((edge) => edge.id)).toContain(`${conceptA}__related__${conceptE}`);
+  });
+
+  it('uses the focal concept profile for ego graph neighbors by default', async () => {
+    getLearningConceptListMock.mockResolvedValue([
+      concept(conceptA, { profileId: 'coding', relatedConcepts: [conceptB] }),
+      concept(conceptB, { profileId: 'photography', relatedConcepts: [conceptA] }),
+      concept(conceptC, { profileId: 'coding', relatedConcepts: [conceptA] }),
+    ]);
+
+    const graph = await fetchEgoGraphData(conceptA);
+
+    expect(graph.totalConceptCount).toBe(2);
+    expect(graph.nodes.map((node) => node.id)).toEqual([conceptA, conceptC]);
+    expect(graph.edges.every((edge) => edge.sourceId !== conceptB && edge.targetId !== conceptB)).toBe(true);
+  });
+
+  it('rejects a focal concept outside an explicit profile scope', async () => {
+    getLearningConceptListMock.mockResolvedValue([concept(conceptA, { profileId: 'coding' })]);
+
+    await expect(fetchEgoGraphData(conceptA, 'photography')).rejects.toBeInstanceOf(GraphFocalNotFoundError);
   });
 
   it('caps ego graph at 40 nodes while keeping focal concept present', async () => {

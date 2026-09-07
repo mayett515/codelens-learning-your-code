@@ -2,8 +2,10 @@ import { and, asc, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm';
 import { db, type DbOrTx } from '../../../db/client';
 import { learningCaptures } from './schema';
 import { buildCaptureClassificationJson, captureRowToDomain, validateCaptureForWrite } from '../codecs/capture';
+import { normalizedCaptureProfileIds } from './captureFilters';
 import type { LearningCapture } from '../types/learning';
 import type { ConceptId, LearningCaptureId } from '../types/ids';
+import type { CaptureListFilters } from './captureFilters';
 
 export async function insertCapture(
   capture: LearningCapture,
@@ -51,12 +53,23 @@ export async function getCaptureById(
 export async function getRecentCaptures(
   limit: number,
   executor: DbOrTx = db,
+  filters: CaptureListFilters = {},
 ): Promise<LearningCapture[]> {
-  const rows = await executor
-    .select()
-    .from(learningCaptures)
-    .orderBy(desc(learningCaptures.createdAt), asc(learningCaptures.id))
-    .limit(limit);
+  const profileIds = normalizedCaptureProfileIds(filters);
+  const rows = profileIds.length === 0
+    ? await executor
+      .select()
+      .from(learningCaptures)
+      .orderBy(desc(learningCaptures.createdAt), asc(learningCaptures.id))
+      .limit(limit)
+    : await executor
+      .select()
+      .from(learningCaptures)
+      .where(profileIds.length === 1
+        ? eq(learningCaptures.profileId, profileIds[0]!)
+        : inArray(learningCaptures.profileId, profileIds))
+      .orderBy(desc(learningCaptures.createdAt), asc(learningCaptures.id))
+      .limit(limit);
   return rows.map(captureRowToDomain);
 }
 

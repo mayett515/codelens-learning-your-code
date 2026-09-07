@@ -1,4 +1,11 @@
-import type { InjectionResult, RetrieveDiagnostics, RetrieveOptions, RetrieveResult, RetrievedMemory } from '../../retrieval/types/retrieval';
+import type {
+  InjectionResult,
+  RetrieveDiagnostics,
+  RetrieveFilters,
+  RetrieveOptions,
+  RetrieveResult,
+  RetrievedMemory,
+} from '../../retrieval/types/retrieval';
 
 export type InjectionMode = 'conservative' | 'standard' | 'aggressive';
 export type PerTurnDefault = 'on' | 'off';
@@ -17,6 +24,7 @@ export interface DotConnectorModeConfig {
 
 export interface TypingRetrievalSnapshot {
   query: string;
+  filters?: RetrieveFilters | undefined;
   result: RetrieveResult;
   injection: InjectionResult;
   createdAt: number;
@@ -26,6 +34,7 @@ export interface SendInjectionInput {
   query: string;
   settings: DotConnectorSettings;
   perTurnEnabled: boolean;
+  filters?: RetrieveFilters | undefined;
   removedMemoryIds?: string[] | undefined;
   typingSnapshot?: TypingRetrievalSnapshot | null | undefined;
   retrieve?: (opts: RetrieveOptions) => Promise<RetrieveResult>;

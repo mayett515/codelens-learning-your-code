@@ -60,12 +60,15 @@ This file explains how the root architecture docs and this refactor folder shoul
 - `40_PROPOSAL_FRESHNESS_AND_STALE_REFRESH_DECISION.md` locks proposal freshness as a separate derived review condition and refresh as replacement-plus-supersede.
 - `41_CHECKER_RUNTIME_FIRST_SLICE_DECISION.md` consolidates the scattered future checker vision and locks the first checker runtime as manual-on-demand, branch-local, proposal-only, and additive ontology-node/item-type only. The pure prompt/output contract, deterministic mapper, manual runtime service, UI trigger/readout, concrete model adapter seam, correction-pattern `patternFrequency` aggregation, and `isItemType` parent hints are implemented. Relationship/boundary operations, base/core checker targeting, background modes, checker-run tables, and auto-apply remain deferred.
 - `42_BRANCH_PROFILE_SELECTION_UI_DECISION.md` locks the first branch/profile selection UI as a minimal project-scoped selector over existing docs 13/14/16/17 seams. The pure selection-draft helper, focused data hooks, compact selection panel, and explicit project-context route wiring are implemented. The gate may create empty branches, save selected base/branch ids, reorder selected branches, and pass an explicit checker branch target, but it must not add global active selection, composed-profile persistence, target switching, branch merge/fork UX, multi-base composition, base mutation, or auto-apply.
-- `43_SECOND_BASE_PROFILE_FORKABILITY_DEMO_DECISION.md` locks and implements the first second-base-profile proof as a minimal photography forkability demo. It proves the existing registry, profile-definition persistence/backup mapping, project selection, branch creation/composition, checker/proposal review, target-switch, and base apply seams work against a non-coding base profile. Its collision follow-up implements profile-scoped learning capture, save-candidate, precheck, concept-list, and retrieval boundaries for overlapping type ids such as `composition`, and it must not be used as a license for profile-gallery UX, cross-base behavior, new operation vocabulary, maturity lifecycle, or source-sync work.
+- `43_SECOND_BASE_PROFILE_FORKABILITY_DEMO_DECISION.md` locks and implements the first second-base-profile proof as a minimal photography forkability demo. It proves the existing registry, profile-definition persistence/backup mapping, project selection, branch creation/composition, checker/proposal review, target-switch, and base apply seams work against a non-coding base profile. Its follow-ups implement profile-scoped learning capture, save-candidate, precheck, concept-list, retrieval, Learning Hub/chat retrieval, graph, review, and promotion consumers for overlapping type ids such as `composition`, and it must not be used as a license for profile-gallery UX, cross-base behavior, new operation vocabulary, maturity lifecycle, or source-sync work.
 - `FABLE_STRATEGIC_REVIEW_2026-06-09/` preserves Claude Fable's historical strategic review as guidance only; durable bans and routing guidance are folded into active docs and it does not override numbered decisions.
 - `architecture_contract_for_profile_refactor.md` is the local adjusted LLM contract for this refactor.
 - `architecture_guide_for_profile_refactor_humans.md` is the local adjusted human guide.
 - `modules_architecture.md` is a draft future module/foldering architecture guide.
 - `modules_architecture_humans.md` is the human-readable version of the module/foldering guide.
+- `FUTURE_CONCEPTS/GAME_ENGINE/` preserves non-authoritative game-engine inspiration. It is routed
+  from the active docs for discoverability, but it does not override numbered decisions or open an
+  implementation gate by itself.
 </refactor_docs>
 
 ## Update Rules
@@ -81,6 +84,8 @@ This file explains how the root architecture docs and this refactor folder shoul
 - If persistence schema changes for profiles or ontology, update `PERSISTENCE.md`, `ARCHITECTURE.md`, and `04_REFACTOR_WITHOUT_BREAKING_APP.md`.
 - If a phase completes, update `current_state.md`.
 - Do not let old handoff/session notes become canonical. Promote durable decisions into root docs or this folder.
+- Keep documents under `FUTURE_CONCEPTS/` explicitly non-authoritative. Before implementing one of
+  those concepts, reconcile it with current numbered decisions and lock the new gate separately.
 - Use `NEXT_LLM_CONTEXT.md` as the canonical active handoff while the refactor is active. `WHERE_WE_STAND.md` and `implementation_handoff.md` are historical logs/pointers unless a specific old slice is being audited.
 - Before proposing a new architecture decision, first check the numbered decision docs and classify the topic as `already locked`, `partially implemented`, `open implementation gap`, or `actually undecided`. Do not re-open locked behavior unless the human explicitly asks to reconsider it.
 - After classifying a topic as already locked, do not start a new code slice from an ambiguous continuation like "continue" alone. Ask for explicit implementation approval unless the human has already clearly requested code.

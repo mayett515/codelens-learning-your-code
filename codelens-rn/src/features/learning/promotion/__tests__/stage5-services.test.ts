@@ -4,7 +4,7 @@ import { buildConceptFromCluster } from '../services/buildConceptFromCluster';
 import { pickRepresentativeCaptureIds } from '../services/representativeCaptureIds';
 import { promoteToConcept } from '../services/promoteToConcept';
 import { linkCapturesToExistingConcept } from '../services/linkCapturesToExistingConcept';
-import { EmptyPromotionError, NormalizedKeyConflictError } from '../types/promotion';
+import { EmptyPromotionError, NormalizedKeyConflictError, PromotionCapturesChangedError } from '../types/promotion';
 import type { DbOrTx } from '../../../../db/client';
 import type { LearningCapture, LearningConcept } from '../../types/learning';
 
@@ -19,7 +19,12 @@ const captureId1 = unsafeLearningCaptureId('lc_111111111111111111111');
 const captureId2 = unsafeLearningCaptureId('lc_222222222222222222222');
 const captureId3 = unsafeLearningCaptureId('lc_333333333333333333333');
 
-function capture(id: typeof captureId1, confidence: number, createdAt: number): LearningCapture {
+function capture(
+  id: typeof captureId1,
+  confidence: number,
+  createdAt: number,
+  overrides: Partial<LearningCapture> = {},
+): LearningCapture {
   return {
     id,
     profileId: 'coding',
@@ -42,6 +47,7 @@ function capture(id: typeof captureId1, confidence: number, createdAt: number): 
     keywords: ['closure', 'scope'],
     createdAt,
     updatedAt: createdAt,
+    ...overrides,
   };
 }
 
@@ -94,12 +100,30 @@ describe('Stage 5 promotion services', () => {
     );
 
     expect(built).toMatchObject({
+      profileId: 'coding',
       familiarityScore: 0.3,
       importanceScore: 0.5,
       normalizedKey: 'closure',
       representativeCaptureIds: [captureId1],
       surfaceFeatures: ['closure', 'scope'],
     });
+  });
+
+  it('builds promoted concepts in the capture profile', () => {
+    const built = buildConceptFromCluster(
+      {
+        fingerprint: null,
+        name: 'Composition',
+        typeNodeId: 'composition',
+        includedCaptureIds: [captureId1],
+        source: 'cluster',
+      },
+      conceptId,
+      [capture(captureId1, 0.8, 1, { profileId: 'photography' })],
+      100,
+    );
+
+    expect(built.profileId).toBe('photography');
   });
 
   it('surfaces normalized key conflicts before inserting', async () => {
@@ -151,6 +175,33 @@ describe('Stage 5 promotion services', () => {
     expect(enqueued).toHaveLength(1);
   });
 
+  it('rejects mixed-profile promotion capture sets', async () => {
+    await expect(promoteToConcept(
+      {
+        fingerprint: 'fp',
+        name: 'Mixed',
+        typeNodeId: 'mechanism',
+        includedCaptureIds: [captureId1, captureId2],
+        source: 'cluster',
+      },
+      {
+        database: { transaction: async (fn) => fn({} as DbOrTx) },
+        getCaptures: async () => [
+          capture(captureId1, 0.8, 1, { profileId: 'coding' }),
+          capture(captureId2, 0.8, 2, { profileId: 'photography' }),
+        ],
+        findConceptByNormalizedKey: async () => undefined,
+        insertConcept: vi.fn(async () => undefined),
+        linkCapture: vi.fn(async () => undefined),
+        removeSuggestion: vi.fn(async () => undefined),
+        embeddingQueue: { enqueue: vi.fn() },
+        now: () => 100,
+        newId: () => conceptId,
+        recompute: vi.fn(async () => undefined),
+      },
+    )).rejects.toBeInstanceOf(PromotionCapturesChangedError);
+  });
+
   it('requires at least one capture', async () => {
     await expect(promoteToConcept({
       fingerprint: null,
@@ -191,5 +242,27 @@ describe('Stage 5 promotion services', () => {
     expect(target.importanceScore).toBe(0.9);
     expect(appendLanguage).toHaveBeenCalledWith(conceptId, 'typescript', expect.anything());
     expect(appendSurfaceFeatures).toHaveBeenCalledWith(conceptId, ['closure'], expect.anything());
+  });
+
+  it('link-existing rejects captures outside the target concept profile', async () => {
+    await expect(linkCapturesToExistingConcept(
+      {
+        fingerprint: null,
+        targetConceptId: conceptId,
+        includedCaptureIds: [captureId1],
+      },
+      {
+        database: { transaction: async (fn) => fn({} as DbOrTx) },
+        getTargetConcept: async () => concept({ profileId: 'coding' }),
+        getCaptures: async () => [capture(captureId1, 0.8, 1, { profileId: 'photography' })],
+        linkCapture: vi.fn(async () => undefined),
+        appendLanguage: vi.fn(async () => undefined),
+        appendSurfaceFeatures: vi.fn(async () => undefined),
+        removeSuggestion: vi.fn(async () => undefined),
+        embeddingQueue: { enqueue: vi.fn() },
+        now: () => 100,
+        recompute: vi.fn(async () => undefined),
+      },
+    )).rejects.toBeInstanceOf(PromotionCapturesChangedError);
   });
 });

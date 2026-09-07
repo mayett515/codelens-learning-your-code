@@ -19,6 +19,7 @@ import type { GraphMode, LayoutResult } from '../types';
 interface GraphCanvasProps {
   layoutResult: LayoutResult;
   mode: GraphMode;
+  nodeColors: Readonly<Record<string, string>>;
   nowMs: number;
   width: number;
   height: number;
@@ -31,6 +32,7 @@ interface GraphCanvasProps {
 export function GraphCanvas({
   layoutResult,
   mode,
+  nodeColors,
   nowMs,
   width,
   height,
@@ -56,11 +58,12 @@ export function GraphCanvas({
     const canvas = recorder.beginRecording(Skia.XYWHRect(0, 0, width, height));
     const paints = createGraphPaints(Skia);
     const font = Skia.Font(undefined, 12);
-    drawEdgesBatched(canvas, Skia, layoutResult, paints, { mode, nowMs, focusedIndex });
-    drawNodes(canvas, Skia, layoutResult, paints, { mode, nowMs, focusedIndex });
-    drawLabels(canvas, Skia, layoutResult, paints, font, { mode, nowMs, focusedIndex });
+    const drawOptions = { mode, nodeColors, nowMs, focusedIndex };
+    drawEdgesBatched(canvas, Skia, layoutResult, paints, drawOptions);
+    drawNodes(canvas, Skia, layoutResult, paints, drawOptions);
+    drawLabels(canvas, Skia, layoutResult, paints, font, drawOptions);
     return recorder.finishRecordingAsPicture();
-  }, [focusedIndex, height, layoutResult, mode, nowMs, width]);
+  }, [focusedIndex, height, layoutResult, mode, nodeColors, nowMs, width]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [

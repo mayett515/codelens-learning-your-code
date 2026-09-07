@@ -2,8 +2,8 @@ import type { ConceptId } from '../../types/ids';
 
 export const reviewKeys = {
   all: () => ['learning', 'review'] as const,
-  weakConcepts: (threshold: number) =>
-    [...reviewKeys.all(), 'weakConcepts', threshold] as const,
+  weakConcepts: (threshold: number, profileId?: string | null | undefined) =>
+    [...reviewKeys.all(), 'weakConcepts', threshold, profileId ?? null] as const,
   session: (conceptId: ConceptId) =>
     [...reviewKeys.all(), 'session', conceptId] as const,
   sessionDisabled: () =>

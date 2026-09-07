@@ -1,6 +1,6 @@
 import { formatMemoriesForInjection } from '../../retrieval/services/formatMemoriesForInjection';
 import { retrieveRelevantMemories } from '../../retrieval/services/retrieveRelevantMemories';
-import type { RetrieveResult, RetrievedMemory } from '../../retrieval/types/retrieval';
+import type { RetrieveFilters, RetrieveResult, RetrievedMemory } from '../../retrieval/types/retrieval';
 import { getInjectionModeConfig } from './dotConnectorSettings';
 import type { DotConnectorSettings, TypingRetrievalSnapshot } from '../types/dotConnector';
 
@@ -10,6 +10,7 @@ export const DOT_CONNECTOR_MIN_QUERY_LENGTH = 3;
 export interface RunTypingRetrievalInput {
   query: string;
   settings: DotConnectorSettings;
+  filters?: RetrieveFilters | undefined;
   removedMemoryIds?: string[];
   retrieve?: typeof retrieveRelevantMemories;
   now?: () => number;
@@ -23,11 +24,12 @@ export async function runTypingRetrieval(input: RunTypingRetrievalInput): Promis
 
   const config = getInjectionModeConfig(input.settings.injectionMode);
   const retrieve = input.retrieve ?? retrieveRelevantMemories;
+  const filters = dotConnectorRetrievalFilters(input.filters);
   const result = await retrieve({
     query,
     limit: config.limit,
     tokenBudget: config.tokenBudget,
-    filters: { kinds: ['capture', 'concept'] },
+    filters,
     enableJitRehydration: true,
     bumpLastAccessed: false,
   });
@@ -39,10 +41,21 @@ export async function runTypingRetrieval(input: RunTypingRetrievalInput): Promis
 
   return {
     query,
+    filters,
     result: { ...result, memories },
     injection,
     createdAt: (input.now ?? Date.now)(),
   };
+}
+
+export function dotConnectorRetrievalFilters(filters: RetrieveFilters | undefined): RetrieveFilters {
+  return { ...(filters ?? {}), kinds: ['capture', 'concept'] };
+}
+
+export function retrievalFilterSignature(filters: RetrieveFilters | undefined): string {
+  const normalized = dotConnectorRetrievalFilters(filters);
+  const keys = Object.keys(normalized).sort() as Array<keyof RetrieveFilters>;
+  return JSON.stringify(keys.map((key) => [key, normalized[key]]));
 }
 
 export function withoutRemoved(memories: RetrievedMemory[], removedIds: string[]): RetrievedMemory[] {

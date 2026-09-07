@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { colors, fontSize, spacing } from '../../../../ui/theme';
 import { getActiveDomainProfile } from '@/src/features/ontology';
+import { useOntologyProfile } from '@/src/features/ontology/hooks/useProfileSelection';
 import { TypeNodeChip } from '../../ui/primitives/TypeNodeChip';
 import { ReflectionInput } from './ReflectionInput';
 import { ShowSavedReveal } from './ShowSavedReveal';
@@ -27,7 +28,9 @@ export function ReviewSessionScreen(props: {
   const session = useReviewSession(props.conceptId);
   const ratingMutation = useApplyReviewRating();
   const data = session.data;
-  const profile = getActiveDomainProfile();
+  const fallbackProfile = getActiveDomainProfile();
+  const { data: reviewProfile } = useOntologyProfile(data?.concept.profileId);
+  const profile = reviewProfile ?? fallbackProfile;
 
   if (session.isLoading || !data) {
     return (
@@ -41,6 +44,7 @@ export function ReviewSessionScreen(props: {
     return (
       <ReviewResultScreen
         conceptName={data.concept.name}
+        profile={profile}
         summary={data.concept.canonicalSummary}
         captures={data.captures}
         onDone={props.onDone}
@@ -70,15 +74,16 @@ export function ReviewSessionScreen(props: {
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <Text style={styles.title}>{data.concept.name}</Text>
-        <TypeNodeChip typeNodeId={data.concept.conceptType} size="md" />
+        <TypeNodeChip typeNodeId={data.concept.conceptType} size="md" profile={profile} />
       </View>
       {phase === 'reflect' ? (
         <>
           <Text style={styles.prompt}>{profile.review.reflectPromptTemplate.replace('{conceptName}', data.concept.name)}</Text>
-          <ReflectionInput value={reflection} onChangeText={setReflection} />
+          <ReflectionInput value={reflection} onChangeText={setReflection} profile={profile} />
           <ShowSavedReveal
             summary={data.concept.canonicalSummary}
             captures={data.captures}
+            profile={profile}
             onOpenCapture={props.onOpenCapture}
           />
           <Pressable style={styles.primary} onPress={() => setPhase('rate')}>
@@ -86,7 +91,7 @@ export function ReviewSessionScreen(props: {
           </Pressable>
         </>
       ) : (
-        <SelfRatingPrompt onRate={rate} disabled={ratingMutation.isPending} />
+        <SelfRatingPrompt onRate={rate} disabled={ratingMutation.isPending} profile={profile} />
       )}
       {ratingMutation.error ? (
         <Text style={styles.error}>

@@ -8,6 +8,7 @@ import type { Concept, ConceptId } from '../../../domain/types';
 function rowToConcept(row: typeof concepts.$inferSelect): Concept {
   return {
     id: row.id as ConceptId,
+    profileId: row.profileId ?? 'coding',
     name: row.name,
     summary: row.summary,
     taxonomy: parseTaxonomy(row.taxonomy),

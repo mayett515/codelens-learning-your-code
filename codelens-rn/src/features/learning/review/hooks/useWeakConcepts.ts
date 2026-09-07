@@ -3,12 +3,13 @@ import { getLearningConceptList } from '../../data/conceptRepo';
 import { computeStrength } from '../../strength/computeStrength';
 import { reviewKeys } from '../data/queryKeys';
 
-export function useWeakConcepts(threshold: number) {
+export function useWeakConcepts(threshold: number, profileId?: string | null | undefined) {
   return useQuery({
-    queryKey: reviewKeys.weakConcepts(threshold),
+    queryKey: reviewKeys.weakConcepts(threshold, profileId),
     queryFn: async () => {
       const concepts = await getLearningConceptList();
       return concepts
+        .filter((concept) => profileId ? concept.profileId === profileId : true)
         .filter((concept) => computeStrength(concept.familiarityScore, concept.importanceScore) < threshold)
         .sort((left, right) => {
           const leftStrength = computeStrength(left.familiarityScore, left.importanceScore);

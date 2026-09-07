@@ -1,6 +1,7 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, fontSize, spacing } from '../../../../ui/theme';
 import { TypeNodeChip } from '../primitives/TypeNodeChip';
+import type { DomainProfile } from '../../../ontology';
 import type { ConceptType } from '../../types/learning';
 import type {
   CandidateSaveState,
@@ -14,6 +15,7 @@ interface CandidateCaptureCardProps {
   whatClicked: string;
   rawSnippet: string;
   conceptType?: ConceptType | null;
+  profile?: DomainProfile | undefined;
   linkedConceptName?: string | null;
   isNewLanguageForExistingConcept?: boolean;
   crossLanguageHint?: string | null;
@@ -32,6 +34,7 @@ export function CandidateCaptureCard({
   whatClicked,
   rawSnippet,
   conceptType,
+  profile,
   linkedConceptName,
   crossLanguageHint,
   extractionConfidence,
@@ -52,7 +55,7 @@ export function CandidateCaptureCard({
     <View style={styles.card}>
       <View style={styles.headerRow}>
         <Text style={styles.title} numberOfLines={1}>{title}</Text>
-        {conceptType ? <TypeNodeChip typeNodeId={conceptType} /> : null}
+        {conceptType ? <TypeNodeChip typeNodeId={conceptType} profile={profile} /> : null}
       </View>
       <Text style={styles.clicked} numberOfLines={1}>{whatClicked}</Text>
       <Text style={styles.snippet} numberOfLines={3}>{rawSnippet}</Text>

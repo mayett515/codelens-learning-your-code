@@ -24,6 +24,7 @@ export const profileBranchKeys = {
 export const profileBaseProfileKeys = {
   all: () => ['ontology', 'base-profiles'] as const,
   summaries: () => [...profileBaseProfileKeys.all(), 'summaries'] as const,
+  byId: (profileId: string) => [...profileBaseProfileKeys.all(), 'profile', profileId] as const,
 } as const;
 
 export const profileSelectionKeys = {

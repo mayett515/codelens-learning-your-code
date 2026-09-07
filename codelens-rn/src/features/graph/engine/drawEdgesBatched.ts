@@ -13,6 +13,7 @@ type SkiaApi = typeof NativeSkia;
 interface DrawOptions {
   mode: GraphMode;
   nowMs: number;
+  nodeColors?: Readonly<Record<string, string>>;
   focusedIndex?: number;
 }
 
@@ -57,7 +58,7 @@ export function drawNodes(
     const y = layout.positionBuffer[index * 2 + 1];
     if (!isFiniteCoordinate(x, y, index)) return;
 
-    const visual = computeNodeVisual(node, options.mode, options.nowMs);
+    const visual = computeNodeVisual(node, options.mode, options.nowMs, options.nodeColors);
     setPaintColor(skia, paints.nodeFill, visual.fill);
     paints.nodeFill.setAlphaf(1);
     canvas.drawCircle(x, y, visual.radius, paints.nodeFill);
@@ -82,7 +83,7 @@ export function drawLabels(
     const y = layout.positionBuffer[index * 2 + 1];
     if (!isFiniteCoordinate(x, y, index)) return;
 
-    const visual = computeNodeVisual(node, options.mode, options.nowMs);
+    const visual = computeNodeVisual(node, options.mode, options.nowMs, options.nodeColors);
     setPaintColor(skia, paints.label, '#E5E7EB');
     paints.label.setAlphaf(0.9);
     canvas.drawText(node.name, x + visual.radius + 5, y + 4, paints.label, font);
@@ -126,7 +127,7 @@ function createArrowheadPath(
     if (!points) continue;
 
     const targetNode = layout.nodes[edge.targetIndex];
-    const targetVisual = computeNodeVisual(targetNode, options.mode, options.nowMs);
+    const targetVisual = computeNodeVisual(targetNode, options.mode, options.nowMs, options.nodeColors);
     const angle = Math.atan2(points.y2 - points.y1, points.x2 - points.x1);
     const tipX = points.x2 - Math.cos(angle) * targetVisual.radius;
     const tipY = points.y2 - Math.sin(angle) * targetVisual.radius;

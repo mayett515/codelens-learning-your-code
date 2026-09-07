@@ -1,13 +1,15 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, fontSize, spacing } from '../../../../ui/theme';
 import { getActiveDomainProfile } from '@/src/features/ontology';
+import type { DomainProfile } from '@/src/features/ontology';
 import type { ReviewRatingOrSkip } from '../types/review';
 
 export function SelfRatingPrompt(props: {
   onRate: (rating: ReviewRatingOrSkip) => void;
   disabled?: boolean;
+  profile?: DomainProfile | undefined;
 }) {
-  const profile = getActiveDomainProfile();
+  const profile = props.profile ?? getActiveDomainProfile();
 
   return (
     <View style={styles.container}>

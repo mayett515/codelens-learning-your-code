@@ -65,6 +65,7 @@ export async function promoteToConcept(
     const captures = await resolvedDeps.getCaptures(input.includedCaptureIds, tx);
     const linkableCaptures = captures.filter((capture) => capture.linkedConceptId === null);
     if (linkableCaptures.length === 0) throw new PromotionCapturesChangedError();
+    if (!allSameProfile(linkableCaptures)) throw new PromotionCapturesChangedError();
 
     concept = buildConceptFromCluster(input, conceptId, linkableCaptures, now);
     await resolvedDeps.insertConcept(concept, tx);
@@ -83,4 +84,10 @@ export async function promoteToConcept(
   await resolvedDeps.recompute('post_promote');
   if (!concept) throw new PromotionCapturesChangedError();
   return { conceptId, concept, linkedCaptureIds, skippedCaptureIds };
+}
+
+function allSameProfile(captures: readonly LearningCapture[]): boolean {
+  if (captures.length === 0) return false;
+  const profileId = captures[0]!.profileId;
+  return captures.every((capture) => capture.profileId === profileId);
 }

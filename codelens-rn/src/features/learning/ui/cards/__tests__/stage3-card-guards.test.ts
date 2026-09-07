@@ -94,7 +94,8 @@ describe('Stage 3 card component guards', () => {
 
     it('TypeNodeChip renders with getOntologyNodeLabel using typeNodeId', () => {
       const src = read('src/features/learning/ui/primitives/TypeNodeChip.tsx');
-      expect(src).toMatch(/getOntologyNodeLabel\(typeNodeId\)/);
+      expect(src).toMatch(/profile\?:\s*DomainProfile/);
+      expect(src).toMatch(/getOntologyNodeLabel\(typeNodeId,\s*profile\)/);
     });
 
     it('ConceptTypeChip.tsx exists as a deprecated compatibility wrapper', () => {
@@ -114,6 +115,7 @@ describe('Stage 3 card component guards', () => {
       const src = read('src/features/learning/ui/primitives/ConceptTypeChip.tsx');
       // Must render TypeNodeChip with typeNodeId={type}
       expect(src).toMatch(/typeNodeId=\{type\}/);
+      expect(src).toMatch(/profile=\{profile\}/);
     });
 
     it('ConceptTypeChip.tsx is a real wrapper (not a bare re-export shim)', () => {
@@ -132,6 +134,15 @@ describe('Stage 3 card component guards', () => {
         // Import must reference the TypeNodeChip module, not the deprecated ConceptTypeChip module
         expect(cardSrc).toContain("'../primitives/TypeNodeChip'");
         expect(cardSrc).not.toContain("'../primitives/ConceptTypeChip'");
+      }
+    });
+
+    it('card type labels can render against an explicit ontology profile', () => {
+      const cards = ['ConceptCardCompact', 'ConceptCardFull', 'CaptureCardFull', 'CandidateCaptureCard'];
+      for (const card of cards) {
+        const cardSrc = read(`src/features/learning/ui/cards/${card}.tsx`);
+        expect(cardSrc).toMatch(/profile\?:\s*DomainProfile/);
+        expect(cardSrc).toMatch(/<TypeNodeChip[\s\S]*profile=\{/);
       }
     });
   });
