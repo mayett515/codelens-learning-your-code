@@ -248,3 +248,20 @@ templates against Doc 06 and same-version bundled-content changes. It records
 Fable's preference for the first and Astra's preference for the second, without
 choosing for the user. Runtime source and backup paths were inspected, not
 executed. No application, schema, dependency or leaf status changed.
+
+## 2026-11-09: M1c ownership and legacy adoption decided
+
+The user chose first-use materialization. Fable explicitly changed position and
+now recommends it too; the earlier first-edit preference above is historical.
+The user subsequently approved visible, audited adoption of the current template
+for existing installations with unrecoverable earlier origin. Unknown origin
+persists across edits/backup; no old content is reclassified or silently verified.
+[Doc 44](../../codelens-rn/ONTOLOGY_PROFILE_REFACTOR/44_BUILT_IN_BASE_MATERIALIZATION_DECISION.md)
+owns the accepted contract; Doc 15 now states the narrow source-ownership exception.
+
+Before implementing, a real file-backed SQLite diagnostic exercised the actual
+base apply service and installed Drizzle transaction driver. It reproduced a
+premature COMMIT and partial target/status writes after audit failure. See the
+[finding](../reviews/2026-11-09-base-apply-rollback-finding.md). No runtime repair,
+materialization schema or behavior has been added. The work-order invariant stop
+applies; leaves remain partial and the observed rollback gap is recorded.

@@ -309,6 +309,18 @@ Do not add:
 
 ## Duplicate Profile Id Behavior
 
+**2026-11-09 amendment (accepted, not yet implemented):**
+[Doc 44](44_BUILT_IN_BASE_MATERIALIZATION_DECISION.md) establishes explicit
+first-use materialization. A validated materialized definition owns its base ID;
+default bootstrap excludes only the corresponding bundled template before
+constructing the registry. Restored materialized provenance receives the same
+treatment. An arbitrary same-ID stored/imported/adapter profile does not qualify.
+Every remaining duplicate, within or across sources, still throws the structured
+error below. The registry remains pure and strict; listing/loading never
+materializes a profile. This is explicit ownership selection, not general
+first-source/last-source precedence. The v1 description below is historical
+where it predates that specific exception.
+
 If multiple sources contain the same profile id, the implementation must define deterministic behavior.
 
 Locked v1 behavior:

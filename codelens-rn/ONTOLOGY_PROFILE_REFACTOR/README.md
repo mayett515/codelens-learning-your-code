@@ -136,6 +136,12 @@ Overlay use case
 - [implementation_handoff.md](implementation_handoff.md) - historical implementation log; use `NEXT_LLM_CONTEXT.md` first.
 - [TOMORROW_START.md](TOMORROW_START.md) - short startup prompt and next-slice reminder for the next orchestrator session.
 
+Latest accepted M1c contract:
+[44_BUILT_IN_BASE_MATERIALIZATION_DECISION.md](44_BUILT_IN_BASE_MATERIALIZATION_DECISION.md)
+specifies explicit first-use ownership, audited legacy adoption, immutable origin,
+release proposals and required database/backup proof. Implementation remains
+partial and is stopped at the documented rollback finding.
+
 ## Non-Goal
 
 <non_goal>

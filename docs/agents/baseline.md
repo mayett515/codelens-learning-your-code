@@ -1,5 +1,18 @@
 # Dated baseline and first candidate slices
 
+## 2026-11-09: real base-apply rollback failure
+
+On `97a5c76`, the installed Drizzle op-sqlite driver issues COMMIT before awaiting
+the async transaction callback. The actual base apply service/repositories over
+file-backed Node SQLite retain base version 2 and accepted proposal status after
+an injected audit-insert failure; reopen confirms zero audit events. Expected:
+version 1, pending, zero events. The
+[reproducible finding](../reviews/2026-11-09-base-apply-rollback-finding.md)
+states the adapter/native limits and exact command. This predates M1c changes;
+the old callback mocks did not establish rollback. No repair is claimed.
+
+## Original inspection
+
 Inspected baseline: `main` at `e93822c5281e9d11e0a0a719b5912ab66866b354`,
 2026-09-14. Recheck before acting. This is a finding ledger, not permission to
 perform every listed change or an assertion that these gaps remain forever.

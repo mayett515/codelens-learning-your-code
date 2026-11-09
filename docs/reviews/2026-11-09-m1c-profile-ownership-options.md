@@ -1,8 +1,12 @@
 # M1c: ownership of editable built-in profiles
 
-Decision preparation, inspected 2026-11-09 at `d020028`. No option is selected.
-Fable's parent/child review was supplied by the user; its recommendations are
-review input, not owner authorization. A-C remain undecided in the
+Options inspected 2026-11-09 at `d020028`. Subsequently the user selected
+**materialize on first use** (option 2 in this sheet). Fable changed position
+and now recommends the same as Astra. The accepted contract, including the
+subsequently approved explicit legacy adoption, is owned by
+[Doc 44](../../codelens-rn/ONTOLOGY_PROFILE_REFACTOR/44_BUILT_IN_BASE_MATERIALIZATION_DECISION.md).
+The comparisons below retain their decision-preparation context. A-C remain
+separate from M1c in the
 [design note](2026-11-09-parent-child-semantics-design.md).
 
 ## Responsibility and observed state
@@ -41,7 +45,7 @@ All options must distinguish a shipped template from a user's accepted state.
 
 ## Three ownership options
 
-### 1. Materialize on first approved base apply (Fable's preference)
+### 1. Materialize on first approved base apply (not selected; Fable's former preference)
 
 Until that point the registry reads the bundled template. At first apply, one
 transaction validates the exact proposal basis, creates the stored definition,
@@ -61,7 +65,7 @@ detects node-local drift, but not changes elsewhere in the base read by apply.
 Saving the original template only at first apply cannot reconstruct an earlier
 release. These costs must be included; this is not merely an insert-if-missing fix.
 
-### 2. Materialize on first use, before accepting dependent work (Astra's preference)
+### 2. Materialize on first use (selected; now recommended by Astra and Fable)
 
 Initialize the selected built-in as an exact stored snapshot once, before
 creating proposals, branches or other dependent accepted work. Initialization
@@ -109,11 +113,10 @@ explicitly adopting this product restriction and updating callers/documentation.
 
 ## Recommendation and boundaries
 
-Prefer **2** for durable accepted meaning across applications. Fable's **1** is
-reasonable if late materialization is a deliberate product preference, with the
-pre-materialization release guard included. The difference is *when a local
-lineage becomes authoritative*, not whether a model may change it. Neither choice
-authorizes A1/B1/C2, new inheritance levels or a generic rule interpreter.
+The user selected **2** for durable accepted meaning across applications. Fable
+withdrew the earlier preference for **1** because it leaves existing captures
+exposed before the first edit unless another release guard is added. The decision
+does not authorize A1/B1/C2, new inheritance levels or a generic rule interpreter.
 
 Preserving the shipped origin forever is distinct from storing the current
 accepted base and from A1's per-override basis. Decide/record its durable contract
@@ -153,9 +156,11 @@ distinct user-owned base; default same-ID duplicates must remain errors.
    tooling gate and affected/full app checks against the baseline. Native UI,
    A1 rebase and B1 collision enforcement remain separate proof scopes.
 
-## Decision requested
+## Decision recorded; persistence blocker
 
-Should ownership begin **at first use (2)**, **at first approved edit (1)**, or
-should built-in IDs **stay uneditable (3)**? No dependent implementation begins
-until the user chooses. Fable's seven M4 recommendations remain proposals for
-that later decision round.
+First-use ownership and explicit legacy adoption with permanently unknown earlier
+origin are decided in Doc 44. No further answer on those choices is needed.
+The required real-database preflight then reproduced an
+[existing rollback failure](2026-11-09-base-apply-rollback-finding.md).
+Stop for its separate repair before materialization runtime work. The M4
+parent/child recommendations remain separate from these accepted M1c decisions.

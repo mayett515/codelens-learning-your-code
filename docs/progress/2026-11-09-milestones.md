@@ -331,3 +331,35 @@ Local verification for this documentation slice: `npm --prefix tools run check`
 passed (tooling compiler, 27/27 fixtures, repository metadata/link checks), and
 `git diff --check` passed. The application suite/compiler were not rerun locally
 for unchanged runtime code. No new database, native or backup behavior is proved.
+
+## M1c decisions accepted; real persistence preflight failed
+
+The user selected first-use materialization, with Fable now supporting the same
+choice, then explicitly authorized legacy adoption of today's template with
+permanently unknown earlier origin. The accepted contract is
+[Doc 44](../../codelens-rn/ONTOLOGY_PROFILE_REFACTOR/44_BUILT_IN_BASE_MATERIALIZATION_DECISION.md).
+Doc 15's duplicate rule has the requested narrow exception; the option sheet and
+transfer ledger correct Fable's attribution. First-use command/audit, legacy
+adoption, proposal invalidation, template basis and backup proof are specified.
+
+Before any schema or runtime edit, Node's SQLite engine successfully executed
+BEGIN/INSERT/ROLLBACK. The subsequent diagnostic exercised the installed Drizzle
+op-sqlite driver and actual base apply service/repositories/codecs over a temporary
+file database. Its successful-apply control passed. Injecting an audit-insert
+failure produced version 2 / accepted / zero events after reopening instead of
+version 1 / pending / zero events. SQL order was BEGIN, COMMIT, SELECT, SELECT,
+UPDATE, UPDATE. `node scripts/diagnose-profile-rollback.cjs` exited 1 on the
+required rollback assertion. Temporary storage was cleaned up.
+
+This is a new proof of an old defect, not a passing integration test or a native
+application run. See the [finding](../reviews/2026-11-09-base-apply-rollback-finding.md).
+The base-apply leaf remains partial and now names the actual atomicity failure.
+The separate driver repair requires the work-order contradiction stop; no M1c
+schema, app behavior or dependency changed. No merge.
+
+Documentation/diagnostic checks: `npm --prefix tools run generate` and
+`npm --prefix tools run check` passed (27/27 fixtures and tooling compiler);
+the generated map now includes the rollback gap. `node --check` on the diagnostic
+and `git diff --check` passed. These checks do not turn its failed rollback
+assertion into a passing guarantee. The default application suite does not run
+this standalone diagnostic; no local full-suite rerun is claimed for this slice.

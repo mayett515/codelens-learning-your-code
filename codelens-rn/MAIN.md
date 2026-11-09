@@ -38,6 +38,11 @@ Master map of docs for the React Native rewrite. If another agent (Claude / Code
    - Purpose: Canonical active handoff for current ontology/profile work. It summarizes the locked docs, implemented slices, and next gates.
    - Include when: resuming ontology/profile work, especially after a context reset.
 
+Latest profile ownership contract (2026-11-09):
+[Doc 44: built-in materialization](ONTOLOGY_PROFILE_REFACTOR/44_BUILT_IN_BASE_MATERIALIZATION_DECISION.md).
+Accepted first-use ownership and legacy adoption are not yet implemented;
+the contract links the blocking real-database rollback finding.
+
 ## Session Notes (Not Canonical)
 
 Dated handoff notes from specific work sessions. Useful for context, not for architecture.

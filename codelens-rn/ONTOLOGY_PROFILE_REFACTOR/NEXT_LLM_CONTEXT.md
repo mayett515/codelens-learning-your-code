@@ -13,6 +13,13 @@ Do not stage, commit, push, reset, or checkout unless the user explicitly asks.
 
 ## Current State - 2026-07-03
 
+Later M1c decision, 2026-11-09:
+[Doc 44](44_BUILT_IN_BASE_MATERIALIZATION_DECISION.md) records first-use
+materialization and explicit legacy adoption with unknown historical origin.
+No runtime implementation yet. Its real-persistence preflight found premature
+COMMIT in the installed async transaction boundary; read its linked finding
+before continuing. The July implementation inventory below is historical.
+
 The ontology/profile refactor is an implemented spine, not just a plan.
 
 Implemented:
