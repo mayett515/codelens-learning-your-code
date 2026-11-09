@@ -294,6 +294,14 @@ describe('profile proposal review presentation helpers', () => {
       expectedRevision: null,
       currentRevision: 5,
     })).toContain('missing its target snapshot');
+    expect(formatProposalFreshnessDescription({
+      status: 'unknown',
+      reason: 'target_branch_updated_at_missing',
+      canApply: false,
+      canRefresh: true,
+      expectedRevision: null,
+      currentRevision: 5,
+    })).toContain('review it before applying');
   });
 
   it('formats target-specific apply labels and success messages', () => {
@@ -419,6 +427,7 @@ describe('profile proposal review presentation helpers', () => {
   it('maps apply and service errors to user-facing review text', () => {
     const cases = [
       ['branch_write_conflict', 'branch changed'],
+      ['proposal_not_fresh', 'current branch revision'],
       ['proposal_write_conflict', 'proposal changed'],
       ['proposal_not_refreshable', 'not refreshable'],
       ['proposal_refresh_time_invalid', 'timestamp'],

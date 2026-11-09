@@ -113,6 +113,9 @@ export function formatProposalFreshnessDescription(
     case 'obsolete':
       return 'The target branch or base profile no longer exists.';
     case 'unknown':
+      if (freshness.canRefresh) {
+        return 'This older proposal is missing its target snapshot. Refresh to create a checked replacement, then review it before applying.';
+      }
       if (
         freshness.reason === 'target_branch_updated_at_missing' ||
         freshness.reason === 'target_profile_version_missing'
@@ -218,6 +221,8 @@ export function formatProposalReviewError(
 ): string {
   const code = errorCode(error);
   switch (code) {
+    case 'proposal_not_fresh':
+      return 'The proposal has no verified current branch revision. Review a current replacement before applying.';
     case 'branch_write_conflict':
       return 'The branch changed while this proposal was open. Refresh and review it again.';
     case 'proposal_write_conflict':

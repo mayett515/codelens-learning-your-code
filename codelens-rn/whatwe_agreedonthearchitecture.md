@@ -8,7 +8,7 @@ Authoritative references:
 - [ARCHITECTURE.md](ARCHITECTURE.md)
 - [current_state.md](current_state.md)
 - [PERSISTENCE.md](PERSISTENCE.md)
-- [ONTOLOGY_PROFILE_REFACTOR/README.md](ONTOLOGY_PROFILE_REFACTOR/README.md) for the planned profile/ontology refactor.
+- [ONTOLOGY_PROFILE_REFACTOR/README.md](../docs/ONTOLOGY_PROFILE_REFACTOR/README.md) for the planned profile/ontology refactor.
 
 ## Scope
 Applies to all edits under `codelens-rn/`.
@@ -64,7 +64,7 @@ Use positive constraints. Do exactly what is listed.
 
 11. Preserve the profile/ontology refactor direction.
    Coding remains the first-class default profile, but domain-specific taxonomy, labels, prompts, metadata fields, and graph visual encoding should move into profile-owned definitions instead of becoming new scattered hardcoded assumptions.
-   Follow [ONTOLOGY_PROFILE_REFACTOR/05_ANTI_REGRESSION_RULES.md](ONTOLOGY_PROFILE_REFACTOR/05_ANTI_REGRESSION_RULES.md) for any taxonomy/profile work.
+   Follow [ONTOLOGY_PROFILE_REFACTOR/05_ANTI_REGRESSION_RULES.md](../docs/ONTOLOGY_PROFILE_REFACTOR/05_ANTI_REGRESSION_RULES.md) for any taxonomy/profile work.
 
 12. Avoid permanent architecture-doc sprawl.
    Planning folders and handoff docs are allowed while a refactor is active.

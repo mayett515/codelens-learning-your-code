@@ -100,7 +100,7 @@ function makeProfileBranch<TItemTypeNodeId extends string = string>(
   const now = 1_700_000_000_000;
   return {
     id,
-    parentProfileId: 'parent-profile',
+    parentProfileId: 'test-base',
     branchKind,
     name: id,
     overlay: {

@@ -3,6 +3,7 @@ import { db, type DbOrTx } from '../../../db/client';
 import { BaseProfileProposalApplyError, compileBaseProfileProposalApplyOperation } from '../baseProfileProposalApply';
 import { BranchLocalProposalApplyError, compileBranchLocalProposalApplyOperation } from '../branchLocalProposalApply';
 import { ProfileNotFoundError } from '../profileRegistry';
+import { evaluateProfileProposalFreshness } from '../profileProposalFreshness';
 import type {
   DomainProfile,
   ProfileBranch,
@@ -226,13 +227,6 @@ async function buildBranchReplacementProposal(input: {
   }
 
   const previousRevision = input.proposal.targetBranchUpdatedAt ?? null;
-  if (previousRevision == null || previousRevision === branch.updatedAt) {
-    throw new ProfileChangeProposalRefreshServiceError(
-      'proposal_not_refreshable',
-      `Proposal ${input.proposal.id} is not stale against branch ${branchId}.`,
-    );
-  }
-
   const registry = await input.deps.loadRegistry();
   let baseProfile: DomainProfile;
   try {
@@ -253,6 +247,23 @@ async function buildBranchReplacementProposal(input: {
     branch,
     now: input.now,
   });
+
+  const freshness = evaluateProfileProposalFreshness({
+    proposal: input.proposal,
+    target: {
+      kind: 'profile_branch',
+      branchId: branch.id,
+      exists: true,
+      currentUpdatedAt: branch.updatedAt,
+      patchValidation: 'valid',
+    },
+  });
+  if (!freshness.canRefresh) {
+    throw new ProfileChangeProposalRefreshServiceError(
+      'proposal_not_refreshable',
+      `Cannot refresh proposal ${input.proposal.id}: ${freshness.reason}.`,
+    );
+  }
 
   return {
     replacement: createReplacementProposal({

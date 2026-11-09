@@ -1,0 +1,62 @@
+name: Repository, core and application checks
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  repository-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: tools/package-lock.json
+      - run: npm --prefix tools ci --ignore-scripts
+      - run: npm --prefix tools run check
+  core-checks:
+    name: Standalone core and isolated package
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: packages/kordex-core/package-lock.json
+      - name: Prove isolated core build, tests and packed consumer
+        run: npm --prefix packages/kordex-core run verify:isolation
+  application-checks:
+    name: Application tests and compiler
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: codelens-rn
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: |
+            packages/kordex-core/package-lock.json
+            codelens-rn/package-lock.json
+      - name: Build the locked core before packing the local app dependency
+        working-directory: packages/kordex-core
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+      - name: Install locked application dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Run application tests
+        run: npm test
+      - name: Check installed core and shared Zod resolution
+        run: node scripts/check-core-install.cjs
+      - name: Check application types
+        run: node node_modules/typescript/bin/tsc --noEmit

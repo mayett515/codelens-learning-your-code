@@ -67,6 +67,7 @@ function makeProposal(overrides: Partial<ProfileChangeProposal<string>> = {}): P
     sourceKind: 'checker',
     baseProfileId: 'coding',
     sourceBranchId: null,
+    targetBranchUpdatedAt: 2,
     target: {
       kind: 'profile_branch',
       branchId: 'branch-1',
@@ -111,6 +112,43 @@ function expectApplyErrorCode(
 describe('applyPendingBranchLocalProfileChangeProposal', () => {
   const baseProfile = codingProfile as DomainProfile<string>;
   const tx = { kind: 'tx' } as unknown as DbOrTx;
+
+  it.each([10, null, undefined])(
+    'rejects proposal snapshot %s against current branch 20 before any write',
+    async (snapshot) => {
+      const branch = makeBranch({ updatedAt: 20 });
+      const proposal = makeProposal({ targetBranchUpdatedAt: snapshot });
+      const beforeBranch = structuredClone(branch);
+      const beforeProposal = structuredClone(proposal);
+      const events: ProfileProposalEvent[] = [];
+      const saveBranch = vi.fn(async () => true);
+      const saveProposal = vi.fn(async () => true);
+      const insertEvent = vi.fn(async (event: ProfileProposalEvent) => { events.push(event); });
+      const deps: BranchLocalProposalApplyServiceDependencies = {
+        transaction: async (callback) => callback(tx),
+        getProposalById: async () => proposal,
+        getBranchById: async () => branch,
+        saveBranchIfUnchanged: saveBranch,
+        saveProposalIfPending: saveProposal,
+        insertEvent,
+        newEventId: () => 'must-not-be-written',
+      };
+
+      await expect(applyPendingBranchLocalProfileChangeProposal({
+        proposalId: proposal.id,
+        baseProfile,
+        now: 30,
+        deps,
+      })).rejects.toMatchObject({ code: 'proposal_not_fresh' });
+
+      expect(saveBranch).not.toHaveBeenCalled();
+      expect(saveProposal).not.toHaveBeenCalled();
+      expect(insertEvent).not.toHaveBeenCalled();
+      expect(branch).toEqual(beforeBranch);
+      expect(proposal).toEqual(beforeProposal);
+      expect(events).toEqual([]);
+    },
+  );
 
   it('loads proposal and branch in one transaction, applies the pure helper, and persists both results', async () => {
     const calls: string[] = [];

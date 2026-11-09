@@ -11,7 +11,7 @@ For detailed implementation docs, read:
 - [ARCHITECTURE.md](ARCHITECTURE.md)
 - [current_state.md](current_state.md)
 - [PERSISTENCE.md](PERSISTENCE.md)
-- [ONTOLOGY_PROFILE_REFACTOR/README.md](ONTOLOGY_PROFILE_REFACTOR/README.md) for the planned profile/ontology refactor.
+- [ONTOLOGY_PROFILE_REFACTOR/README.md](../docs/ONTOLOGY_PROFILE_REFACTOR/README.md) for the planned profile/ontology refactor.
 
 ## The architecture in one sentence
 We use a feature-based folder layout with clean architecture boundaries, so product logic is testable, screens stay thin, and data/AI/storage changes do not leak everywhere.

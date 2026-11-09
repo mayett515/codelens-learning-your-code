@@ -103,9 +103,9 @@ export default function LearningChatScreen() {
 
   const handleSaveAsLearning = useCallback(
     (msg: ChatMessage) => {
-      if (chatId) openLearning(msg, chatId);
+      if (chatId) openLearning(msg, chatId, concept?.profileId);
     },
-    [openLearning, chatId],
+    [openLearning, chatId, concept?.profileId],
   );
 
   const handleSaveModelOverride = useCallback(

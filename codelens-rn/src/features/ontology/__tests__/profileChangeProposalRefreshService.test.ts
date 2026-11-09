@@ -159,11 +159,15 @@ async function captureRejection(promise: Promise<unknown>): Promise<unknown> {
 }
 
 describe('refreshStaleProfileChangeProposal', () => {
-  it('creates a refreshed branch proposal and supersedes the stale proposal atomically', async () => {
+  it.each([2, null, undefined])('creates a pending replacement from snapshot %s and supersedes with audit in one transaction', async (snapshot) => {
     const calls: string[] = [];
     let insertedProposal: ProfileChangeProposal | undefined;
     let supersededProposal: ProfileChangeProposal | undefined;
     let insertedEvent: ProfileProposalEvent | undefined;
+    const source = makeProposal({ targetBranchUpdatedAt: snapshot });
+    const branch = makeBranch({ updatedAt: 5 });
+    const originalSource = structuredClone(source);
+    const originalBranch = structuredClone(branch);
     const tx = { kind: 'tx' } as unknown as DbOrTx;
     const deps = makeDeps({
       transaction: async (callback) => {
@@ -173,12 +177,12 @@ describe('refreshStaleProfileChangeProposal', () => {
       getProposalById: async (id, executor) => {
         calls.push(`getProposal:${id}`);
         expect(executor).toBe(tx);
-        return makeProposal();
+        return source;
       },
       getBranchById: async (id, executor) => {
         calls.push(`getBranch:${id}`);
         expect(executor).toBe(tx);
-        return makeBranch({ updatedAt: 5 });
+        return branch;
       },
       insertProposal: async (proposal, executor) => {
         calls.push(`insertProposal:${proposal.id}`);
@@ -242,15 +246,19 @@ describe('refreshStaleProfileChangeProposal', () => {
       action: 'superseded',
       statusBefore: 'pending',
       statusAfter: 'superseded',
-      branchUpdatedAtBefore: 2,
+      branchUpdatedAtBefore: snapshot ?? null,
       branchUpdatedAtAfter: 5,
       details: {
         supersededByProposalId: 'proposal-2',
         refreshKind: 'target_rebase',
-        previousTargetRevision: 2,
+        previousTargetRevision: snapshot ?? null,
         refreshedTargetRevision: 5,
       },
     });
+    expect(source).toEqual(originalSource);
+    expect(branch).toEqual(originalBranch);
+    expect(result.proposal.patch).toEqual(source.patch);
+    expect(result.proposal.evidenceIds).toEqual(source.evidenceIds);
   });
 
   it('refreshes stale base proposals by snapshotting the current base version', async () => {
@@ -424,12 +432,13 @@ describe('refreshStaleProfileChangeProposal', () => {
     expect(calls).toEqual([]);
   });
 
-  it('propagates patch conflicts and performs no writes', async () => {
+  it.each([2, null, undefined])('dry-runs snapshot %s and rejects patch conflicts before writes', async (snapshot) => {
     const calls: string[] = [];
     const error = await captureRejection(refreshStaleProfileChangeProposal({
       proposalId: 'proposal-1',
       now: 7,
       deps: makeDeps({
+        getProposalById: async () => makeProposal({ targetBranchUpdatedAt: snapshot }),
         getBranchById: async () => makeBranch({
           updatedAt: 5,
           overlay: {

@@ -4,7 +4,7 @@
 
 CodeLens is a mobile-first code learning app built with Expo SDK 54, React Native 0.81.5, and TypeScript 5.9.2 (strict + `exactOptionalPropertyTypes`). It runs local-first AI chat, code marking/highlighting, learning capture, profile-aware ontology review, a manual ontology checker, and a knowledge graph backed by local RAG (sqlite-vec + op-sqlite).
 
-The strategic direction is now implemented as a profile/ontology spine rather than only planned. Coding stays the first child profile, while dynamic profile definitions, branch overlays, correction evidence, inert proposals, freshness checks, user-fit signals, and the manual checker live under `src/features/ontology/`. The decision spine lives under [ONTOLOGY_PROFILE_REFACTOR/](ONTOLOGY_PROFILE_REFACTOR/README.md); read its `00_DOC_SYNC.md` and `NEXT_LLM_CONTEXT.md` before changing ontology/profile architecture.
+The strategic direction is now implemented as a profile/ontology spine rather than only planned. Coding stays the first child profile, while dynamic profile definitions, branch overlays, correction evidence, inert proposals, freshness checks, user-fit signals, and the manual checker live under `src/features/ontology/`. The decision spine lives under [ONTOLOGY_PROFILE_REFACTOR/](../docs/ONTOLOGY_PROFILE_REFACTOR/README.md); read its `00_DOC_SYNC.md` and `NEXT_LLM_CONTEXT.md` before changing ontology/profile architecture.
 
 ## Directory Structure
 

@@ -1,0 +1,120 @@
+import { describe, expect, it } from 'vitest';
+import { parseProfilePatch, validateProfileChangeProposal } from '../codecs/profileChangeProposal';
+import type { ProfileChangeProposal, ProfilePatch } from '../types';
+
+function validPatch(overrides: Partial<ProfilePatch> = {}): ProfilePatch {
+  return {
+    addItemTypeNodeIds: ['react_hook'],
+    ...overrides,
+  };
+}
+
+function validProposal(overrides: Partial<ProfileChangeProposal> = {}): ProfileChangeProposal {
+  return {
+    id: 'proposal-1',
+    proposalKind: 'classification_patch',
+    sourceKind: 'checker',
+    baseProfileId: 'coding',
+    sourceBranchId: null,
+    target: {
+      kind: 'profile_branch',
+      branchId: 'branch-1',
+    },
+    evidenceIds: ['ev-1'],
+    patch: validPatch(),
+    title: 'Add React hook type',
+    summary: 'Suggests a new item type for repeated corrections.',
+    reason: 'The user corrected several captures into this concept family.',
+    riskScore: 35,
+    semanticConfidence: 0.8,
+    userFitConfidence: 0.7,
+    status: 'pending',
+    supersededByProposalId: null,
+    createdAt: 1,
+    updatedAt: 2,
+    reviewedAt: null,
+    appliedAt: null,
+    ...overrides,
+  };
+}
+
+describe('profile change proposal codec', () => {
+
+  it('requires base-profile target profileId to match baseProfileId', () => {
+    expect(() => validateProfileChangeProposal(validProposal({
+      target: {
+        kind: 'base_profile',
+        profileId: 'photography',
+      },
+      targetProfileVersion: 3,
+    }))).toThrow(/target profileId must match baseProfileId/);
+  });
+
+  it('rejects target profile versions on branch-target proposals', () => {
+    expect(() => validateProfileChangeProposal(validProposal({
+      targetProfileVersion: 1,
+    }))).toThrow(/must not set targetProfileVersion/);
+  });
+
+  it('rejects target branch revisions on base-profile proposals', () => {
+    expect(() => validateProfileChangeProposal(validProposal({
+      target: {
+        kind: 'base_profile',
+        profileId: 'coding',
+      },
+      targetProfileVersion: 3,
+      targetBranchUpdatedAt: 2000,
+    }))).toThrow(/must not set targetBranchUpdatedAt/);
+  });
+
+  it('rejects target shapes that mix base-profile and branch targets', () => {
+    expect(() => validateProfileChangeProposal(validProposal({
+      target: {
+        kind: 'base_profile',
+        profileId: 'coding',
+        branchId: 'branch-1',
+      },
+    }))).toThrow(/Base-profile proposals require profileId/);
+  });
+
+  it('rejects empty patches so proposals cannot be no-op rows', () => {
+    expect(() => parseProfilePatch({})).toThrow(/patch must contain at least one operation/);
+  });
+
+  it('requires evidence or a source branch for non-manual system suggestions', () => {
+    expect(() => validateProfileChangeProposal(validProposal({
+      sourceKind: 'model',
+      evidenceIds: [],
+      sourceBranchId: null,
+    }))).toThrow(/require evidence ids or a source branch id/);
+  });
+
+  it('allows a branch merge proposal to be explained by its source branch', () => {
+    expect(() => validateProfileChangeProposal(validProposal({
+      proposalKind: 'branch_merge',
+      sourceKind: 'system',
+      sourceBranchId: 'branch-1',
+      target: {
+        kind: 'base_profile',
+        profileId: 'coding',
+      },
+      targetProfileVersion: 1,
+      evidenceIds: [],
+      patch: validPatch({ addRelationshipTypeNodeIds: ['depends_on_query_key'] }),
+    }))).not.toThrow();
+  });
+
+  it('keeps applied proposals behind accepted review state', () => {
+    expect(() => validateProfileChangeProposal(validProposal({
+      status: 'rejected',
+      reviewedAt: 3,
+      appliedAt: 4,
+    }))).toThrow(/Only accepted proposals may be marked applied/);
+
+    expect(() => validateProfileChangeProposal(validProposal({
+      status: 'accepted',
+      reviewedAt: null,
+      appliedAt: 4,
+    }))).toThrow(/Accepted proposals require reviewedAt/);
+  });
+});

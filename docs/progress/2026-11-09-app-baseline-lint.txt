@@ -1,0 +1,393 @@
+
+> codelens-rn@1.0.0 lint
+> expo lint
+
+
+C:\repos\kordex\codelens-rn\app\chat\[id].tsx
+   84:9  warning  The 'messages' logical expression could make the dependencies of useMemo Hook (at line 85) change on every render. To fix this, wrap the initialization of 'messages' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  208:6  warning  React Hook useCallback has a missing dependency: 'personaQuery'. Either include it or remove the dependency array                                                                                react-hooks/exhaustive-deps
+
+C:\repos\kordex\codelens-rn\app\dev.tsx
+  3:3  warning  'View' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\repos\kordex\codelens-rn\app\general-chat\[id].tsx
+   54:9  warning  The 'messages' logical expression could make the dependencies of useMemo Hook (at line 55) change on every render. To fix this, wrap the initialization of 'messages' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  139:6  warning  React Hook useCallback has a missing dependency: 'personaQuery'. Either include it or remove the dependency array                                                                                react-hooks/exhaustive-deps
+
+C:\repos\kordex\codelens-rn\app\learning\chat\[id].tsx
+   61:9  warning  The 'messages' logical expression could make the dependencies of useMemo Hook (at line 62) change on every render. To fix this, wrap the initialization of 'messages' in its own useMemo() Hook  react-hooks/exhaustive-deps
+  150:6  warning  React Hook useCallback has a missing dependency: 'personaQuery'. Either include it or remove the dependency array                                                                                react-hooks/exhaustive-deps
+
+C:\repos\kordex\codelens-rn\app\project\[id].tsx
+  391:6  warning  React Hook useCallback has a missing dependency: 'projectId'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  409:5  warning  React Hook useCallback has a missing dependency: 'projectId'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\repos\kordex\codelens-rn\src\ai\tokenizer.ts
+  7:7  warning  'PAD_ID' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\repos\kordex\codelens-rn\src\db\migrations\__tests__\ontology-profile-migration.test.ts
+  119:18  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+
+C:\repos\kordex\codelens-rn\src\db\migrations\__tests__\profile-branches-migration.test.ts
+  105:16  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+
+C:\repos\kordex\codelens-rn\src\db\migrations\__tests__\profile-definitions-migration.test.ts
+  108:16  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+
+C:\repos\kordex\codelens-rn\src\db\migrations\__tests__\runner.test.ts
+  56:11  warning  'sqls' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\repos\kordex\codelens-rn\src\db\migrations\__tests__\user-fit-history-recency-indexes-migration.test.ts
+  48:17  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+
+C:\repos\kordex\codelens-rn\src\db\queries\files.ts
+  1:14  warning  'and' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\repos\kordex\codelens-rn\src\db\schema.ts
+  23:5  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+  26:5  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+
+C:\repos\kordex\codelens-rn\src\features\backup\__tests__\profile-columns.test.ts
+   24:62  warning  'parseClassificationJsonToConceptHint' is defined but never used                                       @typescript-eslint/no-unused-vars
+  275:5   warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+
+C:\repos\kordex\codelens-rn\src\features\backup\columnMaps.ts
+  361:6  warning  '_CheckProjectsMissing' is defined but never used                    @typescript-eslint/no-unused-vars
+  362:6  warning  '_CheckProjectsExtra' is defined but never used                      @typescript-eslint/no-unused-vars
+  363:6  warning  '_CheckFilesMissing' is defined but never used                       @typescript-eslint/no-unused-vars
+  364:6  warning  '_CheckFilesExtra' is defined but never used                         @typescript-eslint/no-unused-vars
+  365:6  warning  '_CheckChatsMissing' is defined but never used                       @typescript-eslint/no-unused-vars
+  366:6  warning  '_CheckChatsExtra' is defined but never used                         @typescript-eslint/no-unused-vars
+  367:6  warning  '_CheckChatMessagesMissing' is defined but never used                @typescript-eslint/no-unused-vars
+  368:6  warning  '_CheckChatMessagesExtra' is defined but never used                  @typescript-eslint/no-unused-vars
+  369:6  warning  '_CheckLearningSessionsMissing' is defined but never used            @typescript-eslint/no-unused-vars
+  370:6  warning  '_CheckLearningSessionsExtra' is defined but never used              @typescript-eslint/no-unused-vars
+  371:6  warning  '_CheckLearningCapturesMissing' is defined but never used            @typescript-eslint/no-unused-vars
+  372:6  warning  '_CheckLearningCapturesExtra' is defined but never used              @typescript-eslint/no-unused-vars
+  373:6  warning  '_CheckConceptsMissing' is defined but never used                    @typescript-eslint/no-unused-vars
+  374:6  warning  '_CheckConceptsExtra' is defined but never used                      @typescript-eslint/no-unused-vars
+  375:6  warning  '_CheckConceptLinksMissing' is defined but never used                @typescript-eslint/no-unused-vars
+  376:6  warning  '_CheckConceptLinksExtra' is defined but never used                  @typescript-eslint/no-unused-vars
+  377:6  warning  '_CheckProfileBranchesMissing' is defined but never used             @typescript-eslint/no-unused-vars
+  378:6  warning  '_CheckProfileBranchesExtra' is defined but never used               @typescript-eslint/no-unused-vars
+  379:6  warning  '_CheckProfileSelectionsMissing' is defined but never used           @typescript-eslint/no-unused-vars
+  380:6  warning  '_CheckProfileSelectionsExtra' is defined but never used             @typescript-eslint/no-unused-vars
+  381:6  warning  '_CheckProfileDefinitionsMissing' is defined but never used          @typescript-eslint/no-unused-vars
+  382:6  warning  '_CheckProfileDefinitionsExtra' is defined but never used            @typescript-eslint/no-unused-vars
+  383:6  warning  '_CheckOntologyCorrectionEvidenceMissing' is defined but never used  @typescript-eslint/no-unused-vars
+  384:6  warning  '_CheckOntologyCorrectionEvidenceExtra' is defined but never used    @typescript-eslint/no-unused-vars
+  385:6  warning  '_CheckProfileChangeProposalsMissing' is defined but never used      @typescript-eslint/no-unused-vars
+  386:6  warning  '_CheckProfileChangeProposalsExtra' is defined but never used        @typescript-eslint/no-unused-vars
+  387:6  warning  '_CheckProfileProposalEventsMissing' is defined but never used       @typescript-eslint/no-unused-vars
+  388:6  warning  '_CheckProfileProposalEventsExtra' is defined but never used         @typescript-eslint/no-unused-vars
+  389:6  warning  '_CheckProfileTrustSettingsMissing' is defined but never used        @typescript-eslint/no-unused-vars
+  390:6  warning  '_CheckProfileTrustSettingsExtra' is defined but never used          @typescript-eslint/no-unused-vars
+
+C:\repos\kordex\codelens-rn\src\features\bookmarks\data\__tests__\stage8-bookmarks.repo.test.ts
+  16:1  warning  Import in body of module; reorder to top  import/first
+  17:1  warning  Import in body of module; reorder to top  import/first
+  18:1  warning  Import in body of module; reorder to top  import/first
+
+C:\repos\kordex\codelens-rn\src\features\bookmarks\data\paletteRepo.ts
+  87:12  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+
+C:\repos\kordex\codelens-rn\src\features\bookmarks\index.ts
+  14:1  error  Multiple exports of name 'BookmarkId'  import/export
+  15:1  error  Multiple exports of name 'BookmarkId'  import/export
+
+C:\repos\kordex\codelens-rn\src\features\chat\__tests__\stage8-mini-chat.test.ts
+  5:66  warning  'C:\repos\kordex\codelens-rn\src\features\chat\promptComposition\constants.ts' imported multiple times  import/no-duplicates
+  6:41  warning  'C:\repos\kordex\codelens-rn\src\features\chat\promptComposition\constants.ts' imported multiple times  import/no-duplicates
+
+C:\repos\kordex\codelens-rn\src\features\chat\__tests__\stage8-send-flow-rewire.test.ts
+  134:69  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+  156:56  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+
+C:\repos\kordex\codelens-rn\src\features\graph\__tests__\graphQueries.test.ts
+  19:1  warning  Import in body of module; reorder to top  import/first
+  20:1  warning  Import in body of module; reorder to top  import/first
+
+C:\repos\kordex\codelens-rn\src\features\graph\engine\layout.ts
+  42:23  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+
+C:\repos\kordex\codelens-rn\src\features\graph\ui\GraphScreen.tsx
+  44:43  warning  React Hook useMemo has an unnecessary dependency: 'layout'. Either exclude it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\repos\kordex\codelens-rn\src\features\learning\application\extract.ts
+  60:19  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+
+C:\repos\kordex\codelens-rn\src\features\learning\application\prompts.ts
+  4:20  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+
+C:\repos\kordex\codelens-rn\src\features\learning\codecs\__tests__\capture-classification.test.ts
+  24:1  warning  Unused eslint-disable directive (no problems were reported from '@typescript-eslint/no-explicit-any')
+
+C:\repos\kordex\codelens-rn\src\features\learning\data\fts.ts
+  29:41  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+
+C:\repos\kordex\codelens-rn\src\features\learning\dot-connector\services\runSendInjection.ts
+  94:60  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+
+C:\repos\kordex\codelens-rn\src\features\learning\dot-connector\services\runTypingRetrieval.ts
+   3:32  warning  'RetrieveResult' is defined but never used                   @typescript-eslint/no-unused-vars
+  57:50  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+
+C:\repos\kordex\codelens-rn\src\features\learning\dot-connector\types\dotConnector.ts
+  41:31  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+
+C:\repos\kordex\codelens-rn\src\features\learning\promotion\clustering\computeClusters.ts
+  18:88  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+
+C:\repos\kordex\codelens-rn\src\features\learning\promotion\services\promoteToConcept.ts
+  11:32  warning  'C:\repos\kordex\codelens-rn\src\features\learning\types\ids.ts' imported multiple times  import/no-duplicates
+  12:40  warning  'C:\repos\kordex\codelens-rn\src\features\learning\types\ids.ts' imported multiple times  import/no-duplicates
+
+C:\repos\kordex\codelens-rn\src\features\learning\retrieval\__tests__\stage6-retrieval.test.ts
+  27:1  warning  Import in body of module; reorder to top     import/first
+  28:1  warning  Import in body of module; reorder to top     import/first
+  29:1  warning  Import in body of module; reorder to top     import/first
+  30:1  warning  Import in body of module; reorder to top     import/first
+  31:1  warning  Import in body of module; reorder to top     import/first
+  32:1  warning  Import in body of module; reorder to top     import/first
+  33:1  warning  Import in body of module; reorder to top     import/first
+  34:1  warning  Import in body of module; reorder to top     import/first
+  35:1  warning  Import in body of module; reorder to top     import/first
+  36:1  warning  Import in body of module; reorder to top     import/first
+  37:1  warning  Import in body of module; reorder to top     import/first
+  41:3  warning  'RetrievedMemory' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\repos\kordex\codelens-rn\src\features\learning\retrieval\services\retrieveRelevantMemories.ts
+  210:40  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+
+C:\repos\kordex\codelens-rn\src\features\learning\retrieval\services\runHotColdGc.ts
+  98:65  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+
+C:\repos\kordex\codelens-rn\src\features\learning\retrieval\types\retrieval.ts
+   87:16  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+  127:16  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+
+C:\repos\kordex\codelens-rn\src\features\learning\review\__tests__\stage7-review.test.ts
+  27:1  warning  Import in body of module; reorder to top  import/first
+  28:1  warning  Import in body of module; reorder to top  import/first
+
+C:\repos\kordex\codelens-rn\src\features\learning\services\__tests__\conceptualizeCorrections.test.ts
+  74:22  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+
+C:\repos\kordex\codelens-rn\src\features\learning\services\__tests__\conceptualizePromptBuilder.test.ts
+  4:3  warning  'scopedNodeRefKey' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\repos\kordex\codelens-rn\src\features\learning\services\__tests__\stage2-saveCapture.test.ts
+  53:19  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+
+C:\repos\kordex\codelens-rn\src\features\learning\services\conceptualizePromptBuilder.ts
+  118:11  warning  Array type using 'ReadonlyArray<T>' is forbidden. Use 'readonly T[]' instead  @typescript-eslint/array-type
+  122:24  warning  Array type using 'ReadonlyArray<T>' is forbidden. Use 'readonly T[]' instead  @typescript-eslint/array-type
+  129:13  warning  Array type using 'ReadonlyArray<T>' is forbidden. Use 'readonly T[]' instead  @typescript-eslint/array-type
+  142:16  warning  Array type using 'ReadonlyArray<T>' is forbidden. Use 'readonly T[]' instead  @typescript-eslint/array-type
+  156:28  warning  Array type using 'ReadonlyArray<T>' is forbidden. Use 'readonly T[]' instead  @typescript-eslint/array-type
+  165:18  warning  Array type using 'ReadonlyArray<T>' is forbidden. Use 'readonly T[]' instead  @typescript-eslint/array-type
+  179:22  warning  Array type using 'ReadonlyArray<T>' is forbidden. Use 'readonly T[]' instead  @typescript-eslint/array-type
+
+C:\repos\kordex\codelens-rn\src\features\learning\ui\cards\ConceptCardFull.tsx
+   24:18  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+   25:20  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+   26:21  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+   27:19  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+   37:19  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+  153:10  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+
+C:\repos\kordex\codelens-rn\src\features\learning\ui\cards\__tests__\stage3-card-guards.test.ts
+  77:11  warning  'primitivesDir' is assigned a value but never used  @typescript-eslint/no-unused-vars
+
+C:\repos\kordex\codelens-rn\src\features\ontology\__tests__\baseProfileProposalApplyService.test.ts
+  12:1  warning  Import in body of module; reorder to top  import/first
+  13:1  warning  Import in body of module; reorder to top  import/first
+  18:1  warning  Import in body of module; reorder to top  import/first
+  19:1  warning  Import in body of module; reorder to top  import/first
+
+C:\repos\kordex\codelens-rn\src\features\ontology\__tests__\branchLocalProposalApplyService.test.ts
+  12:1  warning  Import in body of module; reorder to top  import/first
+  13:1  warning  Import in body of module; reorder to top  import/first
+  18:1  warning  Import in body of module; reorder to top  import/first
+  19:1  warning  Import in body of module; reorder to top  import/first
+
+C:\repos\kordex\codelens-rn\src\features\ontology\__tests__\checkerRunService.test.ts
+  12:1  warning  Import in body of module; reorder to top  import/first
+  13:1  warning  Import in body of module; reorder to top  import/first
+  18:1  warning  Import in body of module; reorder to top  import/first
+  19:1  warning  Import in body of module; reorder to top  import/first
+  20:1  warning  Import in body of module; reorder to top  import/first
+
+C:\repos\kordex\codelens-rn\src\features\ontology\__tests__\profileChangeProposalEditService.test.ts
+  12:1  warning  Import in body of module; reorder to top  import/first
+  13:1  warning  Import in body of module; reorder to top  import/first
+  14:1  warning  Import in body of module; reorder to top  import/first
+  19:1  warning  Import in body of module; reorder to top  import/first
+  20:1  warning  Import in body of module; reorder to top  import/first
+  21:1  warning  Import in body of module; reorder to top  import/first
+
+C:\repos\kordex\codelens-rn\src\features\ontology\__tests__\profileChangeProposalLifecycleService.test.ts
+  12:1  warning  Import in body of module; reorder to top  import/first
+  17:1  warning  Import in body of module; reorder to top  import/first
+
+C:\repos\kordex\codelens-rn\src\features\ontology\__tests__\profileChangeProposalRefreshService.test.ts
+  12:1  warning  Import in body of module; reorder to top  import/first
+  13:1  warning  Import in body of module; reorder to top  import/first
+  18:1  warning  Import in body of module; reorder to top  import/first
+  19:1  warning  Import in body of module; reorder to top  import/first
+  20:1  warning  Import in body of module; reorder to top  import/first
+
+C:\repos\kordex\codelens-rn\src\features\ontology\__tests__\profileChangeProposalReviewService.test.ts
+  12:1  warning  Import in body of module; reorder to top  import/first
+  18:1  warning  Import in body of module; reorder to top  import/first
+
+C:\repos\kordex\codelens-rn\src\features\ontology\__tests__\profileChangeProposalTargetSwitchService.test.ts
+  12:1  warning  Import in body of module; reorder to top  import/first
+  13:1  warning  Import in body of module; reorder to top  import/first
+  14:1  warning  Import in body of module; reorder to top  import/first
+  19:1  warning  Import in body of module; reorder to top  import/first
+  20:1  warning  Import in body of module; reorder to top  import/first
+
+C:\repos\kordex\codelens-rn\src\features\ontology\__tests__\profileProposalFreshnessService.test.ts
+  7:1  warning  Import in body of module; reorder to top  import/first
+  8:1  warning  Import in body of module; reorder to top  import/first
+  9:1  warning  Import in body of module; reorder to top  import/first
+
+C:\repos\kordex\codelens-rn\src\features\ontology\__tests__\profileTrustSettingRepo.test.ts
+  12:1  warning  Import in body of module; reorder to top  import/first
+  13:1  warning  Import in body of module; reorder to top  import/first
+
+C:\repos\kordex\codelens-rn\src\features\ontology\__tests__\runtimeProfileActivation.test.ts
+    5:3   warning  'DEFAULT_RUNTIME_PROFILE_BASE_PROFILE_ID' is defined but never used           @typescript-eslint/no-unused-vars
+   15:3   warning  'composeRuntimeDomainProfileFromSelection' is defined but never used          @typescript-eslint/no-unused-vars
+   25:3   warning  'ProfileSelection' is defined but never used                                  @typescript-eslint/no-unused-vars
+  128:13  warning  Array type using 'ReadonlyArray<T>' is forbidden. Use 'readonly T[]' instead  @typescript-eslint/array-type
+  136:13  warning  Array type using 'ReadonlyArray<T>' is forbidden. Use 'readonly T[]' instead  @typescript-eslint/array-type
+
+C:\repos\kordex\codelens-rn\src\features\ontology\__tests__\secondBaseForkability.test.ts
+  12:1  warning  Import in body of module; reorder to top  import/first
+  13:1  warning  Import in body of module; reorder to top  import/first
+  14:1  warning  Import in body of module; reorder to top  import/first
+  15:1  warning  Import in body of module; reorder to top  import/first
+  16:1  warning  Import in body of module; reorder to top  import/first
+  17:1  warning  Import in body of module; reorder to top  import/first
+  18:1  warning  Import in body of module; reorder to top  import/first
+  19:1  warning  Import in body of module; reorder to top  import/first
+  20:1  warning  Import in body of module; reorder to top  import/first
+
+C:\repos\kordex\codelens-rn\src\features\ontology\__tests__\useApplyProfileChangeProposal.test.ts
+   7:1  warning  Import in body of module; reorder to top  import/first
+   8:1  warning  Import in body of module; reorder to top  import/first
+   9:1  warning  Import in body of module; reorder to top  import/first
+  13:1  warning  Import in body of module; reorder to top  import/first
+
+C:\repos\kordex\codelens-rn\src\features\ontology\__tests__\useEditProfileChangeProposal.test.ts
+  7:1  warning  Import in body of module; reorder to top  import/first
+
+C:\repos\kordex\codelens-rn\src\features\ontology\__tests__\useProfileSelection.test.ts
+   7:1  warning  Import in body of module; reorder to top  import/first
+  12:1  warning  Import in body of module; reorder to top  import/first
+
+C:\repos\kordex\codelens-rn\src\features\ontology\__tests__\useRefreshProfileChangeProposal.test.ts
+  7:1  warning  Import in body of module; reorder to top  import/first
+
+C:\repos\kordex\codelens-rn\src\features\ontology\__tests__\useReviewProfileChangeProposal.test.ts
+  7:1  warning  Import in body of module; reorder to top  import/first
+
+C:\repos\kordex\codelens-rn\src\features\ontology\__tests__\useRunManualOntologyChecker.test.ts
+  11:1  warning  Import in body of module; reorder to top  import/first
+  17:1  warning  Import in body of module; reorder to top  import/first
+
+C:\repos\kordex\codelens-rn\src\features\ontology\__tests__\useSwitchProfileChangeProposalTarget.test.ts
+  7:1  warning  Import in body of module; reorder to top  import/first
+
+C:\repos\kordex\codelens-rn\src\features\ontology\__tests__\userFitHistoryRepo.test.ts
+  13:1  warning  Import in body of module; reorder to top  import/first
+
+C:\repos\kordex\codelens-rn\src\features\ontology\baseProfileProposalApply.ts
+  335:7  warning  'PROFILE_PATCH_CLONE_FIELD_KEYS' is assigned a value but only used as a type  @typescript-eslint/no-unused-vars
+
+C:\repos\kordex\codelens-rn\src\features\ontology\checkerPromptBuilder.ts
+   68:12  warning  Array type using 'ReadonlyArray<T>' is forbidden. Use 'readonly T[]' instead  @typescript-eslint/array-type
+   79:24  warning  Array type using 'ReadonlyArray<T>' is forbidden. Use 'readonly T[]' instead  @typescript-eslint/array-type
+   86:13  warning  Array type using 'ReadonlyArray<T>' is forbidden. Use 'readonly T[]' instead  @typescript-eslint/array-type
+  101:23  warning  Array type using 'ReadonlyArray<T>' is forbidden. Use 'readonly T[]' instead  @typescript-eslint/array-type
+  116:18  warning  Array type using 'ReadonlyArray<T>' is forbidden. Use 'readonly T[]' instead  @typescript-eslint/array-type
+  130:22  warning  Array type using 'ReadonlyArray<T>' is forbidden. Use 'readonly T[]' instead  @typescript-eslint/array-type
+
+C:\repos\kordex\codelens-rn\src\features\ontology\codecs\profileDefinition.ts
+  3:3   warning  'DomainProfile' is defined but never used       @typescript-eslint/no-unused-vars
+  8:10  warning  'BoundaryRuleSchema' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\repos\kordex\codelens-rn\src\features\ontology\contextAssembly.ts
+  638:4  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+
+C:\repos\kordex\codelens-rn\src\features\ontology\contextSelector.ts
+  80:18  warning  An interface declaring no members is equivalent to its supertype  @typescript-eslint/no-empty-object-type
+  82:18  warning  An interface declaring no members is equivalent to its supertype  @typescript-eslint/no-empty-object-type
+
+C:\repos\kordex\codelens-rn\src\features\ontology\corrections.ts
+  21:4  warning  Array type using 'ReadonlyArray<string>' is forbidden. Use 'readonly string[]' instead  @typescript-eslint/array-type
+
+C:\repos\kordex\codelens-rn\src\features\ontology\data\checkerRunService.ts
+  13:8  warning  'ContextProposalSnapshotInput' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\repos\kordex\codelens-rn\src\features\ontology\data\profileChangeProposalRefreshService.ts
+  3:10  warning  'BaseProfileProposalApplyError' is defined but never used  @typescript-eslint/no-unused-vars
+  4:10  warning  'BranchLocalProposalApplyError' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\repos\kordex\codelens-rn\src\features\ontology\profileProposalTargetSwitch.ts
+  127:7  warning  'TARGET_SWITCH_PROFILE_PATCH_FIELD_KEYS' is assigned a value but only used as a type  @typescript-eslint/no-unused-vars
+
+C:\repos\kordex\codelens-rn\src\features\ontology\profileSelection.ts
+  26:19  warning  Array type using 'ReadonlyArray<T>' is forbidden. Use 'readonly T[]' instead  @typescript-eslint/array-type
+
+C:\repos\kordex\codelens-rn\src\features\ontology\runtimeProfileActivation.ts
+    7:8   warning  'C:\repos\kordex\codelens-rn\src\features\ontology\types.ts' imported multiple times  import/no-duplicates
+   11:38  warning  'C:\repos\kordex\codelens-rn\src\features\ontology\types.ts' imported multiple times  import/no-duplicates
+   38:3   warning  'TItemTypeNodeId' is defined but never used                                           @typescript-eslint/no-unused-vars
+  229:21  warning  Array type using 'ReadonlyArray<T>' is forbidden. Use 'readonly T[]' instead          @typescript-eslint/array-type
+
+C:\repos\kordex\codelens-rn\src\features\ontology\types.ts
+  68:14  warning  Array type using 'ReadonlyArray<T>' is forbidden. Use 'readonly T[]' instead  @typescript-eslint/array-type
+  73:17  warning  Array type using 'ReadonlyArray<T>' is forbidden. Use 'readonly T[]' instead  @typescript-eslint/array-type
+
+C:\repos\kordex\codelens-rn\src\features\ontology\ui\ProfileSelectionPanel.tsx
+  86:6  warning  React Hook useEffect has a missing dependency: 'selectionRow?.selection'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+C:\repos\kordex\codelens-rn\src\features\ontology\ui\profileProposalReviewPresentation.ts
+  412:10  warning  Array type using 'ReadonlyArray<T>' is forbidden. Use 'readonly T[]' instead  @typescript-eslint/array-type
+
+C:\repos\kordex\codelens-rn\src\features\personas\__tests__\stage8-persona-hooks.test.ts
+  29:1  warning  Import in body of module; reorder to top  import/first
+  30:1  warning  Import in body of module; reorder to top  import/first
+  31:1  warning  Import in body of module; reorder to top  import/first
+  32:1  warning  Import in body of module; reorder to top  import/first
+
+C:\repos\kordex\codelens-rn\src\features\personas\__tests__\stage8-persona-repo.test.ts
+   7:1  warning  Import in body of module; reorder to top  import/first
+  16:1  warning  Import in body of module; reorder to top  import/first
+  17:1  warning  Import in body of module; reorder to top  import/first
+  18:1  warning  Import in body of module; reorder to top  import/first
+
+C:\repos\kordex\codelens-rn\src\hooks\send-flow.ts
+  24:11  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+  45:21  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+
+C:\repos\kordex\codelens-rn\src\ports\ai-client.ts
+  4:13  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+
+C:\repos\kordex\codelens-rn\src\test\expo-crypto-stub.ts
+  4:46  warning  'node:crypto' imported multiple times  import/no-duplicates
+  5:28  warning  'node:crypto' imported multiple times  import/no-duplicates
+
+C:\repos\kordex\codelens-rn\src\ui\components\ChatBubble.tsx
+  28:27  error  Component definition is missing display name  react/display-name
+
+C:\repos\kordex\codelens-rn\src\ui\components\CodeViewer.tsx
+   67:18  error    Component definition is missing display name                 react/display-name
+  125:24  warning  Array type using 'Array<T>' is forbidden. Use 'T[]' instead  @typescript-eslint/array-type
+
+✖ 217 problems (4 errors, 213 warnings)
+  0 errors and 146 warnings potentially fixable with the `--fix` option.
+

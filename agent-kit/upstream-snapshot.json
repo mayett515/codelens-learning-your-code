@@ -1,0 +1,282 @@
+{
+  "recordedOn": "2026-11-09",
+  "purpose": "Read-only provenance snapshot; no runtime dependency or automatic upstream updater.",
+  "sourceRoots": {
+    "claude": "C:\\claude\\claude-workflows\\typescript",
+    "codex": "C:\\codex\\codex-workflows\\typescript",
+    "seo": "C:\\repos\\projects\\seoproject\\Seo_automatisation"
+  },
+  "seoHead": "17e29268f7eb38a8db41c084fbe898a0fe3c0b7f",
+  "files": [
+    {
+      "source": "claude",
+      "path": ".claude/rules/async-concurrency.md",
+      "sha256": "0e42cf830bbc21d9e355cf37e3fefa1aed486fc2946c54e23cb9b1f46daeb4b3"
+    },
+    {
+      "source": "claude",
+      "path": ".claude/rules/auth-security.md",
+      "sha256": "88c0acf5459d138bfaf710c307c7dd84854bc78a7e49f6929a5bdaf217307ab5"
+    },
+    {
+      "source": "claude",
+      "path": ".claude/rules/boundaries.md",
+      "sha256": "e8c24a74a73a3e3ccd3d2294b40af91a39ff3220a22d1b2e4614d0a27c9d4ad6"
+    },
+    {
+      "source": "claude",
+      "path": ".claude/rules/comments.md",
+      "sha256": "143f3bcc5bdc9ce97f3192b56202347a9702725221d5fe65d9769e6e1f0a174d"
+    },
+    {
+      "source": "claude",
+      "path": ".claude/rules/data-access.md",
+      "sha256": "366333e2cfbcacdb8ff7d3135571f027ceeb6515a58b796da4e7e48d07faca99"
+    },
+    {
+      "source": "claude",
+      "path": ".claude/rules/docs.md",
+      "sha256": "7738a3eeee8b38ad259a5d2a35c8d3704d4a01d9c8a49bb40c57192d4684359f"
+    },
+    {
+      "source": "claude",
+      "path": ".claude/rules/error-modeling.md",
+      "sha256": "8bbf0b544cc21c4c5193210f353b1b2a9fcb93060efa2a6f628ae6c104a5797c"
+    },
+    {
+      "source": "claude",
+      "path": ".claude/rules/fastify-adapter.md",
+      "sha256": "f68e3bec0925cf2cef8c2a4c7a325faddeedc89d7106060b8967293f4505b7d1"
+    },
+    {
+      "source": "claude",
+      "path": ".claude/rules/functional-core.md",
+      "sha256": "65ab1fccb80858920024e97d01af929b1d6b3e14e0544f090b9515654be1012d"
+    },
+    {
+      "source": "claude",
+      "path": ".claude/rules/http-boundaries.md",
+      "sha256": "de25eae68d2bf2e69e2db2042c1dba552d2b208f1fb814562c9cf7a6c07311de"
+    },
+    {
+      "source": "claude",
+      "path": ".claude/rules/nest.md",
+      "sha256": "a21f352836e681650313c40f9c7e65b043c3645489d450953020edffdbae7736"
+    },
+    {
+      "source": "claude",
+      "path": ".claude/rules/procedural-shell.md",
+      "sha256": "dfc382c528277a8f6b6bc9f93cfcc7d32fd8182a6d1c883da7a50b15b96f5d1c"
+    },
+    {
+      "source": "claude",
+      "path": ".claude/rules/react.md",
+      "sha256": "e14a7c96a2d0c9049906ddbd0d593b1127a5921d4d89189d83472041f669d911"
+    },
+    {
+      "source": "claude",
+      "path": ".claude/rules/tanstack.md",
+      "sha256": "8536939efb7be971b909cbf758a0db11bab1b24deaf86bc9326b79bb95df807c"
+    },
+    {
+      "source": "claude",
+      "path": ".claude/rules/testing.md",
+      "sha256": "da4d933e49c778e2264eea74fba9f7154010525abb90917800ffb695d593218c"
+    },
+    {
+      "source": "claude",
+      "path": ".claude/rules/type-strategy.md",
+      "sha256": "7333b83d8292b9eaaedc8a99cc93950a3a8ff48389140941ad583a5eb4348b26"
+    },
+    {
+      "source": "claude",
+      "path": ".claude/rules/zod-boundaries.md",
+      "sha256": "40af63b10285e28452b05e048b4e9ae7e7ff3f7a820d43e5a61d533d94fb1242"
+    },
+    {
+      "source": "seo",
+      "path": ".claude/rules/async-concurrency.md",
+      "sha256": "0e42cf830bbc21d9e355cf37e3fefa1aed486fc2946c54e23cb9b1f46daeb4b3"
+    },
+    {
+      "source": "seo",
+      "path": ".claude/rules/auth-security.md",
+      "sha256": "88c0acf5459d138bfaf710c307c7dd84854bc78a7e49f6929a5bdaf217307ab5"
+    },
+    {
+      "source": "seo",
+      "path": ".claude/rules/boundaries.md",
+      "sha256": "e8c24a74a73a3e3ccd3d2294b40af91a39ff3220a22d1b2e4614d0a27c9d4ad6"
+    },
+    {
+      "source": "seo",
+      "path": ".claude/rules/comments.md",
+      "sha256": "143f3bcc5bdc9ce97f3192b56202347a9702725221d5fe65d9769e6e1f0a174d"
+    },
+    {
+      "source": "seo",
+      "path": ".claude/rules/data-access.md",
+      "sha256": "366333e2cfbcacdb8ff7d3135571f027ceeb6515a58b796da4e7e48d07faca99"
+    },
+    {
+      "source": "seo",
+      "path": ".claude/rules/docs.md",
+      "sha256": "7738a3eeee8b38ad259a5d2a35c8d3704d4a01d9c8a49bb40c57192d4684359f"
+    },
+    {
+      "source": "seo",
+      "path": ".claude/rules/error-modeling.md",
+      "sha256": "8bbf0b544cc21c4c5193210f353b1b2a9fcb93060efa2a6f628ae6c104a5797c"
+    },
+    {
+      "source": "seo",
+      "path": ".claude/rules/fastify-adapter.md",
+      "sha256": "f68e3bec0925cf2cef8c2a4c7a325faddeedc89d7106060b8967293f4505b7d1"
+    },
+    {
+      "source": "seo",
+      "path": ".claude/rules/functional-core.md",
+      "sha256": "65ab1fccb80858920024e97d01af929b1d6b3e14e0544f090b9515654be1012d"
+    },
+    {
+      "source": "seo",
+      "path": ".claude/rules/http-boundaries.md",
+      "sha256": "de25eae68d2bf2e69e2db2042c1dba552d2b208f1fb814562c9cf7a6c07311de"
+    },
+    {
+      "source": "seo",
+      "path": ".claude/rules/nest.md",
+      "sha256": "a21f352836e681650313c40f9c7e65b043c3645489d450953020edffdbae7736"
+    },
+    {
+      "source": "seo",
+      "path": ".claude/rules/procedural-shell.md",
+      "sha256": "dfc382c528277a8f6b6bc9f93cfcc7d32fd8182a6d1c883da7a50b15b96f5d1c"
+    },
+    {
+      "source": "seo",
+      "path": ".claude/rules/react.md",
+      "sha256": "e14a7c96a2d0c9049906ddbd0d593b1127a5921d4d89189d83472041f669d911"
+    },
+    {
+      "source": "seo",
+      "path": ".claude/rules/tanstack.md",
+      "sha256": "8536939efb7be971b909cbf758a0db11bab1b24deaf86bc9326b79bb95df807c"
+    },
+    {
+      "source": "seo",
+      "path": ".claude/rules/testing.md",
+      "sha256": "da4d933e49c778e2264eea74fba9f7154010525abb90917800ffb695d593218c"
+    },
+    {
+      "source": "seo",
+      "path": ".claude/rules/type-strategy.md",
+      "sha256": "7333b83d8292b9eaaedc8a99cc93950a3a8ff48389140941ad583a5eb4348b26"
+    },
+    {
+      "source": "seo",
+      "path": ".claude/rules/zod-boundaries.md",
+      "sha256": "40af63b10285e28452b05e048b4e9ae7e7ff3f7a820d43e5a61d533d94fb1242"
+    },
+    {
+      "source": "claude",
+      "path": ".claude/skills/anti-regression/SKILL.md",
+      "sha256": "840ec724438abf7683e32733ebbbe501ea884debc4edc626ae65bb953d861037"
+    },
+    {
+      "source": "claude",
+      "path": ".claude/skills/repo-review/SKILL.md",
+      "sha256": "df83d4879b1f648869fe71628facc01d05a5319b1dc7ff84ffce2acd6cefbb79"
+    },
+    {
+      "source": "claude",
+      "path": ".claude/skills/source-of-truth-audit/SKILL.md",
+      "sha256": "7a5c0bc07212bf540a4ad5005422a396a42a4df1dd6e8beea86be0d225b8e495"
+    },
+    {
+      "source": "claude",
+      "path": ".claude/skills/smoke-verify/SKILL.md",
+      "sha256": "7be6c1cc7a0c5f42c8d09426c16286ea4c26eb8c340c0eb79b00a43ec18c2a8c"
+    },
+    {
+      "source": "claude",
+      "path": ".claude/skills/type-interview/SKILL.md",
+      "sha256": "134af2d784c932aef4dd489a32f6f892a302790c388da4e68e61c3624148559a"
+    },
+    {
+      "source": "codex",
+      "path": ".agents/skills/anti-regression/SKILL.md",
+      "sha256": "5f59ce53345529a124be83279bac8a76da373aa7cd09ae1b7c19a43cd295c277"
+    },
+    {
+      "source": "codex",
+      "path": ".agents/skills/repo-review/SKILL.md",
+      "sha256": "382d8689b4a93794cd7652a3359ffc16e909e3d22ef2fc9ca0ca34e77f69ac9e"
+    },
+    {
+      "source": "codex",
+      "path": ".agents/skills/source-of-truth-audit/SKILL.md",
+      "sha256": "bfa0771c7387e368f74a01e6c9c62b446ed8f55e9ae859c3e58c9da1538ae0f6"
+    },
+    {
+      "source": "codex",
+      "path": ".agents/skills/smoke-verify/SKILL.md",
+      "sha256": "e99266e87a87ccc3bf3d3eac8ce9d6c6a65a83ae168911457b1fb579255f40fc"
+    },
+    {
+      "source": "codex",
+      "path": ".agents/skills/type-interview/SKILL.md",
+      "sha256": "b0ebbd4f29ee33cfefe282dc75754a8b678c2ea036e6c4f80b2109f2215fc70e"
+    },
+    {
+      "source": "seo",
+      "path": ".agents/skills/anti-regression/SKILL.md",
+      "sha256": "5f59ce53345529a124be83279bac8a76da373aa7cd09ae1b7c19a43cd295c277"
+    },
+    {
+      "source": "seo",
+      "path": ".agents/skills/repo-review/SKILL.md",
+      "sha256": "382d8689b4a93794cd7652a3359ffc16e909e3d22ef2fc9ca0ca34e77f69ac9e"
+    },
+    {
+      "source": "seo",
+      "path": ".agents/skills/source-of-truth-audit/SKILL.md",
+      "sha256": "a020f0270edf00048895f2e0f5a59a9f4683d98c94085e063ff9cea78b11ca41"
+    },
+    {
+      "source": "seo",
+      "path": ".agents/skills/smoke-verify/SKILL.md",
+      "sha256": "e99266e87a87ccc3bf3d3eac8ce9d6c6a65a83ae168911457b1fb579255f40fc"
+    },
+    {
+      "source": "seo",
+      "path": ".agents/skills/type-interview/SKILL.md",
+      "sha256": "b0ebbd4f29ee33cfefe282dc75754a8b678c2ea036e6c4f80b2109f2215fc70e"
+    },
+    {
+      "source": "seo",
+      "path": "docs/agents/rule-system-maintenance.md",
+      "sha256": "606d622fc03ef3ecea6a54bcc2d9e2b4511416306dcd236f53e9578813d7c7da"
+    },
+    {
+      "source": "seo",
+      "path": "docs/agents/lanes/ROOT.md",
+      "sha256": "c75b1e1731c5a9f61eeb09b22ab98d4ad6901ed60b9a8a040bf7f2e84eba2ffd"
+    },
+    {
+      "source": "seo",
+      "path": "docs/agents/lanes/SCHEMA.md",
+      "sha256": "fd53a2e3c2f33358a5506e8543caefc93036878effcdf6487a7fb4e39906b974"
+    },
+    {
+      "source": "seo",
+      "path": "AGENTS.md",
+      "sha256": "082df0457993e2201d3b78a18b92197bd5416851b62100efe38bd15b69d614d5"
+    },
+    {
+      "source": "seo",
+      "path": "CLAUDE.md",
+      "sha256": "0d918435baee49454c923f0afcdef9442dc6f26b7c22f16450e2a45be9f8c668"
+    }
+  ]
+}
