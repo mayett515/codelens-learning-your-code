@@ -27,6 +27,13 @@ branch 20: no branch/status/audit write is attempted and supplied records remain
 unchanged. The service reuses the pure freshness decision after patch validation;
 the compiled current revision separately protects the conditional write.
 
+The proposal-snapshot check lives in `applyPendingBranchLocalProfileChangeProposal`,
+not in the pure `applyBranchLocalProfileChangeProposal` helper. As inspected on
+2026-11-09, the service is the only production writer applying branch proposals;
+this does not mean it owns every branch-storage operation. A future writer must
+use this service or enforce the same freshness decision at its own commit
+boundary; calling the pure helper alone does not establish proposal freshness.
+
 Missing-snapshot proposals remain blocked at Apply. The separately owned
 proposal-replacement capability now permits an explicit validated refresh;
 its replacement stays pending until a later explicit Apply.
