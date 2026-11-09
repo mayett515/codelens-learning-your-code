@@ -23,7 +23,7 @@ The source/bootstrap gap remains explicit; a registry description is not proof
 that default production editing and reload work end to end.
 
 Accepted on 2026-11-09, not yet implemented:
-[Doc 44](../../../codelens-rn/ONTOLOGY_PROFILE_REFACTOR/44_BUILT_IN_BASE_MATERIALIZATION_DECISION.md)
+[Doc 44](../../ONTOLOGY_PROFILE_REFACTOR/44_BUILT_IN_BASE_MATERIALIZATION_DECISION.md)
 owns first-use materialization, the explicit legacy adoption path and the narrow
 built-in/local source-ownership rule. Reads remain write-free. Historical unknown
 origin must survive later edits and backup; it is distinct from the new accepted

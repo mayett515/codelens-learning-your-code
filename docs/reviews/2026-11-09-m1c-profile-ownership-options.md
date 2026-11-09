@@ -9,7 +9,7 @@ Options inspected 2026-11-09 at `d020028`. Subsequently the user selected
 **materialize on first use** (option 2 in this sheet). Fable changed position
 and now recommends the same as Astra. The accepted contract, including the
 subsequently approved explicit legacy adoption, is owned by
-[Doc 44](../../codelens-rn/ONTOLOGY_PROFILE_REFACTOR/44_BUILT_IN_BASE_MATERIALIZATION_DECISION.md).
+[Doc 44](../ONTOLOGY_PROFILE_REFACTOR/44_BUILT_IN_BASE_MATERIALIZATION_DECISION.md).
 The comparisons below retain their decision-preparation context. A-C remain
 separate from M1c in the
 [design note](2026-11-09-parent-child-semantics-design.md).
@@ -43,7 +43,7 @@ runtime behavior, durable format, leaf state or inspection date.
   data without incrementing that number; the inspected boundary would miss it.
   This is not evidence that every release, or a particular past release, did so.
 
-[Doc 06](../../codelens-rn/ONTOLOGY_PROFILE_REFACTOR/06_PROFILE_BRANCHING_AND_MERGE.md)
+[Doc 06](../ONTOLOGY_PROFILE_REFACTOR/06_PROFILE_BRANCHING_AND_MERGE.md)
 defines a base as immutable by default, evolved through approved patches. A
 software update is not automatically approval to change an existing lineage.
 All options must distinguish a shipped template from a user's accepted state.

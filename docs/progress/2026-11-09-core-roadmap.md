@@ -60,7 +60,7 @@ model provider or autonomous generation is required to prove the lifecycle.
 ## Kept decisions and limits
 
 - First-use materialization and permanent unknown legacy origin remain semantic
-  inputs from [Doc 44](../../codelens-rn/ONTOLOGY_PROFILE_REFACTOR/44_BUILT_IN_BASE_MATERIALIZATION_DECISION.md).
+  inputs from [Doc 44](../ONTOLOGY_PROFILE_REFACTOR/44_BUILT_IN_BASE_MATERIALIZATION_DECISION.md).
   Their mobile entrypoints, audit schema and backup implementation are not work
   for this roadmap; do not transplant them automatically into the core.
 - [Parent/child A1/B1/C1](../reviews/2026-11-09-parent-child-semantics-design.md)

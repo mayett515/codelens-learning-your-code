@@ -26,20 +26,20 @@ Master map of docs for the React Native rewrite. If another agent (Claude / Code
    - Purpose: Human-readable version of the same architecture agreement and tradeoffs.
    - Include when: onboarding collaborators or sanity-checking architecture decisions.
 
-3. [ONTOLOGY_PROFILE_REFACTOR/README.md](ONTOLOGY_PROFILE_REFACTOR/README.md)
+3. [../docs/ONTOLOGY_PROFILE_REFACTOR/README.md](../docs/ONTOLOGY_PROFILE_REFACTOR/README.md)
    - Purpose: Entry point for the implemented profile/ontology refactor decision spine.
    - Include when: touching learning taxonomy, concept/capture schema, extractor prompts, cards, promotion, retrieval formatting, graph visual encoding, or forkability/product-profile planning.
 
-4. [ONTOLOGY_PROFILE_REFACTOR/05_ANTI_REGRESSION_RULES.md](ONTOLOGY_PROFILE_REFACTOR/05_ANTI_REGRESSION_RULES.md)
+4. [../docs/ONTOLOGY_PROFILE_REFACTOR/05_ANTI_REGRESSION_RULES.md](../docs/ONTOLOGY_PROFILE_REFACTOR/05_ANTI_REGRESSION_RULES.md)
    - Purpose: Hard anti-regression rules for the profile/ontology refactor.
    - Include when: implementing any part of the ontology/profile refactor.
 
-5. [ONTOLOGY_PROFILE_REFACTOR/NEXT_LLM_CONTEXT.md](ONTOLOGY_PROFILE_REFACTOR/NEXT_LLM_CONTEXT.md)
+5. [../docs/ONTOLOGY_PROFILE_REFACTOR/NEXT_LLM_CONTEXT.md](../docs/ONTOLOGY_PROFILE_REFACTOR/NEXT_LLM_CONTEXT.md)
    - Purpose: Canonical active handoff for current ontology/profile work. It summarizes the locked docs, implemented slices, and next gates.
    - Include when: resuming ontology/profile work, especially after a context reset.
 
 Latest profile ownership contract (2026-11-09):
-[Doc 44: built-in materialization](ONTOLOGY_PROFILE_REFACTOR/44_BUILT_IN_BASE_MATERIALIZATION_DECISION.md).
+[Doc 44: built-in materialization](../docs/ONTOLOGY_PROFILE_REFACTOR/44_BUILT_IN_BASE_MATERIALIZATION_DECISION.md).
 Accepted first-use ownership and legacy adoption are not yet implemented;
 the contract links the blocking real-database rollback finding.
 
@@ -49,8 +49,8 @@ Dated handoff notes from specific work sessions. Useful for context, not for arc
 Older one-off prompt/review handoffs were removed from the active doc set. Use git history if that archival context is needed.
 
 - [current_state.md](current_state.md) — Phase tracker. What's done, what's next. Update after every phase checkpoint.
-- [ONTOLOGY_PROFILE_REFACTOR/implementation_handoff.md](ONTOLOGY_PROFILE_REFACTOR/implementation_handoff.md) - historical implementation log. Use only when auditing old slice history.
-- [ONTOLOGY_PROFILE_REFACTOR/WHERE_WE_STAND.md](ONTOLOGY_PROFILE_REFACTOR/WHERE_WE_STAND.md) - historical status log. Use `NEXT_LLM_CONTEXT.md` for active work.
+- [../docs/ONTOLOGY_PROFILE_REFACTOR/implementation_handoff.md](../docs/ONTOLOGY_PROFILE_REFACTOR/implementation_handoff.md) - historical implementation log. Use only when auditing old slice history.
+- [../docs/ONTOLOGY_PROFILE_REFACTOR/WHERE_WE_STAND.md](../docs/ONTOLOGY_PROFILE_REFACTOR/WHERE_WE_STAND.md) - historical status log. Use `NEXT_LLM_CONTEXT.md` for active work.
 
 ## Prompt Bundles (Copy/Paste)
 
@@ -75,12 +75,12 @@ Minimal doc bundles per task type, to keep prompts small:
    - `whatwe_agreedonthearchitecture_humans.md`
    - `ARCHITECTURE.md`
    - `PERSISTENCE.md`
-   - `ONTOLOGY_PROFILE_REFACTOR/README.md`
-   - `ONTOLOGY_PROFILE_REFACTOR/00_DOC_SYNC.md`
-   - `ONTOLOGY_PROFILE_REFACTOR/NEXT_LLM_CONTEXT.md`
-   - `ONTOLOGY_PROFILE_REFACTOR/humanreadable.md`
-   - `ONTOLOGY_PROFILE_REFACTOR/04_REFACTOR_WITHOUT_BREAKING_APP.md`
-   - `ONTOLOGY_PROFILE_REFACTOR/05_ANTI_REGRESSION_RULES.md`
+   - `../docs/ONTOLOGY_PROFILE_REFACTOR/README.md`
+   - `../docs/ONTOLOGY_PROFILE_REFACTOR/00_DOC_SYNC.md`
+   - `../docs/ONTOLOGY_PROFILE_REFACTOR/NEXT_LLM_CONTEXT.md`
+   - `../docs/ONTOLOGY_PROFILE_REFACTOR/humanreadable.md`
+   - `../docs/ONTOLOGY_PROFILE_REFACTOR/04_REFACTOR_WITHOUT_BREAKING_APP.md`
+   - `../docs/ONTOLOGY_PROFILE_REFACTOR/05_ANTI_REGRESSION_RULES.md`
 
 5. **UI / screens work**
    - `MAIN.md`
@@ -88,10 +88,10 @@ Minimal doc bundles per task type, to keep prompts small:
 ## Maintenance Rules
 
 - When an architectural decision changes, update the relevant canonical doc (`PERSISTENCE.md`, or the spec file). Don't let session notes become the source of truth — promote first, then reference.
-- When profile/ontology architecture changes, update the relevant file under `ONTOLOGY_PROFILE_REFACTOR/` and add a short pointer in the root canonical doc if the change affects repo-wide rules.
+- When profile/ontology architecture changes, update the relevant file under `../docs/ONTOLOGY_PROFILE_REFACTOR/` and add a short pointer in the root canonical doc if the change affects repo-wide rules.
 - After each phase checkpoint, update [current_state.md](current_state.md).
 - Session notes accumulate. That's fine — list them here with dates so agents know they're frozen in time.
 
 ## Current Status
 
-**Phases 0-6 complete, and the ontology/profile refactor is now a live implemented spine.** The current repo has profile compatibility fields, branches, selections, profile definitions, correction evidence, proposal storage/events, trust-setting storage, Conceptualize ContextPack/prompt validation, user-fit projection/history, proposal edit/freshness/refresh/apply, the first manual checker gate through UI trigger/readout and adapter, root-doc consolidation, Gate 3 selection UI, Doc 39's first branch-to-base target-switch path, Doc 43's initial photography second-base forkability proof, and profile-scoped learning capture/concept/retrieval boundaries for overlapping base-profile type ids. Choose the next bounded work deliberately against the numbered docs first. See `current_state.md` and `ONTOLOGY_PROFILE_REFACTOR/NEXT_LLM_CONTEXT.md`.
+**Phases 0-6 complete, and the ontology/profile refactor is now a live implemented spine.** The current repo has profile compatibility fields, branches, selections, profile definitions, correction evidence, proposal storage/events, trust-setting storage, Conceptualize ContextPack/prompt validation, user-fit projection/history, proposal edit/freshness/refresh/apply, the first manual checker gate through UI trigger/readout and adapter, root-doc consolidation, Gate 3 selection UI, Doc 39's first branch-to-base target-switch path, Doc 43's initial photography second-base forkability proof, and profile-scoped learning capture/concept/retrieval boundaries for overlapping base-profile type ids. Choose the next bounded work deliberately against the numbered docs first. See `current_state.md` and `../docs/ONTOLOGY_PROFILE_REFACTOR/NEXT_LLM_CONTEXT.md`.

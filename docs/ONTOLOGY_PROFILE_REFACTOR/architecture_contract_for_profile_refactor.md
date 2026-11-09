@@ -1,6 +1,6 @@
 # Architecture Contract For Profile Refactor
 
-This is the local, adjusted contract for agents working specifically on the ontology/profile refactor. It extends the root [whatwe_agreedonthearchitecture.md](../whatwe_agreedonthearchitecture.md).
+This is the local, adjusted contract for agents working specifically on the ontology/profile refactor. It extends the root [whatwe_agreedonthearchitecture.md](../../codelens-rn/whatwe_agreedonthearchitecture.md).
 
 <inherits>
 All root architecture rules still apply:

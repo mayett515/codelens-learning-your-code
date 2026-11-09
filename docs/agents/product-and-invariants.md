@@ -103,8 +103,8 @@ capability inventory start at [the capability root](../capabilities/ROOT.md).
    `isNot` prose do not implement a constraint solver. Future adapters must feed
    supported validated operations into the existing review/apply ownership.
 
-Sources: [why this exists](../../codelens-rn/ONTOLOGY_PROFILE_REFACTOR/why_this_exists.md),
-[decision index](../../codelens-rn/ONTOLOGY_PROFILE_REFACTOR/README.md),
+Sources: [why this exists](../ONTOLOGY_PROFILE_REFACTOR/why_this_exists.md),
+[decision index](../ONTOLOGY_PROFILE_REFACTOR/README.md),
 [current types](../../packages/kordex-core/src/types.ts), and the
 [implementation map](module-map.md). Read the decision for the affected capability;
 this summary does not replace its exact schema or acceptance criteria.

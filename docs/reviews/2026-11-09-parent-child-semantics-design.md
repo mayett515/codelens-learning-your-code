@@ -23,10 +23,10 @@ arbitrary chains or a universal operation language to fix today's flat branches.
 
 ## Intent and authority
 
-The source requirements are [why this exists](../../codelens-rn/ONTOLOGY_PROFILE_REFACTOR/why_this_exists.md),
-[06: branches](../../codelens-rn/ONTOLOGY_PROFILE_REFACTOR/06_PROFILE_BRANCHING_AND_MERGE.md),
-[07: child cores](../../codelens-rn/ONTOLOGY_PROFILE_REFACTOR/07_KORTEX_CORE_AND_CHILD_CORES.md)
-and [26: scoped meaning](../../codelens-rn/ONTOLOGY_PROFILE_REFACTOR/26_SCOPED_MEANING_AND_BRANCH_CORE_SEMANTICS_DECISION.md).
+The source requirements are [why this exists](../ONTOLOGY_PROFILE_REFACTOR/why_this_exists.md),
+[06: branches](../ONTOLOGY_PROFILE_REFACTOR/06_PROFILE_BRANCHING_AND_MERGE.md),
+[07: child cores](../ONTOLOGY_PROFILE_REFACTOR/07_KORTEX_CORE_AND_CHILD_CORES.md)
+and [26: scoped meaning](../ONTOLOGY_PROFILE_REFACTOR/26_SCOPED_MEANING_AND_BRANCH_CORE_SEMANTICS_DECISION.md).
 Their intent, not a claim of complete enforcement:
 
 1. Labels are presentation. Across scopes, identity includes scope and node ID.

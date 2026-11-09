@@ -30,8 +30,8 @@ responsibility, not a claim that a complete standalone Kordex product exists.
 ## Semantic changes
 
 For ontology/profile/checker work, read [product invariants](../docs/agents/product-and-invariants.md),
-[00_DOC_SYNC.md](ONTOLOGY_PROFILE_REFACTOR/00_DOC_SYNC.md),
-[NEXT_LLM_CONTEXT.md](ONTOLOGY_PROFILE_REFACTOR/NEXT_LLM_CONTEXT.md), then the
+[00_DOC_SYNC.md](../docs/ONTOLOGY_PROFILE_REFACTOR/00_DOC_SYNC.md),
+[NEXT_LLM_CONTEXT.md](../docs/ONTOLOGY_PROFILE_REFACTOR/NEXT_LLM_CONTEXT.md), then the
 decision for the touched capability. Cross-check with actual implementation;
 older status sections can lag later decisions. See the
 [baseline](../docs/agents/baseline.md) for identified integration gaps.

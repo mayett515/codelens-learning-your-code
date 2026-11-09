@@ -343,7 +343,7 @@ for unchanged runtime code. No new database, native or backup behavior is proved
 The user selected first-use materialization, with Fable now supporting the same
 choice, then explicitly authorized legacy adoption of today's template with
 permanently unknown earlier origin. The accepted contract is
-[Doc 44](../../codelens-rn/ONTOLOGY_PROFILE_REFACTOR/44_BUILT_IN_BASE_MATERIALIZATION_DECISION.md).
+[Doc 44](../ONTOLOGY_PROFILE_REFACTOR/44_BUILT_IN_BASE_MATERIALIZATION_DECISION.md).
 Doc 15's duplicate rule has the requested narrow exception; the option sheet and
 transfer ledger correct Fable's attribution. First-use command/audit, legacy
 adoption, proposal invalidation, template basis and backup proof are specified.
@@ -428,3 +428,23 @@ architecture-choice question. Its executable in-memory probe passed seven
 checks and shows both reusable behavior and missing semantics. Four additive
 choices await answers; no production type, schema, storage, port or app change
 was made. K2 remains unstarted. Native, rollback and restart gaps are unchanged.
+
+## Repository cleanup and decision-document relocation
+
+Fable's `136bde1` removed the three legacy trees. Verified that annotated tag
+`archive/pre-kordex` points to the preceding `ed71ee8`; synchronized with the
+remote using a fast-forward-only pull, then pushed both the local cleanup commit
+and tag as explicitly requested. Fable's reported 32/359/780 checks are attributed
+to that review; no additional deletion was performed here.
+
+Moved all 71 tracked Markdown files (including subfolders) from the app's
+ontology decision folder to `docs/ONTOLOGY_PROFILE_REFACTOR` using `git mv`.
+Incoming links, local outgoing links and repository-qualified documentation
+locators were updated. The folder README explains historical app-relative code
+snippets. The existing app and machine-local settings remain untouched except
+for app documentation links. App code stays until its orchestration is ported
+through K3. This is a relocation-only slice; no rule-model or runtime changes.
+
+The repository gate passed 32/32 after relocation; inline documentation links
+and generated inventory passed. `git diff --check` passed. No application or
+native runtime claim is made by this documentation check.

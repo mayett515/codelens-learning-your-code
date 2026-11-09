@@ -106,9 +106,9 @@ specified here.
 - The 31 compatibility export subpaths remain a recorded later API-narrowing
   task. They are not changed during this fit interview.
 
-Source context: [why this exists](../../codelens-rn/ONTOLOGY_PROFILE_REFACTOR/why_this_exists.md),
-[Doc 07](../../codelens-rn/ONTOLOGY_PROFILE_REFACTOR/07_KORTEX_CORE_AND_CHILD_CORES.md),
-[Doc 19](../../codelens-rn/ONTOLOGY_PROFILE_REFACTOR/19_PATCH_MERGE_PROPOSAL_STORAGE_DECISION.md),
-[Doc 26](../../codelens-rn/ONTOLOGY_PROFILE_REFACTOR/26_SCOPED_MEANING_AND_BRANCH_CORE_SEMANTICS_DECISION.md).
+Source context: [why this exists](../ONTOLOGY_PROFILE_REFACTOR/why_this_exists.md),
+[Doc 07](../ONTOLOGY_PROFILE_REFACTOR/07_KORTEX_CORE_AND_CHILD_CORES.md),
+[Doc 19](../ONTOLOGY_PROFILE_REFACTOR/19_PATCH_MERGE_PROPOSAL_STORAGE_DECISION.md),
+[Doc 26](../ONTOLOGY_PROFILE_REFACTOR/26_SCOPED_MEANING_AND_BRANCH_CORE_SEMANTICS_DECISION.md).
 Their older app-first sequencing and implementation status are historical; the
 current owner direction and inspected code above govern this next slice.

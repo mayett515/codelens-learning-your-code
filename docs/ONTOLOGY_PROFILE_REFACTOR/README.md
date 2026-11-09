@@ -1,5 +1,13 @@
 # Ontology Profile Refactor Plan
 
+Relocated on 2026-11-09 from the application subtree into repository-level
+documentation. All 71 tracked Markdown files, including review/future-concept
+subfolders, were retained. Older code locators such as `src/` and `app/` refer
+to their historical `codelens-rn/` context; use the current
+[module map](../agents/module-map.md) for extracted core owners and the
+[core roadmap](../progress/2026-11-09-core-roadmap.md) for active sequencing.
+This move changes ownership/location of the documents, not their dated decisions.
+
 This folder captures the strategic plan for extracting Kortex Core while keeping CodeLens useful as
 the first serious coding child around that core.
 

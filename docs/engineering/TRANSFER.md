@@ -256,7 +256,7 @@ now recommends it too; the earlier first-edit preference above is historical.
 The user subsequently approved visible, audited adoption of the current template
 for existing installations with unrecoverable earlier origin. Unknown origin
 persists across edits/backup; no old content is reclassified or silently verified.
-[Doc 44](../../codelens-rn/ONTOLOGY_PROFILE_REFACTOR/44_BUILT_IN_BASE_MATERIALIZATION_DECISION.md)
+[Doc 44](../ONTOLOGY_PROFILE_REFACTOR/44_BUILT_IN_BASE_MATERIALIZATION_DECISION.md)
 owns the accepted contract; Doc 15 now states the narrow source-ownership exception.
 
 Before implementing, a real file-backed SQLite diagnostic exercised the actual
@@ -322,3 +322,14 @@ additive fit details. It explicitly distinguishes pending-proposal supersession
 from accepted node-version history and classification corrections from general
 source evidence. A seven-check compatibility probe exercises existing pure core
 behavior without registering a profile, changing types or designing storage.
+
+## 2026-11-09: decisions moved out of the app
+
+The owner-authorized cleanup keeps historical material at annotated tag
+`archive/pre-kordex` and retains the current app pending K3 orchestration porting.
+Fable's local cleanup commit/tag were checked and pushed. The full 71-file
+ontology decision/documentation folder moved with Git history into
+`docs/ONTOLOGY_PROFILE_REFACTOR`; links now resolve from the new location.
+This separate structural commit changes no decision, skill, product type or
+runtime behavior. The repository gate checks the relocated docs as repo material.
+Further deletions require an owner decision.
