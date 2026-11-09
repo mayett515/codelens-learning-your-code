@@ -18,10 +18,12 @@ import {
   updateProfileChangeProposalIfPending,
 } from './profileChangeProposalRepo';
 import { insertProfileProposalEvent } from './profileProposalEventRepo';
+import { evaluateProfileProposalFreshness } from '../profileProposalFreshness';
 
 export type BranchLocalProposalApplyServiceErrorCode =
   | 'proposal_not_found'
   | 'branch_not_found'
+  | 'proposal_not_fresh'
   | 'branch_write_conflict'
   | 'proposal_write_conflict';
 
@@ -105,6 +107,25 @@ export async function applyPendingBranchLocalProfileChangeProposal<TItemTypeNode
       branch: branch as ProfileBranch<TItemTypeNodeId>,
       now: input.now,
     });
+
+    // The pure helper validated the patch. Its compiled revision protects the
+    // upcoming write; freshness also checks the proposal's original snapshot.
+    const freshness = evaluateProfileProposalFreshness({
+      proposal,
+      target: {
+        kind: 'profile_branch',
+        branchId: branch.id,
+        exists: true,
+        currentUpdatedAt: branch.updatedAt,
+        patchValidation: 'valid',
+      },
+    });
+    if (!freshness.canApply) {
+      throw new BranchLocalProposalApplyServiceError(
+        'proposal_not_fresh',
+        `Cannot apply proposal ${proposal.id}: ${freshness.reason}.`,
+      );
+    }
 
     const branchSaved = await deps.saveBranchIfUnchanged(
       result.branch,

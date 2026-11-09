@@ -11,6 +11,8 @@ expansion, contradictory evidence or two failed attempts at the same fix.
 | --- | --- | --- |
 | M0 | Commit rule/skill/leaf adoption, open PR, observe real GitHub gate | Completed: push and PR runs succeeded for 088ef3d |
 | M0b | Install existing app dependencies; run suite, compiler and lint once; record failures | Completed: 1117 tests and compiler pass; pre-existing lint failures recorded below |
+| A | Newly found branch proposal snapshot gap: reject missing/stale revisions before writes | Completed; legacy recovery remains for B |
+| B | Explicit refresh of missing-snapshot branch proposals as reviewed replacements | Authorized; next slice |
 | M1a | Foreign-parent rejection in profile-selection, failing-first decision test | Pending |
 | M1b | Preserve non-coding scope across learning-chat route/store/modal/save/read-back | Pending |
 | M1c | Registry/bootstrap and base apply ownership; real persistence proof | User decision required before implementation |
@@ -90,3 +92,41 @@ real SQLite rollback. No required baseline check was unavailable. Subsequent
 slices must preserve the passing suite/compiler and introduce no new lint issue.
 Next milestone: M1a; the separately requested parent/child design note prepares
 M4 and does not authorize implementing its undecided contracts.
+
+## Slice A — branch proposal snapshot guard
+
+The user inserted this slice before M1a after the design inspection reproduced
+an old invariant violation. Owner: `applyPendingBranchLocalProfileChangeProposal`;
+caller: `applyProfileChangeProposal` / review hook. The existing pure freshness
+decision now checks the stored proposal revision after pure patch validation and
+before any service write. The existing conditional write remains unchanged.
+The review error formatter handles the new `proposal_not_fresh` error code.
+Parent-state tracking, base ownership, schemas and transaction structure are out
+of scope. The base version guard was inspected and has no equivalent omission.
+
+Failing first: the three new service cases (snapshot 10, null, undefined against
+branch 20) all failed because the old service resolved with an accepted proposal.
+After the fix they reject without branch/status/event write calls, and retain
+unchanged input records. This proves rejection before attempted effects with
+injected repositories; it does not prove real SQLite rollback or concurrency.
+
+Validation on 2026-11-09:
+
+- Focused branch/base service, presentation and photography forkability tests:
+  31 passed in four files.
+- `npm test`: 1120 passed in 120 files; all previous tests still pass.
+- `node node_modules/typescript/bin/tsc --noEmit`: exit 0.
+- Local ESLint on the four touched TS files: exit 0, no errors, the same five
+  pre-existing warnings (four `import/first`, one `array-type`). Repository-wide
+  M0b failures remain unchanged: duplicate `BookmarkId` exports at lines 14/15,
+  and missing display names in ChatBubble/CodeViewer; full baseline output above.
+- `npm --prefix tools run generate`, then `npm --prefix tools run check`:
+  map updated, tooling compiler and 27 fixtures passed; expected dirty-owner
+  warning was inspected against the actual diff.
+
+Leaf transition: `branch-proposal-apply` was corrected from `implemented` to
+`partial` when the defect was reproduced. It remains `partial` solely for the
+separately authorized recovery gap: until B, missing-snapshot proposals are
+blocked and must be recreated. No unknown proposal is treated as fresh.
+Next slice B adds explicit validated replacement/supersession; it does not apply
+that replacement automatically.

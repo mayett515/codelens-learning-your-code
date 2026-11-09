@@ -218,6 +218,8 @@ export function formatProposalReviewError(
 ): string {
   const code = errorCode(error);
   switch (code) {
+    case 'proposal_not_fresh':
+      return 'The proposal has no verified current branch revision. Review a current replacement before applying.';
     case 'branch_write_conflict':
       return 'The branch changed while this proposal was open. Refresh and review it again.';
     case 'proposal_write_conflict':

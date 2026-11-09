@@ -62,3 +62,25 @@ comparison, the [generated inventory](../capabilities/generated-map.md) for
 current declarations and the [review brief](../reviews/2026-11-09-fable-review.md)
 for independent review. The earlier documentation-only statement describes the
 September adoption, not these later executable tools.
+
+## 2026-11-09: branch proposal snapshot enforcement
+
+Design inspection reproduced an additional pre-existing gap: the branch apply
+service loaded the current branch inside its transaction and guarded the write
+with that current timestamp, but did not compare the proposal's stored
+`targetBranchUpdatedAt`. A pending valid patch with snapshot 10 against branch
+20 was accepted. Missing snapshots were also accepted. This was present before
+rule/leaf adoption, not a regression introduced by it.
+
+Owner: `applyPendingBranchLocalProfileChangeProposal` in
+[branch apply service](../../codelens-rn/src/features/ontology/data/branchLocalProposalApplyService.ts).
+The [design note](../reviews/2026-11-09-parent-child-semantics-design.md) records
+the inspected semantics. The user authorized rejection at this service boundary,
+reusing the existing freshness decision, and a separate explicit missing-snapshot
+refresh slice. Progress and executed evidence belong in the
+[milestone record](../progress/2026-11-09-milestones.md).
+
+The base path does not have this same gap:
+`assertBaseProfileProposalTargetsCurrentVersion` rejects missing or mismatched
+`targetProfileVersion`, and the base service subsequently guards its write.
+Neither this inspection nor callback-based service tests establish SQLite rollback.

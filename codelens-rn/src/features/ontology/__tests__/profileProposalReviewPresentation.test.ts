@@ -419,6 +419,7 @@ describe('profile proposal review presentation helpers', () => {
   it('maps apply and service errors to user-facing review text', () => {
     const cases = [
       ['branch_write_conflict', 'branch changed'],
+      ['proposal_not_fresh', 'current branch revision'],
       ['proposal_write_conflict', 'proposal changed'],
       ['proposal_not_refreshable', 'not refreshable'],
       ['proposal_refresh_time_invalid', 'timestamp'],
