@@ -3,6 +3,9 @@
 - Separate invalid input, forbidden action, business refusal, transient failure
   and programmer defects. Empty results differ from failed queries. Branch on
   stable codes rather than messages; preserve the existing error dialect.
+- Use one failure dialect per layer; do not use `null` or `undefined` for several
+  distinct failure modes. Existing mixtures require an explicit migration, not
+  an incidental change during a structural refactor.
 - Normalize unknown caught values at the owning boundary, preserve causes and
   log once with safe context. Do not expose secrets or raw provider payloads.
   Explain intentionally ignored failures; do not convert them to fake success.

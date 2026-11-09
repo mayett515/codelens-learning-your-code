@@ -294,3 +294,21 @@ See the [K1 report](../progress/2026-11-09-core-extraction.md) and its test
 reconciliation. Both hosts still consume this same rule set. Storage/atomic
 ports are deferred to K2; the rule-model interview is required before storage
 design. No parent/child design option or new rule schema is adopted by K1.
+
+## 2026-11-09: Fable review and six condensation omissions restored
+
+The owner relayed Fable's K1 review: no blocking finding; independent module,
+compiler, test, isolation, tooling and CI checks agree with the K1 report. This
+is attributed review evidence, not a second Astra execution. The 31 compatibility
+subpaths remain a later API-surface task, not a change in this slice.
+
+Fable reports reading 48 of the 54 original scheme files; the remaining six are
+the manifest and rule-file generation templates. This records the review's
+coverage and does not claim that every original file was independently reread here.
+
+Restored to their existing owners: input immutability; one failure dialect per
+layer; the concept/ownership/hidden-state test for files, boundaries and unions;
+object parameters and named reasons; the policy/procedure/boundary principle and
+its useful scope; and missing versus valid falsy values. The existing coded-apply
+versus plain-selection error mixture is recorded in the baseline, not repaired.
+No runtime, type, schema, skill mirror or dependency changed.

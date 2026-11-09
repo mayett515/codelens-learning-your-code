@@ -4,6 +4,10 @@ One maintained rule set for Claude and Codex, adapted from the user's Pragmatic
 TypeScript packs. This is an engineering vocabulary, not a prescribed product
 architecture. Use the smallest structure that gives a real rule or lifecycle an owner.
 
+Name the policy, keep the procedure, and choose the smallest honest boundary.
+These rules pay off when policy is hidden in control flow; leave tiny pure helpers,
+framework wiring and generated code alone unless a concrete problem warrants a change.
+
 | Work | Read |
 | --- | --- |
 | Types, schemas, contracts, parsing | [Types and validation](types-and-validation.md) |

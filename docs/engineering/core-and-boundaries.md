@@ -6,7 +6,7 @@ belongs to named decisions, not hidden inside a mapper, controller or SQL helper
 
 - Pure decisions have no IO, logging or ambient mutable state. Supply time,
   randomness, IDs and snapshots as inputs. Arbitrary service access hidden in a
-  context parameter is still a dependency.
+  context parameter is still a dependency. Pure decisions do not mutate their inputs.
 - Model expected outcomes and lifecycle transitions explicitly. Preserve existing
   throw/result contracts in structural refactors; changing them is a behavior
   change. Programmer defects may throw.
@@ -16,6 +16,10 @@ belongs to named decisions, not hidden inside a mapper, controller or SQL helper
 - Split by independent capability and change pressure. Identify callers, rules,
   dependencies, lifecycle and transaction owner first. Size prompts inspection;
   it does not decide extraction. Shared canonicalization has one owner.
+- For a new file, name the concept that would be lost if it were merged back;
+  for a new boundary, what it owns; for a new union, which hidden states it replaces.
+- Use object parameters when positional arguments are numerous or share the
+  same type, and return a named reason instead of a bare boolean when the reason matters.
 - Preserve the public facade during structural extraction. Check callers and
   runtime dependencies, including re-exports and barrel side effects. Translate
   framework/provider/row representations at their boundaries.

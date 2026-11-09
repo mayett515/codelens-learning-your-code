@@ -16,6 +16,8 @@
 - Omission, `undefined` and `null` are different contracts. Use optional for a
   legitimately absent property and nullable for explicit null. Preserve `strict`
   and `exactOptionalPropertyTypes`.
+- Distinguish a missing value from a valid falsy one: `0`, `false` and an empty
+  string must not trigger a missing-value fallback when the contract permits them.
 - Parse representation once at each trust boundary. Then check named semantic
   invariants in the domain. Re-read and recheck mutable state at a write/process
   boundary: earlier parsing cannot establish present freshness or access.

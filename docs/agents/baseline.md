@@ -1,5 +1,20 @@
 # Dated baseline and first candidate slices
 
+## 2026-11-09: existing domain error dialect mixture
+
+Inspected at `9e7e0ed`: [base apply](../../packages/kordex-core/src/baseProfileProposalApply.ts)
+and [branch apply](../../packages/kordex-core/src/branchLocalProposalApply.ts)
+use named error classes with stable `code` values; the pure
+[selection resolver](../../packages/kordex-core/src/profileSelection.ts)
+throws plain `Error` for missing, wrong-kind or foreign-parent branches and
+base identity mismatch. These are different error dialects in the domain layer,
+inherited from before K1, not an extraction regression.
+
+The restored engineering rule prefers one dialect per layer. This documentation
+slice does not change thrown values or callers; any migration must preserve or
+deliberately update their recovery contracts and tests. Evidence here is source
+inspection, not a new runtime test.
+
 ## 2026-11-09: real base-apply rollback failure
 
 On `97a5c76`, the installed Drizzle op-sqlite driver issues COMMIT before awaiting
