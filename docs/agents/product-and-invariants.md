@@ -19,11 +19,31 @@ system combining semantic descriptions with deterministic mechanics. These
 directions motivate inspectability and reusable boundaries. They do not establish
 a shipped SDK, daemon, generic rule interpreter, automatic agent system or engine.
 
+## Engineering rules: owner direction, 2026-11-09
+
+Kordex uses one mechanism for controlled changes of meaning, with domains on top.
+The owner confirms that engineering rules live as nodes in a scoped profile and
+use the existing proposal lifecycle; a separate rule record type or parallel
+acceptance mechanism is not an open alternative.
+
+The next domain is an independent engineering-rules base: generic engineering
+scheme in the base, SEO and Kordex refinements in sibling project branches.
+A deliberate correction to a base rule is a local node override. A new rule
+from experience is an evidence-backed proposal targeting the repository branch.
+This direction does not register the profile or change existing types by itself.
+
+The remaining [fit interview](../reviews/2026-11-09-rule-model-interview.md) concerns
+rule kind, node provenance, accepted-version lineage and reconsideration. These
+details require owner answers before type changes or storage design. Existing
+first-use/unknown-origin decisions remain in force; parent/child A1/B1/C1 remain
+undecided. Pending-proposal supersession is not accepted-rule version history.
+
 ## Existing implementation vocabulary
 
 The terms and constraints below describe the existing profile/proposal design.
-They guide changes to that implementation; they are not an approved universal
-type system for every future Kordex application. Product-wide intent and the
+They guide changes to that implementation. The engineering-rule direction above
+is decided; it does not approve every future domain's detailed type extensions.
+Product-wide intent and the
 capability inventory start at [the capability root](../capabilities/ROOT.md).
 
 | Concept | Meaning and boundary |

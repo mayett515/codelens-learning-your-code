@@ -4,6 +4,12 @@ This domain owns how interpreted meaning can change while keeping scope, intent
 and provenance. The existing implementation has correction evidence, inert
 proposals, review/replacement and guarded profile application.
 
+The [engineering-rule interview](../../reviews/2026-11-09-rule-model-interview.md)
+reuses that lifecycle. Existing pending-proposal supersession does not by itself
+provide accepted node-version history; accepted content and its predecessor
+must remain inspectable when a later proposal replaces it. Exact additive
+semantics await the owner's answer; no new operation is implemented by this note.
+
 - **D1 (P2/G2):** observations/corrections are evidence; proposals identify intended
   changes and targets. One must not be silently rewritten as the other.
 - **D2 (P2/G2):** a producer can propose supported changes but cannot grant itself

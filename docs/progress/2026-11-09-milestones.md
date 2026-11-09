@@ -413,3 +413,18 @@ K1 committed as `8a4b851`. Both observed remote runs passed all three jobs:
 [PR run](https://github.com/mayett515/codelens-learning-your-code/actions/runs/42706433908)
 and [push run](https://github.com/mayett515/codelens-learning-your-code/actions/runs/42706424761).
 K1 is complete and stopped for review; PR 1 remains open, not merged.
+
+## K1 review returned; engineering-rule direction confirmed
+
+The owner supplied Fable's independent K1 review with no blocking finding. The
+six requested rule-text restorations and existing error-dialect baseline were
+committed separately as `9423a1b`; tooling passed 32/32. The 31 compatibility
+subpaths are noted for later narrowing, not changed now.
+
+The owner confirms one shared mechanism: engineering rules are a third base
+profile with repository branches and the existing proposal lifecycle. The
+[fit interview](../reviews/2026-11-09-rule-model-interview.md) replaces the earlier
+architecture-choice question. Its executable in-memory probe passed seven
+checks and shows both reusable behavior and missing semantics. Four additive
+choices await answers; no production type, schema, storage, port or app change
+was made. K2 remains unstarted. Native, rollback and restart gaps are unchanged.

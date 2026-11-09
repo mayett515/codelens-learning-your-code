@@ -312,3 +312,13 @@ object parameters and named reasons; the policy/procedure/boundary principle and
 its useful scope; and missing versus valid falsy values. The existing coded-apply
 versus plain-selection error mixture is recorded in the baseline, not repaired.
 No runtime, type, schema, skill mirror or dependency changed.
+
+## 2026-11-09: engineering-rule direction clarified after K1 review
+
+The owner's confirmed shared profile/proposal mechanism supersedes the earlier
+open “profile or distinct rule record” question. The single product decision
+lives in product-and-invariants; the rule-model interview now concerns only
+additive fit details. It explicitly distinguishes pending-proposal supersession
+from accepted node-version history and classification corrections from general
+source evidence. A seven-check compatibility probe exercises existing pure core
+behavior without registering a profile, changing types or designing storage.

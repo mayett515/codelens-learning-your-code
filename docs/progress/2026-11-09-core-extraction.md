@@ -109,7 +109,8 @@ The mobile Drizzle rollback defect remains open. Pure tests and compilation do
 not prove database transactions, native scheduling or route handover. No desktop
 storage, CLI rule lifecycle or MCP surface exists. A1/B1/C1 remain undecided.
 
-Next is K1 review. The [rule-model interview](../reviews/2026-11-09-rule-model-interview.md)
-compares scoped-profile lifecycle reuse with a separate rule record and names
-what each reuses/duplicates. Resolve it before storage design; do not silently
-turn ontology categories into generic rules.
+Subsequent owner-relayed Fable review: K1 has no blocking finding. The owner
+confirms shared scoped-profile lifecycle reuse, not a separate rule record.
+The [fit interview](../reviews/2026-11-09-rule-model-interview.md) now concerns
+four additive semantics before type/storage changes. Its in-memory probes do
+not upgrade K1 into a persisted rule-lifecycle implementation.

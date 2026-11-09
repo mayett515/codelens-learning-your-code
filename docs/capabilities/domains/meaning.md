@@ -4,6 +4,11 @@ This domain owns scoped identity, vocabulary and composition: what a thing means
 within a particular domain or selection. Existing profile code is one implementation
 of this responsibility; a universal Kordex model has not been finalized.
 
+The [engineering-rule direction](../../agents/product-and-invariants.md#engineering-rules-owner-direction-2026-11-09)
+is now decided: an independent base and repository branches reuse this meaning
+model. Rule-kind/provenance/version/reconsideration details remain an interview,
+not an implemented third profile or a second rule-record mechanism.
+
 - **D1 (P1/G1):** cross-scope identity comparisons include their scope.
 - **D2 (P1/G1):** a branch belongs to its parent; selection must not silently mix
   foreign parents. The selection leaf binds the shared resolver and its
