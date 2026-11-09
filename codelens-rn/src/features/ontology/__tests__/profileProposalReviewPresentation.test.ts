@@ -294,6 +294,14 @@ describe('profile proposal review presentation helpers', () => {
       expectedRevision: null,
       currentRevision: 5,
     })).toContain('missing its target snapshot');
+    expect(formatProposalFreshnessDescription({
+      status: 'unknown',
+      reason: 'target_branch_updated_at_missing',
+      canApply: false,
+      canRefresh: true,
+      expectedRevision: null,
+      currentRevision: 5,
+    })).toContain('review it before applying');
   });
 
   it('formats target-specific apply labels and success messages', () => {

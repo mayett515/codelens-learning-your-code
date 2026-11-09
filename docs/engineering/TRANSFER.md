@@ -198,3 +198,13 @@ existing lifecycle and are tracked separately from the parent/child options.
 Design-only validation: `npm --prefix tools run check` passed the tooling
 compiler, all 27 fixture tests and repository checks on 2026-11-09. This checks
 the document's bindings/links, not the proposed algebra or future database laws.
+
+## 2026-11-09: branch snapshot repair and explicit recovery
+
+The separately approved A/B slices now enforce the proposal's original branch
+revision at Apply and permit explicit validated refresh of a missing-snapshot
+branch proposal. Replacement stays pending; no automatic apply or in-place
+backfill was added. The [milestone record](../progress/2026-11-09-milestones.md)
+records failing-first cases, 1127 passing app tests, compiler success, unchanged
+lint baseline and the 27-test tooling gate. The design note remains a dated
+description of its inspected revision; A-C parent/child options remain undecided.

@@ -100,7 +100,12 @@ function evaluateBranchFreshness(
   const expectedRevision = proposal.targetBranchUpdatedAt ?? null;
   const currentRevision = target.currentUpdatedAt ?? null;
   if (expectedRevision == null) {
-    return freshness('unknown', 'target_branch_updated_at_missing', expectedRevision, currentRevision);
+    return {
+      ...freshness('unknown', 'target_branch_updated_at_missing', expectedRevision, currentRevision),
+      // Missing history cannot authorize apply. An explicit replacement may
+      // establish a new basis only when the current target and patch are valid.
+      canRefresh: currentRevision != null && target.patchValidation === 'valid',
+    };
   }
   if (currentRevision == null) {
     return freshness('unknown', 'target_branch_updated_at_unknown', expectedRevision, currentRevision);

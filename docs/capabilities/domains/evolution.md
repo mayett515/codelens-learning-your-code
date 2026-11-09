@@ -14,6 +14,9 @@ proposals, review/replacement and guarded profile application.
   asking why does not establish that ontology state changed.
 - **D5 (P3):** edits and refreshes preserve replacement lineage. New operation
   kinds require implemented validation, application and verification semantics.
+  An explicitly requested refresh may establish a current basis for a legacy
+  branch proposal without a snapshot; it does not certify the old basis or
+  authorize applying the replacement without a separate review/apply.
 
 These are implementation obligations, not an extra approval gate for ordinary
 repository work. Evidence references in leaves locate tests but do not certify

@@ -70,12 +70,32 @@ Already implemented:
   pending proposal with the current target-basis snapshot, supersedes the old
   pending proposal, and writes a `superseded` audit event in one transaction
 - proposal review shows `Refresh proposal` only when freshness is
-  `stale_refreshable`, then selects the replacement proposal for normal review
+  refreshable (`canRefresh`), then selects the replacement proposal for normal review
 
 Legacy behavior:
 
 - older branch proposals without that snapshot have `unknown` freshness, not
   `fresh`
+- Since the user-approved 2026-11-09 extension, a missing-snapshot branch proposal
+  can be explicitly refreshed when its current branch revision is known and its
+  patch validates. It remains `unknown` and cannot apply. Refresh creates a new
+  pending proposal with the current snapshot and supersedes the old proposal;
+  the user must still review and explicitly apply the replacement. Missing base
+  snapshots and other unknown conditions are not included in this extension.
+
+## 2026-11-09 enforcement and recovery correction
+
+The branch apply service previously guarded concurrent writes using the branch
+revision read at compilation, but failed to compare the proposal's saved
+`targetBranchUpdatedAt`. It now reuses `evaluateProfileProposalFreshness` inside
+its existing transaction after patch validation and before writes. Missing and
+mismatched snapshots reject; the subsequent conditional write remains in place.
+The base path already checked missing/mismatched `targetProfileVersion`.
+
+The separately approved refresh extension retains the existing refresh service's
+transaction and dry-run. It preserves proposal history with replacement and
+supersession, not in-place backfill. Neither change adds parent-dependency tracking
+or claims that injected transaction tests prove actual SQLite rollback.
 
 ## Freshness Evaluation
 

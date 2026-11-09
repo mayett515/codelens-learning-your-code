@@ -76,7 +76,7 @@ describe('profile proposal freshness', () => {
     });
   });
 
-  it('keeps legacy branch proposals without a revision snapshot unknown', () => {
+  it('keeps a missing branch snapshot unknown but permits explicit validated refresh', () => {
     expect(evaluateProfileProposalFreshness({
       proposal: proposal({ targetBranchUpdatedAt: null }),
       target: {
@@ -90,8 +90,19 @@ describe('profile proposal freshness', () => {
       status: 'unknown',
       reason: 'target_branch_updated_at_missing',
       canApply: false,
-      canRefresh: false,
+      canRefresh: true,
     });
+  });
+
+  it.each([
+    { currentUpdatedAt: null, patchValidation: 'valid' as const },
+    { currentUpdatedAt: 100, patchValidation: 'unknown' as const },
+    { currentUpdatedAt: 100, patchValidation: 'conflicted' as const },
+  ])('does not refresh an unknown proposal without a valid current basis: %j', (facts) => {
+    expect(evaluateProfileProposalFreshness({
+      proposal: proposal({ targetBranchUpdatedAt: null }),
+      target: { kind: 'profile_branch', branchId: 'react-branch', exists: true, ...facts },
+    })).toMatchObject({ canApply: false, canRefresh: false });
   });
 
   it('does not call an unvalidated same-revision proposal fresh', () => {

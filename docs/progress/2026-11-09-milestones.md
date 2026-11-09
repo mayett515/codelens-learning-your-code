@@ -12,7 +12,7 @@ expansion, contradictory evidence or two failed attempts at the same fix.
 | M0 | Commit rule/skill/leaf adoption, open PR, observe real GitHub gate | Completed: push and PR runs succeeded for 088ef3d |
 | M0b | Install existing app dependencies; run suite, compiler and lint once; record failures | Completed: 1117 tests and compiler pass; pre-existing lint failures recorded below |
 | A | Newly found branch proposal snapshot gap: reject missing/stale revisions before writes | Completed; legacy recovery remains for B |
-| B | Explicit refresh of missing-snapshot branch proposals as reviewed replacements | Authorized; next slice |
+| B | Explicit refresh of missing-snapshot branch proposals as reviewed replacements | Completed; replacement remains pending and Apply remains explicit |
 | M1a | Foreign-parent rejection in profile-selection, failing-first decision test | Pending |
 | M1b | Preserve non-coding scope across learning-chat route/store/modal/save/read-back | Pending |
 | M1c | Registry/bootstrap and base apply ownership; real persistence proof | User decision required before implementation |
@@ -130,3 +130,42 @@ separately authorized recovery gap: until B, missing-snapshot proposals are
 blocked and must be recreated. No unknown proposal is treated as fresh.
 Next slice B adds explicit validated replacement/supersession; it does not apply
 that replacement automatically.
+
+## Slice B — explicit recovery for missing branch snapshots
+
+Owner: existing `refreshStaleProfileChangeProposal`; decision:
+`evaluateProfileProposalFreshness`; callers: freshness loader and existing review
+screen/hook. Missing branch snapshots remain `unknown` and cannot apply, but can
+refresh with a known current branch revision and a validated patch. The refresh
+service dry-runs again inside its existing transaction, inserts a pending
+replacement, conditionally supersedes the old proposal and records its audit.
+The screen already uses `canRefresh`; explanatory copy now describes review of
+the replacement. Base unknown snapshots, new operation vocabulary, schemas and
+transaction restructuring are out of scope.
+
+The existing refresh service owns this transaction directly; it does not call
+`supersedePendingProfileChangeProposal`. The replacement leaf's earlier caller
+description was corrected, and the refresh owner/evidence were added there.
+No structural consolidation was mixed into this behavior change.
+
+Failing first: five cases failed on the old implementation (unknown eligibility,
+null/undefined replacement and null/undefined patch-conflict dry-run). Afterward:
+
+- Focused freshness/service/presentation/apply tests: 56 passed in five files.
+- `npm test`: 1127 passed in 120 files; all baseline tests pass.
+- Local compiler: exit 0.
+- ESLint on six touched TS files: exit 0, no errors; the same eight pre-existing
+  warnings (five `import/first`, two unused error imports, one `array-type`).
+  The four repository-wide M0b errors remain unchanged as recorded above.
+- Map generation and `npm --prefix tools run check`: exit 0, tooling compiler
+  and 27 fixtures pass; the modified owner was explicitly inspected.
+
+Proof limits: tests demonstrate pending replacement, preserved patch/evidence,
+old-to-new audit lineage, unchanged supplied branch, and no writes on invalid
+patches. They use injected repositories; real SQLite rollback/concurrency and
+native screen interaction remain unproved. The transaction protocol is unchanged.
+
+Leaf result: `proposal-replacement` remains `implemented` with its newly explicit
+refresh owner; `branch-proposal-apply` returns from `partial` to `implemented`
+after A's enforcement and B's recovery evidence. `inspectedOn` remains the actual
+inspection day, 2026-11-09. Next slice: M1a, foreign-parent selection rejection.

@@ -113,6 +113,9 @@ export function formatProposalFreshnessDescription(
     case 'obsolete':
       return 'The target branch or base profile no longer exists.';
     case 'unknown':
+      if (freshness.canRefresh) {
+        return 'This older proposal is missing its target snapshot. Refresh to create a checked replacement, then review it before applying.';
+      }
       if (
         freshness.reason === 'target_branch_updated_at_missing' ||
         freshness.reason === 'target_profile_version_missing'
