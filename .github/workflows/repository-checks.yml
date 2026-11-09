@@ -1,4 +1,4 @@
-name: Repository rules and capability leaves
+name: Repository and application checks
 on:
   push:
   pull_request:
@@ -18,3 +18,23 @@ jobs:
           cache-dependency-path: tools/package-lock.json
       - run: npm --prefix tools ci --ignore-scripts
       - run: npm --prefix tools run check
+  application-checks:
+    name: Application tests and compiler
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: codelens-rn
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: codelens-rn/package-lock.json
+      - name: Install locked application dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Run application tests
+        run: npm test
+      - name: Check application types
+        run: node node_modules/typescript/bin/tsc --noEmit

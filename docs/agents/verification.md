@@ -27,6 +27,20 @@ follows static runtime imports of explicitly declared `decision` owners;
 it does not check all modules or replace runtime/application tests.
 Do not claim that writing AGENTS.md made imports mechanically safe.
 
+## GitHub checks
+
+The [workflow](../../.github/workflows/repository-checks.yml) runs separate
+repository-tooling and application jobs on pushes and pull requests. The app job
+installs its lockfile dependencies (including the existing postinstall), runs
+the full Vitest suite and the local TypeScript compiler on Linux/Node 24.
+The workflow does not run a native build or establish SQLite rollback.
+
+Lint is not a blocking CI step while the four recorded baseline errors remain;
+see the [baseline run](../progress/2026-11-09-milestones.md). Local lint and the
+requirement to introduce no new findings still apply. Workflow configuration
+alone is not execution evidence; cite the observed run and revision when
+reporting remote verification.
+
 ## Select proof by the changed responsibility
 
 | Change | Relevant existing tests / required additional evidence |
