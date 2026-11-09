@@ -178,3 +178,23 @@ Lint ran and failed on four pre-existing errors, with 213 warnings. Exact
 commands, errors and full lint output are linked in the
 [milestone record](../progress/2026-11-09-milestones.md). Application source,
 dependencies and capability states were not changed for this baseline.
+
+## 2026-11-09: parent/child semantics design
+
+The [dated design note](../reviews/2026-11-09-parent-child-semantics-design.md)
+verifies Fable's three hypotheses, gives the current composition algebra,
+candidate laws/counterexamples, A-C options, worked scenarios and M4 decisions.
+It narrows F2 to flattened lookups rather than claiming all scoped references
+retarget. Its recommendations are not adopted schema or product contracts.
+Intent stays in domain parents; future tests and existing leaf evidence should
+establish enforcement before any optional `Mechanised at:` address convention.
+No application source, dependency or schema is changed by the design slice.
+
+The design inspection also reproduced an existing branch proposal revision gap.
+The user authorized a separate missing/stale snapshot rejection slice, followed
+by explicit refresh for missing-snapshot proposals. These implement/extend the
+existing lifecycle and are tracked separately from the parent/child options.
+
+Design-only validation: `npm --prefix tools run check` passed the tooling
+compiler, all 27 fixture tests and repository checks on 2026-11-09. This checks
+the document's bindings/links, not the proposed algebra or future database laws.
