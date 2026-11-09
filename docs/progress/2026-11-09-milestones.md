@@ -14,7 +14,7 @@ expansion, contradictory evidence or two failed attempts at the same fix.
 | A | Newly found branch proposal snapshot gap: reject missing/stale revisions before writes | Completed; legacy recovery remains for B |
 | B | Explicit refresh of missing-snapshot branch proposals as reviewed replacements | Completed; replacement remains pending and Apply remains explicit |
 | M1a | Foreign-parent rejection in profile-selection, failing-first decision test | Completed: shared resolver guard and regression evidence |
-| M1b | Preserve non-coding scope across learning-chat route/store/modal/save/read-back | Awaiting verification-scope decision: native environment not found |
+| M1b | Preserve non-coding scope across learning-chat route/store/modal/save/read-back | Approved Node scope completed; leaf remains partial pending native route/read-back proof |
 | M1c | Registry/bootstrap and base apply ownership; real persistence proof | User decision required before implementation |
 | M2 | Concrete agent-context acceptance scenario and distinct other planned scenarios | Pending |
 | M3 | Headless leaf query; proves repository-description access, not the Kordex lifecycle | Pending |
@@ -219,3 +219,62 @@ For pushed revision `8872700a79da7e7dc9e8538b5737fe6200d8538e` (design plus A/B)
 both [PR run](https://github.com/mayett515/codelens-learning-your-code/actions/runs/42690924821)
 and [push run](https://github.com/mayett515/codelens-learning-your-code/actions/runs/42690913004)
 completed successfully on 2026-11-09. This remains the tooling CI, not app/native CI.
+
+## M1b — approved Node scope completed, native proof remains open
+
+The user accepted a bounded Node-verified repair without installing native tools.
+This supersedes the earlier wait above, but does not waive the native verification
+gap or authorize claiming the capture-save leaf implemented.
+
+Responsibility: carry a known base profile into capture creation. Owners/callers:
+learning-chat `handleSaveAsLearning` supplies the concept profile to store.open;
+`SaveCandidateSource` carries it; `SaveAsLearningModal` passes it into
+`resolveConceptualizeProfileContext`, then preparation and the existing save flow.
+The resolver loads an explicit profile from the existing registry and refuses
+unknown/blank profiles or disagreement with project selection. A project without
+selection uses the explicitly supplied base; only absent context retains coding.
+Preparation refuses a known source/profile mismatch. Source changes also restart
+modal extraction rather than retaining an earlier source's in-flight context.
+No change to the save transaction, dependency set, native tools or schema.
+
+Failing first:
+
+- The initial collision fixture incorrectly assumed the built-in coding profile
+  already had a `composition` ontology node. Before changing production code,
+  the test was corrected to deliberately seed one with a different meaning.
+- The actual chain regression then reached the real capture insert mapping and
+  observed `profileId: coding` instead of `photography`.
+- Explicit missing/blank profiles, a new project's explicit base and conflicting
+  project selection also failed the intended expectations on the old resolver.
+- A separate preparation case initially accepted a known photography source
+  under the coding default; it now rejects that mismatch before extraction.
+
+Test boundary: store.open receives the known concept profile; the test calls
+the real resolver, candidate preparation/classification, conceptualized save,
+capture save, repository insert mapping and repository read codec. Model replies,
+registry data and SQL transport are supplied by the test. The transport records
+rows in memory and returns them for decoding; it does not execute SQL predicates,
+persist to disk or provide rollback. Route and modal components are not rendered.
+This is not a route-to-native-read-back test.
+
+Final checks on 2026-11-09:
+
+- `npm test`: 1139/1139 passed across 121 files, including eight new cases.
+- `node node_modules/typescript/bin/tsc --noEmit`: exit 0.
+- Local ESLint on the six changed TS/TSX files: exit 0; no errors or new warnings.
+  The two existing learning-chat `react-hooks/exhaustive-deps` warnings remain.
+  The full baseline's four errors remain unchanged: duplicate BookmarkId exports
+  at lines 14/15, missing display names in ChatBubble and CodeViewer. The full
+  pre-existing warning inventory remains in the M0b lint artifact.
+- `npm --prefix tools run generate` and `npm --prefix tools run check`: exit 0;
+  tooling compiler and all 27 fixtures passed. Dirty supporting-owner warnings
+  were inspected against their actual diffs; source bindings/map were updated.
+
+Leaf transition: `capture-save` stays `partial`; its old functional gap is replaced
+by the remaining verification gap, "Route handover and read-back are not verified
+in a running app with native SQLite." Revisit on a device/emulator. Registry
+materialization/ownership remains M1c and is not fixed implicitly here.
+
+Review checkpoint requested by the user: Fable can now inspect snapshot guard A,
+legacy refresh B, M1a and this M1b slice together. M1c still requires a product
+ownership decision before implementation; no later milestone was started.

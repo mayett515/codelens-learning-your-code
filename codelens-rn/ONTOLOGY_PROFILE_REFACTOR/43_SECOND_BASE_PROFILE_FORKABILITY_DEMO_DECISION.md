@@ -3,6 +3,17 @@
 **Status:** Locked decision on 2026-06-12. Initial forkability proof, profile-scoped learning capture/save/precheck/list/retrieval boundaries, Learning Hub/chat retrieval consumers, graph consumers, and promotion consumers implemented on 2026-07-03. No forced Doc 43 follow-up remains.
 **Branch:** `refactor/ontology-profile`
 
+**2026-11-09 follow-up:** M1b repairs the learning-chat save handover omitted by
+the earlier profile-scoped consumer work. The route supplies the concept's base
+profile ID through the save source/store and modal to context resolution.
+Explicit profile identity must not silently fall back to coding; missing/blank
+registry identities and conflicts with project selection reject. A source with
+no known profile retains the existing default. Node tests cover store entry,
+resolution, preparation and saving through the real row mapping/read codec with
+substituted model and SQL transport. The capture-save leaf remains partial:
+route/modal execution and native SQLite read-back still need a device/emulator.
+This follow-up adds no native tooling, persistence schema or product expansion.
+
 ## Source Map
 
 This decision does not reopen profile, branch, proposal, checker, or apply architecture. It turns the existing forkability direction into a small proof slice.

@@ -218,3 +218,18 @@ finding and records its resolution. Failing-first evidence, 1131 passing app
 tests, unchanged lint baseline and the passing tooling gate are recorded in the
 [milestone ledger](../progress/2026-11-09-milestones.md). M1b is awaiting a decision
 about native verification availability; no capture-chain fix is claimed yet.
+
+## 2026-11-09: M1b Node scope authorized and completed
+
+The user subsequently authorized the profile-transport repair with native proof
+explicitly deferred. Route/store/modal now carry the known base ID; context
+resolution and preparation reject explicit mismatches rather than defaulting
+to coding. The capture-save leaf remains partial and identifies only the remaining
+native route/read-back verification gap. Its new evidence starts at store.open
+and uses actual resolver/save/repository mappings with model and SQL transport
+doubles; it does not render the route/modal or execute SQLite.
+
+The [milestone record](../progress/2026-11-09-milestones.md) records the corrected
+collision fixture, failing-first profile loss, 1139 passing app tests, compiler
+success, unchanged lint baseline and the 27-test tooling gate. This is the user's
+requested Fable review checkpoint before M1c ownership is decided.

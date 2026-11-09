@@ -21,6 +21,7 @@ const MAX_SNIPPET_LENGTH = 800;
 
 export interface SaveCandidateSource {
   selectedText: string;
+  profileId?: string | null | undefined;
   projectId?: string | null | undefined;
   snippetLang?: string | null | undefined;
   snippetSourcePath?: string | null | undefined;
@@ -47,6 +48,9 @@ export async function prepareSaveCandidates(
 
   const conceptualizeContext = options?.conceptualizeContext;
   const profile = options?.profile ?? conceptualizeContext?.profile ?? getActiveDomainProfile();
+  if (source.profileId != null && source.profileId !== profile.id) {
+    throw new Error(`Source profile "${source.profileId}" does not match extraction profile "${profile.id}".`);
+  }
   const relevantConcepts = (await (options?.preCheck ?? conceptMatchPreCheck)(selectedText))
     .filter((match) => match.concept.profileId === profile.id);
   const prompt = buildExtractorSystemPrompt({

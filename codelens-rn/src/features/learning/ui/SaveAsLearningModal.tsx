@@ -61,6 +61,7 @@ export function SaveAsLearningModal() {
         const state = useSaveLearningStore.getState();
         const context = await resolveConceptualizeProfileContext({
           projectId: state.source?.projectId ?? null,
+          profileId: state.source?.profileId,
         });
         const candidates = await prepareSaveCandidates(
           state.source ?? {
@@ -91,7 +92,7 @@ export function SaveAsLearningModal() {
       cancelled = true;
       controller.abort();
     };
-  }, [store.visible, store.phase]);
+  }, [store.visible, store.phase, store.source]);
 
   const handleRetry = useCallback(() => {
     useSaveLearningStore.getState().setPhase('extracting');

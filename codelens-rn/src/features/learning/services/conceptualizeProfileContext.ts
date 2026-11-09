@@ -57,13 +57,20 @@ const defaultDeps: ResolveConceptualizeProfileContextDeps = {
 export async function resolveConceptualizeProfileContext(
   input?: {
     projectId?: string | null | undefined;
+    profileId?: string | null | undefined;
     deps?: Partial<ResolveConceptualizeProfileContextDeps> | undefined;
   },
 ): Promise<ConceptualizeProfileContext> {
   const projectId = input?.projectId?.trim();
+  const profileId = input?.profileId;
+  if (profileId != null && !profileId.trim()) {
+    throw new Error('An explicit profile ID must not be blank.');
+  }
   const deps = { ...defaultDeps, ...input?.deps };
   if (!projectId) {
-    const profile = getActiveDomainProfile();
+    const profile = profileId != null
+      ? (await deps.loadRegistry()).getProfile(profileId)
+      : getActiveDomainProfile();
     const userFitProjection = await loadUserFitProjection(profile.id, deps);
     return createConceptualizeProfileContext({
       profile,
@@ -89,8 +96,14 @@ export async function resolveConceptualizeProfileContext(
       listBranchesForParent: async (parentProfileId) =>
         deps.listBranchesForParent(parentProfileId),
     },
-    defaultBaseProfileId: DEFAULT_RUNTIME_PROFILE_BASE_PROFILE_ID,
+    defaultBaseProfileId: profileId ?? DEFAULT_RUNTIME_PROFILE_BASE_PROFILE_ID,
   });
+
+  if (profileId != null && result.baseProfile.id !== profileId) {
+    throw new Error(
+      `Explicit profile "${profileId}" does not match project profile "${result.baseProfile.id}".`,
+    );
+  }
 
   const selectionSnapshot: OntologyCorrectionActiveSelectionSnapshot = {
     baseProfileId: result.selection.baseProfileId,

@@ -94,3 +94,19 @@ as well. Unselected foreign branches remain permitted in the supplied pool.
 Existing valid-order/immutability fixtures were corrected to name their actual
 `test-base` parent; their behavioral assertions were retained.
 The original finding above remains a dated baseline, not the current leaf state.
+
+## 2026-11-09: M1b profile transport repaired, native proof pending
+
+The learning-chat route now supplies its known concept profile to the save store;
+the source carries `profileId` into modal context resolution. The resolver loads
+an explicit base through the existing registry, rejects unknown/blank profiles
+and rejects a conflict with a saved project selection. The coding fallback remains
+only for absent context. Preparation also rejects a source/profile mismatch.
+
+The new Node regression starts at store.open and ends at the real capture row
+mapping/read codec over a fake SQL transport. It includes a deliberately seeded
+`composition` ID with different meanings in coding and photography. The observed
+pre-fix row used coding; the corrected row uses photography. Route and modal are
+not rendered, no real SQL executes and no native SQLite read-back is established.
+The capture-save leaf stays partial with that remaining verification gap. No
+native tooling, dependency or schema was added.

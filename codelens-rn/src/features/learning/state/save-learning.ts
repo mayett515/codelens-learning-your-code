@@ -33,7 +33,7 @@ interface SaveLearningStore {
   inspectingCandidateId: string | null;
   error: string | null;
 
-  open: (message: ChatMessage, chatId: ChatId) => void;
+  open: (message: ChatMessage, chatId: ChatId, profileId?: string | null) => void;
   openFromSource: (source: SaveCandidateSource) => void;
   close: () => void;
   setPhase: (phase: Phase) => void;
@@ -75,7 +75,7 @@ function candidateId(index: number): string {
 export const useSaveLearningStore = create<SaveLearningStore>((set) => ({
   ...freshState(),
 
-  open: (message, chatId) =>
+  open: (message, chatId, profileId) =>
     set({
       visible: true,
       snippet: message.content,
@@ -85,6 +85,7 @@ export const useSaveLearningStore = create<SaveLearningStore>((set) => ({
         selectedText: message.content,
         chatMessageId: message.id,
         sessionId: chatId,
+        ...(profileId != null ? { profileId } : {}),
       },
       phase: 'extracting',
       candidates: [],
