@@ -1,20 +1,21 @@
 # Module ownership and dependencies
 
-This is a capability map of the current app, with intended dependency rules for
-changes. It is not a proposal to move everything into new top-level packages.
-Paths below are relative to `codelens-rn/`; linked files are representative owners,
+This maps the portable core and remaining application owners after K1
+(2026-11-09). Core source lives in `packages/kordex-core/src`; old app module
+paths are compatibility facades. Other paths below are relative to `codelens-rn/`.
+Linked files are representative owners,
 not an exhaustive call graph. Reinspect callers before changing a boundary.
 
 ## Product areas and current owners
 
 | Capability | Primary owner | Responsibility |
 | --- | --- | --- |
-| Domain vocabulary and composition | [ontology types](../../codelens-rn/src/features/ontology/types.ts), [profileComposition](../../codelens-rn/src/features/ontology/profileComposition.ts), [profileSelection](../../codelens-rn/src/features/ontology/profileSelection.ts) | Meaning, selections, deterministic composition |
-| Registry and activation | [profileRegistry](../../codelens-rn/src/features/ontology/profileRegistry.ts), [bootstrap](../../codelens-rn/src/features/ontology/data/profileRegistryBootstrap.ts) | Source identity/registration; IO stays in bootstrap |
-| Ontology evolution | [pure branch apply](../../codelens-rn/src/features/ontology/branchLocalProposalApply.ts), [branch apply service](../../codelens-rn/src/features/ontology/data/branchLocalProposalApplyService.ts), [base apply service](../../codelens-rn/src/features/ontology/data/baseProfileProposalApplyService.ts) | Patch decisions versus atomic application |
+| Domain vocabulary and composition | [ontology types](../../packages/kordex-core/src/types.ts), [profileComposition](../../packages/kordex-core/src/profileComposition.ts), [profileSelection](../../packages/kordex-core/src/profileSelection.ts) | Meaning, selections, deterministic composition |
+| Registry and activation | [profileRegistry](../../packages/kordex-core/src/profileRegistry.ts), [bootstrap](../../codelens-rn/src/features/ontology/data/profileRegistryBootstrap.ts) | Source identity/registration; IO stays in bootstrap |
+| Ontology evolution | [pure branch apply](../../packages/kordex-core/src/branchLocalProposalApply.ts), [branch apply service](../../codelens-rn/src/features/ontology/data/branchLocalProposalApplyService.ts), [base apply service](../../codelens-rn/src/features/ontology/data/baseProfileProposalApplyService.ts) | Patch decisions versus atomic application |
 | Proposal review/history | [lifecycle service](../../codelens-rn/src/features/ontology/data/profileChangeProposalLifecycleService.ts), [review service](../../codelens-rn/src/features/ontology/data/profileChangeProposalReviewService.ts) | Review transitions, replacement, audit ownership |
-| Model context and fit | [contextAssembly](../../codelens-rn/src/features/ontology/contextAssembly.ts), [contextSelector](../../codelens-rn/src/features/ontology/contextSelector.ts), [userFitProjection](../../codelens-rn/src/features/ontology/userFitProjection.ts) | Assemble explicit facts, select bounded context, derive signals |
-| Manual checker | [checker mapper](../../codelens-rn/src/features/ontology/checkerProposalMapper.ts), [checkerRunService](../../codelens-rn/src/features/ontology/data/checkerRunService.ts) | Interpret validated findings; orchestrate model call and pending insertion |
+| Model context and fit | [contextAssembly](../../packages/kordex-core/src/contextAssembly.ts), [contextSelector](../../packages/kordex-core/src/contextSelector.ts), [userFitProjection](../../packages/kordex-core/src/userFitProjection.ts) | Assemble explicit facts, select bounded context, derive signals |
+| Manual checker | [checker mapper](../../packages/kordex-core/src/checkerProposalMapper.ts), [checkerRunService](../../codelens-rn/src/features/ontology/data/checkerRunService.ts) | Interpret validated findings; orchestrate model call and pending insertion |
 | Capture and classification | [saveCapture](../../codelens-rn/src/features/learning/services/saveCapture.ts), [profile context](../../codelens-rn/src/features/learning/services/conceptualizeProfileContext.ts) | User learning flow, classification and correction integration |
 | Reusable knowledge | `src/features/learning/promotion`, `review`, `retrieval` | Promote, review and retrieve scoped concepts |
 | Graph presentation | `src/features/graph/` | Present scoped concept relationships; not ontology mutation authority |

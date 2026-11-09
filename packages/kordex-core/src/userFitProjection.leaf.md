@@ -6,11 +6,11 @@ domain: context
 summary: Derive bounded scoped interpretation signals from supplied history
 state: implemented
 owners:
-  - path: codelens-rn/src/features/ontology/userFitProjection.ts
+  - path: packages/kordex-core/src/userFitProjection.ts
     symbol: projectUserFitSignals
     role: decision
 evidence:
-  - path: codelens-rn/src/features/ontology/__tests__/userFitProjection.test.ts
+  - path: packages/kordex-core/src/__tests__/userFitProjection.test.ts
     kind: unit
     covers: Scoped projection from correction and proposal event history
 gaps: []

@@ -19,7 +19,7 @@ evidence:
   - path: codelens-rn/src/features/ontology/__tests__/profileChangeProposalRefreshService.test.ts
     kind: unit
     covers: Explicit refresh of stale or missing branch snapshots, pending replacement, supersession audit and conflict rejection before writes
-  - path: codelens-rn/src/features/ontology/__tests__/profileProposalFreshness.test.ts
+  - path: packages/kordex-core/src/__tests__/profileProposalFreshness.test.ts
     kind: unit
     covers: Unknown branch proposals remain ineligible for apply and become refreshable only with a known current revision and validated patch
 gaps: []

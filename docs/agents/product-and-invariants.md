@@ -85,6 +85,6 @@ capability inventory start at [the capability root](../capabilities/ROOT.md).
 
 Sources: [why this exists](../../codelens-rn/ONTOLOGY_PROFILE_REFACTOR/why_this_exists.md),
 [decision index](../../codelens-rn/ONTOLOGY_PROFILE_REFACTOR/README.md),
-[current types](../../codelens-rn/src/features/ontology/types.ts), and the
+[current types](../../packages/kordex-core/src/types.ts), and the
 [implementation map](module-map.md). Read the decision for the affected capability;
 this summary does not replace its exact schema or acceptance criteria.

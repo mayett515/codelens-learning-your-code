@@ -1,7 +1,11 @@
 # Proposed Kordex Core package boundary
 
-2026-11-09, inspected at `75f608d`. **Awaiting owner approval; no files moved.**
-This implements steps 1/2 of decision preparation, not extraction. The latest
+2026-11-09, originally inspected at `75f608d`. **Larger cut approved by the owner
+after Fable review; K1 extraction is implemented for review.** The approval
+retains Zod 4.3.6, optional profiles and app facades, and explicitly defers new
+storage/atomic port contracts to K2. See the [K1 report](../progress/2026-11-09-core-extraction.md)
+for actual resolution, test reconciliation and isolation evidence. The original
+proposal below records the boundary and later responsibilities. The latest
 owner instruction supersedes app M1c and mobile-driver repair. See the
 [module and test inventory](2026-11-09-core-module-inventory.md) and
 [current roadmap](../progress/2026-11-09-core-roadmap.md).
@@ -14,7 +18,7 @@ material, not an approved universal rule model. No React, Expo, learning-feature
 app database, ORM, model-provider, app alias, or app-relative type import.
 
 Public entry `src/index.ts` explicitly exports domain types, deterministic
-operations, validators and port types. It does not initialize storage, register
+operations and validators. New port types are deferred to K2. It does not initialize storage, register
 templates or choose coding. Avoid wildcard forwarding of the current app barrel.
 Use optional `@kordex/core/profiles/coding` and `/profiles/photography` exports for
 the existing seed data; neither is imported by the main entry or implicitly active.
@@ -122,10 +126,11 @@ and scope checks, restart, traceable replacement and stale rejection. Only after
 that does a read-only MCP adapter expose accepted knowledge with its sources.
 MCP cannot apply proposals or become a second canonical store.
 
-## Approval requested
+## Approval recorded
 
-Approve this package cut, retaining Zod and optional profile exports, with app
-compatibility facades and app row mapping outside core? The alternative is the
-18-module dependency-free first cut with validated apply deferred. No source
-move, dependency adoption, port implementation or schema change occurs before
-the owner's decision and optional Fable review.
+The owner approved the larger cut, retaining pinned Zod and optional profiles,
+with app compatibility facades and app row mapping outside core. The smaller
+18-module alternative was not selected. K1 must stop after the isolation proof
+for review. No speculative ports, storage design, new rule type or parent/child
+A1/B1/C1 behavior is authorized by extraction approval. Before storage design,
+resolve the [rule-model question](2026-11-09-rule-model-interview.md).

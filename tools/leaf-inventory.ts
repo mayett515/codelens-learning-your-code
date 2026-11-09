@@ -6,7 +6,7 @@ import { decisionDependencyProblems, repositoryFile, sourceFacts } from './sourc
 
 export type Finding = { code: string; file: string; message: string; severity?: 'warning' };
 export type LeafEntry = { file: string; leaf: Leaf };
-export const leafRoots = ['codelens-rn/src', 'docs/capabilities/planned'] as const;
+export const leafRoots = ['packages/kordex-core/src', 'codelens-rn/src', 'docs/capabilities/planned'] as const;
 export const mapPath = 'docs/capabilities/generated-map.md';
 
 export function walkFiles(root: string, relative: string): string[] {

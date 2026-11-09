@@ -6,11 +6,11 @@ domain: meaning
 summary: Resolve a base and ordered branch selection
 state: implemented
 owners:
-  - path: codelens-rn/src/features/ontology/profileSelection.ts
+  - path: packages/kordex-core/src/profileSelection.ts
     symbol: resolveProfileSelection
     role: decision
 evidence:
-  - path: codelens-rn/src/features/ontology/__tests__/profileSelection.test.ts
+  - path: packages/kordex-core/src/__tests__/profileSelection.test.ts
     kind: unit
     covers: Selection resolution, missing IDs, branch kinds, foreign-parent rejection for every kind and valid ordering with unselected foreign branches
   - path: codelens-rn/src/features/ontology/__tests__/runtimeProfileActivation.test.ts

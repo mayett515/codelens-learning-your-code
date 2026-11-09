@@ -3,7 +3,22 @@
 Repository tooling, Leaves and shared skills have an independent gate:
 `npm --prefix tools ci --ignore-scripts`, then `npm --prefix tools run check` from the root.
 See [tooling](../../tools/README.md) for generation, mirror sync and exact limits.
-The commands below apply only to the existing RN implementation.
+The application commands below apply to the existing RN implementation.
+
+After K1, build the local core before installing the app: run
+`npm --prefix packages/kordex-core ci` and
+`npm --prefix packages/kordex-core run build`, then install the app lockfile.
+The app's `install-links=true` packs the built file dependency into its own
+`node_modules`; rerun app `npm ci` after rebuilding changed core source.
+`node codelens-rn/scripts/check-core-install.cjs` verifies the installed copy and
+shared Zod resolution. It does not exercise Metro or a device.
+
+Core checks run from `packages/kordex-core/`: `npm run build`,
+`npm run typecheck`, `npm test`, and `npm run verify:isolation`.
+The last command installs only the copied core's own lockfile in a clean
+temporary directory, builds/tests there, then installs a packed consumer with
+only core and Zod. No app dependencies are needed. See the
+[K1 reconciliation](../progress/2026-11-09-core-test-reconciliation.md).
 
 Commands below run from `codelens-rn/` and use the existing
 [package.json](../../codelens-rn/package.json), npm lockfile and
@@ -14,7 +29,7 @@ does not require an install or a native build.
 
 | Check | Command | What it establishes |
 | --- | --- | --- |
-| Selected behavior tests | `npm test -- src/features/ontology/__tests__/profileSelection.test.ts` | Assertions in that test under Vitest's configured environment |
+| Selected app behavior tests | `npm test -- src/features/ontology/__tests__/runtimeProfileActivation.test.ts` | Assertions in that test under Vitest's configured environment; pure selection tests now run in core |
 | Existing architecture guards | `npm test -- src/__tests__/stage10-architecture-guards.test.ts` | Specific source-text constraints; not a complete semantic/import graph proof |
 | Full existing suite | `npm test` | Existing suite results, including any environment failures |
 | TypeScript | `node node_modules/typescript/bin/tsc --noEmit` | Compile-time consistency with the app configuration |
@@ -30,10 +45,12 @@ Do not claim that writing AGENTS.md made imports mechanically safe.
 ## GitHub checks
 
 The [workflow](../../.github/workflows/repository-checks.yml) runs separate
-repository-tooling and application jobs on pushes and pull requests. The app job
+repository-tooling, isolated-core and application jobs on pushes and pull requests. The app job
 installs its lockfile dependencies (including the existing postinstall), runs
 the full Vitest suite and the local TypeScript compiler on Linux/Node 24.
 The workflow does not run a native build or establish SQLite rollback.
+The core job executes the isolated source build, tests and packed consumer.
+The app job builds core before app installation and checks shared Zod resolution.
 
 Lint is not a blocking CI step while the four recorded baseline errors remain;
 see the [baseline run](../progress/2026-11-09-milestones.md). Local lint and the
@@ -42,6 +59,10 @@ alone is not execution evidence; cite the observed run and revision when
 reporting remote verification.
 
 ## Select proof by the changed responsibility
+
+Pure ontology tests named below moved to `packages/kordex-core/src/__tests__/`.
+App service/repository/UI tests remain in `codelens-rn`; mixed codec/default-profile
+tests are split across both packages. Consult the reconciliation for exact counts.
 
 | Change | Relevant existing tests / required additional evidence |
 | --- | --- |

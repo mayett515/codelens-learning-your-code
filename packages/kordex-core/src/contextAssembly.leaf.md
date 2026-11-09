@@ -6,11 +6,11 @@ domain: context
 summary: Assemble explicit scoped facts into a bounded ContextPack
 state: implemented
 owners:
-  - path: codelens-rn/src/features/ontology/contextAssembly.ts
+  - path: packages/kordex-core/src/contextAssembly.ts
     symbol: assembleContextPack
     role: decision
 evidence:
-  - path: codelens-rn/src/features/ontology/__tests__/contextAssembly.test.ts
+  - path: packages/kordex-core/src/__tests__/contextAssembly.test.ts
     kind: unit
     covers: Context validation and assembly from supplied facts
 gaps: []

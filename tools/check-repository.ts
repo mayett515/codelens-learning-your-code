@@ -8,11 +8,12 @@ import { checkSkillMirrors } from './sync-skills.ts';
 import { repositoryFile } from './source-facts.ts';
 import { inspectLeafFreshness } from './leaf-freshness.ts';
 import { inlineLinkTargets } from './markdown-links.ts';
+import { inspectCoreBoundary } from './core-boundary.ts';
 
 export function inspectRepository(root: string, writeMap = false): Finding[] {
   const inventory = inspectLeaves(root);
   const freshness = inspectLeafFreshness(root, inventory.entries);
-  const findings = [...inventory.findings, ...freshness, ...checkSkillMirrors(root)];
+  const findings = [...inventory.findings, ...freshness, ...checkSkillMirrors(root), ...inspectCoreBoundary(root)];
   const schemaDoc = repositoryFile(root, 'docs/capabilities/SCHEMA.md');
   if (schemaDoc) {
     const example = /```yaml\r?\n([\s\S]*?)```/.exec(fs.readFileSync(schemaDoc, 'utf8'));

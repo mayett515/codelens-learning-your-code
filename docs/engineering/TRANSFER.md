@@ -283,3 +283,14 @@ row mapping, preserves app compatibility and makes storage/atomic ports explicit
 New core/lifecycle leaves are planned, with no fictitious owners. Agent-context
 now names the read-only MCP scenario after accepted-knowledge lifecycle proof.
 Source moves, dependencies and schema changes await owner boundary approval.
+
+## 2026-11-09: approved K1 extraction
+
+The larger boundary is approved and implemented. Runtime and type dependencies
+are checked across the package boundary, including test/config imports. The
+existing decision-leaf checker is unchanged. Core roots and real owner leaves
+move with the source; schema validation stays in core and row mapping in app.
+See the [K1 report](../progress/2026-11-09-core-extraction.md) and its test
+reconciliation. Both hosts still consume this same rule set. Storage/atomic
+ports are deferred to K2; the rule-model interview is required before storage
+design. No parent/child design option or new rule schema is adopted by K1.

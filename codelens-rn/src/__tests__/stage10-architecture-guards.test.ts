@@ -95,7 +95,7 @@ describe('Ontology correction evidence guards', () => {
   // records; automatic profile mutations and patch target fields stay out.
 
   it('OntologyCorrectionEvidence exists in src/features/ontology/types.ts', () => {
-    const typesSrc = read('src/features/ontology/types.ts');
+    const typesSrc = read('../packages/kordex-core/src/types.ts');
     expect(typesSrc).toMatch(/export interface OntologyCorrectionEvidence\s*\{/);
     expect(typesSrc).toMatch(/id:\s*string/);
     expect(typesSrc).toMatch(/profileId:\s*string/);
@@ -111,7 +111,7 @@ describe('Ontology correction evidence guards', () => {
   });
 
   it('OntologyCorrectionField is currently only typeNodeId', () => {
-    const typesSrc = read('src/features/ontology/types.ts');
+    const typesSrc = read('../packages/kordex-core/src/types.ts');
     // The type alias must be exactly 'typeNodeId' - no union, no extras
     const match = typesSrc.match(
       /export type OntologyCorrectionField\s*=\s*['"]([^'"]+)['"]\s*;/
@@ -125,7 +125,7 @@ describe('Ontology correction evidence guards', () => {
   });
 
   it('OntologyCorrectionSource is currently only user', () => {
-    const typesSrc = read('src/features/ontology/types.ts');
+    const typesSrc = read('../packages/kordex-core/src/types.ts');
     // The type alias must be exactly 'user' - no union, no extras
     const match = typesSrc.match(
       /export type OntologyCorrectionSource\s*=\s*['"]([^'"]+)['"]\s*;/
@@ -144,7 +144,7 @@ describe('Ontology correction evidence guards', () => {
   });
 
   it('src/features/ontology/corrections.ts does not import from forbidden layers', () => {
-    const correctionsSrc = read('src/features/ontology/corrections.ts');
+    const correctionsSrc = read('../packages/kordex-core/src/corrections.ts');
     // Must not import from persistence, backup, learning, or graph layers
     expect(correctionsSrc).not.toMatch(/from\s+['"][^'"]*(?:\/db|features\/backup|features\/learning|features\/graph)[^'"]*['"]/);
   });
@@ -201,7 +201,7 @@ describe('Ontology correction evidence guards', () => {
   });
 
   it('near-miss correction candidates stay factual evidence, not public tags or mutations', () => {
-    const typesSrc = read('src/features/ontology/types.ts');
+    const typesSrc = read('../packages/kordex-core/src/types.ts');
     const classifierSrc = read('src/features/learning/services/conceptualizeClassification.ts');
     const saveModalSrc = read('src/features/learning/types/saveModal.ts');
     const correctionSaveSrc = read('src/features/learning/services/saveConceptualizedCapture.ts');
@@ -226,7 +226,7 @@ describe('Ontology correction evidence guards', () => {
   });
 
   it('no automatic profile mutation helper exists in src/features/ontology/corrections.ts', () => {
-    const correctionsSrc = read('src/features/ontology/corrections.ts');
+    const correctionsSrc = read('../packages/kordex-core/src/corrections.ts');
     // Must not contain obvious mutation helpers
     expect(correctionsSrc).not.toMatch(/\bapplyOntologyCorrection\b/);
     expect(correctionsSrc).not.toMatch(/\bmutateProfile\b/);
@@ -278,7 +278,7 @@ describe('Kortex active-profile overlay state guards', () => {
   });
 
   it('profileActivation.ts exports createActiveDomainProfileSource and resolveActiveDomainProfileFromActivationInput without forbidden state/persistence/runtime strings', () => {
-    const activationSrc = read('src/features/ontology/profileActivation.ts');
+    const activationSrc = read('../packages/kordex-core/src/profileActivation.ts');
 
     // The file must export the explicit activation helpers
     expect(activationSrc).toMatch(/\bcreateActiveDomainProfileSource\b/);
@@ -317,7 +317,7 @@ describe('Runtime Profile Coordinator guard', () => {
   // not contain forbidden state/persistence/runtime strings.
 
   it('runtimeProfileCoordinator.ts exports the coordinator function and type alias and delegates to the activation input resolver', () => {
-    const coordinatorSrc = read('src/features/ontology/runtimeProfileCoordinator.ts');
+    const coordinatorSrc = read('../packages/kordex-core/src/runtimeProfileCoordinator.ts');
 
     // Must export the coordinator entry point
     expect(coordinatorSrc).toMatch(/\bcomposeRuntimeDomainProfile\b/);
@@ -328,7 +328,7 @@ describe('Runtime Profile Coordinator guard', () => {
   });
 
   it('runtimeProfileCoordinator.ts does not contain forbidden state/persistence/runtime strings', () => {
-    const coordinatorSrc = read('src/features/ontology/runtimeProfileCoordinator.ts');
+    const coordinatorSrc = read('../packages/kordex-core/src/runtimeProfileCoordinator.ts');
 
     const forbiddenStrings = [
       'AsyncStorage',
@@ -573,7 +573,7 @@ describe('Profile registry bootstrap boundary guards', () => {
 
 describe('Doc 26 scoped meaning and label-targeting guards', () => {
   it('coding profile exposes narrows but not runtime shadows semantics yet', () => {
-    const codingProfileSrc = read('src/features/ontology/profiles/codingProfile.ts');
+    const codingProfileSrc = read('../packages/kordex-core/src/profiles/codingProfile.ts');
     expect(codingProfileSrc).toContain("'narrows'");
     expect(codingProfileSrc).not.toContain("'shadows'");
   });
@@ -623,7 +623,7 @@ describe('Doc 26 scoped meaning and label-targeting guards', () => {
 
 describe('Kordex context assembly guards', () => {
   it('contextAssembly.ts stays a pure typed projection without runtime dependencies', () => {
-    const contextAssemblySrc = read('src/features/ontology/contextAssembly.ts');
+    const contextAssemblySrc = read('../packages/kordex-core/src/contextAssembly.ts');
     const forbiddenImportPattern =
       /from\s+['"][^'"]*(?:db\/|\/db|features\/backup|features\/learning|features\/graph|ai\/|react|react-native|expo|zustand|@tanstack)[^'"]*['"]/;
     const forbiddenRendererPattern = /render\w*Prompt|toPrompt|SystemPrompt|formatPrompt/i;
@@ -639,7 +639,7 @@ describe('Kordex context assembly guards', () => {
   });
 
   it('contextSelector.ts stays a pure read-only selector without runtime dependencies', () => {
-    const contextSelectorSrc = read('src/features/ontology/contextSelector.ts');
+    const contextSelectorSrc = read('../packages/kordex-core/src/contextSelector.ts');
     const forbiddenImportPattern =
       /from\s+['"][^'"]*(?:db\/|\/db|features\/backup|features\/learning|features\/graph|ai\/|react|react-native|expo|zustand|@tanstack)[^'"]*['"]/;
     const forbiddenRendererPattern = /render\w*Prompt|toPrompt|SystemPrompt|formatPrompt/i;
@@ -656,8 +656,8 @@ describe('Kordex context assembly guards', () => {
   });
 
   it('checker prompt and mapper stay pure, branch-local, insert-only contract helpers', () => {
-    const checkerPromptSrc = read('src/features/ontology/checkerPromptBuilder.ts');
-    const checkerMapperSrc = read('src/features/ontology/checkerProposalMapper.ts');
+    const checkerPromptSrc = read('../packages/kordex-core/src/checkerPromptBuilder.ts');
+    const checkerMapperSrc = read('../packages/kordex-core/src/checkerProposalMapper.ts');
     const ontologyIndexSrc = read('src/features/ontology/index.ts');
     const combined = `${checkerPromptSrc}\n${checkerMapperSrc}`;
     const forbiddenImportPattern =
@@ -768,7 +768,7 @@ describe('Kordex context assembly guards', () => {
   });
 
   it('keeps the photography second-base profile wired through the built-in profile source', () => {
-    const photographyProfileSrc = read('src/features/ontology/profiles/photographyProfile.ts');
+    const photographyProfileSrc = read('../packages/kordex-core/src/profiles/photographyProfile.ts');
     const bootstrapSrc = read('src/features/ontology/data/profileRegistryBootstrap.ts');
     const ontologyIndexSrc = read('src/features/ontology/index.ts');
 
@@ -812,7 +812,7 @@ describe('Kordex context assembly guards', () => {
   });
 
   it('profile selection draft helper stays pure and selection-scoped', () => {
-    const src = read('src/features/ontology/profileSelectionDraft.ts');
+    const src = read('../packages/kordex-core/src/profileSelectionDraft.ts');
 
     expect(src).toContain('createProfileSelectionDraftModel');
     expect(src).toContain('project_id_required');
@@ -829,7 +829,7 @@ describe('Kordex context assembly guards', () => {
   });
 
   it('proposal target-switch helper stays pure, explicit, and branch-to-base only', () => {
-    const src = read('src/features/ontology/profileProposalTargetSwitch.ts');
+    const src = read('../packages/kordex-core/src/profileProposalTargetSwitch.ts');
     const ontologyIndexSrc = read('src/features/ontology/index.ts');
 
     expect(src).toContain('createProposalTargetSwitchModel');
@@ -1078,7 +1078,7 @@ describe('Kordex context assembly guards', () => {
   });
 
   it('user-fit projection stays a pure bounded projection over supplied facts', () => {
-    const projectionSrc = read('src/features/ontology/userFitProjection.ts');
+    const projectionSrc = read('../packages/kordex-core/src/userFitProjection.ts');
     const ontologyIndexSrc = read('src/features/ontology/index.ts');
 
     expect(projectionSrc).toContain('projectUserFitSignals');
@@ -1133,7 +1133,7 @@ describe('Kordex context assembly guards', () => {
   });
 
   it('base profile versioning guard stays pure and apply-free', () => {
-    const versioningSrc = read('src/features/ontology/baseProfileVersioning.ts');
+    const versioningSrc = read('../packages/kordex-core/src/baseProfileVersioning.ts');
     const ontologyIndexSrc = read('src/features/ontology/index.ts');
 
     expect(versioningSrc).toContain('assertBaseProfileProposalTargetsCurrentVersion');
@@ -1148,7 +1148,7 @@ describe('Kordex context assembly guards', () => {
   });
 
   it('proposal freshness stays a pure read-only classifier, not refresh/apply logic', () => {
-    const freshnessSrc = read('src/features/ontology/profileProposalFreshness.ts');
+    const freshnessSrc = read('../packages/kordex-core/src/profileProposalFreshness.ts');
     const ontologyIndexSrc = read('src/features/ontology/index.ts');
 
     expect(freshnessSrc).toContain('evaluateProfileProposalFreshness');
@@ -1252,7 +1252,7 @@ describe('Kordex context assembly guards', () => {
   });
 
   it('base profile apply helper stays a pure patch compiler, not a data/UI seam', () => {
-    const applySrc = read('src/features/ontology/baseProfileProposalApply.ts');
+    const applySrc = read('../packages/kordex-core/src/baseProfileProposalApply.ts');
     const ontologyIndexSrc = read('src/features/ontology/index.ts');
 
     expect(applySrc).toContain('compileBaseProfileProposalApplyOperation');

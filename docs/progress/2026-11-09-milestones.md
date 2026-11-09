@@ -397,3 +397,14 @@ Direction/inventory slice verification: `npm --prefix tools run generate` and
 fixtures and repository links/metadata. `git diff --check` passed. The runtime
 source and tests were inspected without changing or executing application code;
 no standalone build, package extraction or core persistence proof is claimed.
+
+## K1: approved standalone extraction
+
+The owner approved the larger package after Fable review, with exact Zod,
+optional profiles, preserved app paths and no speculative ports. The
+[K1 report](2026-11-09-core-extraction.md) records resolution and proof:
+359 core + 780 app = 1139 original tests, independent package installation,
+compiler, packed-consumer smoke and 32 tooling fixtures. The
+[test reconciliation](2026-11-09-core-test-reconciliation.md) accounts for every
+moved/split file. Existing app/native/persistence gaps remain; no driver repair.
+K1 stops for review. Rule-model choice precedes storage design and K3.

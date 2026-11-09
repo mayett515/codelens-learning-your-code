@@ -54,6 +54,19 @@ test('valid leaf binds a real exported owner without claiming evidence execution
   assert.match(renderMap(result.entries), /Tests are not executed/);
 });
 
+test('discovers and validates core package leaves alongside app leaves', (t) => {
+  const f = fixture(t);
+  f.write('packages/kordex-core/src/meaning.ts', 'export function decideMeaning() { return true; }\n');
+  f.save({ ...f.leaf, id: 'core-meaning', owners: [{
+    path: 'packages/kordex-core/src/meaning.ts', symbol: 'decideMeaning', role: 'decision',
+  }] }, 'packages/kordex-core/src/meaning.leaf.md');
+  const result = inspectLeaves(f.root);
+  assert.deepEqual(result.findings, []);
+  assert.deepEqual(result.entries.map(({ leaf }) => leaf.id), ['core-meaning', 'policy']);
+  f.write('packages/kordex-core/src/meaning.ts', 'export function unrelated() {}\n');
+  assert.ok(inspectLeaves(f.root).findings.some(({ code }) => code === 'OWNER_EXPORT_MISSING'));
+});
+
 test('rejects impossible states, unknown fields, path traversal and whitespace-only gaps', (t) => {
   const f = fixture(t);
   for (const bad of [

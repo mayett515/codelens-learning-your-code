@@ -43,6 +43,20 @@ transfer: this gate remains runnable independently of Claude/Codex tool dialects
 
 ## Limits
 
+K1 adds [a package boundary check](core-boundary.ts) over core source, tests,
+scripts and compiler/test configuration. It includes erased type imports and
+re-exports, rejects relative escapes, undeclared imports and computed
+import/require calls, and distinguishes development dependencies from runtime
+dependencies. Zod is explicitly declared by the package. This is separate from
+the unchanged, stricter runtime-import check on decision leaves. Indirect loading
+through arbitrary functions is not statically proved; the isolated core install
+and packed-consumer smoke run in the separate core CI job.
+
+Leaf discovery includes `packages/kordex-core/src`. Its fixture first failed
+because the core leaf was absent, then passed after the root was added. Negative
+package-boundary fixtures cover app type imports, re-exports, runtime imports,
+development-only dependencies and test/config escapes.
+
 See [leaf schema](../docs/capabilities/SCHEMA.md). The decision import check is
 opt-in for declared modules and conservative about unknown runtime imports. It
 does not prove mathematical purity, runtime reachability or global architecture.

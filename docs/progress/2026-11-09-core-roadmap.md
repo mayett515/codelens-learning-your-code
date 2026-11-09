@@ -8,9 +8,9 @@ previous slice was committed as `75f608d`; no transaction fix was started.
 
 | Step | Deliverable and proof | Current state |
 | --- | --- | --- |
-| K0: inventory and boundary | Read-only module/test dependency audit; exact core exports, storage/atomic ports and app compatibility proposal; owner approval before moving files | 69 modules and 52 ontology test files inventoried; proposal ready, awaiting approval |
-| K1: structural extraction | Standalone package with no app runtime/type dependency; existing app assertions preserved; core build/tests pass in an isolated install without app dependencies | Planned |
-| K2: desktop persistence | One local adapter behind core-owned ports; current-state checks and real rollback after each write, reopen and concurrency proof | Planned; mobile defect is not a prerequisite repair |
+| K0: inventory and boundary | Read-only module/test dependency audit; exact core exports and app compatibility proposal; owner approval before moving files | Complete; owner approved the larger cut with pinned Zod, optional profiles and no speculative ports |
+| K1: structural extraction | Standalone package with no app runtime/type dependency; existing app assertions preserved; isolated build/tests and packed consumer | Local isolation passed; stop for review. Actual CI evidence belongs in the [K1 report](2026-11-09-core-extraction.md) |
+| K2: desktop persistence | One local adapter behind core-owned ports; current-state checks and real rollback after each write, reopen and concurrency proof | Not started; rule-model decision before storage design. Mobile defect is not a prerequisite repair |
 | K3: headless rule lifecycle (former M5) | CLI: one experience -> proposed rule -> source/scope validation -> explicit acceptance -> restart retrieval -> traceable replacement; stale proposal rejected | Planned; focused rule-model interview before schema, not after building it |
 | K4: read-only MCP | Agent retrieves only accepted knowledge with source, scope and revision; pending, replaced and other-scope records cannot masquerade as current accepted rules | Planned after K3 |
 
@@ -18,6 +18,14 @@ K0 evidence: [inventory](../reviews/2026-11-09-core-module-inventory.md) and
 [package boundary](../reviews/2026-11-09-core-package-boundary.md). Fable's counts
 are confirmed; the runtime-only independence claim needs the codec row-type and
 test-dependency qualifications. The existing import checker was reused unchanged.
+
+K1 adds a separate package-boundary guard for runtime **and type** imports,
+tests and configuration. The stricter decision-leaf checker is unchanged.
+See the [test reconciliation](2026-11-09-core-test-reconciliation.md).
+Before K2 storage design or K3 implementation, the owner answers the
+[rule-model interview](../reviews/2026-11-09-rule-model-interview.md): reuse a scoped
+profile/proposal lifecycle, or introduce a distinct rule record? No schema has
+been designed or port implemented in K1.
 
 ## First product scenario
 

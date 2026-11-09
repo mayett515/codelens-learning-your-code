@@ -1,0 +1,158 @@
+{
+  "name": "@kordex/core",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Portable Kordex domain decisions and validation; no default profile or persistence.",
+  "type": "commonjs",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "default": "./dist/types.js"
+    },
+    "./baseProfileVersioning": {
+      "types": "./dist/baseProfileVersioning.d.ts",
+      "default": "./dist/baseProfileVersioning.js"
+    },
+    "./contextAssembly": {
+      "types": "./dist/contextAssembly.d.ts",
+      "default": "./dist/contextAssembly.js"
+    },
+    "./contextSelector": {
+      "types": "./dist/contextSelector.d.ts",
+      "default": "./dist/contextSelector.js"
+    },
+    "./corrections": {
+      "types": "./dist/corrections.d.ts",
+      "default": "./dist/corrections.js"
+    },
+    "./metadata": {
+      "types": "./dist/metadata.d.ts",
+      "default": "./dist/metadata.js"
+    },
+    "./profileActivation": {
+      "types": "./dist/profileActivation.d.ts",
+      "default": "./dist/profileActivation.js"
+    },
+    "./profileBranchStore": {
+      "types": "./dist/profileBranchStore.d.ts",
+      "default": "./dist/profileBranchStore.js"
+    },
+    "./profileBranches": {
+      "types": "./dist/profileBranches.d.ts",
+      "default": "./dist/profileBranches.js"
+    },
+    "./profileComposition": {
+      "types": "./dist/profileComposition.d.ts",
+      "default": "./dist/profileComposition.js"
+    },
+    "./profileProposalFreshness": {
+      "types": "./dist/profileProposalFreshness.d.ts",
+      "default": "./dist/profileProposalFreshness.js"
+    },
+    "./profileProposalTargetSwitch": {
+      "types": "./dist/profileProposalTargetSwitch.d.ts",
+      "default": "./dist/profileProposalTargetSwitch.js"
+    },
+    "./profileRegistry": {
+      "types": "./dist/profileRegistry.d.ts",
+      "default": "./dist/profileRegistry.js"
+    },
+    "./profileSelection": {
+      "types": "./dist/profileSelection.d.ts",
+      "default": "./dist/profileSelection.js"
+    },
+    "./profileSelectionDraft": {
+      "types": "./dist/profileSelectionDraft.d.ts",
+      "default": "./dist/profileSelectionDraft.js"
+    },
+    "./runtimeProfileCoordinator": {
+      "types": "./dist/runtimeProfileCoordinator.d.ts",
+      "default": "./dist/runtimeProfileCoordinator.js"
+    },
+    "./scopedMeaning": {
+      "types": "./dist/scopedMeaning.d.ts",
+      "default": "./dist/scopedMeaning.js"
+    },
+    "./userFitProjection": {
+      "types": "./dist/userFitProjection.d.ts",
+      "default": "./dist/userFitProjection.js"
+    },
+    "./baseProfileProposalApply": {
+      "types": "./dist/baseProfileProposalApply.d.ts",
+      "default": "./dist/baseProfileProposalApply.js"
+    },
+    "./branchLocalProposalApply": {
+      "types": "./dist/branchLocalProposalApply.d.ts",
+      "default": "./dist/branchLocalProposalApply.js"
+    },
+    "./checkerPromptBuilder": {
+      "types": "./dist/checkerPromptBuilder.d.ts",
+      "default": "./dist/checkerPromptBuilder.js"
+    },
+    "./checkerProposalMapper": {
+      "types": "./dist/checkerProposalMapper.d.ts",
+      "default": "./dist/checkerProposalMapper.js"
+    },
+    "./codecs/ontologyCorrectionEvidence": {
+      "types": "./dist/codecs/ontologyCorrectionEvidence.d.ts",
+      "default": "./dist/codecs/ontologyCorrectionEvidence.js"
+    },
+    "./codecs/profileBranch": {
+      "types": "./dist/codecs/profileBranch.d.ts",
+      "default": "./dist/codecs/profileBranch.js"
+    },
+    "./codecs/profileChangeProposal": {
+      "types": "./dist/codecs/profileChangeProposal.d.ts",
+      "default": "./dist/codecs/profileChangeProposal.js"
+    },
+    "./codecs/profileDefinition": {
+      "types": "./dist/codecs/profileDefinition.d.ts",
+      "default": "./dist/codecs/profileDefinition.js"
+    },
+    "./codecs/profileProposalEvent": {
+      "types": "./dist/codecs/profileProposalEvent.d.ts",
+      "default": "./dist/codecs/profileProposalEvent.js"
+    },
+    "./codecs/profileSelection": {
+      "types": "./dist/codecs/profileSelection.d.ts",
+      "default": "./dist/codecs/profileSelection.js"
+    },
+    "./codecs/profileTrustSetting": {
+      "types": "./dist/codecs/profileTrustSetting.d.ts",
+      "default": "./dist/codecs/profileTrustSetting.js"
+    },
+    "./profiles/coding": {
+      "types": "./dist/profiles/codingProfile.d.ts",
+      "default": "./dist/profiles/codingProfile.js"
+    },
+    "./profiles/photography": {
+      "types": "./dist/profiles/photographyProfile.d.ts",
+      "default": "./dist/profiles/photographyProfile.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "verify:isolation": "node scripts/verify-isolation.mjs"
+  },
+  "peerDependencies": {
+    "zod": "4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "24.10.0",
+    "typescript": "5.9.2",
+    "vitest": "4.1.4",
+    "zod": "4.3.6"
+  }
+}

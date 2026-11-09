@@ -805,9 +805,8 @@ describe('context selector', () => {
   });
 
   it('keeps contextSelector source pure and free of runtime dependencies', () => {
-    const repoRoot = path.resolve(__dirname, '../../../..');
     const source = fs.readFileSync(
-      path.join(repoRoot, 'src/features/ontology/contextSelector.ts'),
+      path.resolve(__dirname, '..', 'contextSelector.ts'),
       'utf8',
     );
 
