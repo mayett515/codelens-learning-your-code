@@ -6,7 +6,8 @@ of this responsibility; a universal Kordex model has not been finalized.
 
 - **D1 (P1/G1):** cross-scope identity comparisons include their scope.
 - **D2 (P1/G1):** a branch belongs to its parent; selection must not silently mix
-  foreign parents. The existing selection leaf records the enforcement gap.
+  foreign parents. The selection leaf binds the shared resolver and its
+  foreign-parent regression evidence.
 - **D3 (P2/P4):** declared sources and composed views have distinct ownership;
   runtime composition does not become a second canonical stored definition.
 - **D4 (P3/G3):** composition order is meaningful and deterministic under its

@@ -13,8 +13,8 @@ expansion, contradictory evidence or two failed attempts at the same fix.
 | M0b | Install existing app dependencies; run suite, compiler and lint once; record failures | Completed: 1117 tests and compiler pass; pre-existing lint failures recorded below |
 | A | Newly found branch proposal snapshot gap: reject missing/stale revisions before writes | Completed; legacy recovery remains for B |
 | B | Explicit refresh of missing-snapshot branch proposals as reviewed replacements | Completed; replacement remains pending and Apply remains explicit |
-| M1a | Foreign-parent rejection in profile-selection, failing-first decision test | Pending |
-| M1b | Preserve non-coding scope across learning-chat route/store/modal/save/read-back | Pending |
+| M1a | Foreign-parent rejection in profile-selection, failing-first decision test | Completed: shared resolver guard and regression evidence |
+| M1b | Preserve non-coding scope across learning-chat route/store/modal/save/read-back | Awaiting verification-scope decision: native environment not found |
 | M1c | Registry/bootstrap and base apply ownership; real persistence proof | User decision required before implementation |
 | M2 | Concrete agent-context acceptance scenario and distinct other planned scenarios | Pending |
 | M3 | Headless leaf query; proves repository-description access, not the Kordex lifecycle | Pending |
@@ -169,3 +169,53 @@ Leaf result: `proposal-replacement` remains `implemented` with its newly explici
 refresh owner; `branch-proposal-apply` returns from `partial` to `implemented`
 after A's enforcement and B's recovery evidence. `inspectedOn` remains the actual
 inspection day, 2026-11-09. Next slice: M1a, foreign-parent selection rejection.
+
+## M1a — selected branches must belong to the base
+
+Owner: `resolveProfileSelection` / private `resolveIds`. Callers include
+`composeRuntimeDomainProfileFromSelection` and `resolveRuntimeProfileForProject`.
+Only selected branches are checked; the branch pool may contain unrelated bases.
+No changes to composition order, persistence, defaults or UI were made.
+
+Failing first: coding-owned project, learning and personal branches in a
+photography selection all failed their new expected-rejection tests. After the
+guard, resolution and composition reject each case. A valid reversed selection
+with an unselected foreign branch still resolves in requested order.
+
+The first full check also exposed invalid pre-existing happy-path fixture parent
+IDs in runtime activation and a generic type inference issue in the new test.
+The fixture parents now match their `test-base`; the new heterogeneous test
+explicitly selects the supported string generic. Existing assertions were retained.
+
+Final proof on 2026-11-09:
+
+- `npm test`: 1131/1131 passed in 120 files.
+- Local TypeScript compiler: exit 0.
+- ESLint on the three touched TS files: exit 0; six pre-existing warnings
+  (three unused fixture imports, three `array-type`), no new errors/warnings.
+  The four M0b repository-wide lint errors remain unchanged.
+- Map generation and `npm --prefix tools run check`: exit 0, tooling compiler
+  and all 27 fixtures passed. The dirty owner warning was reviewed against its diff.
+
+Leaf `profile-selection` moves `partial -> implemented` for this pure responsibility.
+The meaning parent and dated baseline were updated. No native or DB behavior is
+claimed from these tests.
+
+## M1b — verification boundary before implementation
+
+Read-only inspection confirms the existing route/store/modal gap. No M1b code
+was edited. `adb` and `emulator` are absent from PATH, the default local Android
+SDK directory does not exist, and ANDROID_HOME/ANDROID_SDK_ROOT are unset.
+A nonstandard or external installation has not been ruled out. The current
+Node suite is not proof of the required native save flow.
+
+Under the user's unavailable-check stop rule, implementation waits for either
+a usable runtime or explicit acceptance of a bounded headless fix with its native
+verification gap retained in the leaf. This is not an M1b completion claim.
+
+## Additional observed CI
+
+For pushed revision `8872700a79da7e7dc9e8538b5737fe6200d8538e` (design plus A/B),
+both [PR run](https://github.com/mayett515/codelens-learning-your-code/actions/runs/42690924821)
+and [push run](https://github.com/mayett515/codelens-learning-your-code/actions/runs/42690913004)
+completed successfully on 2026-11-09. This remains the tooling CI, not app/native CI.

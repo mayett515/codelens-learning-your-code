@@ -84,3 +84,13 @@ The base path does not have this same gap:
 `assertBaseProfileProposalTargetsCurrentVersion` rejects missing or mismatched
 `targetProfileVersion`, and the base service subsequently guards its write.
 Neither this inspection nor callback-based service tests establish SQLite rollback.
+
+## 2026-11-09: selection gap closed in M1a
+
+`resolveProfileSelection` now rejects a selected branch whose `parentProfileId`
+differs from the selected base. Regression cases use photography with coding-owned
+project, learning and personal branches and exercise the composition entrypoint
+as well. Unselected foreign branches remain permitted in the supplied pool.
+Existing valid-order/immutability fixtures were corrected to name their actual
+`test-base` parent; their behavioral assertions were retained.
+The original finding above remains a dated baseline, not the current leaf state.

@@ -208,3 +208,13 @@ backfill was added. The [milestone record](../progress/2026-11-09-milestones.md)
 records failing-first cases, 1127 passing app tests, compiler success, unchanged
 lint baseline and the 27-test tooling gate. The design note remains a dated
 description of its inspected revision; A-C parent/child options remain undecided.
+
+## 2026-11-09: M1a selection guard
+
+The shared selection resolver now rejects a selected branch belonging to another
+base while preserving valid ordering and allowing unselected foreign branches.
+The selection leaf is `implemented`; the dated baseline preserves the original
+finding and records its resolution. Failing-first evidence, 1131 passing app
+tests, unchanged lint baseline and the passing tooling gate are recorded in the
+[milestone ledger](../progress/2026-11-09-milestones.md). M1b is awaiting a decision
+about native verification availability; no capture-chain fix is claimed yet.

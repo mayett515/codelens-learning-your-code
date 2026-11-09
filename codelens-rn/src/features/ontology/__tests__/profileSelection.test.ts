@@ -7,6 +7,7 @@ import {
   resolveProfileSelection,
 } from '../profileSelection';
 import { codingProfile } from '../profiles/codingProfile';
+import { photographyProfile } from '../profiles/photographyProfile';
 import type {
   DomainProfile,
   OntologyNode,
@@ -92,7 +93,7 @@ function makeProfileBranch<TItemTypeNodeId extends string = string>(
   const now = 1_700_000_000_000;
   return {
     id,
-    parentProfileId: 'parent-profile',
+    parentProfileId: 'test-base',
     branchKind,
     name: id,
     overlay: {
@@ -111,6 +112,35 @@ function makeProfileBranch<TItemTypeNodeId extends string = string>(
 // ---------------------------------------------------------------------------
 
 describe('resolveProfileSelection', () => {
+  it.each(['project', 'learning', 'personal'] as const)(
+    'rejects a selected coding-owned %s branch in a photography context',
+    (kind) => {
+      const branch = makeProfileBranch('foreign', kind, {}, { parentProfileId: codingProfile.id });
+      const selection: ProfileSelection = {
+        baseProfileId: photographyProfile.id,
+        projectBranchIds: kind === 'project' ? [branch.id] : [],
+        learningBranchIds: kind === 'learning' ? [branch.id] : [],
+        personalBranchIds: kind === 'personal' ? [branch.id] : [],
+      };
+      const input = { selection, baseProfile: photographyProfile, branches: [branch] };
+      expect(() => resolveProfileSelection<string>(input)).toThrow(/belongs to.*coding.*photography/);
+      expect(() => composeRuntimeDomainProfileFromSelection<string>(input)).toThrow(/belongs to.*coding.*photography/);
+    },
+  );
+
+  it('ignores an unselected foreign branch while preserving valid selection order', () => {
+    const first = makeProfileBranch('first', 'project', {}, { parentProfileId: photographyProfile.id });
+    const second = makeProfileBranch('second', 'project', {}, { parentProfileId: photographyProfile.id });
+    const foreign = makeProfileBranch('foreign', 'project', {}, { parentProfileId: codingProfile.id });
+    const result = resolveProfileSelection<string>({
+      selection: { baseProfileId: photographyProfile.id, projectBranchIds: ['second', 'first'] },
+      baseProfile: photographyProfile,
+      branches: [first, foreign, second],
+    });
+    expect(result.branches).toEqual([second, first]);
+    expect(result.baseProfile).toBe(photographyProfile);
+  });
+
   describe('empty selection returns base profile', () => {
     it('returns base profile by reference when no branches selected', () => {
       const base = makeNonDefaultBaseProfile();

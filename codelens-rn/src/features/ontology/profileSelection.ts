@@ -70,6 +70,12 @@ function resolveIds<TItemTypeNodeId extends string>(
 
       const branch = branchMap.get(id);
       if (branch) {
+        if (branch.parentProfileId !== selection.baseProfileId) {
+          throw new Error(
+            `Selected branch id "${id}" belongs to base profile "${branch.parentProfileId}", ` +
+            `not selected base profile "${selection.baseProfileId}".`,
+          );
+        }
         result.push(branch);
       }
     }
@@ -90,6 +96,7 @@ function resolveIds<TItemTypeNodeId extends string>(
  * - Throws if `selection.baseProfileId` does not match `baseProfile.id`.
  * - Throws if a selected branch id is not found in the provided branches array.
  * - Throws if a branch id is listed under the wrong kind section.
+ * - Throws if a selected branch belongs to another base profile.
  * - Returns branches in normalized kind order: project, learning, personal.
  * - Preserves selection order within each kind.
  */
@@ -126,7 +133,7 @@ export function resolveProfileSelection<TItemTypeNodeId extends string = string>
  * Pure function: no mutation, no persistence, no side effects.
  *
  * - Returns the base profile by reference when no branches are selected.
- * - Throws on baseProfileId mismatch, missing branch id, or wrong-kind branch id.
+ * - Throws on baseProfileId mismatch, missing/wrong-kind branch id, or foreign parent.
  */
 export function composeRuntimeDomainProfileFromSelection<TItemTypeNodeId extends string = string>(input: {
   selection: ProfileSelection;
