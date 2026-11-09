@@ -54,10 +54,10 @@ export function toDomainProfileSummary<TItemTypeNodeId extends string = string>(
   };
 }
 
-export function createStaticProfileSource<TItemTypeNodeId extends string = string>(input: {
+export function createStaticProfileSource<TItemTypeNodeId extends string = string, TExtension extends object = object>(input: {
   id: string;
-  profiles: readonly DomainProfile<TItemTypeNodeId>[];
-}): ProfileSource<TItemTypeNodeId> {
+  profiles: readonly DomainProfile<TItemTypeNodeId, TExtension>[];
+}): ProfileSource<TItemTypeNodeId, TExtension> {
   // Check for duplicates within this source.
   const seen = new Map<string, string>();
   for (const profile of input.profiles) {
@@ -87,10 +87,10 @@ export function createStaticProfileSource<TItemTypeNodeId extends string = strin
   };
 }
 
-export function createProfileDefinitionSource<TItemTypeNodeId extends string = string>(input: {
+export function createProfileDefinitionSource<TItemTypeNodeId extends string = string, TExtension extends object = object>(input: {
   id: string;
-  definitions: readonly ProfileDefinition<TItemTypeNodeId>[];
-}): ProfileSource<TItemTypeNodeId> {
+  definitions: readonly ProfileDefinition<TItemTypeNodeId, TExtension>[];
+}): ProfileSource<TItemTypeNodeId, TExtension> {
   // Check for duplicates within this source.
   const seen = new Map<string, string>();
   for (const def of input.definitions) {
@@ -103,7 +103,7 @@ export function createProfileDefinitionSource<TItemTypeNodeId extends string = s
 
   const id = input.id;
   const definitions = [...input.definitions];
-  const profilesById = new Map<string, DomainProfile<TItemTypeNodeId>>();
+  const profilesById = new Map<string, DomainProfile<TItemTypeNodeId, TExtension>>();
   for (const def of definitions) {
     profilesById.set(def.id, def.profile);
   }
@@ -124,9 +124,9 @@ export function createProfileDefinitionSource<TItemTypeNodeId extends string = s
   };
 }
 
-export function createProfileRegistry<TItemTypeNodeId extends string = string>(input: {
-  sources: readonly ProfileSource<TItemTypeNodeId>[];
-}): ProfileRegistry<TItemTypeNodeId> {
+export function createProfileRegistry<TItemTypeNodeId extends string = string, TExtension extends object = object>(input: {
+  sources: readonly ProfileSource<TItemTypeNodeId, TExtension>[];
+}): ProfileRegistry<TItemTypeNodeId, TExtension> {
   const sources = [...input.sources];
 
   // Detect duplicate profile ids across all sources.

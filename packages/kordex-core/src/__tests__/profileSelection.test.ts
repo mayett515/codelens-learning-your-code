@@ -1,3 +1,4 @@
+import type { LearningDomainProfile as DomainProfile } from '../extensions/learningProfile';
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -9,7 +10,7 @@ import {
 import { codingProfile } from '../profiles/codingProfile';
 import { photographyProfile } from '../profiles/photographyProfile';
 import type {
-  DomainProfile,
+
   OntologyNode,
   ProfileBranch,
   ProfileOverlay,

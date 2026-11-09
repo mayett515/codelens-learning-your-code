@@ -4,7 +4,6 @@
 //                      node docs/reviews/fixtures/rule-profile-fit.cjs
 const assert = require('node:assert/strict');
 const core = require('../../../packages/kordex-core/dist/index.js');
-const { photographyProfile } = require('../../../packages/kordex-core/dist/profiles/photographyProfile.js');
 const { OntologyNodeSchema } = require('../../../packages/kordex-core/dist/codecs/profileBranch.js');
 const findings = [];
 function check(name, work) { work(); findings.push(name); }
@@ -14,10 +13,10 @@ function node(id, meaning) {
     examples: [], relatedNodeIds: [], contrastNodeIds: [], status: 'active',
     createdBy: 'user', createdAt: 1, updatedAt: 1 };
 }
-// Reuse presentation fields only as test scaffolding: current DomainProfile
-// requires them. This is not a shipped engineering profile or domain inheritance.
+// A genuine headless profile; no borrowed learning or presentation defaults.
+// The category node kind is compatibility scaffolding until R1 is implemented.
 const generic = node('optional-vs-nullable', 'Absence and explicit null have different contracts.');
-const base = { ...structuredClone(photographyProfile), id: 'engineering-rules',
+const base = { id: 'engineering-rules', version: 1,
   label: 'Engineering rules — compatibility probe', description: 'Interview fixture',
   ontology: { nodes: [generic], itemTypeNodeIds: [], relationshipTypeNodeIds: [] } };
 const branch = { id: 'repo:kordex', parentProfileId: base.id, branchKind: 'project',

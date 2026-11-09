@@ -1,7 +1,8 @@
+import type { LearningDomainProfile as DomainProfile, LearningProfileExtension } from '../extensions/learningProfile';
 import { describe, expect, it } from 'vitest';
 import { createActiveDomainProfileSource, resolveActiveDomainProfile, resolveActiveDomainProfileFromActivationInput } from '../index';
 import { codingProfile } from '../profiles/codingProfile';
-import type { ActiveDomainProfileSource, ActiveDomainProfileActivationInput, DomainProfile, OntologyNode, ProfileOverlay } from '../types';
+import type { ActiveDomainProfileSource, ActiveDomainProfileActivationInput, OntologyNode, ProfileOverlay } from '../types';
 
 function makeTestNode(id: string): OntologyNode {
   return {
@@ -70,21 +71,21 @@ function makeNonDefaultBaseProfile(): DomainProfile<string> {
 describe('resolveActiveDomainProfile', () => {
   it('returns the exact base profile reference when overlays are omitted', () => {
     const base = makeNonDefaultBaseProfile();
-    const source: ActiveDomainProfileSource<string> = { baseProfile: base };
+    const source: ActiveDomainProfileSource<string, LearningProfileExtension> = { baseProfile: base };
     const result = resolveActiveDomainProfile(source);
     expect(result).toBe(base);
   });
 
   it('returns the exact base profile reference when overlays are null', () => {
     const base = makeNonDefaultBaseProfile();
-    const source: ActiveDomainProfileSource<string> = { baseProfile: base, overlays: null };
+    const source: ActiveDomainProfileSource<string, LearningProfileExtension> = { baseProfile: base, overlays: null };
     const result = resolveActiveDomainProfile(source);
     expect(result).toBe(base);
   });
 
   it('returns the exact base profile reference when overlays are an empty array', () => {
     const base = makeNonDefaultBaseProfile();
-    const source: ActiveDomainProfileSource<string> = { baseProfile: base, overlays: [] };
+    const source: ActiveDomainProfileSource<string, LearningProfileExtension> = { baseProfile: base, overlays: [] };
     const result = resolveActiveDomainProfile(source);
     expect(result).toBe(base);
   });
@@ -96,7 +97,7 @@ describe('resolveActiveDomainProfile', () => {
       kind: 'project',
       overrideLabels: { hubTitle: 'Overridden Hub' },
     };
-    const source: ActiveDomainProfileSource<string> = {
+    const source: ActiveDomainProfileSource<string, LearningProfileExtension> = {
       baseProfile: base,
       overlays: [overlay],
     };
@@ -113,7 +114,7 @@ describe('resolveActiveDomainProfile', () => {
       overrideLabels: { hubTitle: 'Overridden Hub' },
       addOntologyNodes: [makeTestNode('added_node')],
     };
-    const source: ActiveDomainProfileSource<string> = {
+    const source: ActiveDomainProfileSource<string, LearningProfileExtension> = {
       baseProfile: base,
       overlays: [overlay],
     };
@@ -134,7 +135,7 @@ describe('resolveActiveDomainProfile', () => {
       kind: 'project',
       overrideGraph: { nodeColors: { base_node: '#ABCDEF' } },
     };
-    const source: ActiveDomainProfileSource<string> = {
+    const source: ActiveDomainProfileSource<string, LearningProfileExtension> = {
       baseProfile: base,
       overlays: [overlay],
     };
@@ -154,7 +155,7 @@ describe('resolveActiveDomainProfile', () => {
       addOntologyNodes: [makeTestNode('custom_added')],
       addItemTypeNodeIds: ['custom_added'],
     };
-    const source: ActiveDomainProfileSource<string> = {
+    const source: ActiveDomainProfileSource<string, LearningProfileExtension> = {
       baseProfile: customBase,
       overlays: [overlay],
     };
@@ -170,7 +171,7 @@ describe('resolveActiveDomainProfile', () => {
 describe('createActiveDomainProfileSource', () => {
   it('returns a source with the exact base profile reference and no overlays property when all overlay groups are omitted', () => {
     const base = makeNonDefaultBaseProfile();
-    const input: ActiveDomainProfileActivationInput<string> = { baseProfile: base };
+    const input: ActiveDomainProfileActivationInput<string, LearningProfileExtension> = { baseProfile: base };
     const source = createActiveDomainProfileSource(input);
     expect(source.baseProfile).toBe(base);
     expect('overlays' in source).toBe(false);
@@ -178,7 +179,7 @@ describe('createActiveDomainProfileSource', () => {
 
   it('treats null overlay groups as no overlays', () => {
     const base = makeNonDefaultBaseProfile();
-    const input: ActiveDomainProfileActivationInput<string> = {
+    const input: ActiveDomainProfileActivationInput<string, LearningProfileExtension> = {
       baseProfile: base,
       projectOverlays: null,
       learningOverlays: null,
@@ -191,7 +192,7 @@ describe('createActiveDomainProfileSource', () => {
 
   it('treats empty overlay groups as no overlays', () => {
     const base = makeNonDefaultBaseProfile();
-    const input: ActiveDomainProfileActivationInput<string> = {
+    const input: ActiveDomainProfileActivationInput<string, LearningProfileExtension> = {
       baseProfile: base,
       projectOverlays: [],
       learningOverlays: [],
@@ -204,7 +205,7 @@ describe('createActiveDomainProfileSource', () => {
 
   it('treats mixed null/empty/omitted groups as no overlays', () => {
     const base = makeNonDefaultBaseProfile();
-    const input: ActiveDomainProfileActivationInput<string> = {
+    const input: ActiveDomainProfileActivationInput<string, LearningProfileExtension> = {
       baseProfile: base,
       projectOverlays: [],
       learningOverlays: null,
@@ -231,7 +232,7 @@ describe('createActiveDomainProfileSource', () => {
       kind: 'personal',
       overrideLabels: { hubTitle: 'Personal Hub' },
     };
-    const input: ActiveDomainProfileActivationInput<string> = {
+    const input: ActiveDomainProfileActivationInput<string, LearningProfileExtension> = {
       baseProfile: base,
       projectOverlays: [projOverlay],
       learningOverlays: [learnOverlay],
@@ -252,7 +253,7 @@ describe('createActiveDomainProfileSource', () => {
     const proj2: ProfileOverlay<string> = { id: 'proj-2', kind: 'project' };
     const learn1: ProfileOverlay<string> = { id: 'learn-1', kind: 'learning' };
     const learn2: ProfileOverlay<string> = { id: 'learn-2', kind: 'learning' };
-    const input: ActiveDomainProfileActivationInput<string> = {
+    const input: ActiveDomainProfileActivationInput<string, LearningProfileExtension> = {
       baseProfile: base,
       projectOverlays: [proj1, proj2],
       learningOverlays: [learn1, learn2],
@@ -266,7 +267,7 @@ describe('createActiveDomainProfileSource', () => {
   it('works with only project overlays', () => {
     const base = makeNonDefaultBaseProfile();
     const overlay: ProfileOverlay<string> = { id: 'proj-only', kind: 'project' };
-    const input: ActiveDomainProfileActivationInput<string> = {
+    const input: ActiveDomainProfileActivationInput<string, LearningProfileExtension> = {
       baseProfile: base,
       projectOverlays: [overlay],
     };
@@ -279,7 +280,7 @@ describe('createActiveDomainProfileSource', () => {
   it('works with only personal overlays', () => {
     const base = makeNonDefaultBaseProfile();
     const overlay: ProfileOverlay<string> = { id: 'personal-only', kind: 'personal' };
-    const input: ActiveDomainProfileActivationInput<string> = {
+    const input: ActiveDomainProfileActivationInput<string, LearningProfileExtension> = {
       baseProfile: base,
       personalOverlays: [overlay],
     };
@@ -292,7 +293,7 @@ describe('createActiveDomainProfileSource', () => {
   it('does not mutate the input object', () => {
     const base = makeNonDefaultBaseProfile();
     const overlay: ProfileOverlay<string> = { id: 'mut-1', kind: 'project' };
-    const input: ActiveDomainProfileActivationInput<string> = {
+    const input: ActiveDomainProfileActivationInput<string, LearningProfileExtension> = {
       baseProfile: base,
       projectOverlays: [overlay],
     };
@@ -307,7 +308,7 @@ describe('createActiveDomainProfileSource', () => {
     const projOverlays: ProfileOverlay<string>[] = [{ id: 'p1', kind: 'project' }];
     const learnOverlays: ProfileOverlay<string>[] = [{ id: 'l1', kind: 'learning' }];
     const personalOverlays: ProfileOverlay<string>[] = [{ id: 'per1', kind: 'personal' }];
-    const input: ActiveDomainProfileActivationInput<string> = {
+    const input: ActiveDomainProfileActivationInput<string, LearningProfileExtension> = {
       baseProfile: base,
       projectOverlays: projOverlays,
       learningOverlays: learnOverlays,
@@ -325,7 +326,7 @@ describe('createActiveDomainProfileSource', () => {
   it('returns a distinct overlays array on each call (no shared mutable state)', () => {
     const base = makeNonDefaultBaseProfile();
     const overlay: ProfileOverlay<string> = { id: 'shared', kind: 'project' };
-    const input: ActiveDomainProfileActivationInput<string> = {
+    const input: ActiveDomainProfileActivationInput<string, LearningProfileExtension> = {
       baseProfile: base,
       projectOverlays: [overlay],
     };
@@ -338,7 +339,7 @@ describe('createActiveDomainProfileSource', () => {
     const base = makeNonDefaultBaseProfile();
     const proj1: ProfileOverlay<string> = { id: 'proj-1', kind: 'project' };
     const learn1: ProfileOverlay<string> = { id: 'learn-1', kind: 'learning' };
-    const input: ActiveDomainProfileActivationInput<string> = {
+    const input: ActiveDomainProfileActivationInput<string, LearningProfileExtension> = {
       baseProfile: base,
       projectOverlays: [proj1],
       learningOverlays: [learn1],
@@ -356,14 +357,14 @@ describe('createActiveDomainProfileSource', () => {
 describe('resolveActiveDomainProfileFromActivationInput', () => {
   it('returns the exact base profile reference when all overlay groups are omitted', () => {
     const base = makeNonDefaultBaseProfile();
-    const input: ActiveDomainProfileActivationInput<string> = { baseProfile: base };
+    const input: ActiveDomainProfileActivationInput<string, LearningProfileExtension> = { baseProfile: base };
     const result = resolveActiveDomainProfileFromActivationInput(input);
     expect(result).toBe(base);
   });
 
   it('returns the exact base profile reference when all overlay groups are null or empty', () => {
     const base = makeNonDefaultBaseProfile();
-    const input: ActiveDomainProfileActivationInput<string> = {
+    const input: ActiveDomainProfileActivationInput<string, LearningProfileExtension> = {
       baseProfile: base,
       projectOverlays: null,
       learningOverlays: [],
@@ -386,7 +387,7 @@ describe('resolveActiveDomainProfileFromActivationInput', () => {
       addOntologyNodes: [makeTestNode('learn_node')],
       addItemTypeNodeIds: ['learn_node'],
     };
-    const input: ActiveDomainProfileActivationInput<string> = {
+    const input: ActiveDomainProfileActivationInput<string, LearningProfileExtension> = {
       baseProfile: base,
       projectOverlays: [projOverlay],
       learningOverlays: [learnOverlay],
@@ -401,7 +402,7 @@ describe('resolveActiveDomainProfileFromActivationInput', () => {
   it('is equivalent to resolveActiveDomainProfile(createActiveDomainProfileSource(input))', () => {
     const base = makeNonDefaultBaseProfile();
     const overlay: ProfileOverlay<string> = { id: 'eq', kind: 'personal', overrideLabels: { hubTitle: 'Eq Hub' } };
-    const input: ActiveDomainProfileActivationInput<string> = {
+    const input: ActiveDomainProfileActivationInput<string, LearningProfileExtension> = {
       baseProfile: base,
       personalOverlays: [overlay],
     };
@@ -413,10 +414,10 @@ describe('resolveActiveDomainProfileFromActivationInput', () => {
 
   it('preserves no-overlay base-reference behavior', () => {
     const base = makeNonDefaultBaseProfile();
-    const inputEmpty: ActiveDomainProfileActivationInput<string> = {
+    const inputEmpty: ActiveDomainProfileActivationInput<string, LearningProfileExtension> = {
       baseProfile: base,
     };
-    const inputNull: ActiveDomainProfileActivationInput<string> = {
+    const inputNull: ActiveDomainProfileActivationInput<string, LearningProfileExtension> = {
       baseProfile: base,
       projectOverlays: null,
       learningOverlays: null,
@@ -445,7 +446,7 @@ describe('resolveActiveDomainProfileFromActivationInput', () => {
       kind: 'personal',
       overrideLabels: { hubTitle: 'Personal Hub' },
     };
-    const input: ActiveDomainProfileActivationInput<string> = {
+    const input: ActiveDomainProfileActivationInput<string, LearningProfileExtension> = {
       baseProfile: base,
       projectOverlays: [projectOverlay],
       learningOverlays: [learningOverlay],
@@ -467,7 +468,7 @@ describe('resolveActiveDomainProfileFromActivationInput', () => {
       kind: 'learning',
       overrideLabels: { hubTitle: 'Learning Hub' },
     };
-    const input: ActiveDomainProfileActivationInput<string> = {
+    const input: ActiveDomainProfileActivationInput<string, LearningProfileExtension> = {
       baseProfile: base,
       projectOverlays: [projectOverlay],
       learningOverlays: [learningOverlay],
@@ -488,7 +489,7 @@ describe('resolveActiveDomainProfileFromActivationInput', () => {
       kind: 'project',
       overrideLabels: { hubTitle: 'Second Project Hub' },
     };
-    const input: ActiveDomainProfileActivationInput<string> = {
+    const input: ActiveDomainProfileActivationInput<string, LearningProfileExtension> = {
       baseProfile: base,
       projectOverlays: [firstProjectOverlay, secondProjectOverlay],
     };
@@ -513,7 +514,7 @@ describe('resolveActiveDomainProfileFromActivationInput', () => {
       kind: 'personal',
       overrideLabels: { hubTitle: 'Frozen Personal' },
     });
-    const input: ActiveDomainProfileActivationInput<string> = {
+    const input: ActiveDomainProfileActivationInput<string, LearningProfileExtension> = {
       baseProfile: base,
       projectOverlays: Object.freeze([proj]),
       learningOverlays: Object.freeze([learn]),

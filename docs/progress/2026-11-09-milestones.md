@@ -464,3 +464,17 @@ leaving unapproved parent-following/collision/edge policies open. K5-K8 each hav
 a distinct planned scenario with no executable owner. The gate passed 32/32.
 The authorized headless-profile structural slice is in progress; K2 storage and
 rule-node behavior have not started. This entry does not claim those features.
+
+## K1b: semantic profile separated from the learning extension
+
+The [K1b report](2026-11-09-headless-profile.md) records the structural cut,
+failing-first cases and limits. Core profiles require no learning/UI fields;
+existing CodeLens profiles retain a complete explicit extension. Validation
+rejects partial extensions and the app still rejects bare semantic profiles.
+Existing composition/selection/registry policies remain their single owners.
+
+Local proof: isolated core 366/366, app 781/781, both compilers, one shared Zod,
+seven headless fit probes and tooling 32/32. All original 1139 tests remain,
+with seven core and one app additions. Lint retains four baseline errors and
+196 warnings; changed app files pass focused lint. Desktop storage and R1-R4
+behavior are not implemented, and native/app rollback gaps remain open.

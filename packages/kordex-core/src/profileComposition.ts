@@ -1,11 +1,7 @@
+import { composeLearningProfileFields } from './extensions/learningProfileComposition';
 import type {
   BoundaryRule,
-  DomainLabelOverrides,
-  DomainLabels,
   DomainProfile,
-  GraphProfile,
-  GraphProfileOverrides,
-  MetadataFieldDefinition,
   OntologyNode,
   OntologyProfile,
   ProfileOverlay,
@@ -36,96 +32,6 @@ function cloneBoundaryRule(rule: BoundaryRule): BoundaryRule {
   };
 }
 
-function cloneMetadataField(f: MetadataFieldDefinition): MetadataFieldDefinition {
-  return {
-    ...f,
-    appliesTo: [...f.appliesTo],
-    examples: [...f.examples],
-    enumOptions: f.enumOptions ? f.enumOptions.map((option) => ({ ...option })) : undefined,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Merge helpers
-// ---------------------------------------------------------------------------
-
-function mergeLabels(
-  base: DomainLabels,
-  partial: DomainLabelOverrides,
-): DomainLabels {
-  return {
-    ...base,
-    ...partial,
-    flashback: {
-      ...base.flashback,
-      ...(partial.flashback ?? {}),
-    },
-  };
-}
-
-function mergeGraphProfiles<TItemTypeNodeId extends string>(
-  base: GraphProfile<TItemTypeNodeId>,
-  partial: GraphProfileOverrides<TItemTypeNodeId>,
-): GraphProfile<TItemTypeNodeId> {
-  return {
-    ...base,
-    ...partial,
-    nodeColors: {
-      ...base.nodeColors,
-      ...(partial.nodeColors ?? {}),
-    } as Readonly<Record<TItemTypeNodeId, string>>,
-    relationshipLabels: {
-      ...base.relationshipLabels,
-      ...(partial.relationshipLabels ?? {}),
-    },
-    relationshipSectionLabels: {
-      ...base.relationshipSectionLabels,
-      ...(partial.relationshipSectionLabels ?? {}),
-    },
-    statusLabels: {
-      ...base.statusLabels,
-      ...(partial.statusLabels ?? {}),
-    },
-    tooltipLabels: {
-      ...base.tooltipLabels,
-      ...(partial.tooltipLabels ?? {}),
-    },
-    legendHelperLabels: {
-      ...base.legendHelperLabels,
-      ...(partial.legendHelperLabels ?? {}),
-    },
-    modeLabels: {
-      ...base.modeLabels,
-      ...(partial.modeLabels ?? {}),
-    },
-  };
-}
-
-function mergeMetadataFields(
-  base: readonly MetadataFieldDefinition[],
-  overrides: readonly MetadataFieldDefinition[],
-): MetadataFieldDefinition[] {
-  const overrideById = new Map<string, MetadataFieldDefinition>();
-  for (const o of overrides) {
-    overrideById.set(o.id, cloneMetadataField(o));
-  }
-  const result: MetadataFieldDefinition[] = [];
-  for (const b of base) {
-    const replacement = overrideById.get(b.id);
-    if (replacement) {
-      result.push(replacement);
-      overrideById.delete(b.id);
-    } else {
-      result.push(cloneMetadataField(b));
-    }
-  }
-  // Append new fields that were not in the base
-  for (const [, replacement] of overrideById) {
-    result.push(replacement);
-  }
-  return result;
-}
-
 function dedupStrings(arr: readonly string[]): string[] {
   return [...new Set(arr)];
 }
@@ -151,10 +57,10 @@ function dedupStrings(arr: readonly string[]): string[] {
  * 2. Project/learning overlays in the order provided
  * 3. Personal overlays last, also in the order provided
  */
-export function composeDomainProfile<TItemTypeNodeId extends string = string>(
-  base: DomainProfile<TItemTypeNodeId>,
+export function composeDomainProfile<TItemTypeNodeId extends string = string, TExtension extends object = object>(
+  base: DomainProfile<TItemTypeNodeId, TExtension>,
   overlays: readonly ProfileOverlay<TItemTypeNodeId>[],
-): DomainProfile<TItemTypeNodeId> {
+): DomainProfile<TItemTypeNodeId, TExtension> {
   // Deep-clone base ontology nodes
   const composedNodes: OntologyNode[] = base.ontology.nodes.map(cloneOntologyNode);
   const nodeIndex = new Map<string, number>();
@@ -164,20 +70,10 @@ export function composeDomainProfile<TItemTypeNodeId extends string = string>(
 
   let composedItemTypeNodeIds: TItemTypeNodeId[] = [...base.ontology.itemTypeNodeIds];
   let composedRelTypeNodeIds: string[] = [...base.ontology.relationshipTypeNodeIds];
-  let composedLabels: DomainLabels = { ...base.labels };
-  if (base.labels.flashback) {
-    composedLabels = {
-      ...composedLabels,
-      flashback: { ...base.labels.flashback },
-    };
-  }
-  let composedMetadataFields: MetadataFieldDefinition[] = base.metadataFields.map(cloneMetadataField);
-  let composedGraph: GraphProfile<TItemTypeNodeId> = mergeGraphProfiles(
-    base.graph,
-    {},
-  );
+  const orderedOverlays = orderOverlaysForComposition(overlays);
+  const learningFields = composeLearningProfileFields(base, orderedOverlays);
 
-  for (const overlay of orderOverlaysForComposition(overlays)) {
+  for (const overlay of orderedOverlays) {
     // Add new ontology nodes
     if (overlay.addOntologyNodes) {
       for (const node of overlay.addOntologyNodes) {
@@ -220,21 +116,6 @@ export function composeDomainProfile<TItemTypeNodeId extends string = string>(
       ]);
     }
 
-    // Override labels partially
-    if (overlay.overrideLabels) {
-      composedLabels = mergeLabels(composedLabels, overlay.overrideLabels);
-    }
-
-    // Override metadata fields by id
-    if (overlay.overrideMetadataFields) {
-      composedMetadataFields = mergeMetadataFields(composedMetadataFields, overlay.overrideMetadataFields);
-    }
-
-    // Override graph partially
-    if (overlay.overrideGraph) {
-      composedGraph = mergeGraphProfiles(composedGraph, overlay.overrideGraph);
-    }
-
     // Override ontology partially (currently only supports adding/overriding nodes
     // that were not handled above, but this allows future extension)
     if (overlay.overrideOntology) {
@@ -271,10 +152,8 @@ export function composeDomainProfile<TItemTypeNodeId extends string = string>(
 
   return {
     ...base,
-    labels: composedLabels,
+    ...learningFields,
     ontology: composedOntology,
-    metadataFields: composedMetadataFields,
-    graph: composedGraph,
   };
 }
 

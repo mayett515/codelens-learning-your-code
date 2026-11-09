@@ -1,3 +1,4 @@
+import type { LearningDomainProfile as DomainProfile } from '../extensions/learningProfile';
 import { describe, expect, it } from 'vitest';
 import {
   createScopedOntologyNodeReferences,
@@ -6,7 +7,7 @@ import {
   formatScopedOntologyNodeLabel,
   normalizeOntologyDisplayLabel,
 } from '../scopedMeaning';
-import type { DomainProfile, OntologyNode } from '../types';
+import type { OntologyNode } from '../types';
 
 function node(id: string, label: string, overrides: Partial<OntologyNode> = {}): OntologyNode {
   return {

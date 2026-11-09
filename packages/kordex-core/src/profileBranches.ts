@@ -66,12 +66,12 @@ export function groupProfileBranchesByKind<TItemTypeNodeId extends string = stri
  * Does not mutate the base profile or any branch objects.
  * Returns base profile by reference when branches are empty.
  */
-export function createActiveDomainProfileSourceFromBranches<TItemTypeNodeId extends string = string>(
+export function createActiveDomainProfileSourceFromBranches<TItemTypeNodeId extends string = string, TExtension extends object = object>(
   input: {
-    baseProfile: DomainProfile<TItemTypeNodeId>;
+    baseProfile: DomainProfile<TItemTypeNodeId, TExtension>;
     branches: readonly ProfileBranch<TItemTypeNodeId>[];
   },
-): ActiveDomainProfileSource<TItemTypeNodeId> {
+): ActiveDomainProfileSource<TItemTypeNodeId, TExtension> {
   const groups = groupProfileBranchesByKind(input.branches);
   return createActiveDomainProfileSource({
     baseProfile: input.baseProfile,
@@ -91,12 +91,12 @@ export function createActiveDomainProfileSourceFromBranches<TItemTypeNodeId exte
  * Does not mutate the base profile or any branch objects.
  * Returns base profile by reference when branches are empty.
  */
-export function composeRuntimeDomainProfileFromBranches<TItemTypeNodeId extends string = string>(
+export function composeRuntimeDomainProfileFromBranches<TItemTypeNodeId extends string = string, TExtension extends object = object>(
   input: {
-    baseProfile: DomainProfile<TItemTypeNodeId>;
+    baseProfile: DomainProfile<TItemTypeNodeId, TExtension>;
     branches: readonly ProfileBranch<TItemTypeNodeId>[];
   },
-): DomainProfile<TItemTypeNodeId> {
+): DomainProfile<TItemTypeNodeId, TExtension> {
   const groups = groupProfileBranchesByKind(input.branches);
   return composeRuntimeDomainProfile({
     baseProfile: input.baseProfile,

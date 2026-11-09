@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { rowToProfileDefinition, profileDefinitionToRow } from '../codecs/profileDefinition';
+import { rowToProfileDefinition, profileDefinitionToRow, validateProfileDefinition } from '../codecs/profileDefinition';
 import { codingProfile } from '../profiles/codingProfile';
 import type { DomainProfile, OntologyNode, ProfileDefinition } from '../types';
 
@@ -83,6 +83,14 @@ function makeTestDefinition(id: string, label: string): ProfileDefinition<string
 // ---------------------------------------------------------------------------
 
 describe('rowToProfileDefinition', () => {
+  it('keeps the app boundary strict when the core also supports headless profiles', () => {
+    const full = makeTestDefinition('test', 'Test');
+    const { id, version, label, description, ontology } = full.profile;
+    const bare = { id, version, label, description, ontology };
+    expect(() => validateProfileDefinition({ ...full, profile: bare })).toThrow();
+    expect(() => rowToProfileDefinition({ ...full, profileJson: bare })).toThrow();
+    expect(validateProfileDefinition(full)).toEqual(full);
+  });
   it('maps a row with object profileJson to definition', () => {
     const def = makeTestDefinition('test', 'Test');
     const row = {

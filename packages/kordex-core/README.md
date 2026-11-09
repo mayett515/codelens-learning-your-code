@@ -16,6 +16,22 @@ Codec subpaths also expose the validation helpers needed by those row mappers.
 There is one owner for each schema. The main entry exposes domain operations
 and validators rather than those mapping-support helpers.
 
+## Headless and learning profiles
+
+`DomainProfile` requires only id, version, label, description and ontology.
+`LearningDomainProfile` adds the explicit `LearningProfileExtension` used by
+CodeLens and the optional coding/photography seeds. Registry, selection and
+composition preserve that extension's type. Semantic composition delegates the
+legacy label/metadata/graph merge rules to its pure compatibility owner; it adds
+no such fields to a bare profile. Learning overrides on a bare profile fail.
+
+`validateProfileDefinition` accepts either a strict bare semantic profile or a
+complete learning extension. Partial extensions and unknown fields are rejected.
+The app uses `validateLearningProfileDefinition` from the codec subpath so its
+own boundary still requires every existing learning field. This is not an open
+plugin-schema registry: arbitrary extension payloads require an explicit codec.
+There is no persisted format migration for existing full profiles.
+
 ## What this package does not establish
 
 Pure apply functions calculate candidates; they do not persist an accepted

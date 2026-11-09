@@ -5,8 +5,8 @@ import type { ActiveDomainProfileActivationInput, DomainProfile } from './types'
  * Runtime Profile Coordinator input - re-exported as a named type alias so
  * callers can import it from this module without reaching into `types.ts`.
  */
-export type RuntimeProfileCoordinatorInput<TItemTypeNodeId extends string = string> =
-  ActiveDomainProfileActivationInput<TItemTypeNodeId>;
+export type RuntimeProfileCoordinatorInput<TItemTypeNodeId extends string = string, TExtension extends object = object> =
+  ActiveDomainProfileActivationInput<TItemTypeNodeId, TExtension>;
 
 /**
  * Compose a `DomainProfile` from grouped activation input.
@@ -20,8 +20,8 @@ export type RuntimeProfileCoordinatorInput<TItemTypeNodeId extends string = stri
  * about branch groups, activation input resolvers, or global active-profile
  * state.
  */
-export function composeRuntimeDomainProfile<TItemTypeNodeId extends string = string>(
-  input: RuntimeProfileCoordinatorInput<TItemTypeNodeId>,
-): DomainProfile<TItemTypeNodeId> {
+export function composeRuntimeDomainProfile<TItemTypeNodeId extends string = string, TExtension extends object = object>(
+  input: RuntimeProfileCoordinatorInput<TItemTypeNodeId, TExtension>,
+): DomainProfile<TItemTypeNodeId, TExtension> {
   return resolveActiveDomainProfileFromActivationInput(input);
 }

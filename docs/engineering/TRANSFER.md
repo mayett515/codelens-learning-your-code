@@ -347,3 +347,16 @@ K5 repository adaptation, K6 dependency invalidation, K7 comparison/restoration
 and K8 replayable scenario lab visible. Their leaves contain distinct scenarios,
 remain planned and bind no fictional executable owners. No storage/schema
 implementation or additional deletion is part of this decision-record slice.
+
+## 2026-11-09: headless profile structural slice
+
+The semantic profile no longer requires learning/presentation fields. One
+explicit learning extension owns the unchanged CodeLens shape, merge helpers
+and validation. App facades retain that strict extension while core pipelines
+preserve generic extension types. No learning storage or mobile code enters the
+core. The seven-case fit probe now uses a genuinely bare profile.
+
+Pure profile leaves cite the new evidence without claiming persisted rule
+history. The [report](../progress/2026-11-09-headless-profile.md) reconciles
+366 core plus 781 app tests against the original 1139. No dependency or storage
+schema was changed. R1-R4 implementation and K2 remain separate future slices.

@@ -16,6 +16,9 @@ evidence:
   - path: codelens-rn/src/features/ontology/__tests__/runtimeProfileActivation.test.ts
     kind: unit
     covers: Runtime caller resolution, ordering and immutable inputs with matching parent fixtures
+  - path: packages/kordex-core/src/__tests__/headlessProfile.test.ts
+    kind: unit
+    covers: Bare semantic profile validation, registry, branch selection and composition without learning fields
 gaps: []
 reason: ""
 revisit: ""

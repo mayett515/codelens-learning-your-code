@@ -43,20 +43,20 @@ export interface BaseProfilePatchOperation<TItemTypeNodeId extends string = stri
   appliedAt: number;
 }
 
-export interface BaseProfileProposalApplyInput<TItemTypeNodeId extends string = string> {
+export interface BaseProfileProposalApplyInput<TItemTypeNodeId extends string = string, TExtension extends object = object> {
   proposal: ProfileChangeProposal<TItemTypeNodeId>;
-  profileDefinition: ProfileDefinition<TItemTypeNodeId>;
+  profileDefinition: ProfileDefinition<TItemTypeNodeId, TExtension>;
   now: number;
 }
 
-export interface BaseProfileProposalApplyResult<TItemTypeNodeId extends string = string> {
+export interface BaseProfileProposalApplyResult<TItemTypeNodeId extends string = string, TExtension extends object = object> {
   operation: BaseProfilePatchOperation<TItemTypeNodeId>;
-  profileDefinition: ProfileDefinition<TItemTypeNodeId>;
+  profileDefinition: ProfileDefinition<TItemTypeNodeId, TExtension>;
   proposal: ProfileChangeProposal<TItemTypeNodeId>;
 }
 
-export function compileBaseProfileProposalApplyOperation<TItemTypeNodeId extends string = string>(
-  input: BaseProfileProposalApplyInput<TItemTypeNodeId>,
+export function compileBaseProfileProposalApplyOperation<TItemTypeNodeId extends string = string, TExtension extends object = object>(
+  input: BaseProfileProposalApplyInput<TItemTypeNodeId, TExtension>,
 ): BaseProfilePatchOperation<TItemTypeNodeId> {
   const proposal = validateProfileChangeProposal(input.proposal) as ProfileChangeProposal<TItemTypeNodeId>;
   assertBaseProfileProposal(proposal, input.profileDefinition, input.now);
@@ -74,12 +74,12 @@ export function compileBaseProfileProposalApplyOperation<TItemTypeNodeId extends
   };
 }
 
-export function applyBaseProfilePatchOperation<TItemTypeNodeId extends string = string>(
+export function applyBaseProfilePatchOperation<TItemTypeNodeId extends string = string, TExtension extends object = object>(
   input: {
-    profileDefinition: ProfileDefinition<TItemTypeNodeId>;
+    profileDefinition: ProfileDefinition<TItemTypeNodeId, TExtension>;
     operation: BaseProfilePatchOperation<TItemTypeNodeId>;
   },
-): ProfileDefinition<TItemTypeNodeId> {
+): ProfileDefinition<TItemTypeNodeId, TExtension> {
   const { profileDefinition, operation } = input;
 
   if (profileDefinition.id !== operation.baseProfileId || profileDefinition.profile.id !== operation.baseProfileId) {
@@ -107,7 +107,7 @@ export function applyBaseProfilePatchOperation<TItemTypeNodeId extends string = 
   const nextProfile = composeDomainProfile(profileDefinition.profile, [
     patchToOverlay(operation.proposalId, operation.patch),
   ]);
-  const versionedProfile: DomainProfile<TItemTypeNodeId> = {
+  const versionedProfile: DomainProfile<TItemTypeNodeId, TExtension> = {
     ...nextProfile,
     version: nextVersion,
   };
@@ -122,9 +122,9 @@ export function applyBaseProfilePatchOperation<TItemTypeNodeId extends string = 
   };
 }
 
-export function applyBaseProfileChangeProposal<TItemTypeNodeId extends string = string>(
-  input: BaseProfileProposalApplyInput<TItemTypeNodeId>,
-): BaseProfileProposalApplyResult<TItemTypeNodeId> {
+export function applyBaseProfileChangeProposal<TItemTypeNodeId extends string = string, TExtension extends object = object>(
+  input: BaseProfileProposalApplyInput<TItemTypeNodeId, TExtension>,
+): BaseProfileProposalApplyResult<TItemTypeNodeId, TExtension> {
   const operation = compileBaseProfileProposalApplyOperation(input);
   const profileDefinition = applyBaseProfilePatchOperation({
     profileDefinition: input.profileDefinition,

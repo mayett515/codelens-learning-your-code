@@ -1,6 +1,7 @@
+import type { LearningDomainProfile as DomainProfile } from '../extensions/learningProfile';
 import { describe, expect, it } from 'vitest';
 import { codingProfile } from '../profiles/codingProfile';
-import type { DomainProfile, OntologyCorrectionEvidence } from '../types';
+import type { OntologyCorrectionEvidence } from '../types';
 import { validateOntologyCorrection } from '../corrections';
 
 function validCorrection(overrides: Partial<OntologyCorrectionEvidence> = {}): OntologyCorrectionEvidence {

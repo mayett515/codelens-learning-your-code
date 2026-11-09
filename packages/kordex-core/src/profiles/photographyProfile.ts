@@ -1,4 +1,5 @@
-import type { DomainProfile, OntologyNode } from '../types';
+import type { LearningDomainProfile } from '../extensions/learningProfile';
+import type { OntologyNode } from '../types';
 
 const PROFILE_SEED_TIMESTAMP = 0;
 
@@ -332,4 +333,4 @@ export const photographyProfile = {
       strengthSize: 'Small to large: lower to higher strength',
     },
   },
-} as const satisfies DomainProfile<PhotographyTypeNodeId>;
+} as const satisfies LearningDomainProfile<PhotographyTypeNodeId>;

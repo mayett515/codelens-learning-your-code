@@ -1,14 +1,14 @@
-import type { DomainProfile, MetadataFieldDefinition } from './types';
+import type { LearningDomainProfile, MetadataFieldDefinition } from './extensions/learningProfile';
 
 export function getMetadataField(
-  profile: DomainProfile,
+  profile: LearningDomainProfile,
   fieldId: string,
 ): MetadataFieldDefinition | undefined {
   return profile.metadataFields.find((f) => f.id === fieldId);
 }
 
 export function getMetadataFieldLabel(
-  profile: DomainProfile,
+  profile: LearningDomainProfile,
   fieldId: string,
   fallback: string,
 ): string {
@@ -16,7 +16,7 @@ export function getMetadataFieldLabel(
 }
 
 export function getMetadataFieldPlaceholder(
-  profile: DomainProfile,
+  profile: LearningDomainProfile,
   fieldId: string,
   fallback: string,
 ): string {

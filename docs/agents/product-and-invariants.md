@@ -1,123 +1,123 @@
-# Product meaning and invariants
-
-These are intended constraints for changes, not a claim that every existing
-path already enforces them. Known deviations live in the [baseline](baseline.md).
-
-## Product direction
-
-Kordex preserves meaning across interactions: what something is, how it relates
-to other things, why it was classified that way and how a person corrected it.
-The durable core should support multiple applications and domain profiles.
-CodeLens/RN is existing implementation material. The user has explicitly asked
-to set it aside when defining Kordex's target: neither preserving that product
-nor using its shell is required. Start from the cross-application capabilities.
-
-Use-case directions retained from the user's historical chats are codebase
-understanding exposed to tools/MCP, durable context and proposals for agents,
-domain models reused by applications, personal knowledge, and a future game
-system combining semantic descriptions with deterministic mechanics. These
-directions motivate inspectability and reusable boundaries. They do not establish
-a shipped SDK, daemon, generic rule interpreter, automatic agent system or engine.
-
-## Engineering rules: owner direction, 2026-11-09
-
-Kordex uses one mechanism for controlled changes of meaning, with domains on top.
-The owner confirms that engineering rules live as nodes in a scoped profile and
-use the existing proposal lifecycle; a separate rule record type or parallel
-acceptance mechanism is not an open alternative.
-
-The next domain is an independent engineering-rules base: generic engineering
-scheme in the base, SEO and Kordex refinements in sibling project branches.
-A deliberate correction to a base rule is a local node override. A new rule
-from experience is an evidence-backed proposal targeting the repository branch.
-This direction does not register the profile or change existing types by itself.
-
-On 2026-11-09 the owner accepted R1–R4 from the
-[fit interview](../reviews/2026-11-09-rule-model-interview.md):
-
-- R1: an explicit `rule` node kind, descriptive rather than executable authority.
-- R2: node provenance refers to retained evidence and the inspected source basis;
-  unknown earlier origin stays unknown through later edits.
-- R3: stable scoped node identity with immutable accepted versions and predecessor
-  history, distinct from replacement of pending proposals.
-- R4: an optional reconsideration date marks accepted knowledge due for review;
-  it does not silently expire or withdraw it.
-
-R3 and parent/child A1 use **one accepted-state history**: a scoped immutable
-revision identifies both a rule's accepted content and the parent basis used by
-a branch. See the [shared basis design](../reviews/2026-11-09-accepted-state-basis.md).
-This settles the representation principle, not all parent update/rebase behavior;
-B1/C1 and remaining parent/child policies are not adopted by this decision.
-First-use materialization and permanent unknown legacy origin remain in force.
-These are approved semantics to implement, not claims of shipped rule history.
-
-## Existing implementation vocabulary
-
-The terms and constraints below describe the existing profile/proposal design.
-They guide changes to that implementation. The engineering-rule direction above
-is decided; it does not approve every future domain's detailed type extensions.
-Product-wide intent and the
-capability inventory start at [the capability root](../capabilities/ROOT.md).
-
-| Concept | Meaning and boundary |
-| --- | --- |
-| Capture | A concrete learning record with source/context; not automatically reusable canonical knowledge |
-| Concept | A promoted reusable knowledge entry; graph concepts are not ontology categories |
-| OntologyNode | A semantic category in a profile; not a capture or graph-card instance |
-| DomainProfile | Runtime domain vocabulary and policy; coding and photography are independent bases |
-| ProfileDefinition | Persisted base definition used by versioned base apply; not every built-in is automatically materialized |
-| ProfileBranch | An overlay with a parent profile and branch kind; not a second independent base |
-| ProfileSelection | Base plus ordered selected branches; not a mutation target |
-| Correction evidence | Append-only observation of an actual user correction, including the active selection snapshot |
-| Proposal | Inert candidate change with explicit target, provenance and revision expectations |
-| Proposal event | Audit of a defined lifecycle/review action; not evidence that every action changed ontology |
-| ContextPack | Bounded assembled model context; not a new canonical database or authorization layer |
-| User-fit projection | Derived signals from scoped history; not model training or permission to apply changes |
-
-## Constraints to preserve
-
-1. **Scope survives the whole use case.** Preserve base identity through UI,
-   stores, services, rows, retrieval and promotion. IDs may collide across bases;
-   use scoped identity when comparing across them. Do not default an explicitly
-   known non-coding context to coding. Capture/concept `profileId` is base scope,
-   not a claim of full branch isolation.
-2. **Composition is derived.** Keep base definitions and inline branch overlays
-   as sources. Do not persist the composed profile as competing truth. The
-   selection path groups project, learning, then personal branches, retaining
-   order within each group; the raw overlay compositor has its own priority
-   contract. Preserve both contracts explicitly when changing composition.
-3. **Evidence is not a command.** Store actual correction facts with their full
-   selection snapshot. Proposal target selection belongs to the proposal flow;
-   it must not be retroactively written into historical correction evidence.
-4. **Generation cannot apply.** Conceptualize/checker/model output crosses a
-   schema and deterministic validation boundary. Creating a pending proposal
-   does not modify its target. Existing user capture edits and evidence writes
-   are distinct from ontology evolution and retain their own transaction owner.
-5. **Apply revalidates current state.** A preview is insufficient authority after
-   the target changes. Validate pending status, target identity, revision and
-   supported change against current state. Commit target update, conditional
-   proposal transition and corresponding audit together, or roll them back.
-6. **Lifecycle and freshness differ.** Current status vocabulary is `pending`,
-   `accepted`, `rejected`, `postponed`, `superseded`. Freshness is separately
-   derived. Do not invent `applied` as a persisted status from an old chat.
-   Edits/refreshes replace and supersede through the existing lifecycle service;
-   they do not silently rewrite history. Review events can record reject,
-   postpone or ask-why without a semantic apply.
-7. **Checker scope remains explicit.** The current checker is manually invoked,
-   branch-local and proposal-only. It validates evidence references, maps only
-   supported additive node/item-type candidates, dry-runs against current state
-   and skips existing pending duplicates. Preserve runtime caps. Base checking,
-   background checking and relationship/split/merge mutations require a separate
-   intentional product change, not reinterpretation of model output.
-8. **Consumers do not invent ontology policy.** UI, retrieval, graph and promotion
-   consume the selected profile contract. Display filtering is insufficient proof
-   that persistence and identity are correctly scoped.
-9. **Descriptions are not executable constraints.** A category's boundaries or
-   `isNot` prose do not implement a constraint solver. Future adapters must feed
-   supported validated operations into the existing review/apply ownership.
-
-Sources: [why this exists](../ONTOLOGY_PROFILE_REFACTOR/why_this_exists.md),
-[decision index](../ONTOLOGY_PROFILE_REFACTOR/README.md),
-[current types](../../packages/kordex-core/src/types.ts), and the
-[implementation map](module-map.md). Read the decision for the affected capability;
-this summary does not replace its exact schema or acceptance criteria.
+# Product meaning and invariants
+
+These are intended constraints for changes, not a claim that every existing
+path already enforces them. Known deviations live in the [baseline](baseline.md).
+
+## Product direction
+
+Kordex preserves meaning across interactions: what something is, how it relates
+to other things, why it was classified that way and how a person corrected it.
+The durable core should support multiple applications and domain profiles.
+CodeLens/RN is existing implementation material. The user has explicitly asked
+to set it aside when defining Kordex's target: neither preserving that product
+nor using its shell is required. Start from the cross-application capabilities.
+
+Use-case directions retained from the user's historical chats are codebase
+understanding exposed to tools/MCP, durable context and proposals for agents,
+domain models reused by applications, personal knowledge, and a future game
+system combining semantic descriptions with deterministic mechanics. These
+directions motivate inspectability and reusable boundaries. They do not establish
+a shipped SDK, daemon, generic rule interpreter, automatic agent system or engine.
+
+## Engineering rules: owner direction, 2026-11-09
+
+Kordex uses one mechanism for controlled changes of meaning, with domains on top.
+The owner confirms that engineering rules live as nodes in a scoped profile and
+use the existing proposal lifecycle; a separate rule record type or parallel
+acceptance mechanism is not an open alternative.
+
+The next domain is an independent engineering-rules base: generic engineering
+scheme in the base, SEO and Kordex refinements in sibling project branches.
+A deliberate correction to a base rule is a local node override. A new rule
+from experience is an evidence-backed proposal targeting the repository branch.
+This direction does not register the profile or change existing types by itself.
+
+On 2026-11-09 the owner accepted R1–R4 from the
+[fit interview](../reviews/2026-11-09-rule-model-interview.md):
+
+- R1: an explicit `rule` node kind, descriptive rather than executable authority.
+- R2: node provenance refers to retained evidence and the inspected source basis;
+  unknown earlier origin stays unknown through later edits.
+- R3: stable scoped node identity with immutable accepted versions and predecessor
+  history, distinct from replacement of pending proposals.
+- R4: an optional reconsideration date marks accepted knowledge due for review;
+  it does not silently expire or withdraw it.
+
+R3 and parent/child A1 use **one accepted-state history**: a scoped immutable
+revision identifies both a rule's accepted content and the parent basis used by
+a branch. See the [shared basis design](../reviews/2026-11-09-accepted-state-basis.md).
+This settles the representation principle, not all parent update/rebase behavior;
+B1/C1 and remaining parent/child policies are not adopted by this decision.
+First-use materialization and permanent unknown legacy origin remain in force.
+These are approved semantics to implement, not claims of shipped rule history.
+
+## Existing implementation vocabulary
+
+The terms and constraints below describe the existing profile/proposal design.
+They guide changes to that implementation. The engineering-rule direction above
+is decided; it does not approve every future domain's detailed type extensions.
+Product-wide intent and the
+capability inventory start at [the capability root](../capabilities/ROOT.md).
+
+| Concept | Meaning and boundary |
+| --- | --- |
+| Capture | A concrete learning record with source/context; not automatically reusable canonical knowledge |
+| Concept | A promoted reusable knowledge entry; graph concepts are not ontology categories |
+| OntologyNode | A semantic category in a profile; not a capture or graph-card instance |
+| DomainProfile | Runtime domain vocabulary and policy; coding and photography are independent bases |
+| ProfileDefinition | Persisted base definition used by versioned base apply; not every built-in is automatically materialized |
+| ProfileBranch | An overlay with a parent profile and branch kind; not a second independent base |
+| ProfileSelection | Base plus ordered selected branches; not a mutation target |
+| Correction evidence | Append-only observation of an actual user correction, including the active selection snapshot |
+| Proposal | Inert candidate change with explicit target, provenance and revision expectations |
+| Proposal event | Audit of a defined lifecycle/review action; not evidence that every action changed ontology |
+| ContextPack | Bounded assembled model context; not a new canonical database or authorization layer |
+| User-fit projection | Derived signals from scoped history; not model training or permission to apply changes |
+
+## Constraints to preserve
+
+1. **Scope survives the whole use case.** Preserve base identity through UI,
+   stores, services, rows, retrieval and promotion. IDs may collide across bases;
+   use scoped identity when comparing across them. Do not default an explicitly
+   known non-coding context to coding. Capture/concept `profileId` is base scope,
+   not a claim of full branch isolation.
+2. **Composition is derived.** Keep base definitions and inline branch overlays
+   as sources. Do not persist the composed profile as competing truth. The
+   selection path groups project, learning, then personal branches, retaining
+   order within each group; the raw overlay compositor has its own priority
+   contract. Preserve both contracts explicitly when changing composition.
+3. **Evidence is not a command.** Store actual correction facts with their full
+   selection snapshot. Proposal target selection belongs to the proposal flow;
+   it must not be retroactively written into historical correction evidence.
+4. **Generation cannot apply.** Conceptualize/checker/model output crosses a
+   schema and deterministic validation boundary. Creating a pending proposal
+   does not modify its target. Existing user capture edits and evidence writes
+   are distinct from ontology evolution and retain their own transaction owner.
+5. **Apply revalidates current state.** A preview is insufficient authority after
+   the target changes. Validate pending status, target identity, revision and
+   supported change against current state. Commit target update, conditional
+   proposal transition and corresponding audit together, or roll them back.
+6. **Lifecycle and freshness differ.** Current status vocabulary is `pending`,
+   `accepted`, `rejected`, `postponed`, `superseded`. Freshness is separately
+   derived. Do not invent `applied` as a persisted status from an old chat.
+   Edits/refreshes replace and supersede through the existing lifecycle service;
+   they do not silently rewrite history. Review events can record reject,
+   postpone or ask-why without a semantic apply.
+7. **Checker scope remains explicit.** The current checker is manually invoked,
+   branch-local and proposal-only. It validates evidence references, maps only
+   supported additive node/item-type candidates, dry-runs against current state
+   and skips existing pending duplicates. Preserve runtime caps. Base checking,
+   background checking and relationship/split/merge mutations require a separate
+   intentional product change, not reinterpretation of model output.
+8. **Consumers do not invent ontology policy.** UI, retrieval, graph and promotion
+   consume the selected profile contract. Display filtering is insufficient proof
+   that persistence and identity are correctly scoped.
+9. **Descriptions are not executable constraints.** A category's boundaries or
+   `isNot` prose do not implement a constraint solver. Future adapters must feed
+   supported validated operations into the existing review/apply ownership.
+
+Sources: [why this exists](../ONTOLOGY_PROFILE_REFACTOR/why_this_exists.md),
+[decision index](../ONTOLOGY_PROFILE_REFACTOR/README.md),
+[current types](../../packages/kordex-core/src/types.ts), and the
+[implementation map](module-map.md). Read the decision for the affected capability;
+this summary does not replace its exact schema or acceptance criteria.

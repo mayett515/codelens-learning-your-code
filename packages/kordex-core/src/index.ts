@@ -273,3 +273,5 @@ export { validateProfileDefinition } from './codecs/profileDefinition';
 export { parseProfileProposalEventDetails, validateProfileProposalEvent } from './codecs/profileProposalEvent';
 export { validateProjectProfileSelection } from './codecs/profileSelection';
 export { profileTrustSettingScopeKey, validateProfileTrustSetting, makeSuggestFirstProfileTrustSetting } from './codecs/profileTrustSetting';
+
+export type { LearningDomainProfile, LearningProfileDefinition, LearningProfileExtension } from './extensions/learningProfile';

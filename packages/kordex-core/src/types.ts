@@ -1,3 +1,6 @@
+import type { DomainLabelOverrides, MetadataFieldDefinition, GraphProfileOverrides } from './extensions/learningProfile';
+export type { DomainLabels, MetadataFieldDefinition, ExtractionProfile, EmbeddingProfile, RetrievalProfile, PromotionProfile, ReviewProfile, GraphProfile, DomainLabelOverrides, GraphProfileOverrides } from './extensions/learningProfile';
+
 export type OntologyNodeKind = 'category' | 'subcategory' | 'tag' | 'field' | 'relationshipType';
 export type OntologyNodeStatus = 'active' | 'suggested' | 'deprecated';
 export type OntologyNodeCreator = 'system' | 'user' | 'model';
@@ -25,138 +28,6 @@ export interface OntologyNode {
   createdBy: OntologyNodeCreator;
   createdAt: number;
   updatedAt: number;
-}
-
-export interface DomainLabels {
-  hubTitle: string;
-  captureSingular: string;
-  capturePlural: string;
-  itemSingular: string;
-  itemPlural: string;
-  saveAction: string;
-  reviewModeTitle: string;
-  strengthLabel: string;
-  bodyFieldLabel: string;
-  contextFieldLabel: string;
-  sourceFieldLabel: string;
-  originSectionTitle: string;
-  relationshipSectionTitle: string;
-  reviewEntryText: string;
-  conceptListTitle: string;
-  conceptListSortLabel: string;
-  conceptListEmptyLabel: string;
-  flashback: {
-    bannerPrefix: string;
-    fallbackTitle: string;
-    noMetadataLabel: string;
-    savedSectionTitle: string;
-    emptyLabel: string;
-    unknownDateLabel: string;
-    conceptCountTemplate: string;
-    conceptCountSingularLabel: string;
-    conceptCountPluralLabel: string;
-    captureCountTemplate: string;
-    captureCountSingularLabel: string;
-    captureCountPluralLabel: string;
-  };
-}
-
-export interface MetadataFieldDefinition {
-  id: string;
-  label: string;
-  placeholder?: string | undefined;
-  appliesTo: ReadonlyArray<'capture' | 'item'>;
-  kind: 'string' | 'stringList' | 'number' | 'boolean' | 'enum' | 'date' | 'json';
-  required: boolean;
-  description: string;
-  examples: readonly unknown[];
-  enumOptions?: ReadonlyArray<{ id: string; label: string; description?: string | undefined }> | undefined;
-}
-
-export interface ExtractionProfile {
-  assistantRole: string;
-  captureInstructions: string;
-  classificationInstructions: string;
-}
-
-export interface EmbeddingProfile {
-  captureTextFields: readonly string[];
-  itemTextFields: readonly string[];
-}
-
-export interface RetrievalProfile {
-  defaultHeader: string;
-  captureLabel: string;
-  itemLabel: string;
-  summaryLabel: string;
-  languageOrRuntimeLabel: string;
-  sourceLabel: string;
-}
-
-export interface PromotionProfile<TItemTypeNodeId extends string = string> {
-  defaultTypeNodeId: TItemTypeNodeId;
-  contextOnlyKeywords: readonly string[];
-}
-
-export interface ReviewProfile {
-  enabledLabel: string;
-  weakItemLabel: string;
-  thresholdSubtitle: string;
-  thresholdCloseLabel: string;
-  thresholdEmptyLabel: string;
-  reflectPromptTemplate: string;
-  reflectSubmitLabel: string;
-  reflectErrorLabel: string;
-  reflectPlaceholder: string;
-  resultSavedLabel: string;
-  resultDoneLabel: string;
-  resultContinueInChatLabel: string;
-  resultOpenItemLabel: string;
-  ratePromptTitle: string;
-  rateStrongLabel: string;
-  ratePartialLabel: string;
-  rateWeakLabel: string;
-  rateSkipLabel: string;
-  revealHideLabel: string;
-  revealShowLabel: string;
-}
-
-export interface GraphProfile<TItemTypeNodeId extends string = string> {
-  nodeColors: Readonly<Record<TItemTypeNodeId, string>>;
-  relationshipLabels: Readonly<Record<string, string>>;
-  relationshipSectionLabels: Readonly<Record<string, string>>;
-  screenTitle: string;
-  focusedScreenTitle: string;
-  focusedViewLabel: string;
-  fullViewLabel: string;
-  emptyLabel: string;
-  modeLabels: Readonly<Record<string, string>>;
-  statusLabels: {
-    loading: string;
-    unavailable: string;
-    retryAction: string;
-    emptyBody: string;
-    capBannerTemplate: string;
-  };
-  tooltipLabels: {
-    neverAccessed: string;
-    lastAccessedTemplate: string;
-    scoreTemplate: string;
-    strengthTemplate: string;
-    viewDetailAction: string;
-    dayAgoTemplate: string;
-    daySingularLabel: string;
-    dayPluralLabel: string;
-  };
-  legendHelperLabels: {
-    title: string;
-    recencyRecent: string;
-    recencyModerate: string;
-    recencyOld: string;
-    recencyStale: string;
-    strengthGradient: string;
-    strengthSize: string;
-  };
 }
 
 export type OntologyCorrectionSubjectKind = 'capture' | 'item';
@@ -216,21 +87,13 @@ export interface OntologyProfile<TItemTypeNodeId extends string = string> {
   relationshipTypeNodeIds: readonly string[];
 }
 
-export interface DomainProfile<TItemTypeNodeId extends string = string> {
+export type DomainProfile<TItemTypeNodeId extends string = string, TExtension extends object = object> = {
   id: string;
   version: number;
   label: string;
   description: string;
-  labels: DomainLabels;
   ontology: OntologyProfile<TItemTypeNodeId>;
-  metadataFields: readonly MetadataFieldDefinition[];
-  extraction: ExtractionProfile;
-  embedding: EmbeddingProfile;
-  retrieval: RetrievalProfile;
-  promotion: PromotionProfile<TItemTypeNodeId>;
-  review: ReviewProfile;
-  graph: GraphProfile<TItemTypeNodeId>;
-}
+} & TExtension;
 
 // ---------------------------------------------------------------------------
 // Profile overlay / branch composition types
@@ -251,31 +114,6 @@ export interface ProfileBranch<TItemTypeNodeId extends string = string> {
   updatedAt: number;
 }
 
-export type DomainLabelOverrides = Partial<Omit<DomainLabels, 'flashback'>> & {
-  flashback?: Partial<DomainLabels['flashback']> | undefined;
-};
-
-export type GraphProfileOverrides<TItemTypeNodeId extends string = string> = Partial<
-  Omit<
-    GraphProfile<TItemTypeNodeId>,
-    | 'nodeColors'
-    | 'relationshipLabels'
-    | 'relationshipSectionLabels'
-    | 'modeLabels'
-    | 'statusLabels'
-    | 'tooltipLabels'
-    | 'legendHelperLabels'
-  >
-> & {
-  nodeColors?: Partial<Record<TItemTypeNodeId, string>> | undefined;
-  relationshipLabels?: Record<string, string> | undefined;
-  relationshipSectionLabels?: Record<string, string> | undefined;
-  modeLabels?: Record<string, string> | undefined;
-  statusLabels?: Partial<GraphProfile<TItemTypeNodeId>['statusLabels']> | undefined;
-  tooltipLabels?: Partial<GraphProfile<TItemTypeNodeId>['tooltipLabels']> | undefined;
-  legendHelperLabels?: Partial<GraphProfile<TItemTypeNodeId>['legendHelperLabels']> | undefined;
-};
-
 // ---------------------------------------------------------------------------
 // Active profile source: an explicit, caller-owned bundle of base + overlays.
 // ---------------------------------------------------------------------------
@@ -285,8 +123,8 @@ export type GraphProfileOverrides<TItemTypeNodeId extends string = string> = Par
  * Callers pass this to `resolveActiveDomainProfile` to obtain a composed
  * `DomainProfile` without any persistence, UI, global state, or mutation.
  */
-export interface ActiveDomainProfileSource<TItemTypeNodeId extends string = string> {
-  baseProfile: DomainProfile<TItemTypeNodeId>;
+export interface ActiveDomainProfileSource<TItemTypeNodeId extends string = string, TExtension extends object = object> {
+  baseProfile: DomainProfile<TItemTypeNodeId, TExtension>;
   overlays?: readonly ProfileOverlay<TItemTypeNodeId>[] | null | undefined;
 }
 
@@ -437,26 +275,26 @@ export interface DomainProfileSummary {
   description: string;
 }
 
-export interface ProfileSource<TItemTypeNodeId extends string = string> {
+export interface ProfileSource<TItemTypeNodeId extends string = string, TExtension extends object = object> {
   id: string;
-  getProfile(id: string): DomainProfile<TItemTypeNodeId> | null;
+  getProfile(id: string): DomainProfile<TItemTypeNodeId, TExtension> | null;
   listProfiles(): readonly DomainProfileSummary[];
 }
 
-export interface ProfileRegistry<TItemTypeNodeId extends string = string> {
-  getProfile(id: string): DomainProfile<TItemTypeNodeId>;
+export interface ProfileRegistry<TItemTypeNodeId extends string = string, TExtension extends object = object> {
+  getProfile(id: string): DomainProfile<TItemTypeNodeId, TExtension>;
   listProfiles(): readonly DomainProfileSummary[];
 }
 
 export type ProfileDefinitionSourceKind = 'built_in' | 'user' | 'imported' | 'adapter';
 
-export interface ProfileDefinition<TItemTypeNodeId extends string = string> {
+export interface ProfileDefinition<TItemTypeNodeId extends string = string, TExtension extends object = object> {
   id: string;
   label: string;
   description: string;
   version: number;
   sourceKind: ProfileDefinitionSourceKind;
-  profile: DomainProfile<TItemTypeNodeId>;
+  profile: DomainProfile<TItemTypeNodeId, TExtension>;
   createdAt: number;
   updatedAt: number;
 }
@@ -489,8 +327,8 @@ export interface ProfileBranchStore<TItemTypeNodeId extends string = string> {
  * Use this to supply project, learning, and personal overlays separately,
  * then normalize them into an `ActiveDomainProfileSource`.
  */
-export interface ActiveDomainProfileActivationInput<TItemTypeNodeId extends string = string> {
-  baseProfile: DomainProfile<TItemTypeNodeId>;
+export interface ActiveDomainProfileActivationInput<TItemTypeNodeId extends string = string, TExtension extends object = object> {
+  baseProfile: DomainProfile<TItemTypeNodeId, TExtension>;
   projectOverlays?: readonly ProfileOverlay<TItemTypeNodeId>[] | null | undefined;
   learningOverlays?: readonly ProfileOverlay<TItemTypeNodeId>[] | null | undefined;
   personalOverlays?: readonly ProfileOverlay<TItemTypeNodeId>[] | null | undefined;

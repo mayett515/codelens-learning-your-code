@@ -1,10 +1,11 @@
+import type { LearningDomainProfile as DomainProfile } from '../extensions/learningProfile';
 import { describe, expect, it } from 'vitest';
 import {
   BaseProfileVersioningError,
   assertBaseProfileProposalTargetsCurrentVersion,
 } from '../baseProfileVersioning';
 import { codingProfile } from '../profiles/codingProfile';
-import type { DomainProfile, ProfileChangeProposal, ProfilePatch } from '../types';
+import type { ProfileChangeProposal, ProfilePatch } from '../types';
 
 function patch(): ProfilePatch {
   return {

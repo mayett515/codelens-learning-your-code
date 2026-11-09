@@ -16,6 +16,9 @@ evidence:
   - path: packages/kordex-core/scripts/verify-isolation.mjs
     kind: scenario
     covers: Independent locked install, compilation, domain tests and packed consumer without app dependencies
+  - path: packages/kordex-core/src/__tests__/headlessProfile.test.ts
+    kind: unit
+    covers: Bare semantic profile validation, registry, branch selection and composition without learning fields
 gaps: []
 reason: ""
 revisit: ""

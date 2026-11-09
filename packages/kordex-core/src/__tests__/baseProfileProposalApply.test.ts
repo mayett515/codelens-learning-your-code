@@ -1,3 +1,4 @@
+import type { LearningDomainProfile as DomainProfile, LearningProfileDefinition as ProfileDefinition } from '../extensions/learningProfile';
 import { describe, expect, it } from 'vitest';
 import { BaseProfileVersioningError } from '../baseProfileVersioning';
 import {
@@ -8,10 +9,10 @@ import {
 } from '../baseProfileProposalApply';
 import { codingProfile } from '../profiles/codingProfile';
 import type {
-  DomainProfile,
+
   OntologyNode,
   ProfileChangeProposal,
-  ProfileDefinition,
+
   ProfilePatch,
 } from '../types';
 

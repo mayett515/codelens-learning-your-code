@@ -15,9 +15,9 @@ import type {
  *   by reference.
  * - If overlays are present, returns `composeDomainProfile(source.baseProfile, overlays)`.
  */
-export function resolveActiveDomainProfile<TItemTypeNodeId extends string = string>(
-  source: ActiveDomainProfileSource<TItemTypeNodeId>,
-): DomainProfile<TItemTypeNodeId> {
+export function resolveActiveDomainProfile<TItemTypeNodeId extends string = string, TExtension extends object = object>(
+  source: ActiveDomainProfileSource<TItemTypeNodeId, TExtension>,
+): DomainProfile<TItemTypeNodeId, TExtension> {
   const overlays = source.overlays;
   if (!overlays || overlays.length === 0) {
     return source.baseProfile;
@@ -54,9 +54,9 @@ function flattenGroup<TItemTypeNodeId extends string>(
  * When all overlay groups are omitted, `null`, or empty, returns a source
  * with no `overlays` property.
  */
-export function createActiveDomainProfileSource<TItemTypeNodeId extends string = string>(
-  input: ActiveDomainProfileActivationInput<TItemTypeNodeId>,
-): ActiveDomainProfileSource<TItemTypeNodeId> {
+export function createActiveDomainProfileSource<TItemTypeNodeId extends string = string, TExtension extends object = object>(
+  input: ActiveDomainProfileActivationInput<TItemTypeNodeId, TExtension>,
+): ActiveDomainProfileSource<TItemTypeNodeId, TExtension> {
   const overlays = [
     ...flattenGroup(input.projectOverlays),
     ...flattenGroup(input.learningOverlays),
@@ -75,8 +75,8 @@ export function createActiveDomainProfileSource<TItemTypeNodeId extends string =
  *
  * Equivalent to `resolveActiveDomainProfile(createActiveDomainProfileSource(input))`.
  */
-export function resolveActiveDomainProfileFromActivationInput<TItemTypeNodeId extends string = string>(
-  input: ActiveDomainProfileActivationInput<TItemTypeNodeId>,
-): DomainProfile<TItemTypeNodeId> {
+export function resolveActiveDomainProfileFromActivationInput<TItemTypeNodeId extends string = string, TExtension extends object = object>(
+  input: ActiveDomainProfileActivationInput<TItemTypeNodeId, TExtension>,
+): DomainProfile<TItemTypeNodeId, TExtension> {
   return resolveActiveDomainProfile(createActiveDomainProfileSource(input));
 }

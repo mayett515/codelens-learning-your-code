@@ -1,8 +1,9 @@
 import type { ProfileDefinition, ProfileDefinitionSourceKind } from '../types';
 import type { profileDefinitions } from '../data/schema';
-import { ProfileDefinitionSchema, parseProfileJson, validateDefinitionProfileMatch } from '@kordex/core/codecs/profileDefinition';
+import { LearningProfileDefinitionSchema as ProfileDefinitionSchema, parseProfileJson, validateDefinitionProfileMatch } from '@kordex/core/codecs/profileDefinition';
 
-export * from '@kordex/core/codecs/profileDefinition';
+export { parseProfileJson, validateDefinitionProfileMatch } from '@kordex/core/codecs/profileDefinition';
+export { LearningProfileDefinitionSchema as ProfileDefinitionSchema, validateLearningProfileDefinition as validateProfileDefinition } from '@kordex/core/codecs/profileDefinition';
 
 
 /**

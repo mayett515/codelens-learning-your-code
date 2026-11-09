@@ -39,9 +39,10 @@ node docs/reviews/fixtures/rule-profile-fit.cjs
 
 Both exited 0; the [probe](fixtures/rule-profile-fit.cjs) reports seven checks.
 It uses an in-memory engineering base and Kordex/SEO branches. **Current
-`category` kind and borrowed presentation fields are test scaffolding only**;
+`category` kind is test scaffolding only**;
 this is neither a registered third profile nor approval to encode rules as
-categories. No production type, runtime behavior or storage was changed.
+categories. The original probe borrowed presentation fields. K1b now runs it
+with a bare semantic profile; no storage or rule-node behavior is introduced.
 
 1. A pending proposal adding the stale-apply node produces an accepted candidate
    and a composed branch view. Original base/branch inputs remain unchanged.
@@ -74,9 +75,11 @@ names are illustrative; scope plus node identity matters, not the display label.
 | Improve the rule | A new pending proposal deliberately replaces the current version. On acceptance, preserve the previous accepted content and explicit predecessor relation. The prior acceptance remains a historical fact; do not repurpose pending-proposal supersession to erase it. |
 | Reject stale work | A competing proposal prepared at branch 10 must fail after branch 11 is accepted, with no partial node/status/audit writes. Reuse the existing freshness decision at the new transactional owner. |
 
-## Four remaining owner choices
+## Four owner choices — accepted 2026-11-09
 
-These are proposed semantics, **not approved types or storage design**.
+The owner accepted all four recommended options after Fable reported a clean
+review and seven passing probes. These are approved semantics; their production
+implementation remains separate work.
 
 | Choice | Recommended option | Alternative and consequence |
 | --- | --- | --- |
@@ -85,17 +88,17 @@ These are proposed semantics, **not approved types or storage design**.
 | R3: accepted replacement | Keep the stable scoped node identity for revisions of the same rule; preserve each accepted version and its predecessor through the common history/audit mechanism. Pending-proposal replacement and accepted-content history stay distinct. | Mint a new node ID for every wording revision and explicitly retire/link its predecessor. This makes revisions separate nodes and requires every consumer to follow retirement/replacement. Truly different meanings already need different IDs under Doc 26; R3 concerns revisions of one rule. |
 | R4: reconsideration | An optional due date marks an accepted rule as due for review. Retrieval still returns it as accepted, visibly due, until an explicit replacement/withdrawal decision. No date means no scheduled review, not “verified forever.” | Treat the date as expiry and exclude the rule from default retrieval. This changes availability automatically and needs explicit fallback/empty-context behavior. A proposal's stale target and a rule's review date remain different facts. |
 
-Recommendation: R1–R4 as listed. The owner decides these before type changes or
-storage design. Detailed schema representation and storage layout are not
-specified here.
+Decision: R1–R4 as listed. R3 and A1 use the
+[same accepted-state basis](2026-11-09-accepted-state-basis.md).
+Detailed storage schema and layout are not specified here.
 
 ## Additional fit limits kept visible
 
-- Current `DomainProfile` requires learning/UI/promotion/retrieval/graph fields.
-  The probe borrows these as fixtures; this coupling must not silently become
-  product policy for a headless engineering profile. Keep its later decoupling
-  separate from the rule semantics and preserve existing app compatibility.
-- Parent/child A1/B1/C1 remain undecided. The probe holds the base fixed. Whole
+- K1b separates the mandatory learning/UI fields into an explicit optional
+  extension. The probe now uses a bare profile. This removes presentation
+  scaffolding, but does not implement R1-R4 or the persisted lifecycle.
+- A1 shares its history basis with R3; remaining parent update policies and
+  B1/C1 remain undecided. The probe holds the base fixed. Whole
   overrides do not track the copied parent basis; branch freshness does not
   certify that a changed parent leaves an override valid. No automatic SEO-to-
   Kordex inheritance, parent update, upward merge or collision policy is approved

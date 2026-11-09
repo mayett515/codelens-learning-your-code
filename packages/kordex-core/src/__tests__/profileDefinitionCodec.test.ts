@@ -1,7 +1,8 @@
+import type { LearningDomainProfile as DomainProfile, LearningProfileDefinition as ProfileDefinition } from '../extensions/learningProfile';
 import { describe, expect, it } from 'vitest';
 import { validateProfileDefinition } from '../codecs/profileDefinition';
 import { codingProfile } from '../profiles/codingProfile';
-import type { DomainProfile, OntologyNode, ProfileDefinition } from '../types';
+import type { OntologyNode, } from '../types';
 
 // ---------------------------------------------------------------------------
 // Test fixtures

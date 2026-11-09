@@ -1,3 +1,4 @@
+import type { LearningDomainProfile as DomainProfile, LearningProfileDefinition as ProfileDefinition } from '../extensions/learningProfile';
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -10,7 +11,7 @@ import {
   toDomainProfileSummary,
 } from '../profileRegistry';
 import { codingProfile } from '../profiles/codingProfile';
-import type { DomainProfile, OntologyNode, ProfileDefinition } from '../types';
+import type { OntologyNode, } from '../types';
 
 function makeTestNode(id: string, label?: string): OntologyNode {
   return {

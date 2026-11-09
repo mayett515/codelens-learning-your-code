@@ -1,6 +1,7 @@
+import type { LearningDomainProfile as DomainProfile } from '../extensions/learningProfile';
 import { describe, expect, it } from 'vitest';
 import { composeDomainProfile } from '../profileComposition';
-import type { BoundaryRule, DomainProfile, OntologyNode, ProfileOverlay } from '../types';
+import type { BoundaryRule, OntologyNode, ProfileOverlay } from '../types';
 import { codingProfile } from '../profiles/codingProfile';
 
 // ---------------------------------------------------------------------------

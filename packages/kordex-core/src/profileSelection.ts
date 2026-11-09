@@ -14,8 +14,8 @@ import type {
  * Branches are returned in normalized kind order: project, learning, personal.
  * Order within each kind matches the order specified in the selection arrays.
  */
-export interface ResolvedProfileSelection<TItemTypeNodeId extends string = string> {
-  baseProfile: DomainProfile<TItemTypeNodeId>;
+export interface ResolvedProfileSelection<TItemTypeNodeId extends string = string, TExtension extends object = object> {
+  baseProfile: DomainProfile<TItemTypeNodeId, TExtension>;
   branches: ProfileBranch<TItemTypeNodeId>[];
 }
 
@@ -100,11 +100,11 @@ function resolveIds<TItemTypeNodeId extends string>(
  * - Returns branches in normalized kind order: project, learning, personal.
  * - Preserves selection order within each kind.
  */
-export function resolveProfileSelection<TItemTypeNodeId extends string = string>(input: {
+export function resolveProfileSelection<TItemTypeNodeId extends string = string, TExtension extends object = object>(input: {
   selection: ProfileSelection;
-  baseProfile: DomainProfile<TItemTypeNodeId>;
+  baseProfile: DomainProfile<TItemTypeNodeId, TExtension>;
   branches: readonly ProfileBranch<TItemTypeNodeId>[];
-}): ResolvedProfileSelection<TItemTypeNodeId> {
+}): ResolvedProfileSelection<TItemTypeNodeId, TExtension> {
   if (input.selection.baseProfileId !== input.baseProfile.id) {
     throw new Error(
       `Selection baseProfileId "${input.selection.baseProfileId}" does not match ` +
@@ -135,11 +135,11 @@ export function resolveProfileSelection<TItemTypeNodeId extends string = string>
  * - Returns the base profile by reference when no branches are selected.
  * - Throws on baseProfileId mismatch, missing/wrong-kind branch id, or foreign parent.
  */
-export function composeRuntimeDomainProfileFromSelection<TItemTypeNodeId extends string = string>(input: {
+export function composeRuntimeDomainProfileFromSelection<TItemTypeNodeId extends string = string, TExtension extends object = object>(input: {
   selection: ProfileSelection;
-  baseProfile: DomainProfile<TItemTypeNodeId>;
+  baseProfile: DomainProfile<TItemTypeNodeId, TExtension>;
   branches: readonly ProfileBranch<TItemTypeNodeId>[];
-}): DomainProfile<TItemTypeNodeId> {
+}): DomainProfile<TItemTypeNodeId, TExtension> {
   const resolved = resolveProfileSelection(input);
   return composeRuntimeDomainProfileFromBranches({
     baseProfile: resolved.baseProfile,

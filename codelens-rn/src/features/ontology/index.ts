@@ -310,7 +310,7 @@ export function getActiveDomainProfile(overlays: readonly ProfileOverlay<string>
 export function getActiveDomainProfile(
   overlays?: readonly ProfileOverlay<string>[],
 ): DomainProfile<string> {
-  return resolveActiveDomainProfile<string>({
+  return resolveActiveDomainProfile({
     baseProfile: codingProfile as DomainProfile<string>,
     overlays,
   });

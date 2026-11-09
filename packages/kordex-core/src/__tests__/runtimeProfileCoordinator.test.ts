@@ -1,8 +1,9 @@
+import type { LearningDomainProfile as DomainProfile } from '../extensions/learningProfile';
 import { describe, expect, it } from 'vitest';
 import { composeRuntimeDomainProfile } from '../runtimeProfileCoordinator';
 import { resolveActiveDomainProfileFromActivationInput } from '../profileActivation';
 import { codingProfile } from '../profiles/codingProfile';
-import type { DomainProfile, OntologyNode, ProfileOverlay } from '../types';
+import type { OntologyNode, ProfileOverlay } from '../types';
 
 function makeTestNode(id: string): OntologyNode {
   return {
