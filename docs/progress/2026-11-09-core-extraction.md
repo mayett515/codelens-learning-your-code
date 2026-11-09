@@ -1,7 +1,7 @@
 # K1 extraction report — 2026-11-09
 
-Owner-approved larger cut implemented in `packages/kordex-core` on
-`codex/kordex-rule-leaf-adoption`. Baseline: `a2efaee`. Stop after K1 for
+Owner-approved larger cut implemented in `packages/kordex-core` in commit
+`8a4b851` on `codex/kordex-rule-leaf-adoption`. Baseline: `a2efaee`. Stop after K1 for
 Fable review; no K2 storage, rule-model implementation or merge into main.
 
 ## Result and responsibility
@@ -26,6 +26,14 @@ staying `implemented` for unchanged narrow responsibilities. The former planned
 to explicit source resolution through an independently executable package. App
 leaf states/gaps remain unchanged; one freshness-test evidence path moved.
 Discovery roots and generated map now include the package.
+
+History check after commit: default `git log --follow` reaches pre-extraction
+history for 59 of the 60 moved source/test files. The heavily split
+`ontologyCorrectionEvidenceCodec.test.ts` needs `git log --follow
+--find-renames=30% -- packages/kordex-core/src/__tests__/ontologyCorrectionEvidenceCodec.test.ts`;
+that also reaches the original commits. Compatibility files at the old paths
+can make a default diff display additions/rewrites rather than renames; history
+was not rewritten or discarded.
 
 ## Resolution
 
@@ -83,9 +91,17 @@ fixtures/imports, not a newly lint-clean core. No lint rule was disabled.
 
 ## Remote evidence
 
-The workflow has separate repository, isolated-core and app jobs. Actual remote
-results will be recorded after observing the K1 run; configuration alone is not
-a passed CI claim.
+Observed on 2026-11-09 for `8a4b851fa0b150860c49b05eb33e5122e020c2b6`:
+
+- [Pull-request run](https://github.com/mayett515/codelens-learning-your-code/actions/runs/42706433908): success.
+- [Push run](https://github.com/mayett515/codelens-learning-your-code/actions/runs/42706424761): success.
+
+Both runs completed all three jobs successfully: repository checks, standalone
+core/isolated package, and application tests/compiler. The core job ran the
+independent install, 359 tests and packed-consumer smoke on Linux/Node 24; the
+app job built core, installed the app, ran its suite/compiler and verified the
+packed dependency and shared Zod. This is observed execution, not a workflow-only
+claim. [PR 1](https://github.com/mayett515/codelens-learning-your-code/pull/1) remains open.
 
 ## Limits and next step
 

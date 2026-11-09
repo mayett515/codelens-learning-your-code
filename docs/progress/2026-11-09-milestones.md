@@ -408,3 +408,8 @@ compiler, packed-consumer smoke and 32 tooling fixtures. The
 [test reconciliation](2026-11-09-core-test-reconciliation.md) accounts for every
 moved/split file. Existing app/native/persistence gaps remain; no driver repair.
 K1 stops for review. Rule-model choice precedes storage design and K3.
+
+K1 committed as `8a4b851`. Both observed remote runs passed all three jobs:
+[PR run](https://github.com/mayett515/codelens-learning-your-code/actions/runs/42706433908)
+and [push run](https://github.com/mayett515/codelens-learning-your-code/actions/runs/42706424761).
+K1 is complete and stopped for review; PR 1 remains open, not merged.

@@ -9,7 +9,7 @@ previous slice was committed as `75f608d`; no transaction fix was started.
 | Step | Deliverable and proof | Current state |
 | --- | --- | --- |
 | K0: inventory and boundary | Read-only module/test dependency audit; exact core exports and app compatibility proposal; owner approval before moving files | Complete; owner approved the larger cut with pinned Zod, optional profiles and no speculative ports |
-| K1: structural extraction | Standalone package with no app runtime/type dependency; existing app assertions preserved; isolated build/tests and packed consumer | Local isolation passed; stop for review. Actual CI evidence belongs in the [K1 report](2026-11-09-core-extraction.md) |
+| K1: structural extraction | Standalone package with no app runtime/type dependency; existing app assertions preserved; isolated build/tests and packed consumer | Complete at `8a4b851`; local proof and both remote runs pass. Stopped for review; [evidence](2026-11-09-core-extraction.md) |
 | K2: desktop persistence | One local adapter behind core-owned ports; current-state checks and real rollback after each write, reopen and concurrency proof | Not started; rule-model decision before storage design. Mobile defect is not a prerequisite repair |
 | K3: headless rule lifecycle (former M5) | CLI: one experience -> proposed rule -> source/scope validation -> explicit acceptance -> restart retrieval -> traceable replacement; stale proposal rejected | Planned; focused rule-model interview before schema, not after building it |
 | K4: read-only MCP | Agent retrieves only accepted knowledge with source, scope and revision; pending, replaced and other-scope records cannot masquerade as current accepted rules | Planned after K3 |
