@@ -305,3 +305,29 @@ The three requested follow-ups are separate commits:
 
 After remote verification, stop before M1c. Its ownership decision remains with
 the user, and Fable's design-note review is still pending. No merge is authorized.
+
+## Fable design review received; M1c options prepared
+
+On 2026-11-09 the user supplied the subsequent positive design-note review.
+Fable recommends A1 with a copied-node basis, composition-first B1, deferred
+edges/chains and shared lifecycle vocabulary without a generic interpreter.
+These are reviewer recommendations, not the user's product decisions.
+
+The design note now includes the two requested refinements. The
+[M1c option sheet](../reviews/2026-11-09-m1c-profile-ownership-options.md) compares
+ownership at first approved edit, at first use, or never for built-in IDs. It
+states the release-drift issue precisely: both inspected built-ins declare
+version 1, and their content can change without the numeric guard detecting it;
+no historical release frequency was established. Node-local basis does not guard
+all profile-wide dependencies.
+
+Scope: documentation only, inspected source at `d020028`; bootstrap/base-apply
+leaves stay partial. No failing behavior test is appropriate because this slice
+does not implement a policy. Runtime/database/backup experiments were not run;
+their required proof is specified for the later implementation. Await the user's
+M1c ownership choice. A-C and M4 remain unapproved; no merge.
+
+Local verification for this documentation slice: `npm --prefix tools run check`
+passed (tooling compiler, 27/27 fixtures, repository metadata/link checks), and
+`git diff --check` passed. The application suite/compiler were not rerun locally
+for unchanged runtime code. No new database, native or backup behavior is proved.

@@ -233,3 +233,18 @@ The [milestone record](../progress/2026-11-09-milestones.md) records the correct
 collision fixture, failing-first profile loss, 1139 passing app tests, compiler
 success, unchanged lint baseline and the 27-test tooling gate. This is the user's
 requested Fable review checkpoint before M1c ownership is decided.
+
+## 2026-11-09: Fable design review and M1c decision preparation
+
+The user supplied Fable's positive review of the parent/child design. The
+[note](../reviews/2026-11-09-parent-child-semantics-design.md) now distinguishes
+a copied parent-node basis from a numeric base version and prioritizes the pure
+composition backstop if B1 is approved. Storage, backup and external-dependency
+limits are explicit; the recommendations remain unadopted.
+
+The [M1c option sheet](../reviews/2026-11-09-m1c-profile-ownership-options.md)
+compares first-edit materialization, first-use materialization and uneditable
+templates against Doc 06 and same-version bundled-content changes. It records
+Fable's preference for the first and Astra's preference for the second, without
+choosing for the user. Runtime source and backup paths were inspected, not
+executed. No application, schema, dependency or leaf status changed.

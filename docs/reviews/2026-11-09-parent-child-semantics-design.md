@@ -244,6 +244,26 @@ fork; replace the local decision; postpone. Only a successful review records a
 new basis. A parent version without old content supports detection, not a
 reliable three-way explanation.
 
+**Review refinement, 2026-11-09 (still proposed):** prefer storing the copied
+parent node itself beside each override, with its parent scope/node identity
+and a versioned encoding. Compare that recorded node with the current parent
+node, not just the profile's numeric version. This detects a changed node even
+when a bundled profile keeps its version number, avoids invalidating this
+override for an unrelated node edit, and supplies the old side of a three-way
+comparison. It does not detect all dependencies: vocabulary, parent hierarchy
+or policy outside the copied node may also matter. Record/check such dependencies
+before claiming the override remains semantically valid. Define comparison over
+validated data; object identity or arbitrary JSON key order is not a revision.
+
+Cost: one additional parent-node snapshot per recorded override (plus retained
+replacement history), larger branch JSON/backups, and explicit codec/format
+compatibility work. Old clients must not silently discard the basis and call a
+restored override verified. Legacy overrides have no recoverable basis merely
+because today's parent is available: recommend marked inspection-only reading
+and blocking dependent apply until explicit review. These are recommendations,
+not a new persisted shape or an adopted legacy policy. The release/ownership
+interaction is detailed in the [M1c options](2026-11-09-m1c-profile-ownership-options.md).
+
 ### B. IDs that collide as scopes evolve
 
 | Option | Law consequences and tradeoff | Existing data and compatibility | Smallest proof slice |
@@ -258,6 +278,17 @@ B2 only when simultaneous same-ID scoped entities in one runtime are a concrete
 requirement. Any re-ID must name which entity changes and preserve traceability;
 rename the incoming addition where possible rather than silently editing a
 child's established references. That resolution is still an owner choice.
+
+**Review refinement, 2026-11-09:** once B1 is approved, start with the pure
+composition backstop. It must report conflicting additions from base/branches,
+siblings, legacy additions and restored/imported rows instead of publishing a
+successful view with a silently skipped node. Preserve the separate deliberate
+replacement operation and its declared precedence; do not reject every repeated
+ID indiscriminately. This first slice needs failing collision fixtures and valid
+replacement regressions, then caller handling of the explicit failure. It does
+not prove base-apply atomicity or repair imports. The base transaction check and
+its concurrent-child/rollback proof follow separately. No B1 implementation is
+authorized by this sequencing recommendation.
 
 ### C. Typed relations between scoped nodes
 
