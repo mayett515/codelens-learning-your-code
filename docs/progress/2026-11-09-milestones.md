@@ -1,5 +1,11 @@
 # Milestone execution — 2026-11-09
 
+**Current direction:** the owner replaced the app-first sequence with the
+[core roadmap](2026-11-09-core-roadmap.md). App M1c, backup/adoption UI, mobile
+transaction repair and native tooling are stopped. The completed decision and
+diagnostic slice is committed as `75f608d`; no driver fix began. The historical
+sequence and stop decisions below remain evidence, not today's execution order.
+
 User authorization: work in order on a separate branch, commit each bounded
 slice, push and open a PR. No merge into main, force-push or history rewriting.
 Stop for product decisions, unavailable required checks, scope/dependency
@@ -363,3 +369,31 @@ the generated map now includes the rollback gap. `node --check` on the diagnosti
 and `git diff --check` passed. These checks do not turn its failed rollback
 assertion into a passing guarantee. The default application suite does not run
 this standalone diagnostic; no local full-suite rerun is claimed for this slice.
+
+## Owner direction changed: inventory complete, extraction boundary pending
+
+The user explicitly cancelled mobile-driver repair and app M1c work, including
+native tooling. No repair implementation was started. The combined instruction
+adds a read-only MCP surface after the standalone CLI rule lifecycle. See the
+[current roadmap](2026-11-09-core-roadmap.md).
+
+Read-only application inventory: 69 modules, 22 passing the unchanged strict
+runtime decision-import checker and 47 reported. Fable's narrower 33-module
+grouping (24 top-level, seven codecs, two profiles) has only Zod as an external
+runtime dependency. All seven codecs additionally reference app DB row types;
+that distinction and 52 ontology test imports/mocks are recorded in the
+[inventory](../reviews/2026-11-09-core-module-inventory.md).
+
+The [proposed package cut](../reviews/2026-11-09-core-package-boundary.md) includes
+22 top-level mechanics/validation users, domain-validation portions of seven
+codecs, optional seed profiles, explicit storage/atomic ports, and preserved app
+facades/row mapping. Zod is retained, not replaced or upgraded. No package,
+dependency, runtime source or schema has been created/changed. New leaves remain
+planned; app leaves and their known gaps are unchanged by this direction slice.
+Stop here for owner approval of the package boundary, with Fable review invited.
+
+Direction/inventory slice verification: `npm --prefix tools run generate` and
+`npm --prefix tools run check` passed, including the tooling compiler, 27/27
+fixtures and repository links/metadata. `git diff --check` passed. The runtime
+source and tests were inspected without changing or executing application code;
+no standalone build, package extraction or core persistence proof is claimed.

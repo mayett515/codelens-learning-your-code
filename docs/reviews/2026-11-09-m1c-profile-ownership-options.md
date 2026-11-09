@@ -1,5 +1,10 @@
 # M1c: ownership of editable built-in profiles
 
+Later owner direction: these decisions remain core-semantic input, but mobile
+implementation and driver repair are stopped. Follow the
+[core roadmap](../progress/2026-11-09-core-roadmap.md); the historical stop/repair
+sequence below is superseded.
+
 Options inspected 2026-11-09 at `d020028`. Subsequently the user selected
 **materialize on first use** (option 2 in this sheet). Fable changed position
 and now recommends the same as Astra. The accepted contract, including the

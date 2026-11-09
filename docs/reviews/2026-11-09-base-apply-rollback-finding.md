@@ -1,5 +1,10 @@
 # Base apply commits before asynchronous work finishes
 
+**Later owner direction, 2026-11-09:** keep this finding open; do not repair the
+mobile driver. No fix was begun. The new [core roadmap](../progress/2026-11-09-core-roadmap.md)
+proves atomicity in an independent desktop adapter instead. The proposed repair
+below records the earlier response to the defect, not an active work order.
+
 Reproduced 2026-11-09 on application revision `97a5c76`, before any M1c runtime
 change. This is an existing persistence defect, not a materialization regression.
 

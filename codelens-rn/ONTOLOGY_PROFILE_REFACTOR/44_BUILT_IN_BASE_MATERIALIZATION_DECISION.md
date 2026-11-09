@@ -4,7 +4,11 @@ Decision accepted by the user on 2026-11-09: **materialize on first use**.
 Astra and Fable now recommend the same option. The user also selected explicit
 adoption of today's template for legacy installations with unrecoverable origin.
 This contract is not an implementation claim. Both M1c leaves stay `partial`.
-Implementation is stopped at the [real rollback finding](../../docs/reviews/2026-11-09-base-apply-rollback-finding.md).
+The later owner direction stops all app implementation, including repair of the
+[real rollback finding](../../docs/reviews/2026-11-09-base-apply-rollback-finding.md).
+Keep these semantics as input to the independent core; do not implement the
+mobile entrypoints, migration or backup work below. The
+[core roadmap](../../docs/progress/2026-11-09-core-roadmap.md) supersedes that order.
 
 ## First use is a command, not a query
 

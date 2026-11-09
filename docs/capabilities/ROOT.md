@@ -48,6 +48,12 @@ claim universal enforcement or a completed headless runtime.
 
 ## Domain parents and navigation
 
+Current owner-approved work order:
+[standalone core roadmap](../progress/2026-11-09-core-roadmap.md). Package boundary
+approval and extraction precede desktop atomicity, the headless rule lifecycle
+and read-only MCP. App-shell repair is stopped; historical implementation gaps
+remain visible and are not prerequisites for proving the independent core.
+
 | Domain | Responsibility |
 | --- | --- |
 | [Meaning](domains/meaning.md) | Profiles, identities and composition |

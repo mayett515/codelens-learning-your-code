@@ -265,3 +265,21 @@ premature COMMIT and partial target/status writes after audit failure. See the
 [finding](../reviews/2026-11-09-base-apply-rollback-finding.md). No runtime repair,
 materialization schema or behavior has been added. The work-order invariant stop
 applies; leaves remain partial and the observed rollback gap is recorded.
+
+## 2026-11-09: owner redirects work to standalone Kordex Core
+
+The consolidated owner work order stops app M1c, adoption UI, app backup,
+mobile-driver repair and native tooling. The decision/diagnostic slice was
+already committed as `75f608d`; no driver fix or materialization code was started.
+Recorded semantics and the rollback defect remain valid inputs, not work queued
+ahead of the core. The [new roadmap](../progress/2026-11-09-core-roadmap.md)
+reorders extraction, desktop persistence, the complete rule lifecycle and MCP.
+
+Read-only inspection used the unchanged decision import checker over all 69
+ontology modules, with additional type-import and 52-test-file inspection.
+Fable's 24 + 7 + 2 runtime-independent grouping is confirmed; seven codecs still
+depend on app database row types. The package proposal separates validation from
+row mapping, preserves app compatibility and makes storage/atomic ports explicit.
+New core/lifecycle leaves are planned, with no fictitious owners. Agent-context
+now names the read-only MCP scenario after accepted-knowledge lifecycle proof.
+Source moves, dependencies and schema changes await owner boundary approval.
