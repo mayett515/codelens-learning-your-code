@@ -9,7 +9,7 @@ expansion, contradictory evidence or two failed attempts at the same fix.
 
 | Milestone | Scope and proof | Status |
 | --- | --- | --- |
-| M0 | Commit rule/skill/leaf adoption, open PR, observe real GitHub gate | Local gate passed; remote execution pending |
+| M0 | Commit rule/skill/leaf adoption, open PR, observe real GitHub gate | Completed: push and PR runs succeeded for 088ef3d |
 | M0b | Install existing app dependencies; run suite, compiler and lint once; record failures | Pending |
 | M1a | Foreign-parent rejection in profile-selection, failing-first decision test | Pending |
 | M1b | Preserve non-coding scope across learning-chat route/store/modal/save/read-back | Pending |
@@ -36,3 +36,20 @@ behavior requiring an artificial failing test.
 Open evidence: real GitHub workflow execution, application baseline/runtime and
 database integration. A green repository gate is not application verification.
 Next slice after observed successful CI: M0b.
+
+## M0 — observed result
+
+Adoption commit: `088ef3d6364c558866b96c19463cb2bcde740f44` on
+`codex/kordex-rule-leaf-adoption`. [PR #1](https://github.com/mayett515/codelens-learning-your-code/pull/1)
+is open against main; no merge occurred. The existing GitHub author identity
+was verified against prior commits and the authenticated account and supplied
+per command; no global Git identity setting was changed.
+
+Observed on 2026-11-09:
+
+- [Push run](https://github.com/mayett515/codelens-learning-your-code/actions/runs/42686848425): completed, success.
+- [Pull-request run](https://github.com/mayett515/codelens-learning-your-code/actions/runs/42686927753): completed, success.
+
+These runs cover dependency installation and the tooling gate on GitHub's Linux
+runner for the named revision. Application/runtime/database evidence remains
+open. Later revisions need their own CI results. Next slice: M0b, baseline only.

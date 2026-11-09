@@ -161,3 +161,11 @@ fixtures failed with the reported symptoms; the conflict-resolution and alias
 scope checks passed. After the fixes, the tooling typecheck, all 27 tests and
 the repository gate passed. No application tests or remote CI were run; no
 application source was changed and no repository commit or push was performed.
+
+## M0 publication evidence
+
+The adoption was subsequently committed and published under the user's explicit
+milestone authorization. Both push and pull-request CI passed for `088ef3d` on
+2026-11-09. Exact revision and run links are in the
+[milestone record](../progress/2026-11-09-milestones.md). Earlier statements about
+uncommitted work or unobserved CI describe their original inspection stage.
