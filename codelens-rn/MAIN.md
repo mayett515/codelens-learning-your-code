@@ -4,9 +4,9 @@ Master map of docs for the React Native rewrite. If another agent (Claude / Code
 
 ## Canonical Docs
 
-1. [rewrite-spec/00-START-HERE.md](../rewrite-spec/00-START-HERE.md)
-   - Purpose: Entry point for the full rewrite spec (intent, stack, architecture, state model, screens, RAG pipeline, preserved behaviors, non-goals, build phases).
-   - Include when: starting any new phase, making architectural decisions, or onboarding a new agent.
+1. Rewrite spec (archived)
+   - Purpose: The original spec for porting the Capacitor/Java app to React Native. That port is finished; the spec was removed from the tree on 2026-11-09.
+   - Where: `git show archive/pre-kordex:rewrite-spec/00-START-HERE.md`. Use only when auditing why the app was built this way.
 
 2. [PERSISTENCE.md](PERSISTENCE.md)
    - Purpose: op-sqlite + Drizzle + sqlite-vec. The three load-bearing decisions (static vec extension, vec0 upsert pattern, Drizzle Proxy wrapper).
@@ -14,7 +14,7 @@ Master map of docs for the React Native rewrite. If another agent (Claude / Code
 
 3. [README.md](README.md)
    - Purpose: Expo default — run commands, nothing project-specific yet.
-   - Include when: rarely; use `rewrite-spec/09-BUILD-PHASES.md` for real build/run workflow.
+   - Include when: rarely; run commands are in [AGENTS.md](AGENTS.md) and [verification](../docs/agents/verification.md).
 
 ## Architecture Contracts (Read Early)
 
@@ -59,21 +59,15 @@ Minimal doc bundles per task type, to keep prompts small:
 1. **New phase kickoff**
    - `MAIN.md`
    - `whatwe_agreedonthearchitecture.md`
-   - `rewrite-spec/00-START-HERE.md`
-   - `rewrite-spec/09-BUILD-PHASES.md`
    - `current_state.md`
 
 2. **Persistence / data layer work**
    - `MAIN.md`
    - `PERSISTENCE.md`
-   - `rewrite-spec/03-ARCHITECTURE.md`
-   - `rewrite-spec/04-STATE-MODEL.md`
 
 3. **RAG / learning / embeddings work**
    - `MAIN.md`
    - `PERSISTENCE.md`
-   - `rewrite-spec/06-RAG-PIPELINE.md`
-   - `rewrite-spec/04-STATE-MODEL.md`
 
 4. **Ontology/profile refactor work**
    - `MAIN.md`
@@ -90,8 +84,6 @@ Minimal doc bundles per task type, to keep prompts small:
 
 5. **UI / screens work**
    - `MAIN.md`
-   - `rewrite-spec/05-SCREENS.md`
-   - `rewrite-spec/07-PRESERVE-THESE-BEHAVIORS.md`
 
 ## Maintenance Rules
 

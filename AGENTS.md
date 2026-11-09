@@ -11,8 +11,9 @@ its existing folders. Future integrations remain proposals until implemented.
 
 `codelens-rn/` contains the implementation available to inspect and reuse.
 Coding and photography are existing examples, not mandatory future domains.
-Treat `codelens-full/`, `rewrite-spec/` and comparison material as historical
-references unless targeted. Check the branch and working tree; preserve others' changes.
+The legacy Capacitor/Java app, its rewrite spec and the comparison material were
+removed from the tree; they remain at tag `archive/pre-kordex`. Check the branch
+and working tree; preserve others' changes.
 
 ## Read the relevant sources
 
