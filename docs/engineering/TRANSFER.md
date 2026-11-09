@@ -169,3 +169,12 @@ milestone authorization. Both push and pull-request CI passed for `088ef3d` on
 2026-11-09. Exact revision and run links are in the
 [milestone record](../progress/2026-11-09-milestones.md). Earlier statements about
 uncommitted work or unobserved CI describe their original inspection stage.
+
+## M0b application baseline
+
+On 2026-11-09, the locked app dependencies installed successfully and the
+existing suite passed all 1117 tests across 120 files. The compiler passed.
+Lint ran and failed on four pre-existing errors, with 213 warnings. Exact
+commands, errors and full lint output are linked in the
+[milestone record](../progress/2026-11-09-milestones.md). Application source,
+dependencies and capability states were not changed for this baseline.

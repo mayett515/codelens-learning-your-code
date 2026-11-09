@@ -10,7 +10,7 @@ expansion, contradictory evidence or two failed attempts at the same fix.
 | Milestone | Scope and proof | Status |
 | --- | --- | --- |
 | M0 | Commit rule/skill/leaf adoption, open PR, observe real GitHub gate | Completed: push and PR runs succeeded for 088ef3d |
-| M0b | Install existing app dependencies; run suite, compiler and lint once; record failures | Pending |
+| M0b | Install existing app dependencies; run suite, compiler and lint once; record failures | Completed: 1117 tests and compiler pass; pre-existing lint failures recorded below |
 | M1a | Foreign-parent rejection in profile-selection, failing-first decision test | Pending |
 | M1b | Preserve non-coding scope across learning-chat route/store/modal/save/read-back | Pending |
 | M1c | Registry/bootstrap and base apply ownership; real persistence proof | User decision required before implementation |
@@ -53,3 +53,40 @@ Observed on 2026-11-09:
 These runs cover dependency installation and the tooling gate on GitHub's Linux
 runner for the named revision. Application/runtime/database evidence remains
 open. Later revisions need their own CI results. Next slice: M0b, baseline only.
+
+## M0b — application baseline, 2026-11-09
+
+Inspected revision: `5493b0852d4cd7ee6df20716c45182fbf79a6fc7`; application
+source and lockfile unchanged. Windows, Node 24.19.0, npm 11.17.0.
+Responsibility: establish the starting evidence, without repairing unrelated
+application behavior. No capability state changed.
+
+Commands run from `codelens-rn/`:
+
+| Command | Observed result |
+| --- | --- |
+| `npm ci --no-audit --no-fund --fetch-retries=0 --fetch-timeout=30000` | Exit 0; locked dependencies installed, repository postinstall ran |
+| `npm test` | Exit 0; 120 files, 1117 tests passed |
+| `node node_modules/typescript/bin/tsc --noEmit` | Exit 0; no diagnostics |
+| `npm run lint` | Exit 1; 4 errors and 213 warnings |
+
+All four existing errors are left unchanged:
+
+- `src/features/bookmarks/index.ts:14` and `:15`: duplicate exported
+  `BookmarkId` (`import/export`, two errors).
+- `src/ui/components/ChatBubble.tsx:28`: missing component display name
+  (`react/display-name`).
+- `src/ui/components/CodeViewer.tsx:67`: missing component display name
+  (`react/display-name`).
+
+The [complete lint output](2026-11-09-app-baseline-lint.txt) records every warning
+and error, including locations and rule names. No automatic fixes were applied.
+Install reported deprecated transitive packages and npm allow-scripts warnings;
+no package, lockfile or script-policy change was made. Tests and compiler ran
+successfully despite those warnings.
+
+This establishes the Node suite/compiler/lint baseline, not native UI behavior or
+real SQLite rollback. No required baseline check was unavailable. Subsequent
+slices must preserve the passing suite/compiler and introduce no new lint issue.
+Next milestone: M1a; the separately requested parent/child design note prepares
+M4 and does not authorize implementing its undecided contracts.
