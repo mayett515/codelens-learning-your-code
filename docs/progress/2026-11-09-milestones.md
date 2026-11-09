@@ -278,3 +278,30 @@ materialization/ownership remains M1c and is not fixed implicitly here.
 Review checkpoint requested by the user: Fable can now inspect snapshot guard A,
 legacy refresh B, M1a and this M1b slice together. M1c still requires a product
 ownership decision before implementation; no later milestone was started.
+
+## Fable's independent review and three follow-ups
+
+The user supplied Fable's independent review on 2026-11-09: no blocking findings
+in A/B/M1a/M1b, with 1139 app tests, compiler and 27 tooling fixtures passing on
+Fable's run. Fable explicitly did not review the parent/child design note in that
+pass. This is attributed reviewer evidence, not a claim of running those checks
+again here.
+
+The three requested follow-ups are separate commits:
+
+1. Add an application job to the existing push/PR workflow: Node 24, locked
+   dependency installation with postinstall, full app suite and local compiler.
+   Lint is not blocking while the four baseline errors remain. YAML/event/job
+   wiring and repository checks were checked locally; remote execution must be
+   observed on the pushed revision before reporting CI success.
+2. Reinspect the branch apply owner/callers and document that proposal-snapshot
+   validation belongs to the service, not the pure helper. The service is the
+   only inspected production writer applying branch proposals, not the only
+   possible branch-storage operation. Map regeneration changed no inventory
+   content; the tooling compiler and all 27 fixtures passed.
+3. Record the existing no-project, base-only save behavior in the dated baseline,
+   with the resolver/route and pre-M1b revision as evidence. No branch-selection
+   semantics or application source was changed in these follow-ups.
+
+After remote verification, stop before M1c. Its ownership decision remains with
+the user, and Fable's design-note review is still pending. No merge is authorized.

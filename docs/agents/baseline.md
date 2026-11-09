@@ -110,3 +110,23 @@ pre-fix row used coding; the corrected row uses photography. Route and modal are
 not rendered, no real SQL executes and no native SQLite read-back is established.
 The capture-save leaf stays partial with that remaining verification gap. No
 native tooling, dependency or schema was added.
+
+## 2026-11-09: learning-chat saves without a project use only the base
+
+Observed in `resolveConceptualizeProfileContext` in
+[the context resolver](../../codelens-rn/src/features/learning/services/conceptualizeProfileContext.ts):
+the no-project path returns `branches: []`, a base-only selection snapshot and a
+base-profile proposal target. Existing learning or personal branches are not
+implicitly selected or composed merely because they exist.
+
+The [learning-chat route](../../codelens-rn/app/learning/chat/[id].tsx),
+`handleSaveAsLearning`, supplies the known concept profile but no project or
+branch selection. `SaveAsLearningModal` passes that source context to the resolver.
+M1b fixed the lost base identity; it did not introduce selection outside projects.
+The same empty-branch behavior is visible in the resolver before M1b (`ac5f819`).
+This is an older limitation/observation, not a regression from the profile fix.
+
+Where a caller-owned selection should come from without a project remains a
+product question. Do not infer a global active branch or automatically activate
+all branches for a base. This entry records source inspection, not a native flow
+test or an implementation decision for that future selection mechanism.
