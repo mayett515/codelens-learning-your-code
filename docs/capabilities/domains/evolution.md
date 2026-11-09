@@ -8,7 +8,8 @@ The [engineering-rule interview](../../reviews/2026-11-09-rule-model-interview.m
 reuses that lifecycle. Existing pending-proposal supersession does not by itself
 provide accepted node-version history; accepted content and its predecessor
 must remain inspectable when a later proposal replaces it. Exact additive
-semantics await the owner's answer; no new operation is implemented by this note.
+semantics R1-R4 are accepted. Rule history and parent basis share the same
+accepted-state representation; no new operation is implemented by this note.
 
 - **D1 (P2/G2):** observations/corrections are evidence; proposals identify intended
   changes and targets. One must not be silently rewritten as the other.

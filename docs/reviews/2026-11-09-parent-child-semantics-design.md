@@ -1,5 +1,11 @@
 # Parent changes, child meaning and scoped references
 
+Later owner decision (2026-11-09): R3 accepted history and A1 parent basis must
+share [one accepted-state representation](2026-11-09-accepted-state-basis.md).
+This settles that representation principle only; the remaining A-C choices
+below are not implicitly approved or implemented.
+
+
 Design note, inspected 2026-11-09 at `5493b085` (application identical to
 `8192ee4`). This is decision preparation for M4, not an adopted schema or an
 implementation order. Recommendations below remain proposals. The separately

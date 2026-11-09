@@ -454,3 +454,13 @@ opening decision files beneath the old app directory (ENOENT). Only their file
 locators were corrected; all content assertions remain. The targeted 91-test
 architecture-guard file now passes. This correction belongs to the document
 move, separately from the headless profile change.
+
+## Rule decisions accepted; K1b before storage
+
+The owner accepted R1-R4 as recommended after Fable's clean fit review. The
+product decision, interview and domain parents now agree. A conceptual design
+uses one accepted-state history for R3 node versions and A1 parent basis, while
+leaving unapproved parent-following/collision/edge policies open. K5-K8 each have
+a distinct planned scenario with no executable owner. The gate passed 32/32.
+The authorized headless-profile structural slice is in progress; K2 storage and
+rule-node behavior have not started. This entry does not claim those features.

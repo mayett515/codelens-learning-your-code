@@ -333,3 +333,17 @@ ontology decision/documentation folder moved with Git history into
 This separate structural commit changes no decision, skill, product type or
 runtime behavior. The repository gate checks the relocated docs as repo material.
 Further deletions require an owner decision.
+
+## 2026-11-09: accepted rule semantics and extended roadmap
+
+The owner accepted R1-R4 following Fable's clean fit review and seven reported
+passing probes. Product invariants now own those decisions. One immutable,
+scoped accepted-state history serves both stable rule versions (R3) and parent
+basis (A1); no second rule-history truth. Unknown legacy basis remains explicit.
+Remaining parent/rebase, collision and scoped-edge choices are not inferred.
+
+The roadmap puts the authorized headless profile separation before K2 and keeps
+K5 repository adaptation, K6 dependency invalidation, K7 comparison/restoration
+and K8 replayable scenario lab visible. Their leaves contain distinct scenarios,
+remain planned and bind no fictional executable owners. No storage/schema
+implementation or additional deletion is part of this decision-record slice.

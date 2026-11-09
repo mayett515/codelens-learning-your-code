@@ -3,19 +3,22 @@ schemaVersion: 1
 inspectedOn: "2026-11-09"
 id: change-impact
 domain: integrations
-summary: Identify which derived results need reconsideration after a changed assumption
+summary: Invalidate downstream results whose recorded input basis changed
 state: planned
 owners: []
-evidence: []
+evidence:
+  - path: docs/progress/2026-11-09-core-roadmap.md
+    kind: design
+    covers: Planned acceptance scenario and roadmap order
 gaps:
-  - No executable owner is bound for this target capability.
-reason: Retained product direction; existing profile/ontology mechanisms do not establish this
-  complete application capability.
-revisit: Select a concrete acceptance scenario, settle ownership and implement a bounded slice
-  before binding a runtime owner.
+  - No executable owner or runtime proof exists for this scenario.
+reason: Owner-approved future direction after the first headless rule lifecycle.
+revisit: Implement the bounded scenario after its required history and persistence boundaries exist.
 ---
 
-# Identify which derived results need reconsideration after a changed assumption
+# Invalidate downstream results whose recorded input basis changed
 
-This records a direction, not a promise that all domains fit the existing profile
-model. Do not invent runtime dependency edges or an implementation address.
+K6 seed: accepted inputs A and B, derived result C with recorded dependency on
+A at revision 1, and unrelated result D. Accept A revision 2. C becomes due for
+revalidation with the changed dependency identified; D and accepted B remain
+unchanged. A diagram or guessed relationship does not create a dependency.

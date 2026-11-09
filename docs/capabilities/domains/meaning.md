@@ -6,8 +6,8 @@ of this responsibility; a universal Kordex model has not been finalized.
 
 The [engineering-rule direction](../../agents/product-and-invariants.md#engineering-rules-owner-direction-2026-11-09)
 is now decided: an independent base and repository branches reuse this meaning
-model. Rule-kind/provenance/version/reconsideration details remain an interview,
-not an implemented third profile or a second rule-record mechanism.
+model. R1-R4 semantics are accepted; a third profile and its durable history are
+still to implement. The headless contract separates the optional learning fields.
 
 - **D1 (P1/G1):** cross-scope identity comparisons include their scope.
 - **D2 (P1/G1):** a branch belongs to its parent; selection must not silently mix
