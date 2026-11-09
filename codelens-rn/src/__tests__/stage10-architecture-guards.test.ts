@@ -607,7 +607,7 @@ describe('Doc 26 scoped meaning and label-targeting guards', () => {
   });
 
   it('doc 26 keeps hybrid identity, narrows, and label-only guard anchors', () => {
-    const docRoot = path.join(repoRoot, 'ONTOLOGY_PROFILE_REFACTOR');
+    const docRoot = path.join(repoRoot, '..', 'docs', 'ONTOLOGY_PROFILE_REFACTOR');
     const doc26 = fs.readFileSync(
       path.join(docRoot, '26_SCOPED_MEANING_AND_BRANCH_CORE_SEMANTICS_DECISION.md'),
       'utf8',
@@ -690,7 +690,7 @@ describe('Kordex context assembly guards', () => {
   });
 
   it('doc 41 keeps checker runtime mapper pins and acceptance anchors', () => {
-    const doc41 = read('ONTOLOGY_PROFILE_REFACTOR/41_CHECKER_RUNTIME_FIRST_SLICE_DECISION.md');
+    const doc41 = read('../docs/ONTOLOGY_PROFILE_REFACTOR/41_CHECKER_RUNTIME_FIRST_SLICE_DECISION.md');
 
     expect(doc41).toContain('## First Runtime Slice Decision');
     expect(doc41).toContain('### Mapper Contract Pins');
@@ -718,7 +718,7 @@ describe('Kordex context assembly guards', () => {
   });
 
   it('doc 42 keeps branch/profile selection UI scope anchors', () => {
-    const doc42 = read('ONTOLOGY_PROFILE_REFACTOR/42_BRANCH_PROFILE_SELECTION_UI_DECISION.md');
+    const doc42 = read('../docs/ONTOLOGY_PROFILE_REFACTOR/42_BRANCH_PROFILE_SELECTION_UI_DECISION.md');
 
     expect(doc42).toContain('## Locked Decision');
     expect(doc42).toContain('Build a minimal branch/profile selection UI over existing persistence and runtime seams.');
@@ -733,7 +733,7 @@ describe('Kordex context assembly guards', () => {
   });
 
   it('doc 43 keeps second-base forkability demo scope anchors', () => {
-    const doc43 = read('ONTOLOGY_PROFILE_REFACTOR/43_SECOND_BASE_PROFILE_FORKABILITY_DEMO_DECISION.md');
+    const doc43 = read('../docs/ONTOLOGY_PROFILE_REFACTOR/43_SECOND_BASE_PROFILE_FORKABILITY_DEMO_DECISION.md');
 
     expect(doc43).toContain('## Locked Decision');
     expect(doc43).toContain('Add a minimal second-base-profile forkability demo, using a photography profile.');
@@ -783,7 +783,7 @@ describe('Kordex context assembly guards', () => {
   });
 
   it('doc 39 keeps target-layer switching scope anchors', () => {
-    const doc39 = read('ONTOLOGY_PROFILE_REFACTOR/39_EDIT_THEN_APPLY_DECISION.md');
+    const doc39 = read('../docs/ONTOLOGY_PROFILE_REFACTOR/39_EDIT_THEN_APPLY_DECISION.md');
 
     expect(doc39).toContain('## Implementation Note - Target-Layer Switching First Slice');
     expect(doc39).toContain('pending branch-local additive new-node proposal');
@@ -1401,7 +1401,7 @@ describe('Ontology-profile naming boundary guards', () => {
 });
 
 describe('Kortex durable doc future-direction anchor guards', () => {
-  const docRoot = path.join(repoRoot, 'ONTOLOGY_PROFILE_REFACTOR');
+  const docRoot = path.join(repoRoot, '..', 'docs', 'ONTOLOGY_PROFILE_REFACTOR');
 
   function readDoc(filename: string): string {
     return fs.readFileSync(path.join(docRoot, filename), 'utf8');

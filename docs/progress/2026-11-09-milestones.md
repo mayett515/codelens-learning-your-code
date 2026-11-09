@@ -448,3 +448,9 @@ through K3. This is a relocation-only slice; no rule-model or runtime changes.
 The repository gate passed 32/32 after relocation; inline documentation links
 and generated inventory passed. `git diff --check` passed. No application or
 native runtime claim is made by this documentation check.
+
+Relocation follow-up: the full app run exposed twelve architecture guards still
+opening decision files beneath the old app directory (ENOENT). Only their file
+locators were corrected; all content assertions remain. The targeted 91-test
+architecture-guard file now passes. This correction belongs to the document
+move, separately from the headless profile change.
