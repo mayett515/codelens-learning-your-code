@@ -71,7 +71,13 @@ after relocation, retaining all 91 content assertions.
 
 Isolation evidence was retained at
 `C:/Users/vonma/AppData/Local/Temp/kordex-core-isolation-osbK28` during this run.
-Remote CI for this slice is pending push/observation. Native bundling, device UI,
+At report creation, remote CI was pending; the PR checks hold subsequent run
+results. Native bundling, device UI,
 SQLite rollback, durable history/restart, CLI and MCP are not established here.
 The known mobile transaction defect stays open. K2 requires a concrete storage
 schema decision; this slice creates neither a speculative port nor an adapter.
+
+Next decision: [K2 storage options](../reviews/2026-11-09-k2-storage-choice.md).
+Recommendation is SQLite with full immutable accepted-state snapshots, rather
+than implementing a replay engine before there is a demonstrated size need.
+The owner's schema stop applies; no adapter or durable schema has been created.

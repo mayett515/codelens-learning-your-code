@@ -478,3 +478,8 @@ seven headless fit probes and tooling 32/32. All original 1139 tests remain,
 with seven core and one app additions. Lint retains four baseline errors and
 196 warnings; changed app files pass focused lint. Desktop storage and R1-R4
 behavior are not implemented, and native/app rollback gaps remain open.
+
+K1b is committed as `02112a4` and pushed. The remaining K2 stop is concrete:
+[SQLite accepted-state snapshots or replayed change records](../reviews/2026-11-09-k2-storage-choice.md).
+Snapshots are recommended; the storage schema is not implemented before the
+owner answers. This does not reopen any R1-R4 decision.
